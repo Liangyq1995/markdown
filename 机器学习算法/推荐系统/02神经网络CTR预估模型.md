@@ -1,285 +1,3 @@
-![](../../picture/1/142.png)
-
-##### `DSSM`
-
-在搜索广告的场景中，`query` 和 `document` 使用不同的单词、同一个单词的不同形态来表达同一个概念。如果简单的通过文本的单词匹配来计算 `query` 和 `document` 的相似性，则效果不好。
-
-- 一种解决方式是：利用潜在语义模型（如：`LSA`），将 `query` 和 `document` 都降维到低维语义空间，然后根据二者在低维空间的距离来计算二者相似度。
-- `DSSM` 模型将 `query` 和 `document` 降维到公共的低维空间。在该低维空间中，`query` 和 `document` 的相似性也是通过二者的距离来衡量。
-
-为解决搜索广告中词汇量大的问题，模型采用了 `word hash` 技术。
-
-`DSSM` 模型将原始的文本特征映射到低维的语义空间。
-
-- 首先将 `query` 和 `document` 表示为词频向量，该向量由每个单词出现的词频组成。
-
-- 然后将$\vec{\mathbf{q}}$和$\vec{\mathbf{d}}$映射到低维语义空间，得到 `query` 语义向量$\vec{\mathbf{y}}_q$和 `document` 语义向量$\vec{\mathbf{y}}_d$。
-
-- 计算$\vec{\mathbf{y}}_q$和$\vec{\mathbf{y}}_d$的相似度：
-  $$
-  R(\vec{\mathbf{q}},\vec{\mathbf{d}})=\cos(\vec{\mathbf{y}}_q,\vec{\mathbf{y}}_d)=\frac{\vec{\mathbf{y}}_q\cdot\vec{\mathbf{y}}_d}{||\vec{\mathbf{y}}_q||\times||\vec{\mathbf{y}}_d||}
-  $$
-
-- 给定 `query i` ，计算所有`document` 与它的相似度，并截取 `top K` 个 `document` 即可得到排序结果：
-  $$
-  \mathbb{L}_i=\{\vec{\mathbf{d}}|\max_{\text{topK}}R(\vec{\mathbf{q}}_i,\vec{\mathbf{d}})\text{ and } \vec{\mathbf{d}}\in\mathcal{D}_i\}
-  $$
-  其中$\mathbb{L}_i$​是 `query i` 的排序结果，$\mathcal{D}_i$​​是所有与 `query i` 有关的文档。
-
-![](../../picture/1/418.png)
-
-假设输入向量为$\vec{\mathbf{x}}$​​​，输出向量为$\vec{\mathbf{y}}$​​​，网络一共有$L$​​​层。对于 `query`，输入就是$\vec{\mathbf{q}}$​​​，输出就是$\vec{\mathbf{y}}_q$​​​；对于 `document`，输入就是$\vec{\mathbf{d}}$​​​，输出就是$\vec{\mathbf{y}}_d$​​​ 。第$l$层的隐向量为：
-$$
-\begin{array}{cc}\vec{\mathbf{h}}_1=\mathbf{W}_1\vec{\mathbf{x}}\\
-\vec{\mathbf{h}}_l=\sigma(\mathbf{W}_i\vec{\mathbf{h}}_{i-1}+\vec{\mathbf{b}}_i),&i=2,3,\cdots,L\\
-\vec{\mathbf{y}}=\vec{\mathbf{h}}_L
-
-\end{array}
-$$
-给定 `query`$\vec{\mathbf{q}}$​和 `document`$\vec{\mathbf{d}}$​，用户点击该文档的概率为：
-$$
-p(\vec{\mathbf{d}}|\vec{\mathbf{q}})=\frac{\exp\left(\gamma\times R(\vec{\mathbf{q}},\vec{\mathbf{d}})\right)}{\sum_{\vec{\mathbf{d}}^{\prime}\in\mathcal{D}}\exp\left(\gamma\times R(\vec{\mathbf{q}},\vec{\mathbf{d}}^{\prime})\right)}
-$$
-其中$\gamma$为平滑因子，它是一个超参数，需要根据验证集来执行超参数搜索。$\mathcal{D}$是候选的文档集合。
-
-实际应用中，给定一对点击样本$(\vec{\mathbf{q}},\vec{\mathbf{d}}^{+})$，我们从曝光但是未点击的文档中随机选择 篇文档作为负样本$(\vec{\mathbf{q}},\vec{\mathbf{d}}^{-}),k=1,\cdots,K$，则$\mathcal{D}=\{\vec{\mathbf{d}}^{+},\vec{\mathbf{d}}^{-}_1,\cdots,\vec{\mathbf{d}}^{-}_K\}$。模型训练的目标是：最大化点击样本的对数似然：
-$$
-\mathcal{L}=-\log\prod_{(\vec{\mathbf{q}},(\vec{\mathbf{q}},\vec{\mathbf{d}}^{+}))}p(\vec{\mathbf{d}}^{+}|\vec{\mathbf{q}})
-$$
-
-
-然后基于随机梯度下降优化算法来求解该最优化问题。注意：这里并没有计算负样本的概率$p(\vec{\mathbf{d}}^{-}|\vec{\mathbf{q}})$，负样本的信息在计算概率$p(\vec{\mathbf{d}}^{+}|\vec{\mathbf{q}})$时被使用。
-
-###### `word hash`
-
-在将 `query/document` 的文本转化为输入向量的过程中，输入向量的维度等于词表的大小。由于实际 `web search` 任务中的词汇表非常庞大，这导致 `DSSM` 网络的输入层的参数太多，模型难以训练。为解决该问题，`DSSM` 模型在第一层引入 `word hash` 技术。该层是一个线性映射，虽然参数非常多，但是这些参数不需要更新和学习。
-
-`word hash` 技术用于降低输入向量的维度。给定一个单词，如：`good`，`word hash` 的步骤为：
-
-- 首先添加开始标记、结束标记：`#good#`
-- 然后将其分解为字符级的 `n-gram` 格式：`#go,goo,ood,od#` （`n=3` 时）
-- 最后将文本中的单词 `good` 用一组 `char-level n-gram` 替代。
-
-除此之外，`word-hash` 技术还有以下优点：
-
-- 它能够将同一个单词的不同形态变化映射到 `char-level n-gram` 空间中彼此接近的点。
-- 它能够有效缓解 `out-of-vocabulary:OOV` 问题。在推断期间，虽然有些词汇未出现在训练集中，但是当拆解未 `char-level n-gram` 之后，每个 `n-gram` 都在训练集中出现过。
-- 从单词到 `char-level n-gram` 的映射关系是固定的线性映射，不需要学习。
-
-##### `FNN`
-
-传统的 `CTR` 预估模型大多数采用线性模型。线性模型的优点是易于实现，缺点是：模型表达能力较差，无法学习特征之间的相互作用 `interaction` 。非线性模型（如：`FM,GBDT`）能够利用不同的组合特征，因此能够改善模型的表达能力。但是这些特征无法利用不同特征的任意组合。
-
-`FNN` 和 `SNN` 的主要思路是：从 `sparse feature`$\vec{\mathbf{x}}$学到 `dense representation`$\vec{\mathbf{z}}$；将$\vec{\mathbf{z}}$作为一个深度前馈神经网络的输入，输出为概率$\hat{y}$。二者的区别在于学到$\vec{\mathbf{z}}$的方式不同。
-
-`FNN` 模型结合了神经网络和 `FM` 模型，网络分为以下几层：
-
-- 第 0 层输入层：`categorical` 经过 `one-hot` 编码之后作为输入，该层也被称作 `sparse binary feature` 层。
-- 第1层`embedding` 层：输入层经过局部连接生成`embedding` 向量，该层也被称作 `dense real layer` 层。
-- 第2层到第$L$层：全连接层。
-- 最后一层：`sigmoid` 输出层。
-
-![](../../picture/1/143.png)
-
-`FNN` 的核心在于 `embedding` 向量的生成。假设有$F$个 `field`，`one-hot` 向量为$\vec{\mathbf{x}}$，`field i`在向量中的起始位置为$s_i$、终止位置为$e_i$（包含）。每个 `field` 生成一个 `embedding` 向量。即 `field i` 生成$\vec{\mathbf{z}}_i=(\omega_i,v_1^i,\cdots,v_K^i)\in \mathbb{R}^{K+1}$。同时还有全局`bias` 。即：$\vec{\mathbf{z}}=(\omega_0,\omega_1,v_1^1,\cdots,v_K^1,\cdots,v_1^F,\cdots,v_K^F)^T$。输入位置$s_i\sim e_i$仅仅与$\vec{\mathbf{z}}_i$相连，即：局部连接：
-$$
-\vec{\mathbf{z}}_i = \mathbf{W}_0^i(x_{s_i},\cdots,x_{e_i})^T
-$$
-$\vec{\mathbf{z}}$由 `FM` 模型初始化。由于采用逐层预训练，因此一旦初始化$\vec{\mathbf{z}}$之后就固定。因此求解 `FM` 的过程就是求解$\mathbf{W}_0$的过程，且一旦初始化后就冻结$\mathbf{W}_0$，直到最后的微调阶段才更新$\mathbf{W}_0$。
-
-一旦进行了 `FM` 预训练和 `layer-wise RBM` 预训练之后，则可以通过监督学习来微调模型。模型的损失函数为交叉熵：
-$$
-\begin{array}{c}\mathcal{L}(y,\hat{y}) = -\left[y\log\hat{y}+(1-y)\log(1-\hat{y})\right]\\
-\frac{\part \mathcal{L}}{\part \mathbf{W}_0^i}=\sum_{k=1}^{K+1}\frac{\part \mathcal{L}}{\part z_{i,k}}\frac{\part z_{i,k}}{\mathbf{W}_0^i}=\frac{\part \mathcal{L}}{\part \vec{\mathbf{z}}_i}(x_{s_i},\cdots,x_{e_i})\end{array}
-$$
-当$x_j$​时，对应梯度为0。因此只需要更新$\vec{\mathbf{x}}$​非零的分量对应的参数，这大大降低了参数更新的计算量。
-
-###### `SNN`
-
-`SNN` 和 `FNN` 的区别在于第一层的网络结构，在 `SNN` 中第一层是全连接的。
-$$
-\vec{\mathbf{z}}=\sigma(\mathbf{W}_0\vec{\mathbf{x}}+\vec{\mathbf{b}}_0)
-$$
-$\mathbf{W}_0,\vec{\mathbf{b}}_0$为第一层的网络参数。第一层参数可以通过两种预训练方式来预训练：`RBM` 或者 `DAE`
-
-##### `PNN`
-
-`PNN` 模型，该模型构建了一个 `embedding` 层来学习离散特征的分布式`representation`，构建一个 `product` 层来自动捕捉离散特征的潜在高阶模式。
-
-假设有$F$个 `field`，`one-hot` 向量为$\vec{\mathbf{x}}$，`field i`在向量中的起始位置为$s_i$、终止位置为$e_i$（包含）。每个 `field` 生成一个 `embedding` 向量。即 `field i` 生成$\vec{\mathbf{z}}_i=(v_1^i,\cdots,v_K^i)\in \mathbb{R}^{K}$。
-
-模型包含以下几层：
-
-- 第 0 层输入层：`categorical` 经过 `one-hot` 编码之后作为输入
-
-- 第1层`embedding` 层：模型从每个 `field` 中学得各 `field` 的 `embedding` 表示。
-  $$
-  \vec{\mathbf{z}}_i = \mathbf{W}_0^i(x_{s_i},\cdots,x_{e_i})^T
-  $$
-  其中$\mathbf{W}^i_0\in\mathbb{R}^{K\times(e_i-s_i+1)}$为映射参数，它由$\mathbf{W}_0$的第$s_i$到第$e_i$列组成。
-  
-- 第2层 `product` 层：由`embedding` 特征的一阶特征和二阶交叉特征拼接而成。其中$\mathbf{z}$​部分表示一阶特征，$\mathbf{p}$​部分表示二阶特征。为统一生成方式，$\mathbf{z}$​由常数 `1` 和一阶特征交叉生成。
-
-$$
-\begin{array}{c}\mathbf{z} = \left[\vec{\mathbf{z}}_1,\cdots,\vec{\mathbf{z}}_F\right]\in\mathbb{R}^{K\times F}\\
-\mathbf{p}={p_{i,j}},i=1,\cdots,F;j=1,2,\cdots,F\\
-p_{i,j} = g(\vec{\mathbf{z}}_i,\vec{\mathbf{z}}_j)
-\end{array}
-$$
-
-$g(\cdot,\cdot)$表示成对特征交叉，当定义不同的$g$函数时，就定义了不同的 `PNN` 实现。该层的输出为：
-$$
-\begin{array}{c}h_z^i = \mathbf{W}_z^i\odot\mathbf{z},h_p^i=\mathbf{W}_p^i\odot\mathbf{p}\\
-\vec{\mathbf{h}}_z = (h_z^1,\cdots,h_z^{d_1})^T,\vec{\mathbf{h}}_p = (h_p^1,\cdots,h_p^{d_1})^T\\
-\vec{\mathbf{h}}_2 = \text{relu}(\vec{\mathbf{h}}_z+\vec{\mathbf{h}}_p+\vec{\mathbf{b}}_1)\end{array}
-$$
-其中$d_1$表示对提取的一阶特征和二阶特征通过$\mathbf{W}_z$和$\mathbf{W}_p$各自分别进行进一步的特征抽取的数量。$\mathbf{W}_z^i,\mathbf{W}_p^i$类似于 `CNN` 的卷积核，其尺寸为整个图片大小，$d_1$为卷积核的数量，$i$表示第$i$个卷积核。$\odot$表示张量的内积，定义为：$\mathbf{A}\odot\mathbf{B}=\sum_{i,j}A_{i,j}\times B_{i,j}$
-
-- 第3层到第 层：全连接层。
-
-- 最后一层：`sigmoid` 输出层。$\hat{y}=\text{sigmoid}(\vec{\mathbf{h}}_L)$
-
-  ![](../../picture/1/145.png)
-
-模型的损失函数为 `logloss`：
-$$
-\mathcal{L} = -\frac{1}{N}\sum_{i=1}^N\left[y_i\log\hat{y}_i+(1-y_i)\log(1-\hat{y}_i)\right]
-$$
-`IPNN` 的特征交叉函数为：$p_{i,j} = g(\vec{\mathbf{z}}_i,\vec{\mathbf{z}}_j)=\vec{\mathbf{z}}_i\cdot\vec{\mathbf{z}}_j$
-
-`OPNN` 的特征交叉函数为：$p_{i,j} = g(\vec{\mathbf{z}}_i,\vec{\mathbf{z}}_j)=\vec{\mathbf{z}}_i\vec{\mathbf{z}}_j^T$与内积产生标量不同，这里的外积产生一个矩阵。则$\mathbf{p}\in\mathbb{R}^{F\times F\times K\times K},\mathbf{W}_p^i\in\mathbb{R}^{F\times F\times K\times K}$
-
-##### `DeepCrossing`
-
-该模型利用深度神经网络来自动组合特征从而生成高阶特征。虽然 `Deep Crossing` 模型能够自动组合原始特征，但是收集原始数据并提取原始特征仍需要用户的大量精力。
-
-![](../../picture/1/144.png)
-
-`DeepCrossing` 模型的输入是原始特征，模型有四种类型的`Layer`：
-
-- `Embedding Layer`：将原始特征映射成 `embedding` 向量。假设原始特征`one-hot` 向量为$\vec{\mathbf{x}}$，`field i`在向量中的起始位置为$s_i$、终止位置为$e_i$（包含）。
-
-$$
-\vec{\mathbf{E}}^i = \text{relu}(\mathbf{W}^i(x_{s_i},\cdots,x_{e_i})^T+\vec{\mathbf{b}}^i)\in\mathbb{R}^{m_i}
-$$
-
-其中$\mathbf{W}^i\in\mathbb{R}^{m_i\times(e_i-s_i+1)},\vec{\mathbf{b}}_i\in\mathbb{R}^{m_i}$为参数，$m_i$为第$i$个 `embedding` 的维度。对于某些维度较小的原始特征，无需进行 `embedding` 层，而是直接输入到 `Stacking Layer` 层。这是在模型大小和信息保留程度之间的折衷：完全保留信息（原始输入），则可能使得模型过大；全部使用 `embedding`，则可能信息丢失太多
-
-- `Stacking Layer`：所有 `embedding` 特征和部分原始特征拼接成一个向量：
-
-$$
-\vec{\mathbf{h}}_1=<\vec{\mathbf{E}}^1,\cdots,\vec{\mathbf{E}}^K>
-$$
-
-其中$<\cdot>$表示特征拼接，$K$为原始特征的数量，$\vec{\mathbf{E}}$为 `embedding` 向量。如果是直接输入的原始特征，则$\vec{\mathbf{E}}$表示该原始特征的 `one-hot` 向量。
-
-- `Residual Unit Layer`：基于残差单元 `Residual Unit` 构建的残差层，其输出为：$\vec{\mathbf{h}}_l=\mathcal{F}(\vec{\mathbf{h}}_{l-1};\mathbf{W}_0^{l},\mathbf{W}_1^l,\vec{\mathbf{b}}_0^l,\vec{\mathbf{b}}_1^l)+\vec{\mathbf{h}}_{l-1}$其中$\mathcal{F}(\cdot)$为残差单元：
-  $$
-  \mathcal{F}(\vec{\mathbf{h}}_{l-1};\mathbf{W}_0^{l},\mathbf{W}_1^l,\vec{\mathbf{b}}_0^l,\vec{\mathbf{b}}_1^l)=\text{relu}\left[\mathbf{W}_1^l\left(\text{relu}(\mathbf{W}_0^{l}\vec{\mathbf{h}}_{l-1}+\vec{\mathbf{b}}_0^l)\right)+\vec{\mathbf{b}}_1^l\right]
-  $$
-
-- `Scoring Layer`：`sigmoid` 输出层。其输出为：$\hat{y}=\text{sigmoid}(\vec{\mathbf{w}}\cdot\vec{\mathbf{h}}_{L-1}+b)$。其中$\vec{\mathbf{w}},b$为参数，$\vec{\mathbf{h}}_{L-1}$为前一层的隐向量，$L$为总的层数。
-
-模型的损失函数为负的 `Logloss`：
-$$
-\mathcal{L} = -\frac{1}{N}\sum_{i=1}^N\left[y_i\log\hat{y}_i+(1-y_i)\log(1-\hat{y}_i)\right]
-$$
-
-##### `Wide&Deep`
-
-推荐系统中的一个挑战是：同时实现 `memorization` 和 `generalization`。
-
-- `memorization`：学到 `item` 或者 `feature` 共现关系，并基于历史数据中的这种相关性来推荐。基于`memorization` 的推荐通常更具有话题性，并且和用户已经发生行为的 `item` 直接关联。
-- `generalization`：根据 `item` 或者 `feature` 的共现关系，探索过去从未发生或者很少发生的新特征组合。基于 `generalization` 的推荐通常更具有多样性。
-
-广义线性模型（称为 `wide` 模型）可以通过大量交叉特征来记住特征交互 `feature interaction` ，即 `memorization` 。其优点是可解释性强，缺点是：为了提升泛化能力，需要人工执行大量的特征工程。
-
-深度神经网络模型（称为 `deep` 模型）只需要执行较少的特征工程即可泛化到未出现的特征组合，即 `generalization` 。其优点是泛化能力强，缺点是容易陷入过拟合。
-
-![](../../picture/1/146.png)
-
-`Wide & Deep` 模型包含一个 `linear model:LM` 部分和一个 `neural network:NN` 部分。设模型的输入特征向量为$\vec{\mathbf{x}}=(x_1,\cdots,x_d)^T$是一个$d$维的特征向量（经过 `one-hot` ），仅包含原始特征。$\phi(\cdot)$表示特征交叉转换函数，$\phi(\vec{\mathbf{x}})$包含转换后的特征。
-
-- `LM` 部分：即左侧的 `wide` 子模型，它是一个线性模型：
-
-$$
-y = \vec{\mathbf{w}}\cdot<\vec{\mathbf{x}},\phi(\vec{\mathbf{x}})>+b
-$$
-
-其中$<\cdot>$表示特征拼接，$\vec{\mathbf{w}}\in\mathbb{R}^{d+d^{\prime}}$是模型参数，$b$为偏置。
-
-`NN` 部分：即右侧的 `deep` 子模型，它是一个 `DNN` 模型。
-
-- 输入层：为了缓解模型的输入大小，`DNN` 的所有离散特征的输入都是原始特征，而没有经过 `one-hot` 编码转换。
-- 第一层 `embedding` 层：将高维稀疏的 `categorical` 特征转换为低维的 `embedding` 向量。
-- 第二层特征拼接层：将所有的 `embedding` 向量拼接成一个 `dense feature` 向量。
-- 后续每一层都是全连接层：$\vec{\mathbf{h}}^{l+1}=\sigma(\mathbf{W}\vec{\mathbf{h}}^{l}+\vec{\mathbf{b}}^{l})$
-
-模型联合了 `wide` 和 `deep` 的输出：
-$$
-\hat{y} = p(y=1|\vec{\mathbf{x}})=\text{sigmoid}(\vec{\mathbf{w}}_{\text{wide}}\cdot<\vec{\mathbf{x}},\phi(\vec{\mathbf{x}})>+\vec{\mathbf{w}}_{\text{deep}}\cdot\vec{\mathbf{h}}^L+b)
-$$
-模型的损失函数为负的对数似然，并通过随机梯度下降来训练：
-$$
-\mathcal{L} = -\frac{1}{N}\sum_{i=1}^N\left[y_i\log\hat{y}_i+(1-y_i)\log(1-\hat{y}_i)\right]
-$$
-`Wide&Deep` 模型与 `LM & DNN` 的 `ensemble` 集成模型不同。
-
-- 在集成模型中，每个子模型都是独立训练的，只有预测时才将二者结合在一起。
-
-  在 `Wide&Deep` 模型中，每个子模型在训练期间就结合在一起，共同训练。
-
-- 在集成模型中，每个子模型必须足够大从而足够健壮，使得子模型集成之后整体的 `accuracy` 等性能足够高。在 `Wide&Deep` 模型中，每个子模型都可以比较小，尤其是 `wide` 部分只需要少量的特征交叉即可。
-
-
-##### `DCN`
-
-`DCN` 模型保留了 `DNN` 的优点。此外，`DCN` 提出了一种新的`cross network` ，该网络能够高效学习高阶特征交互。
-
-`DCN` 无论在模型表现以及模型大小方面都具有显著优势。其优点：
-
-- `cross network` 显式的在每层应用特征交叉，有效的学习了预测能力强的交叉特征，无需人工特征工程。
-- `cross network` 简单高效，可以学习高阶交叉特征。每增加一层，能够学到的交叉特征的阶数就加一阶。
-- 模型表现更好，且参数要比 `DNN` 少一个量级。
-
-`DCN` 模型结构如下图所示，模型包含 `embedding and stacking` 层、`cross network`、`deep network` 三个组成部分。
-
-![](../../picture/1/148.png)
-
-`embedding and stacking` 层：假设输入包含 `sparse` 特征和 `dense` 特征。设原始特征为向量$\vec{\mathbf{x}}$，其中：
-$$
-\vec{\mathbf{x}}=<\vec{\mathbf{x}}_{\text{sparse}}^1,\cdots,\vec{\mathbf{x}}_{\text{sparse}}^K,\vec{\mathbf{x}}_{\text{dense}}>
-$$
-其中$\vec{\mathbf{x}}_{\text{sparse}}^i$为 `field i` 的 `one-hot` 向量，$\vec{\mathbf{x}}_{\text{dense}}$为经过归一化的 `dense` 特征，$<\cdot>$为向量拼接。首先将 `field i` 的特征映射到 `embedding` 向量：
-$$
-\vec{\mathbf{x}}_{\text{embed}}^i=\mathbf{W}_{\text{embed}}^i\vec{\mathbf{x}}_{\text{sparse}}^i
-$$
-其中$\vec{\mathbf{x}}_{\text{sparse}}^i$为`one-hot` 向量长度，$\mathbf{W}_{\text{embed}}^i\in\mathbb{R}^{e_i\times d_i}$为参数。然后将 `embedding` 向量和归一化的 `dense` 特征拼接成向量：
-$$
-\vec{\mathbf{x}}^0=<\vec{\mathbf{x}}_{\text{embed}}^1,\cdots,\vec{\mathbf{x}}_{\text{embed}}^K,\vec{\mathbf{x}}_{\text{dense}}>\in\mathbb{R}^{e_i+\cdots+e_K+d_s}
-$$
-其中$d_s$为 的向量长度。`embedding and stacking` 层就是将$\vec{\mathbf{x}}$转换为$\vec{\mathbf{x}}^0$。
-
-`cross network`：`cross network` 核心思想是以高效的方式显式应用特征交叉。`cross network` 由交叉层构成，每层的输入输出为：
-$$
-\vec{\mathbf{x}}_{l+1}=\vec{\mathbf{x}}_0\vec{\mathbf{x}}_l^T\vec{\mathbf{w}}_{l+1}+\vec{\mathbf{b}}_{l+1}+\vec{\mathbf{x}}_l=f(\vec{\mathbf{x}}_l,\vec{\mathbf{w}}_{l+1},\vec{\mathbf{b}}_{l+1})+\vec{\mathbf{x}}_l
-$$
-其中$\vec{\mathbf{x}}_l$为第$l$层的输出，$\vec{\mathbf{w}}_{l},\vec{\mathbf{b}}_{l}\in\mathbb{R}^d$为第$l$层的参数。 其中$d=e_1+\cdots+e_K+d_s$。每一层的输出都包含两个部分：该层的输入$\vec{\mathbf{x}}_l$、交叉特征$f$ 。`cross network` 的本质是用$\vec{\mathbf{x}}_0\vec{\mathbf{x}}_l^T$来捕获所有的特征交叉，这种方式避免了存储整个矩阵以及矩阵乘法运算。由于`cross network` 的参数很少，所以这部分网络的容量较小，网络过于简单，模型容易陷入欠拟合。为了加强模型的学习能力，`DCN` 在右侧引入了并行的 `deep `
-
-`deep network`：`deep network` 部分是一个简单的全连接前馈神经网络：
-$$
-\vec{\mathbf{h}}_{l+1}=\sigma(\vec{\mathbf{W}}_{l}\vec{\mathbf{h}}_{l}+\vec{\mathbf{b}}_{l})
-$$
-`DCN` 通过拼接层 `combination layer` 来拼接 `cross network` 和 `deep network` 两个网络的输出向量，然后输出到标准的 `sigmoid` 输出层：
-$$
-\hat{y}=\text{sigmoid}(\mathbf{W}_{\text{logits}}<\vec{\mathbf{x}}_{L1},\vec{\mathbf{h}}_{L2}>+\vec{\mathbf{b}}_{\text{logits}})
-$$
-其中$\hat{y}$为预测的点击概率，$\vec{\mathbf{x}}_{L1}$为 `cross network` 的输出向量，$\vec{\mathbf{h}}_{L2}$为 `deep network` 的输出向量，$\mathbf{W}_{\text{logits}},\vec{\mathbf{b}}_{\text{logits}}$为模型参数。模型的损失函数为带正则化的对数似然函数：
-$$
-\mathcal{L} = -\frac{1}{N}\sum_{i=1}^N\left[y_i\log\hat{y}_i+(1-y_i)\log(1-\hat{y}_i)\right]+\lambda\sum_{l}||\mathbf{W}_l||^2_2
-$$
-`cross network` 可以理解为：多项式逼近 `polynomial approximation`、`FM` 泛化`generalization to FM` 、或者有效投影`efficient projection` 。
-
 ##### `DeepFM`
 
  `DeepFM` 模型结合了 `FM` 的推荐能力和 `DNN` 的特征学习能力，综合利用了低阶交叉特征和高阶交叉特征。其特点有：
@@ -357,11 +75,9 @@ $$
 
 - `Bi-Interaction` 层并没有引入任何额外的模型参数
 - `Bi-Interaction` 层可以在线性时间内有效计算：
-
 $$
 f(\mathcal{V}_{\vec{\mathbf{x}}})=\frac{1}{2}\left[\left(\sum_{i=1}^nx_i\vec{\mathbf{v}}_i\right)^2-\sum_{i=1}^n(x_i\vec{\mathbf{v}}_i)^2\right]
 $$
-
 这些性质意味着 `Bi-Interaction` 层对二阶交叉特征建模的代价很低。另外，`Bi-Interaction` 层也支持求导运算：
 $$
 \frac{\part}{\part \vec{\mathbf{v}}_i}f(\mathcal{V}_{\vec{\mathbf{x}}})=\left(\sum_{i=1}^nx_i\vec{\mathbf{v}}_i\right)x_i-x_i^2\vec{\mathbf{v}}_i
@@ -493,7 +209,6 @@ $$
 ![](../../picture/1/416.png)
 
 卷积、池化操作都是沿着 `embedding` 维度进行，而不是沿着其它方向。原因是：我们希望对特征之间的高阶特征交叉显式建模。根据 `CIN` 网络的基本原理，卷积必须对$\mathbf{Z}^{k+1}$​的 `embedding` 维度进 行。
-
 $$
 \vec{\mathbf{x}}_h^k=\sum_{i=1}^{H_{k-1}}\sum_{j=1}^mW_{i,j}^{k,h}(\vec{\mathbf{x}}_i^{k-1}\odot \vec{\mathbf{x}}_j^0)
 $$
@@ -547,9 +262,9 @@ $$
 大多数传统 `CVR` 模型是上图左侧所示的 `DNN` 模型。传统 `CVR` 模型直接估计$p(z=1|y=1,\vec{\mathbf{x}})$，模型训练样本仅包含点击样本：$\mathcal{S}_c=\{(\vec{\mathbf{x}}_1,y_1,z_1|y_1=1),\cdots,(\vec{\mathbf{x}}_M,y_M,z_M|y_M=1)\}$。其中 `M` 为所有点击样本数量，$\mathcal{S}_c\sub\mathcal{S}$。这会带来以下问题：
 
 - `SSB`：设$\mathcal{S}_c$的特征空间为$\mathcal{X}_c$，则 `CVR` 模型近似转化为：
-  $$
+$$
   p(z=1|y=1,\vec{\mathbf{x}};\vec{\mathbf{x}}\in\mathcal{X})\backsimeq q(z=1|\vec{\mathbf{x}};\vec{\mathbf{x}}\in\mathcal{X}_c)
-  $$
+$$
   因此训练期间都是在$\mathcal{X}_c$上训练。而推断期间给定一个特征$\vec{\mathbf{x}}\in\mathcal{X}$，我们需要计算：假设该曝光被点击的条件下其转化率。即计算$q(z=1|\vec{\mathbf{x}};\vec{\mathbf{x}}\in\mathcal{X})$。这里存在两个问题：
 
   - $\mathcal{X}_c$仅仅是$\mathcal{X}$的一个很小的部分，它很容易受到一些随机的噪声点击的影响。因此其分布很不稳定。
@@ -626,7 +341,6 @@ $$
 0,&\text{else}
 \end{array}\right.
 $$
-
 ##### `DIEN`
 
 目前捕获用户兴趣的模型有两个主要缺陷：
@@ -701,23 +415,23 @@ $$
 有多种注意力机制来建模兴趣演化过程。
 
 - `AIGRU` ：最简单直接的方式是采用注意力得分来影响兴趣演化层的输入，这被称作 `AIGRU` 。
-  $$
+$$
   \vec{\mathbf{i}}_t^{\prime}=\vec{\mathbf{h}}_t\times a_t
-  $$
+$$
   但是 `AIGRU` 效果不是很好，因为即使是零输入也可以改变 `GRU` 的隐状态。即：即使相对于目标商品的兴趣较低，也会影响后面兴趣演化过程的学习。
 
 - `AGRU`：通过使用注意力得分来替代 `GRU` 的更新门，并直接更改隐状态：
-  $$
+$$
   \vec{\mathbf{h}}_t^{\prime}=(1-a_t)\times\vec{\mathbf{h}}_{t-1}^{\prime}+a_t\times\tilde{\vec{\mathbf{h}}}_t^{\prime}
-  $$
+$$
   `AGRU` 将注意力机制嵌入到 `GRU` 中，从而降低了兴趣演化过程中与目标商品无关兴趣的影响，克服了 `AIGRU` 的缺陷。
 
 - `AUGRU`：在 `AGRU` 中我们用一个标量$a_t$替代了更新门向量，这会忽略不同维度的差异。因此可以考虑通过注意力得分调整更新门：
-  $$
+$$
   \begin{array}{cc}\tilde{\vec{\mathbf{u}}}_t^{\prime}=a_t\times \vec{\mathbf{u}}_t^{\prime}\\
   \vec{\mathbf{h}}_t^{\prime}=(1-\tilde{\vec{\mathbf{u}}}_t^{\prime})\odot\vec{\mathbf{h}}_t^{\prime}+\tilde{\vec{\mathbf{u}}}_t^{\prime}\odot\tilde{\vec{\mathbf{h}}}_t^{\prime}
   \end{array}
-  $$
+$$
   其中$\vec{\mathbf{u}}_t^{\prime}$为原始更新门。
 
 ##### `DSIN`
