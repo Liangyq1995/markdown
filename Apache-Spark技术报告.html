@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apache Spark 技术报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --bg-card: #24273a;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --accent: #cba6f7;
+      --yellow: #f9e2af;
+      --red: #f38ba8;
+      --teal: #94e2d5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    #toc a.toc-h4 { padding-left: 32px; font-size: 11px; opacity: 0.65; }
+    main { margin-left: 260px; padding: 40px 48px; max-width: 1100px; }
+    h1 { color: var(--heading); font-size: 2em; margin-bottom: 10px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.45em; margin: 2.2em 0 0.7em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--accent); font-size: 1.15em; margin: 1.6em 0 0.5em; }
+    h4 { color: var(--yellow); font-size: 1.02em; margin: 1.2em 0 0.4em; }
+    p { margin: 0.65em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    em { color: var(--yellow); font-style: normal; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.87em; line-height: 1.6; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; color: var(--teal); }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #1a1a2e; border-radius: 8px; padding: 20px; margin: 1.2em 0; text-align: center; border: 1px solid var(--border); }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .info-box { background: #1e2a3a; border: 1px solid #3a6ea8; border-radius: 6px; padding: 12px 16px; margin: 1em 0; }
+    .info-box .info-title { color: var(--heading); font-weight: 600; margin-bottom: 6px; }
+    ul, ol { margin: 0.5em 0 0.5em 1.5em; }
+    li { margin: 0.3em 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1 id="title">Apache Spark 技术报告</h1>
+<p><span class="tag" style="display:inline-block;background:#2a2a3e;border:1px solid #45475a;border-radius:4px;padding:2px 8px;font-size:0.82em;color:#cba6f7;">汇总自 <code>md/note/spark学习</code></span></p>
+
+<blockquote>
+  本报告对《Spark学习》《sparkRDD》《SparkSQL》《pyspark学习》《spark性能优化》五份笔记进行结构化提炼，涵盖部署与工程入门、RDD 编程模型、Spark SQL、PySpark 与 Pandas 集成、性能调优与数据倾斜处理等内容，版式与同目录下 HTML 技术报告保持一致，便于离线阅读与检索。
+</blockquote>
+
+<h2 id="part1">第一部分：概述与运行环境</h2>
+
+<h3 id="p1-1">1.1 Spark 在栈中的位置</h3>
+<p>Apache Spark 是围绕<strong>内存计算</strong>与<strong>统一批流与 SQL 引擎</strong>构建的分布式计算框架。Driver 持有用户程序与 DAGScheduler；Cluster Manager（Standalone、YARN、Kubernetes 等）分配 Executor；Executor 执行 Task 并缓存分区数据。</p>
+
+<pre class="mermaid">
+flowchart LR
+  subgraph Driver
+    D[SparkSession / SparkContext]
+  end
+  subgraph Cluster
+    CM[Cluster Manager]
+    E1[Executor]
+    E2[Executor]
+  end
+  D -->|注册与申请资源| CM
+  CM --> E1
+  CM --> E2
+  E1 -->|Task 结果 / 状态| D
+  E2 -->|Task 结果 / 状态| D
+  style D fill:#1a3a5c,stroke:#89b4fa,color:#cdd6f4
+  style CM fill:#2a1a3e,stroke:#cba6f7,color:#cdd6f4
+</pre>
+
+<h3 id="p1-2">1.2 工程与依赖（Maven 要点）</h3>
+<p>Scala 项目通常引入 <code>spark-core_2.12</code> 等与集群 Spark 版本一致的构件，并配合 <code>scala-maven-plugin</code> 编译；打包上线常用 <code>maven-assembly-plugin</code> 生成带依赖的 fat JAR。笔记中以 Spark 3.0.0 为例，生产环境应以实际集群版本为准。</p>
+
+<h3 id="p1-3">1.3 日志与可观测性</h3>
+<p>默认日志较冗长。可在 <code>resources/log4j.properties</code> 中将根级别设为 <code>ERROR</code>，并对 <code>org.apache.spark</code>、Jetty、Parquet、Hive 元数据等包单独降噪，便于本地与 shell 调试时看清业务输出。</p>
+
+<h3 id="p1-4">1.4 部署模式速览</h3>
+<table>
+  <thead><tr><th>模式</th><th>说明</th><th>监控入口（示例）</th></tr></thead>
+  <tbody>
+    <tr><td><strong>local</strong></td><td>单机线程/进程，适合学习与单元验证</td><td>作业 UI 常见为 <code>:4040</code></td></tr>
+    <tr><td><strong>Standalone</strong></td><td>自带 Master/Worker，需配置 <code>slaves</code>、<code>spark-env.sh</code>（如 <code>SPARK_MASTER_HOST</code>、端口 7077）</td><td>Master UI 常见 <code>:8080</code></td></tr>
+    <tr><td><strong>YARN / K8s</strong></td><td>企业环境常见；Driver 可 client 或 cluster 部署</td><td>YARN RM UI；Spark History Server</td></tr>
+  </tbody>
+</table>
+
+<div class="info-box">
+  <div class="info-title">路径与网络</div>
+  <p>解压路径避免中文与空格；<code>spark-shell</code> 启动后可通过浏览器访问作业 Jobs 页面（笔记中示例为 <code>http://&lt;主机&gt;:4040/jobs/</code>）。</p>
+</div>
+
+<hr>
+
+<h2 id="part2">第二部分：RDD 与核心执行模型</h2>
+
+<h3 id="p2-1">2.1 RDD 是什么</h3>
+<p><strong>RDD</strong>（Resilient Distributed Dataset）是只读、可分区的记录集合，通过<strong>血统（lineage）</strong>容错。RDD 算子整体分为 <strong>Value 型</strong>、<strong>双 Value 型</strong>与 <strong>Key-Value 型</strong>。执行风格接近「装饰器」式链式转换：<strong>转换（Transformation）懒执行</strong>，遇到 <strong>行动（Action）</strong>（如 <code>collect</code>）才触发实际计算；RDD 默认不落盘保存中间结果，与带缓冲的 IO 流类比时需注意分布式语义差异。</p>
+
+<h3 id="p2-2">2.2 创建与读取</h3>
+<ul>
+  <li>并行化集合：<code>SparkContext.parallelize</code> / <code>makeRDD</code></li>
+  <li>外部存储：<code>textFile</code> 等；<strong>本地路径必须在各 Worker 上同样可访问</strong>，否则应使用 HDFS 或共享存储</li>
+</ul>
+
+<h3 id="p2-3">2.3 Transformation 与 Action</h3>
+<p>Transformation 返回新 RDD；Action 将结果送回 Driver 或写外部系统。默认每次 Action 可能从头重算整条血统，故对复用链路应 <code>persist</code> / <code>cache</code>，并可指定存储级别（内存、磁盘、副本等）。</p>
+
+<table>
+  <thead><tr><th>类型</th><th>代表算子</th><th>备注</th></tr></thead>
+  <tbody>
+    <tr><td>窄依赖</td><td><code>map</code>、<code>filter</code>、<code>mapPartitions</code></td><td>无 shuffle 或数据重分布代价低</td></tr>
+    <tr><td>宽依赖 / shuffle</td><td><code>reduceByKey</code>、<code>groupByKey</code>、<code>repartition</code>、<code>join</code></td><td>跨分区拉取数据，成本高，易倾斜</td></tr>
+    <tr><td>Action</td><td><code>collect</code>、<code>reduce</code>、<code>count</code>、<code>saveAsTextFile</code>、<code>foreach</code></td><td><code>collect</code> 会把全量拉回 Driver，慎用大数据集</td></tr>
+  </tbody>
+</table>
+
+<h3 id="p2-4">2.4 向集群传递函数与闭包</h3>
+<ul>
+  <li>推荐：短逻辑用匿名函数；或定义在 <strong>全局单例 object</strong> 的静态方法，避免序列化整个外部类实例</li>
+  <li>在实例方法里引用 <code>this</code> 的字段会捕获整个对象，增大序列化与语义风险；可先拷贝到局部常量再闭包内使用</li>
+  <li>不要在 RDD 算子中依赖「改 Driver 上变量」的副作用计数；应使用 <strong>Accumulator</strong></li>
+  <li><code>rdd.foreach(println)</code> 在集群上输出在 Executor 标准输出，Driver 不一定可见；需要时在 Driver 侧 <code>collect</code> 后再打印（注意数据量）</li>
+</ul>
+
+<h3 id="p2-5">2.5 共享变量</h3>
+<p><strong>广播变量（Broadcast）</strong>：大只读表在各 Executor 一份副本，减少 Driver 到 Task 的重复传输。<strong>累加器（Accumulator）</strong>：仅「可加」的聚合变量，供监控与分布式计数，不应用于业务关键且需强一致的场景替代 reduce。</p>
+
+<pre class="mermaid">
+flowchart TD
+  T[Transformations 懒构建 DAG] --> A[Action 触发]
+  A --> S[Stage 划分 宽依赖为界]
+  S --> Task[Task 调度到 Executor]
+  Task --> R[结果 / Shuffle 写]
+  style T fill:#1a3a2e,stroke:#a6e3a1,color:#cdd6f4
+  style A fill:#2e1a3a,stroke:#cba6f7,color:#cdd6f4
+</pre>
+
+<hr>
+
+<h2 id="part3">第三部分：Spark SQL、DataFrame 与 Dataset</h2>
+
+<h3 id="p3-1">3.1 DataFrame 与 Dataset</h3>
+<p>DataFrame 即带列名与类型的二维表视图（Scala/Java 中为 <code>Dataset[Row]</code>），由 <strong>Catalyst 优化器</strong>生成执行计划，通常比手写 RDD 链更易优化。Dataset 在 DataFrame 上增加<strong>强类型</strong>与编码器（Encoder），适合复杂类型与编译期检查。与 RDD 互转需 <code>import spark.implicits._</code>（<code>spark</code> 为已创建的 <code>SparkSession</code> 变量名）。</p>
+
+<h3 id="p3-2">3.2 入口与临时视图</h3>
+<p>统一入口为 <code>SparkSession.builder().getOrCreate()</code>。临时视图会话级；全局临时视图位于 <code>global_temp</code> 库，需用限定名引用。</p>
+
+<h3 id="p3-3">3.3 Join 类型（SQL/DataFrame API）</h3>
+<table>
+  <thead><tr><th>类型</th><th>语义摘要</th><th>API 关键词示例</th></tr></thead>
+  <tbody>
+    <tr><td>INNER</td><td>默认；仅匹配键两侧都存在</td><td><code>join(df, Seq("id"))</code></td></tr>
+    <tr><td>CROSS</td><td>笛卡尔积，行数乘积级膨胀</td><td><code>crossJoin</code></td></tr>
+    <tr><td>LEFT / RIGHT / FULL OUTER</td><td>保留一侧或两侧未匹配行</td><td><code>"left_outer"</code>、<code>"outer"</code> 等</td></tr>
+    <tr><td>LEFT SEMI</td><td>仅保留左表中「右表存在匹配」的行，不展开右表列</td><td><code>"left_semi"</code> / <code>"semi"</code></td></tr>
+    <tr><td>LEFT ANTI</td><td>保留左表中「右表无匹配」的行</td><td><code>"left_anti"</code> / <code>"anti"</code></td></tr>
+  </tbody>
+</table>
+
+<h3 id="p3-4">3.4 日期时间与比较陷阱</h3>
+<p>应用层应<strong>统一为日期/时间类型</strong>再比较，避免字符串与空串语义混乱。笔记示例：<code>null &lt;= '2022-01-10'</code> 结果为 null；<code>'' &lt;= '2022-01-10'</code> 可能为 true。常用函数包括 <code>current_date</code>、<code>current_timestamp</code>、<code>to_date</code>、<code>to_timestamp</code>、<code>unix_timestamp</code>、<code>from_unixtime</code>、<code>date_add</code>、<code>datediff</code>、<code>trunc</code>、<code>date_trunc</code> 等。</p>
+
+<h3 id="p3-5">3.5 读写、分区与保存模式</h3>
+<p>支持 JSON、CSV、Parquet、ORC 等；可配置分隔符、表头、推断 schema、路径通配 <code>pathGlobFilter</code>、递归目录 <code>recursiveFileLookup</code>。分区表路径可自动解析分区列。保存模式包括 <code>error</code>、<code>append</code>、<code>overwrite</code>、<code>ignore</code>（非原子，覆盖会先删后写）。</p>
+
+<h3 id="p3-6">3.6 性能与自适应（AQE）要点</h3>
+<ul>
+  <li>缓存：<code>dataFrame.cache()</code> / <code>spark.catalog.cacheTable</code>，列式压缩与扫描列裁剪由引擎优化</li>
+  <li>Join Hint：<code>BROADCAST</code>、<code>MERGE</code>、<code>SHUFFLE_HASH</code> 等提示执行策略，但不保证一定采纳</li>
+  <li><strong>AQE</strong>（Spark 3.2+ 默认 umbrella）：运行期统计合并 shuffle 分区、广播小边、处理倾斜 Join 等；相关配置如 <code>spark.sql.adaptive.enabled</code>、<code>spark.sql.adaptive.skewJoin.enabled</code> 等</li>
+</ul>
+
+<h3 id="p3-7">3.7 NULL 语义与聚合</h3>
+<p>比较运算符遇 NULL 多为 UNKNOWN；<code>WHERE</code>/<code>HAVING</code>/<code>JOIN ON</code> 仅「真」为保留。聚合中 NULL 通常被忽略（<code>COUNT(*)</code> 例外）。<code>ORDER BY</code> 默认 NULL 在前，可用 <code>NULLS LAST</code>。集合运算（UNION 等）中行比较对 NULL 采用 null-safe 相等语义。</p>
+
+<h3 id="p3-8">3.8 SQL 与 Hive 运维片段</h3>
+<p>分区表若由已有目录创建，元数据可能未注册分区，可执行 <code>MSCK REPAIR TABLE</code> 或 <code>ALTER TABLE RECOVER PARTITIONS</code>。<code>concat_ws</code> 与 <code>collect_list</code> 场景下若多 mapper/reducer 破坏顺序，需结合 <code>sort_array</code>、补位排序键等技巧稳定输出顺序。</p>
+
+<hr>
+
+<h2 id="part4">第四部分：PySpark、窗口函数与 Pandas 集成</h2>
+
+<h3 id="p4-1">4.1 创建 DataFrame</h3>
+<p><code>SparkSession.createDataFrame</code> 接受 list、Row、Pandas DataFrame、RDD 等；可显式传入 <code>schema</code>，否则采样推断。DataFrame 仍为<strong>懒执行</strong>；多数列操作返回 <code>Column</code> 表达式。</p>
+
+<h3 id="p4-2">4.2 窗口函数（Window）</h3>
+<p>窗口由 <code>Window.partitionBy</code> 与可选 <code>orderBy</code> 定义；每行对应一个 <strong>Frame</strong>。无序窗口在同分区内 Frame 可相同；有序窗口默认 Frame 常包含分区中从首行到当前行的范围（依函数而定）。</p>
+<table>
+  <thead><tr><th>函数族</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>rank</code> / <code>dense_rank</code> / <code>row_number</code></td><td>排名：是否留空位、并列是否连续、是否唯一序号</td></tr>
+    <tr><td><code>ntile</code>、<code>percent_rank</code></td><td>分桶与相对排名</td></tr>
+    <tr><td><code>lag</code> / <code>lead</code></td><td>取前/后若干行的列值</td></tr>
+  </tbody>
+</table>
+<h4>Frame 边界</h4>
+<p><code>rowsBetween</code> 按物理行位移；<code>rangeBetween</code> 按排序列值与当前值的差。常配合 <code>Window.unboundedPreceding</code>、<code>Window.currentRow</code>、<code>Window.unboundedFollowing</code> 表达滑动累计等。</p>
+
+<h3 id="p4-3">4.3 Pandas UDF 与 Arrow</h3>
+<p>开启 <code>spark.sql.execution.arrow.pyspark.enabled</code> 可加速 Spark 与 Pandas 之间的列式转换。<code>pandas_udf</code>（Spark 3.0+ 推荐类型注解）与 <code>mapInPandas</code>、<code>applyInPandas</code>、<code>cogroup().applyInPandas</code> 等 API 便于向量化与复杂分区内逻辑。</p>
+
+<div class="info-box">
+  <div class="info-title">内存与分区</div>
+  <p>笔记实践：<strong>分区过大</strong>时，整分区转为 Pandas DataFrame 可能使 Python 侧内存膨胀数倍，并行多分区易导致 YARN OOM Kill。宜控制分区大小与并发、或先 <code>repartition</code> 再进入 Pandas UDF。</p>
+</div>
+
+<h3 id="p4-4">4.4 经典 UDF 与 SQL 注册</h3>
+<p>可用 <code>@udf</code> 或 <code>udf(lambda, returnType)</code>；在 SQL 中使用需 <code>spark.udf.register</code>。Scalar Pandas UDF 也可注册后在 SQL 中调用。</p>
+
+<hr>
+
+<h2 id="part5">第五部分：性能调优与数据倾斜</h2>
+
+<h3 id="p5-1">5.1 资源与提交参数</h3>
+<p>在资源允许范围内，增加 Executor 数量、每 Executor 核数与内存，可提升并行度与 shuffle 可用内存、减少落盘。典型 <code>spark-submit</code> 含 <code>--num-executors</code>、<code>--executor-memory</code>、<code>--executor-cores</code>、<code>--driver-memory</code>、<code>spark.yarn.executor.memoryOverhead</code> 等。YARN 单容器上限受 <code>yarn.scheduler.maximum-allocation-mb</code> 等约束，需与 <code>executor.memory + overhead</code> 对齐。</p>
+
+<h3 id="p5-2">5.2 并行度与 Spark SQL</h3>
+<p>官方经验：Task 数可为集群总 CPU 核数的约 2～3 倍以减少空转。<code>spark.default.parallelism</code> 主要作用于非 SQL Stage；SQL 类 shuffle 常用 <code>spark.sql.shuffle.partitions</code>（默认 200，大数据量宜调大）。<strong>Spark SQL 自动推断的 stage 并行度若过低</strong>，可在 SQL 读出的 RDD/DataFrame 后接 <code>repartition</code> 提升后续非 SQL Stage 并行度。</p>
+
+<h3 id="p5-3">5.3 RDD 与算子层面</h3>
+<ul>
+  <li>避免重复计算同一血统：对复用分支 <code>cache</code>/<code>persist</code></li>
+  <li>尽早 <code>filter</code> 减少后续数据量</li>
+  <li><code>mapPartitions</code>：按分区一次处理，减少函数调用开销，但单分区数据过大易 OOM</li>
+  <li><strong>reduceByKey</strong> 相对 <code>groupByKey</code> 可在 map 端预聚合，减少 shuffle 量</li>
+  <li><strong>广播大变量</strong>：大表维表等用 Broadcast，减少每个 Task 副本</li>
+  <li><strong>Kryo</strong>：<code>spark.serializer=KryoSerializer</code> 并注册自定义类型，可显著降低序列化开销</li>
+  <li><strong>本地化等待</strong>：<code>spark.locality.wait</code> 在数据局部性与资源利用间折中</li>
+</ul>
+
+<h3 id="p5-4">5.4 Shuffle 调优</h3>
+<table>
+  <thead><tr><th>配置项</th><th>作用方向</th></tr></thead>
+  <tbody>
+    <tr><td><code>spark.shuffle.file.buffer</code></td><td>增大 map 端缓冲，减少溢写次数（默认较小如 32KB 量级）</td></tr>
+    <tr><td><code>spark.reducer.maxSizeInFlight</code></td><td>reduce 端单次拉取缓冲；过大可能 OOM，过小则网络往返增多</td></tr>
+    <tr><td><code>spark.shuffle.io.maxRetries</code> / <code>retryWait</code></td><td>拉取失败重试与间隔；GC 或网络抖动场景可适当加大</td></tr>
+    <tr><td><code>spark.shuffle.sort.bypassMergeThreshold</code></td><td>SortShuffle 下 reduce 分区数小于阈值可走 bypass，减少排序开销（需结合场景）</td></tr>
+  </tbody>
+</table>
+
+<h3 id="p5-5">5.5 JVM 与堆外</h3>
+<p>老版本静态内存模型可调 <code>spark.storage.memoryFraction</code>；统一内存模型下 Storage 与 Execution 可动态借用。超大数据 shuffle 若出现 <code>shuffle file not found</code>、<code>executor lost</code> 等，可增大 <code>spark.yarn.executor.memoryOverhead</code> 与连接超时 <code>spark.core.connection.ack.wait.timeout</code> 等。</p>
+
+<h3 id="p5-6">5.6 数据倾斜：识别与对策</h3>
+<p><strong>倾斜</strong>表现为少数 Task 极慢或反复 OOM，与「全体 Task 都慢」的数据量过大不同。定位：查 shuffle 类算子与 Stage 日志。对策包括：上游 Hive 预聚合、过滤热点 key、提高 reduce 并行度（缓解但非根治）、随机前缀双重聚合、小表 <strong>广播 + map 侧 join</strong>、采样拆分倾斜 key 单独 join、以及 Spark 3 AQE 倾斜 Join 等。</p>
+
+<h3 id="p5-7">5.7 故障排除摘要</h3>
+<ul>
+  <li>reduce 端缓冲过大导致 OOM：适当<strong>减小</strong> <code>spark.reducer.maxSizeInFlight</code>，以性能换稳定</li>
+  <li>GC 导致 shuffle 拉取失败：结合重试与等待参数；优化 JVM 与业务对象分配</li>
+  <li>序列化错误：确保 RDD 元素类型、闭包捕获变量、第三方连接等可序列化或不在闭包中持有不可序列化对象</li>
+  <li>算子返回 NULL 引发下游异常：用占位值 + <code>filter</code> 或显式处理空值</li>
+  <li>YARN client 模式 Driver 在本地，流量与稳定性需单独评估</li>
+</ul>
+
+<hr>
+
+<h2 id="part6">第六部分：配置速查与动态资源</h2>
+
+<h3 id="p6-1">6.1 常用 Spark 配置（节选）</h3>
+<table>
+  <thead><tr><th>配置项</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td><code>spark.master</code> / <code>spark.submit.deployMode</code></td><td>集群 URL；<code>cluster</code> 与 <code>client</code> 的 Driver 位置</td></tr>
+    <tr><td><code>spark.dynamicAllocation.enabled</code></td><td>动态 Executor；生产常配合 external shuffle service</td></tr>
+    <tr><td><code>spark.speculation</code></td><td>推测执行，慢 Task 备份运行；偶发卡顿可尝试</td></tr>
+    <tr><td><code>spark.sql.hive.mergeFiles</code></td><td>合并小文件（Hive 写入场景）</td></tr>
+    <tr><td><code>spark.io.compression.codec</code></td><td>shuffle、广播等压缩编解码器</td></tr>
+    <tr><td><code>spark.memory.fraction</code> / <code>storageFraction</code></td><td>统一内存管理中用户内存与存储占比调优</td></tr>
+    <tr><td><code>spark.driver.maxResultSize</code></td><td>限制 collect 等到 Driver 的结果大小，避免 Driver OOM</td></tr>
+  </tbody>
+</table>
+
+<h3 id="p6-2">6.2 文档来源说明</h3>
+<p>本 HTML 由仓库内 <code>md/note/spark学习/</code> 下 Markdown 笔记提炼重组，不替代官方文档；版本-specific 行为请以当前集群 Spark 版本为准。</p>
+
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+  document.addEventListener('DOMContentLoaded', () => { if (window.hljs) hljs.highlightAll(); });
+
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3, main h4').forEach((h, i) => {
+    if (!h.id) h.id = 'h-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent.replace(/[⭐✅❌]/g, '').trim();
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    if (h.tagName === 'H4') a.classList.add('toc-h4');
+    toc.appendChild(a);
+  });
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector('a[href="#' + e.target.id + '"]');
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-5% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

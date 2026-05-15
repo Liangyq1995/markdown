@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图神经网络 · 学习报告</title>
+<style>
+:root{--bg:#1e1e2e;--nav:#181825;--tx:#cdd6f4;--h:#89b4fa;--a:#89dceb;--b:#45475a;--ac:#cba6f7;--y:#f9e2af;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,sans-serif;line-height:1.74;font-size:15px}
+#toc{position:fixed;inset:0 auto 0 0;width:272px;background:var(--nav);border-right:1px solid var(--b);padding:12px 10px;overflow-y:auto;font-size:11px;z-index:2}
+#toc h2{color:var(--h);font-size:10px;letter-spacing:.08em;margin-bottom:8px}
+#toc ul.toc-root{list-style:none;margin:0;padding:0}
+#toc ul.toc-root>li{margin:0 0 4px}
+#toc ul.toc-sub{list-style:none;margin:2px 0 0;padding:0 0 0 11px;border-left:2px solid var(--b)}
+#toc ul.toc-sub:empty{display:none}
+#toc ul.toc-sub>li{margin:2px 0}
+#toc a{display:block;color:var(--tx);text-decoration:none;padding:4px 6px;border-radius:4px;line-height:1.35;word-break:break-word;white-space:normal}
+#toc a:hover{background:var(--b)}#toc a.active{background:var(--h);color:#1e1e2e;font-weight:600}
+#toc ul.toc-sub a{font-size:10.5px;padding:3px 5px;opacity:.93}
+main{margin-left:288px;padding:22px 26px 72px;max-width:940px}
+h1{color:var(--h);font-size:1.42em}
+h2{color:var(--h);font-size:1.1em;margin:1.35em 0 .35em;border-bottom:1px solid var(--b);padding-bottom:3px}
+h3{color:var(--ac);font-size:1.02em;margin:1em 0 .25em}
+p{margin:.48em 0}
+ul{margin:.4em 0 .4em 1.2em}li{margin:.2em 0}
+.mjx{margin:.65em 0;padding:16px 18px;background:#1a1a28;border:1px solid var(--b);border-radius:6px;overflow-x:auto;font-size:.9em;text-align:center;line-height:1.55}
+.mjx mjx-container{display:inline-block!important;text-align:left;max-width:100%}
+.k{color:var(--y);font-size:.9em;margin:.35em 0}
+img{max-width:100%;display:block;margin:.55em 0;border-radius:4px;border:1px solid var(--b)}
+a{color:var(--a)}
+hr{border:none;border-top:1px solid var(--b);margin:1.1em 0}
+</style>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$']],packages:{'[+]':['ams']}},options:{skipHtmlTags:['script','noscript','style','textarea']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2><ul id="toc-list" class="toc-root"></ul></nav>
+<main>
+
+<h1>图神经网络 · 学习报告</h1>
+
+<h2 id="g0">〇、源文件与主线</h2>
+<p>《图模型.md》：离散结构、存储、寻路/中心性/社群等算法动机。《概率图模型.md》：有向/无向联合分解、推断、学习（含隐变量时 ELBO）。本页按「结构数据 \(\rightarrow\) PGM 表示 \(\rightarrow\) 条件随机场 \(\rightarrow\) 推断/学习难点 \(\rightarrow\) 与 GNN 对应」重排，并对照公式校验；原 md 中个别括号或 \(\mathcal{C}\) 漏写处已按标准记法补全。</p>
+
+<h2 id="g1">一、图、子图与存储</h2>
+<p>\(\mathcal{G}=(V,E)\)：度、路径、直径、连通分支；有向图入/出度。邻接矩阵便于 \(O(1)\) 查边、\(O(|V|^2)\) 空间；邻接表适合稀疏图。有向图可用逆邻接表或十字链表合并正向与反向边表。</p>
+<h3 id="g1a">从图抽特征的三类思路</h3>
+<p>节点属性、局部结构统计（度分布、三角形数等）、以及通过学习得到的节点嵌入；下游寻路、中心性、社群检测与推荐/风控场景对应（图模型.md）。</p>
+
+<h2 id="g2">二、PGM 三问题</h2>
+<p><strong>表示</strong>：因子与条件独立结构。<strong>推断</strong>：\(p(\mathbf{q}\mid\mathbf{e})\) 常写为边缘比，分母含对隐变量求和/积分。<strong>学习</strong>：结构 + 参数；笔记侧重给定结构的最大似然 / 伪似然。</p>
+<img src="../../picture/29.png" alt="概率图模型（与笔记路径一致）">
+
+<h2 id="g3">三、贝叶斯网络与局部马尔可夫</h2>
+<p>DAG 因子分解；三节点链上四种 d-分离情形（共因、共果等）决定条件独立。Sigmoid 信念网络对父节点集合用 logistic 条件概率。</p>
+<div class="mjx">
+$$p(\mathbf{x})=\prod_{k=1}^{K} p\bigl(x_k\mid\mathbf{x}_{\pi_k}\bigr),\qquad
+P\bigl(X_k{=}1\mid\mathbf{x}_{\pi_k},\theta\bigr)=\sigma\Bigl(\theta_0+\sum_{x_i\in\mathbf{x}_{\pi_k}}\theta_i x_i\Bigr)$$
+</div>
+
+<h2 id="g4">四、朴素贝叶斯与 HMM 链式分解</h2>
+<div class="mjx">
+$$\begin{aligned}
+p(y\mid\mathbf{x},\theta)&\propto p(y)\prod_{j=1}^d p(x_j\mid y,\theta), &
+p(\mathbf{x},\mathbf{y})&=\prod_{t=1}^{T} p\bigl(y_t\mid y_{t-1}\bigr)\,p\bigl(x_t\mid y_t\bigr)
+\end{aligned}$$
+</div>
+<p class="k">HMM 与统计学习笔记《13隐马尔可夫模型》同一套 \(\alpha,\beta,\gamma\) 记号；此处只列联合分解，前向–后向见下一节。</p>
+
+<h2 id="g5">五、马尔可夫随机场与玻尔兹曼形式</h2>
+<p>局部马尔可夫：\(p(x_k\mid\mathbf{x}_{-k})=p(x_k\mid\mathbf{x}_{N(k)})\)。正分布下 Hammersley–Clifford：联合为（正）团势乘积。取 \(\phi_c=\exp(-E_c)\) 得指数族/玻尔兹曼写法，配分函数 \(Z\) 对归一化负责。</p>
+<div class="mjx">
+$$p(\mathbf{x})=\frac{1}{Z}\prod_{c\in\mathcal{C}}\phi_c(\mathbf{x}_c),\qquad Z=\sum_{\mathbf{x}\in\mathcal{X}}\prod_{c\in\mathcal{C}}\phi_c(\mathbf{x}_c)$$
+</div>
+
+<h2 id="g6">六、对数线性模型与条件随机场</h2>
+<p>无向对数线性：\(\log p(\mathbf{x}\mid\theta)=\sum_{c\in\mathcal{C}}\theta_c^\top f_c(\mathbf{x}_c)-\log Z(\theta)\)。条件最大熵 / 线性链 CRF 将 \(\mathbf{x}\) 作为条件，对 \(\mathbf{y}\) 因子分解（概率图模型.md）。</p>
+<div class="mjx">
+$$\begin{aligned}
+p(\mathbf{y}\mid\mathbf{x},\theta)&=\frac{1}{Z(\mathbf{x},\theta)}\exp\Bigl(\sum_{c\in\mathcal{C}}\theta_c^\top f_c(\mathbf{x},\mathbf{y}_c)\Bigr),\\
+p(\mathbf{y}\mid\mathbf{x},\theta)&=\frac{1}{Z(\mathbf{x},\theta)}\exp\Bigl(\sum_{t=1}^{T}\theta_1^\top f_1(\mathbf{x},y_t)+\sum_{t=1}^{T-1}\theta_2^\top f_2(\mathbf{x},y_t,y_{t+1})\Bigr)
+\end{aligned}$$
+</div>
+<img src="../../picture/30.png" alt="链式 CRF（与笔记路径一致）">
+
+<h2 id="g7">七、推断：后验与配分困难</h2>
+<p>观测 \(\mathbf{e}\)，查询 \(\mathbf{q}\)，其余 \(\mathbf{z}\)。贝叶斯公式给出 \(p(\mathbf{q}\mid\mathbf{e})\propto\sum_{\mathbf{z}}p(\mathbf{q},\mathbf{e},\mathbf{z})\)。无向模型中 \(Z\) 与边际常使精确推断指数难，实用上依赖变分、BP（树/稀疏图）、采样（MCMC）。</p>
+<p class="k">原 md 推断式一行中分式括号曾缺闭合，阅读时请以「分子对 \(\mathbf{z}\) 求和、分母对 \(\mathbf{q},\mathbf{z}\) 求和」理解。</p>
+
+<h2 id="g8">八、学习：有向分解似然与无向梯度</h2>
+<p>有向且全观测：对数似然按结点分解，可分开最大化各 \(p(x_k\mid\mathbf{x}_{\pi_k})\)。无向对数线性：梯度为经验特征期望减模型期望 \(\mathbb{E}_{\mathbf{x}\sim p(\cdot\mid\theta)}[f_c]\)（与 概率图模型.md 推导同构）。含隐变量时回到 EM / 对比散度等近似。</p>
+<div class="mjx">
+$$\frac{\partial}{\partial\theta_c}\Bigl(\frac{1}{N}\sum_{i=1}^N\sum_{c}\theta_c^\top f_c(\mathbf{x}_c^{(i)})-\log Z(\theta)\Bigr)
+=\frac{1}{N}\sum_{i=1}^N f_c(\mathbf{x}_c^{(i)})-\mathbb{E}_{\mathbf{x}\sim p(\mathbf{x}\mid\theta)}[f_c(\mathbf{x}_c)]$$
+</div>
+
+<h2 id="g9">九、玻尔兹曼机能量（与深度信念网衔接）</h2>
+<p>全连接二值 BM：能量 \(E(\mathbf{x})=-(\sum_{i<j}w_{ij}x_ix_j+\sum_i b_ix_i)\)，联合 \(p(\mathbf{x})\propto e^{-E(\mathbf{x})/T}\)。推断与学习常用 MCMC；与「随机神经网络」视角及 RBM/DBN 笔记同脉（概率图模型.md 末章）。</p>
+<div class="mjx">
+$$p(\mathbf{x})=\frac{1}{Z}\exp\Bigl(-\frac{E(\mathbf{x})}{T}\Bigr),\qquad
+E(\mathbf{x})=-\Bigl(\sum_{i<j}w_{ij}x_ix_j+\sum_i b_ix_i\Bigr)$$
+</div>
+<img src="../../picture/40.png" alt="玻尔兹曼机示意（与笔记路径一致）">
+
+<h2 id="g10">十、与图神经网络（消息传递）的对应</h2>
+<p>第 \(l\) 层常见形式：聚合邻居 \(\mathbf{h}_i^{(l)}=\sigma\bigl(\mathbf{W}^{(l)}\mathrm{AGG}\{\mathbf{h}_j^{(l-1)}:j\in\mathcal{N}(i)\cup\{i\}\}\bigr)\)。有向条件 \(p(x_k\mid\pi_k)\) 与无向团势 \(\phi_c\) 都规定了「谁向谁传信息」；GNN 用可学习 \(\mathbf{W}\) 与 AGG 替代手工因子，但推断困难（尤其是配分）仍需 PGM 工具链。</p>
+
+</main>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  var list=document.getElementById('toc-list');
+  var currentSub=null;
+  document.querySelectorAll('main h2,main h3').forEach(function(el,i){
+    if(!el.id)el.id='g'+i;
+    var label=el.textContent.replace(/\s+/g,' ').trim();
+    var a=document.createElement('a');a.href='#'+el.id;a.textContent=label;a.title=label;
+    if(el.tagName==='H2'){
+      var li=document.createElement('li');li.appendChild(a);
+      currentSub=document.createElement('ul');currentSub.className='toc-sub';
+      li.appendChild(currentSub);list.appendChild(li);
+    }else{var li2=document.createElement('li');li2.appendChild(a);(currentSub||list).appendChild(li2);}
+  });
+  var o=new IntersectionObserver(function(es){es.forEach(function(e){
+    if(!e.isIntersecting)return;var x=list.querySelector('a[href="#'+e.target.id+'"]');if(!x)return;
+    list.querySelectorAll('a.active').forEach(function(n){n.classList.remove('active');});x.classList.add('active');
+  });},{rootMargin:'-10% 0 -75% 0',threshold:[0,0.05,0.2]});
+  document.querySelectorAll('main h2,main h3').forEach(function(el){o.observe(el);});
+});
+</script>
+</body>
+</html>

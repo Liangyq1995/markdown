@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>统计学习 · 学习报告</title>
+<style>
+:root{--bg:#1e1e2e;--nav:#181825;--tx:#cdd6f4;--h:#89b4fa;--a:#89dceb;--b:#45475a;--ac:#cba6f7;--y:#f9e2af;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:system-ui,sans-serif;line-height:1.74;font-size:15px}
+#toc{position:fixed;inset:0 auto 0 0;width:272px;background:var(--nav);border-right:1px solid var(--b);padding:12px 10px;overflow-y:auto;font-size:11px;z-index:2}
+#toc h2{color:var(--h);font-size:10px;letter-spacing:.08em;margin-bottom:8px}
+#toc ul.toc-root{list-style:none;margin:0;padding:0}
+#toc ul.toc-root>li{margin:0 0 4px}
+#toc ul.toc-sub{list-style:none;margin:2px 0 0;padding:0 0 0 11px;border-left:2px solid var(--b)}
+#toc ul.toc-sub:empty{display:none}
+#toc ul.toc-sub>li{margin:2px 0}
+#toc a{display:block;color:var(--tx);text-decoration:none;padding:4px 6px;border-radius:4px;line-height:1.35;word-break:break-word;white-space:normal}
+#toc a:hover{background:var(--b)}#toc a.active{background:var(--h);color:#1e1e2e;font-weight:600}
+#toc ul.toc-sub a{font-size:10.5px;padding:3px 5px;opacity:.93}
+main{margin-left:288px;padding:22px 26px 72px;max-width:940px}
+h1{color:var(--h);font-size:1.42em}
+h2{color:var(--h);font-size:1.1em;margin:1.35em 0 .35em;border-bottom:1px solid var(--b);padding-bottom:3px}
+h3{color:var(--ac);font-size:1.02em;margin:1em 0 .25em}
+p{margin:.48em 0}
+ul{margin:.4em 0 .4em 1.2em}li{margin:.2em 0}
+.mjx{margin:.65em 0;padding:16px 18px;background:#1a1a28;border:1px solid var(--b);border-radius:6px;overflow-x:auto;font-size:.9em;text-align:center;line-height:1.55}
+.mjx mjx-container{display:inline-block!important;text-align:left;max-width:100%}
+.k{color:var(--y);font-size:.9em;margin:.35em 0}
+img{max-width:100%;display:block;margin:.55em 0;border-radius:4px;border:1px solid var(--b)}
+a{color:var(--a)}
+hr{border:none;border-top:1px solid var(--b);margin:1.1em 0}
+</style>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$']],packages:{'[+]':['ams']}},options:{skipHtmlTags:['script','noscript','style','textarea']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2><ul id="toc-list" class="toc-root"></ul></nav>
+<main>
+
+<h1>统计学习 · 学习报告</h1>
+
+<h2 id="t0">〇、源笔记与叙述顺序</h2>
+<p>对照目录内 <code>01</code>～<code>14</code> 共十二份笔记重排：<strong>监督框架与损失</strong>（01）\(\rightarrow\) <strong>线性/广义线性</strong>（02）\(\rightarrow\) <strong>SVM</strong>（03）\(\rightarrow\) <strong>贝叶斯与朴素贝叶斯</strong>（04）\(\rightarrow\) <strong>树与提升</strong>（07）\(\rightarrow\) <strong>集成</strong>（06）\(\rightarrow\) <strong>评估与偏差–方差</strong>（08）\(\rightarrow\) <strong>聚类</strong>（11）\(\rightarrow\) <strong>降维</strong>（10）\(\rightarrow\) <strong>半监督</strong>（12）\(\rightarrow\) <strong>HMM</strong>（13）\(\rightarrow\) <strong>EM</strong>（14）。公式与记号以通行写法为准；若与某页 md 印刷式略有出入，以数学等价为准。</p>
+<img src="../../picture/1.png" alt="三要素示意（与 01 笔记路径一致）">
+
+<h2 id="t1">一、任务划分、NFL 与监督学习对象</h2>
+<p>监督 / 无监督 / 半监督 / 强化四类任务与「没有免费午餐」：比较算法必须限定问题类。监督学习假设 \((\vec{\mathbf{x}},y)\sim p(\vec{\mathbf{x}},y)\)，训练与测试 i.i.d.；模型可为判别式 \(p(y\mid\vec{\mathbf{x}})\) 或生成式先学 \(p(\vec{\mathbf{x}},y)\) 再归一化得条件分布。</p>
+<div class="mjx">
+$$\begin{aligned}
+p(y\mid\vec{\mathbf{x}})&=\frac{p(\vec{\mathbf{x}},y)}{p(\vec{\mathbf{x}})} \quad\text{（生成式）},\qquad
+\hat{y}=\operatorname*{arg\,max}_y\,p(y\mid\vec{\mathbf{x}})\ \text{或}\ \operatorname*{arg\,max}_y f(\vec{\mathbf{x}})
+\end{aligned}$$
+</div>
+
+<h2 id="t2">二、三要素、经验风险与典型损失</h2>
+<p><strong>模型</strong>给出假设空间 \(\mathcal{F}\)（由 \(\vec{\theta}\) 参数化）；<strong>策略</strong>选损失 \(L(\tilde{y},\hat{y})\) 与经验风险 \(\hat R\)；<strong>算法</strong>做数值优化。以下损失与《01机器学习简介》一致。</p>
+<div class="mjx">
+$$\begin{aligned}
+\hat R(f)&=\frac{1}{N}\sum_{i=1}^N L\bigl(\tilde{y}_i,f(\vec{\mathbf{x}}_i)\bigr), &
+L_{\mathrm{MSE}}&=\tfrac{1}{2}(\tilde{y}-\hat{y})^2,\quad L_{\mathrm{MAE}}=|\tilde{y}-\hat{y}| \\[0.45em]
+L_{\delta}(\tilde{y},\hat{y})&=\begin{cases}\tfrac{1}{2}(\tilde{y}-\hat{y})^2,&|\tilde{y}-\hat{y}|\le\delta\\ \delta|\tilde{y}-\hat{y}|-\tfrac{1}{2}\delta^2,&\text{否则}\end{cases}
+&\text{（Huber）}
+\end{aligned}$$
+</div>
+<p class="k">高斯噪声假设下最小化 MSE 等价于极大似然；拉普拉斯噪声对应 MAE。Huber 在 \(|e|\le\delta\) 内像 MSE、远处像 MAE，兼顾可导与抗离群。</p>
+
+<h2 id="t3">三、线性回归、闭式解与逻辑回归</h2>
+<p>线性模型 \(f(\vec{\mathbf{x}})=\vec{\mathbf{w}}^\top\vec{\mathbf{x}}+b\)。平方损失下 \((\vec{\mathbf{w}}^*,b^*)=\arg\min\sum_i(\vec{\mathbf{w}}^\top\vec{\mathbf{x}}_i+b-\tilde{y}_i)^2\)。若 \(\mathbf{X}^\top\mathbf{X}\) 满秩，\(\vec{\mathbf{w}}^*=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\vec{\mathbf{y}}\)（与 02 笔记一致）。逻辑回归用 sigmoid 将线性得分压入 \((0,1)\) 建模 \(p(y{=}1\mid\vec{\mathbf{x}})\)，对数几率线性于特征。</p>
+<div class="mjx">
+$$\begin{aligned}
+P(y{=}1\mid\vec{\mathbf{x}})&=\sigma\bigl(\vec{\mathbf{w}}^\top\vec{\mathbf{x}}+b\bigr), &
+\ln\frac{P(y{=}1\mid\vec{\mathbf{x}})}{P(y{=}0\mid\vec{\mathbf{x}})}&=\vec{\mathbf{w}}^\top\vec{\mathbf{x}}+b
+\end{aligned}$$
+</div>
+
+<h2 id="t4">四、支持向量机：几何间隔与凸二次规划</h2>
+<p>线性可分 SVM 最大化最小几何间隔；取函数间隔为 1 得经典凸形式。软间隔引入松弛 \(\xi_i\) 与惩罚 \(C\)（笔记 03）。对偶后核技巧处理非线性。</p>
+<div class="mjx">
+$$\begin{aligned}
+&\min_{\vec{\mathbf{w}},b}\ \tfrac{1}{2}\|\vec{\mathbf{w}}\|_2^2
+&&\text{s.t.}\ \ \tilde{y}_i(\vec{\mathbf{w}}^\top\vec{\mathbf{x}}_i+b)\ge 1 \\[0.4em]
+&L(\vec{\mathbf{w}},b,\vec{\alpha})=\tfrac{1}{2}\|\vec{\mathbf{w}}\|_2^2-\sum_i\alpha_i\bigl[\tilde{y}_i(\vec{\mathbf{w}}^\top\vec{\mathbf{x}}_i+b)-1\bigr]
+&&\Rightarrow\ \vec{\mathbf{w}}=\sum_i\alpha_i\tilde{y}_i\vec{\mathbf{x}}_i
+\end{aligned}$$
+</div>
+
+<h2 id="t5">五、朴素贝叶斯与拉普拉斯平滑</h2>
+<p>条件独立 \(p(\vec{\mathbf{x}}\mid y)=\prod_j p(x_j\mid y)\)。分母为对所有类的归一化。期望风险在 0-1 损失下等价于后验最大化。计数为 0 时用拉普拉斯（\(\lambda{=}1\)）平滑条件与先验（与 04 笔记式同构）。</p>
+<div class="mjx">
+$$\begin{aligned}
+p(y\mid\vec{\mathbf{x}})&\propto p(y)\prod_{j=1}^n p(x_j\mid y), &
+p_\lambda(x_j{=}a_{j,l}\mid y{=}c_k)&=\frac{N_{j,l,k}+\lambda}{N_{y=c_k}+s_j\lambda}
+\end{aligned}$$
+</div>
+
+<h2 id="t6">六、决策树：经验熵、条件熵与信息增益比</h2>
+<p>以划分减小不确定性；信息增益 \(g(\mathbb{D},A)=H(\mathbb{D})-H(\mathbb{D}\mid A)\)。多取值特征易偏置，用增益比 \(g_R=g/H_A(\mathbb{D})\) 抑制（07）。</p>
+<div class="mjx">
+$$\begin{aligned}
+H(\mathbb{D})&=-\sum_{k=1}^K\frac{N_k}{N}\log\frac{N_k}{N}, &
+H(\mathbb{D}\mid A)&=\sum_{i=1}^{n_A}\frac{N_{a_i}}{N}\Bigl[-\sum_{k=1}^K\frac{N_{a_i,k}}{N_{a_i}}\log\frac{N_{a_i,k}}{N_{a_i}}\Bigr] \\[0.35em]
+g_R(\mathbb{D},A)&=\frac{H(\mathbb{D})-H(\mathbb{D}\mid A)}{H_A(\mathbb{D})}
+\end{aligned}$$
+</div>
+
+<h2 id="t7">七、集成学习：Boosting、Bagging 与随机森林</h2>
+<p><strong>Boosting</strong>（AdaBoost）：指数损失 \(e^{-\tilde{y}f(\vec{\mathbf{x}})}\)，前向分步加性模型；错分样本权加重。<strong>Bagging</strong>：bootstrap 子集训练多个基学习器，分类投票、回归平均；方差主导时有效。<strong>随机森林</strong>：Bagging + 结点随机子特征（常取 \(k\approx\log_2 n\)）。</p>
+<div class="mjx">
+$$\begin{aligned}
+H(\vec{\mathbf{x}})&=\operatorname{sign}\Bigl(\sum_{m=1}^M\alpha_m h_m(\vec{\mathbf{x}})\Bigr), &
+L(\tilde{y},f)&=e^{-\tilde{y}f(\vec{\mathbf{x}})}
+\end{aligned}$$
+</div>
+
+<h2 id="t8">八、偏差–方差、诊断与极大似然</h2>
+<p>与《08模型评估》：高偏差 \(\approx\) 欠拟合；高方差 \(\approx\) 过拟合。点估计 \(\hat\theta_m\) 的偏差 \(\mathbb{E}[\hat\theta_m]-\theta\)；分解式给出 \((\text{bias})^2+\text{variance}\) 对泛化误差的贡献。MLE：\(\theta_{\mathrm{ML}}=\arg\max_\theta\sum_i\log p_{\mathrm{model}}(\vec{\mathbf{x}}_i;\theta)\)。</p>
+<div class="mjx">
+$$\mathbb{E}_{\mathcal{D}}\bigl[(f_{\mathcal{D}}(\mathbf{x})-f^*(\mathbf{x}))^2\bigr]
+=\underbrace{\bigl(\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}(\mathbf{x})]-f^*(\mathbf{x})\bigr)^2}_{\text{偏差}^2}
++\underbrace{\mathbb{E}_{\mathcal{D}}\bigl[(f_{\mathcal{D}}(\mathbf{x})-\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}(\mathbf{x})])^2\bigr]}_{\text{方差}}$$
+</div>
+
+<h2 id="t9">九、聚类：\(k\)-means 目标与外部指标</h2>
+<p>\(k\)-means 最小化簇内平方和；迭代_assign–update_ 收敛到局部极小。外部指标 Jaccard、FM、Rand、ARI 等基于样本对 \(SS,SD,DS,DD\) 计数（11）。</p>
+<div class="mjx">
+$$\min_{\mathcal{C}}\ \sum_{k=1}^K\sum_{\vec{\mathbf{x}}_i\in\mathbb{C}_k}\bigl\|\vec{\mathbf{x}}_i-\vec{\mu}_k\bigr\|_2^2,\qquad
+\vec{\mu}_k=\frac{1}{|\mathbb{C}_k|}\sum_{\vec{\mathbf{x}}_i\in\mathbb{C}_k}\vec{\mathbf{x}}_i$$
+</div>
+
+<h2 id="t10">十、主成分分析（与 10 笔记目标一致）</h2>
+<p>样本中心化后，PCA 求正交 \(\mathbf{W}\in\mathbb{R}^{n\times d}\) 使投影方差最大或等价地最小化重构误差。标准结论：列向量为协方差阵 \(\mathbf{S}=\frac{1}{N}\mathbf{X}^\top\mathbf{X}\)（中心化后）的前 \(d\) 个特征向量；亦等价 \(\mathbf{W}^*=\arg\max_{\mathbf{W}^\top\mathbf{W}=\mathbf{I}}\operatorname{tr}(\mathbf{W}^\top\mathbf{X}^\top\mathbf{X}\mathbf{W})\)。</p>
+<p class="k">原 md 中个别矩阵块在转写时出现缺项，本页采用上述通行 PCA 目标，与教材推导一致。</p>
+
+<h2 id="t11">十一、半监督：假设与图上的能量</h2>
+<p>少量 \(\mathbb{D}_l\) 与大量 \(\mathbb{D}_u\)。<strong>聚类假设</strong>：同簇同类；<strong>流形假设</strong>：相近输入相似输出。图半监督中亲和矩阵常取高斯核 \(w_{ij}=\exp(-\|\vec{x}_i-\vec{x}_j\|^2/(2\sigma^2))\)（\(i\neq j\)），能量 \(E(f)=\vec{\mathbf{f}}^\top(\mathbf{D}-\mathbf{W})\vec{\mathbf{f}}\)，\(\mathbf{L}=\mathbf{D}-\mathbf{W}\) 为图拉普拉斯（12）。</p>
+<div class="mjx">
+$$E(f)=\frac{1}{2}\sum_{i,j}w_{ij}\bigl(f(\vec{\mathbf{x}}_i)-f(\vec{\mathbf{x}}_j)\bigr)^2=\vec{\mathbf{f}}^\top(\mathbf{D}-\mathbf{W})\vec{\mathbf{f}}$$
+</div>
+
+<h2 id="t12">十二、隐马尔可夫模型：三问题与前向</h2>
+<p>参数 \(\lambda=(\mathbf{A},\mathbf{B},\vec{\pi})\)。齐次马尔可夫链 + 观测仅依赖当前状态。三问题：概率计算、学习（Baum–Welch）、解码（Viterbi）。前向概率 \(\alpha_t(i)=P(o_1,\ldots,o_t,i_t=i\mid\lambda)\) 递推（13）。</p>
+<div class="mjx">
+$$\begin{aligned}
+\alpha_{t+1}(i)&=\Bigl[\sum_{j=1}^Q\alpha_t(j)\,a_{j,i}\Bigr]\,b_i(o_{t+1}), &
+P(\mathbf{O}\mid\lambda)&=\sum_{j=1}^Q\alpha_T(j)
+\end{aligned}$$
+</div>
+
+<h2 id="t13">十三、EM：边际似然难与 M 步</h2>
+<p>含隐变量 \(Z\) 时 \(\log p(\mathbb{Y};\theta)=\sum_i\log\sum_z p(y_i,z;\theta)\)。Jensen 给出 ELBO；迭代 E 步算 \(q(z)=p(z\mid y,\theta^{(t)})\)，M 步最大化完全数据期望对数似然（14）。</p>
+<div class="mjx">
+$$\theta^{(t+1)}=\operatorname*{arg\,max}_\theta\sum_{j}\sum_{z}P\bigl(z\mid y_j;\theta^{(t)}\bigr)\,\log p\bigl(y_j,z;\theta\bigr)$$
+</div>
+
+<h2 id="t14">十四、延伸阅读</h2>
+<ul>
+<li><a href="https://hastie.su.stanford.edu/ElemStatLearn/">The Elements of Statistical Learning</a></li>
+<li><a href="https://cs229.stanford.edu/syllabus-new.html">Stanford CS229</a></li>
+</ul>
+
+</main>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+  var list=document.getElementById('toc-list');
+  var currentSub=null;
+  document.querySelectorAll('main h2,main h3').forEach(function(el,i){
+    if(!el.id)el.id='t'+i;
+    var label=el.textContent.replace(/\s+/g,' ').trim();
+    var a=document.createElement('a');a.href='#'+el.id;a.textContent=label;a.title=label;
+    if(el.tagName==='H2'){
+      var li=document.createElement('li');li.appendChild(a);
+      currentSub=document.createElement('ul');currentSub.className='toc-sub';
+      li.appendChild(currentSub);list.appendChild(li);
+    }else{var li2=document.createElement('li');li2.appendChild(a);(currentSub||list).appendChild(li2);}
+  });
+  var o=new IntersectionObserver(function(es){es.forEach(function(e){
+    if(!e.isIntersecting)return;var x=list.querySelector('a[href="#'+e.target.id+'"]');if(!x)return;
+    list.querySelectorAll('a.active').forEach(function(n){n.classList.remove('active');});x.classList.add('active');
+  });},{rootMargin:'-10% 0 -75% 0',threshold:[0,0.05,0.2]});
+  document.querySelectorAll('main h2,main h3').forEach(function(el){o.observe(el);});
+});
+</script>
+</body>
+</html>
