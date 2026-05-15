@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第3章 大语言模型资源 | 大语言模型</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}
+.timeline-wrap{overflow-x:auto;margin:1em 0;}
+.timeline{display:flex;gap:0;min-width:900px;}
+.tl-col{flex:1;display:flex;flex-direction:column;}
+.tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 4px;font-size:.85em;border-radius:6px 6px 0 0;}
+.tl-body{flex:1;padding:10px 6px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px;}
+.tl-item{background:#313244;border-radius:5px;padding:6px 8px;margin-bottom:6px;font-size:.82em;line-height:1.5;}
+.tl-item:last-child{margin-bottom:0;}
+.tl-tag{display:inline-block;font-size:.72em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:3px;background:var(--heading);color:#1e1e2e;}
+.tl-tag.orange{background:#fab387;}.tl-tag.green{background:#a6e3a1;}.tl-tag.purple{background:#cba6f7;}
+.badge{display:inline-block;font-size:.75em;padding:2px 8px;border-radius:10px;font-weight:600;margin:0 3px;}
+.badge-open{background:#1e3a2e;color:#a6e3a1;border:1px solid #a6e3a1;}
+.badge-closed{background:#3a1e2e;color:#f38ba8;border:1px solid #f38ba8;}
+.badge-moe{background:#2e2a1e;color:#f9e2af;border:1px solid #f9e2af;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1em 0;}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin:1em 0;}
+@media(max-width:none){.two-col,.three-col{grid-template-columns:1fr;}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第3章 大语言模型资源</h1>
+<p style="color:#6c7086;font-size:.9em;">《大语言模型》赵鑫等著 · 中国人民大学 AI Box · 第46–70页</p>
+<blockquote>
+由于面临着算力、数据、技术等多重挑战，从头研发或复现大语言模型绝非易事。本章介绍可公开使用的大语言模型研发资源，包括<strong>模型检查点和API</strong>（§3.1）、<strong>预训练数据</strong>（§3.2）、<strong>微调数据</strong>（§3.3）以及<strong>常用代码库</strong>（§3.4）。
+</blockquote>
+
+<hr>
+
+<!-- ==================== 3.1 ==================== -->
+<h2 id="s3-1">3.1 公开可用的模型检查点或API</h2>
+
+<p>大模型预训练对计算资源要求极高，经过预训练的公开模型检查点对推动技术发展至关重要。目前开源社区积累了大量模型检查点，商业公司也提供闭源模型的API接口。</p>
+
+<h3 id="s3-1-1">3.1.1 开源通用大语言模型</h3>
+
+<h4>LLaMA 系列（Meta AI）</h4>
+<div class="tech-card green">
+  <strong>LLaMA（2023.02）</strong> <span class="badge badge-open">开源</span><br>
+  <ul>
+    <li>参数规模：<strong>7B / 13B / 30B / 65B</strong></li>
+    <li>训练数据：超过 <strong>1T tokens</strong>（Common Crawl、GitHub、Wikipedia、Books、ArXiv、StackExchange）</li>
+    <li>硬件：65B 版本在 <strong>2,048 张 A100 (80G)</strong> 上训练约 <strong>21 天</strong></li>
+    <li>关键设计：Pre-Norm（RMSNorm）、SwiGLU 激活函数、RoPE 旋转位置编码</li>
+    <li>意义：13B 版本在多项 NLP 基准上超越 GPT-3 (175B)，成为开源 LLM 事实标准</li>
+  </ul>
+  <br>
+  <strong>LLaMA-2（2023.07）</strong> <span class="badge badge-open">开源可商用</span><br>
+  <ul>
+    <li>参数规模：<strong>7B / 13B / 34B（未开源）/ 70B</strong></li>
+    <li>训练数据：扩充至 <strong>2T tokens</strong></li>
+    <li>上下文长度：从 2,048 翻倍至 <strong>4,096 tokens</strong></li>
+    <li>关键改进：引入<strong>分组查询注意力（GQA）</strong>，显著降低推理时 KV Cache 内存占用</li>
+    <li>Chat 版本：通过完整的 SFT → RLHF 流程对齐，发布 LLaMA-2-Chat（4种规模）</li>
+    <li>硬件：70B 版本使用约 <strong>2,000 张 A100 (80G)</strong></li>
+  </ul>
+</div>
+
+<h4>ChatGLM 系列（清华大学 & 智谱AI）</h4>
+<div class="tech-card blue">
+  <ul>
+    <li>参数规模：<strong>6B</strong>（系列均为6B，部署门槛低）</li>
+    <li>首次发布：2023年5月，已迭代至 ChatGLM-3</li>
+    <li>特色：中英双语对话，GLM 架构（自回归填空目标），在语义/数学/推理/代码/知识多维度评测优异</li>
+    <li>衍生版本：ChatGLM3-6B-Base（基础模型）、ChatGLM3-6B-32K（长文本）、ChatGLM3-6B-128K（超长文本）</li>
+    <li>更大模型：智谱AI 同步研发更强的 <strong>GLM-4</strong></li>
+  </ul>
+</div>
+
+<h4>Falcon（TII，阿布扎比技术创新研究院）</h4>
+<div class="tech-card yellow">
+  <ul>
+    <li>参数规模：<strong>7B / 40B / 180B</strong>（7B/40B 发布于2023.05，180B 发布于2023.09）</li>
+    <li>训练数据：<strong>80%+ 来自 RefinedWeb</strong>（基于 Common Crawl 严格清洗的网页数据集）</li>
+    <li>训练规模：7B 在 384×A100 上用 1.5T tokens；40B 在 384×A100 上用 1T tokens；<strong>180B 在 4,096×A100 上用 3.5T tokens</strong></li>
+    <li>180B 版本是当时参数量最大的开源预训练语言模型</li>
+    <li>同步发布指令微调版本 Falcon Instruct</li>
+  </ul>
+</div>
+
+<h4>Baichuan / Baichuan-2（百川智能）</h4>
+<div class="tech-card purple">
+  <ul>
+    <li><strong>Baichuan（2023.06）</strong>：7B，中英双语，预训练数据 <strong>1.2T tokens</strong>，在中英多个基准取得同尺寸最优</li>
+    <li><strong>Baichuan-2（2023.09）</strong>：7B / 13B，预训练数据扩展至 <strong>2.6T tokens</strong>，硬件：1,024×A800</li>
+    <li>特色：多语言能力和垂域应用潜力（法律、医疗等），提供 SFT + 人类偏好对齐的对话模型</li>
+  </ul>
+</div>
+
+<h4>InternLM / InternLM-2（上海人工智能实验室）</h4>
+<div class="tech-card green">
+  <ul>
+    <li><strong>InternLM（2023.07）</strong>：7B / 20B，20B 达到 LLaMA (70B) 水平，支持数十类插件工具调用</li>
+    <li><strong>InternLM-2（2024.01）</strong>：1.8B / 7B / 20B，推理/代码/数学/对话全面提升</li>
+    <li>完整工具链：InternLM-Train（预训练）、XTuner（低成本微调）、LMDeploy（部署推理）、OpenCompass（评测）、Lagent（智能体）</li>
+    <li>多模态扩展：InternLM-XComposer（多模态）、InternLM-Math（数学）</li>
+  </ul>
+</div>
+
+<h4>Qwen 通义千问（阿里巴巴）</h4>
+<div class="tech-card blue">
+  <ul>
+    <li>首发：2023.08，持续更新</li>
+    <li>参数规模：<strong>0.5B 到 72B</strong>（覆盖多种部署场景）</li>
+    <li>训练数据：14B 版本达 <strong>3T tokens</strong></li>
+    <li>Qwen-1.5 (72B)（2024.02）：在语言理解/推理/数学等测试基准上优于 LLaMA-2 (70B)</li>
+    <li>专项模型：Code-Qwen（代码）、Math-Qwen（数学）、Qwen-VL（多模态）</li>
+  </ul>
+</div>
+
+<h4>Mistral 7B（Mistral AI，法国）</h4>
+<div class="tech-card yellow">
+  <ul>
+    <li>发布：2023.09，参数规模 <strong>7B</strong></li>
+    <li>性能：在评估基准中全面优于 LLaMA-2 (13B) 和 LLaMA (34B)，代码生成接近 Code LLaMA (7B)</li>
+    <li>核心技术：
+      <ul>
+        <li><strong>滑动窗口注意力（SWA）</strong>：在 16K 序列长度、4K 注意力窗口下速度提升 2×</li>
+        <li><strong>分组查询注意力（GQA）</strong>：减少 KV Cache 内存占用</li>
+      </ul>
+    </li>
+    <li>指令版本：Mistral Instruct，在 MT-bench 上优于多数 7B 对话模型</li>
+  </ul>
+</div>
+
+<h4>DeepSeek LLM（幻方科技）</h4>
+<div class="tech-card purple">
+  <ul>
+    <li>发布：2023.11，参数规模 <strong>7B / 67B</strong></li>
+    <li>训练数据：<strong>2T tokens</strong>（中英双语，代码和数学比例更高）</li>
+    <li>性能：67B 在代码/数学/推理任务上超越 LLaMA-2 (70B)</li>
+    <li>专项模型：DeepSeek-Math、DeepSeek-Coder、DeepSeek-VL</li>
+    <li>对话版本：7B 和 67B 均提供对话模型，针对人类价值观对齐</li>
+  </ul>
+</div>
+
+<h4>Mixtral 8×7B（Mistral AI）</h4>
+<div class="tech-card green">
+  <span class="badge badge-moe">MoE 架构</span>
+  <ul>
+    <li>发布：2023.12，<strong>稀疏混合专家（Sparse MoE）</strong>架构，较早公开的 MoE 语言模型</li>
+    <li>总参数：<strong>46.7B</strong>（8 组专家参数），每个 token 每层选择 <strong>Top-2 专家</strong></li>
+    <li>激活参数：<strong>12.9B</strong>，推理成本等同于 12.9B 密集模型</li>
+    <li>上下文：支持 <strong>32K tokens</strong></li>
+    <li>性能：多项基准超越 LLaMA-2 (70B) 和 GPT-3.5，解码速度比 LLaMA-2 (70B) 快 <strong>6×</strong></li>
+    <li>多语言：英/法/意/德/西班牙语</li>
+    <li>指令版本：Mixtral 8×7B Instruct，MT-bench 与 GPT-3.5 相当</li>
+  </ul>
+</div>
+
+<h4>Gemma（谷歌，2024.02）</h4>
+<div class="tech-card blue">
+  <ul>
+    <li>参数规模：<strong>2B / 7B</strong>，纯语言模型，专注英语任务</li>
+    <li>训练数据：2B 版本 <strong>2T tokens</strong>，7B 版本 <strong>6T tokens</strong>（主要英语数据）</li>
+    <li>技术路线与 Gemini 类似，提供 SFT 版本 Gemma IT</li>
+  </ul>
+</div>
+
+<h4>MiniCPM（面壁智能 & 清华大学，2024.02）</h4>
+<div class="tech-card yellow">
+  <ul>
+    <li>参数规模：<strong>2B</strong>，极小参数量高性能</li>
+    <li>训练创新：<strong>模型沙盒实验</strong>——先用小模型广泛实验寻找最优训练设置，再迁移至大模型</li>
+    <li>训练方法：稳定训练 + 退火的两阶段学习，再进行 SFT 和人类偏好对齐</li>
+    <li>系列：MiniCPM-2B-SFT、MiniCPM-2B-DPO、MiniCPM-V（多模态）</li>
+  </ul>
+</div>
+
+<h3 id="s3-1-2">3.1.2 开源模型参数统计总览</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>模型</th><th>发布时间</th><th>最大规模(B)</th><th>IT</th><th>RLHF</th><th>预训练数据</th><th>硬件</th><th>训练时间</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>T5</td><td>2019.10</td><td>11</td><td>-</td><td>-</td><td>1,000B tokens</td><td>1024 TPU v3</td><td>-</td></tr>
+    <tr><td>OPT</td><td>2022.05</td><td>175</td><td>-</td><td>-</td><td>180B tokens</td><td>992 A100(80G)</td><td>-</td></tr>
+    <tr><td>BLOOM</td><td>2022.11</td><td>176</td><td>✓</td><td>-</td><td>366B tokens</td><td>384 A100(80G)</td><td>105天</td></tr>
+    <tr><td><strong>LLaMA</strong></td><td>2023.02</td><td><strong>65</strong></td><td>-</td><td>-</td><td><strong>1,400B tokens</strong></td><td>2048 A100(80G)</td><td>21天</td></tr>
+    <tr><td>Falcon</td><td>2023.06</td><td>180</td><td>-</td><td>-</td><td>3,500B tokens</td><td>4096 A100(40G)</td><td>-</td></tr>
+    <tr><td><strong>LLaMA-2</strong></td><td>2023.07</td><td><strong>70</strong></td><td>✓</td><td>✓</td><td><strong>2,000B tokens</strong></td><td>2000 A100(80G)</td><td>-</td></tr>
+    <tr><td>Baichuan-2</td><td>2023.09</td><td>13</td><td>✓</td><td>✓</td><td>2,600B tokens</td><td>1024 A800</td><td>-</td></tr>
+    <tr><td>QWEN</td><td>2023.09</td><td>14</td><td>✓</td><td>✓</td><td>3,000B tokens</td><td>-</td><td>-</td></tr>
+    <tr><td>Mistral</td><td>2023.09</td><td>7</td><td>✓</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+    <tr><td>Skywork</td><td>2023.10</td><td>13</td><td>-</td><td>-</td><td>3,200B tokens</td><td>512 A800(80G)</td><td>-</td></tr>
+    <tr><td><strong>Mixtral</strong></td><td>2023.12</td><td><strong>47(MoE)</strong></td><td>✓</td><td>-</td><td>-</td><td>-</td><td>-</td></tr>
+    <tr><td>DeepSeek</td><td>2024.01</td><td>67</td><td>✓</td><td>✓</td><td>2,000B tokens</td><td>-</td><td>-</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption style="color:var(--heading);text-align:left;padding:4px 0;font-weight:600;">闭源商业模型</caption>
+  <thead>
+    <tr><th>模型</th><th>发布时间</th><th>规模(B)</th><th>IT</th><th>RLHF</th><th>预训练数据</th><th>硬件</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>GPT-3</td><td>2020.05</td><td>175</td><td>-</td><td>-</td><td>300B tokens</td><td>-</td></tr>
+    <tr><td>Gopher</td><td>2021.12</td><td>280</td><td>-</td><td>-</td><td>300B tokens</td><td>4096 TPU v3</td></tr>
+    <tr><td>Chinchilla</td><td>2022.03</td><td>70</td><td>-</td><td>-</td><td>1,400B tokens</td><td>-</td></tr>
+    <tr><td>PaLM</td><td>2022.04</td><td>540</td><td>-</td><td>-</td><td>780B tokens</td><td>6144 TPU v4</td></tr>
+    <tr><td>InstructGPT</td><td>2022.03</td><td>175</td><td>✓</td><td>✓</td><td>-</td><td>-</td></tr>
+    <tr><td><strong>GPT-4</strong></td><td>2023.03</td><td>-</td><td>✓</td><td>✓</td><td>-</td><td>-</td></tr>
+    <tr><td>PanGu-Σ</td><td>2023.03</td><td>1085</td><td>-</td><td>-</td><td>329B tokens</td><td>512 Ascend 910</td></tr>
+    <tr><td>PaLM-2</td><td>2023.05</td><td>16</td><td>✓</td><td>-</td><td>100B tokens</td><td>-</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-1-3">3.1.3 Mixtral MoE 架构详解</h3>
+
+<p>Mixtral 8×7B 是较早公开发布的稀疏混合专家（Sparse MoE）架构大语言模型，其核心思想是：用更多的参数存储知识，但每次推理只激活一小部分参数。</p>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph "输入层"
+        IN["输入 Token\n序列"]
+    end
+    subgraph "Transformer Block（共32层）"
+        ATT["多头注意力\nGQA"] --> GATE["门控网络\nGating Network\nSoftmax Top-2 路由"]
+        GATE --> E1["专家1\nFFN (7B参数)"]
+        GATE --> E2["专家2\nFFN (7B参数)"]
+        GATE --> E3["专家3~8\n（未激活）"]
+        E1 --> AGG["加权求和\nw1·E1 + w2·E2"]
+        E2 --> AGG
+    end
+    subgraph "输出统计"
+        STAT["总参数: 46.7B\n激活参数: 12.9B\n推理成本 ≈ 12.9B密集模型\n速度: 6× LLaMA-2 70B"]
+    end
+    IN --> ATT
+    AGG --> STAT
+</pre>
+
+<div class="formula-box">
+  <p><strong>MoE 路由公式</strong>：对于输入 token $x$，门控网络选择 Top-K 个专家：</p>
+  $$\text{MoE}(x) = \sum_{i \in \text{TopK}(G(x))} G_i(x) \cdot E_i(x)$$
+  <p>其中 $G(x) = \text{Softmax}(\text{TopK}(x \cdot W_g))$，$W_g$ 是门控权重矩阵，$E_i$ 是第 $i$ 个专家的 FFN。Mixtral 使用 $K=2$，每层从 8 个专家中选 2 个。</p>
+</div>
+
+<h3 id="s3-1-4">3.1.4 LLaMA 衍生生态</h3>
+
+<p>LLaMA 开放权重后，学术界和开源社区基于其进行大量衍生工作，形成了庞大的"LLaMA 家族"。</p>
+
+<pre class="mermaid">
+flowchart TD
+    LLAMA["LLaMA\n(Meta AI, 2023.02)"]
+
+    LLAMA --> ALPACA["Stanford Alpaca\n52K Self-Instruct\n基础指令微调"]
+    LLAMA --> VICUNA["Vicuna\nShareGPT 对话数据\n对话能力接近ChatGPT"]
+    LLAMA --> CLLAMA["Chinese LLaMA\n扩展中文词表\n中文继续预训练"]
+    LLAMA --> GUANACO["Guanaco\nQLoRA 轻量微调\n单GPU可训练"]
+
+    ALPACA --> ALPACA_LORA["AlpacaLoRA\nLoRA复现Alpaca"]
+    ALPACA --> WIZARD["WizardLM\nEvol-Instruct\n复杂指令增强"]
+
+    VICUNA --> LLAVA["LLaVA\nCLIP + Vicuna\n视觉指令微调"]
+    VICUNA --> MINIGPT4["MiniGPT-4\nEVA-CLIP + Vicuna\nQ-Former对齐"]
+    VICUNA --> INSTRUCTBLIP["InstructBLIP\n多任务视觉指令"]
+
+    CLLAMA --> CHINESE_ALPACA["Chinese Alpaca\n中文指令微调"]
+    CLLAMA --> YULAN["YuLan-Chat\n人大AI Box\n中英双语对话"]
+
+    LLAMA --> BENTAO["BenTsao 本草\n医学领域微调"]
+    LLAMA --> LAWGPT["LAWGPT\n法律领域微调"]
+    LLAMA --> GOAT["Goat\n数学领域微调"]
+
+    style LLAMA fill:#1e3a5f,stroke:#89b4fa,color:#cdd6f4
+    style ALPACA fill:#1e3a2e,stroke:#a6e3a1,color:#cdd6f4
+    style VICUNA fill:#1e3a2e,stroke:#a6e3a1,color:#cdd6f4
+    style CLLAMA fill:#2e2a1e,stroke:#f9e2af,color:#cdd6f4
+</pre>
+
+<p>衍生模型按指令类型可分为四类：</p>
+<div class="two-col">
+  <div class="tech-card blue">
+    <h4>基础指令</h4>
+    <ul>
+      <li><strong>Stanford Alpaca</strong>：首个基于 LLaMA-7B 的指令微调模型，使用 Self-Instruct 生成 52K 条指令数据，仅需约 $600 API 费用</li>
+      <li><strong>Vicuna</strong>：使用 ShareGPT 收集的真实用户对话（70K 条）训练，对话质量接近 ChatGPT 的 90%</li>
+    </ul>
+  </div>
+  <div class="tech-card yellow">
+    <h4>中文指令</h4>
+    <ul>
+      <li>LLaMA 原始词表中文覆盖有限（约700个汉字token）</li>
+      <li>扩展词表 → 中文继续预训练 → 中文指令微调</li>
+      <li>代表：Chinese LLaMA、Panda、Open-Chinese-LLaMA、Chinese Alpaca、YuLan-Chat</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <h4>垂域指令</h4>
+    <ul>
+      <li><strong>BenTsao（本草）</strong>：医学领域，中医药知识图谱</li>
+      <li><strong>LAWGPT</strong>：法律领域</li>
+      <li><strong>TaoLi</strong>：教育领域</li>
+      <li><strong>Goat</strong>：数学领域</li>
+      <li><strong>Cornucopia</strong>：金融领域</li>
+    </ul>
+  </div>
+  <div class="tech-card purple">
+    <h4>多模态指令</h4>
+    <ul>
+      <li><strong>LLaVA</strong>：CLIP ViT-L/14 + Vicuna，线性投影层对齐</li>
+      <li><strong>MiniGPT-4</strong>：EVA-CLIP + Vicuna，Q-Former 对齐</li>
+      <li><strong>InstructBLIP</strong>：多任务视觉指令</li>
+      <li><strong>PandaGPT</strong>：ImageBind + Vicuna，支持图像/音频/视频/点云</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="s3-1-5">3.1.5 公共 API 服务（OpenAI）</h3>
+
+<p>闭源模型通过 API 形式调用，无需本地部署即可使用，OpenAI 是最具代表性的提供商。</p>
+
+<h4>语言模型 API</h4>
+<table>
+  <thead>
+    <tr><th>API 接口</th><th>上下文长度</th><th>特点</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>gpt-3.5-turbo</code></td><td>16K tokens</td><td>高性价比，支持开发者微调（提高指令遵循/定制输出格式）</td></tr>
+    <tr><td><code>gpt-4</code></td><td>32K tokens</td><td>基础版，强推理，无视觉</td></tr>
+    <tr><td><code>gpt-4-32k</code></td><td>32K tokens</td><td>扩展上下文版</td></tr>
+    <tr><td><code>gpt-4-vision-preview</code></td><td>128K tokens</td><td>多模态，图像理解</td></tr>
+    <tr><td><code>gpt-4-turbo-preview</code></td><td>128K tokens</td><td>更快速度、更长上下文、更低价格</td></tr>
+  </tbody>
+</table>
+
+<h4>文本嵌入 API</h4>
+<table>
+  <thead>
+    <tr><th>API 接口</th><th>向量维度</th><th>MTEB 平均分</th><th>备注</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>text-embedding-ada-002</code></td><td>1,536</td><td>61.0%</td><td>2022年发布，至今未更新</td></tr>
+    <tr><td><code>text-embedding-3-small</code></td><td>1,536</td><td>62.3%</td><td>更高效，性能提升明显</td></tr>
+    <tr><td><code>text-embedding-3-large</code></td><td>3,072</td><td>64.6%</td><td>三者中性能最佳</td></tr>
+  </tbody>
+</table>
+<p>三个 API 支持的输入长度均为 <strong>8,191 tokens</strong>，可用于聚类、稠密检索、检索增强生成（RAG）等任务。</p>
+
+<hr>
+
+<!-- ==================== 3.2 ==================== -->
+<h2 id="s3-2">3.2 常用的预训练数据集</h2>
+
+<p>大语言模型需要更多、更多元化的训练数据。根据内容类型，预训练语料可分为：<strong>网页</strong>、<strong>书籍</strong>、<strong>维基百科</strong>、<strong>代码</strong>和<strong>混合型</strong>数据集。</p>
+
+<h3 id="s3-2-1">3.2.1 数据集概览</h3>
+
+<table>
+  <thead>
+    <tr><th>语料库</th><th>类型</th><th>大小</th><th>机构</th><th>最近更新</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Common Crawl</td><td>通用网页</td><td>PB级</td><td>Common Crawl</td><td>持续更新</td></tr>
+    <tr><td>C4</td><td>通用网页</td><td>800GB</td><td>Google</td><td>2019.04</td></tr>
+    <tr><td>CC-Stories-R</td><td>通用网页</td><td>31GB</td><td>-</td><td>2019.09</td></tr>
+    <tr><td>CC-NEWS</td><td>通用网页</td><td>78GB</td><td>Facebook</td><td>2019.02</td></tr>
+    <tr><td>REALNEWs</td><td>通用网页</td><td>120GB</td><td>UWashington</td><td>2019.04</td></tr>
+    <tr><td>RedPajama-Data</td><td>通用网页</td><td>100TB</td><td>Together AI</td><td>2023.10</td></tr>
+    <tr><td>RefinedWeb</td><td>通用网页</td><td>1.68TB</td><td>TII</td><td>2023.01</td></tr>
+    <tr><td>WanJuan-CC</td><td>通用网页</td><td>400GB</td><td>上海AI Lab</td><td>2024.02</td></tr>
+    <tr><td>OpenWebText</td><td>通用网页</td><td>38GB</td><td>-</td><td>2023.03</td></tr>
+    <tr><td>ChineseWebText</td><td>中文网页</td><td>1.42TB</td><td>中科院自动化所</td><td>2023.11</td></tr>
+    <tr><td>WanJuan 1.0 Text</td><td>中文网页</td><td>1TB</td><td>上海AI Lab</td><td>2023.08</td></tr>
+    <tr><td>WuDaoCorpora Text</td><td>中文网页</td><td>5TB</td><td>北京智源研究院</td><td>2021.06</td></tr>
+    <tr><td>SkyPile-150B</td><td>中文网页</td><td>620GB</td><td>昆仑万维</td><td>2023.10</td></tr>
+    <tr><td>BookCorpus</td><td>书籍</td><td>5GB</td><td>Toronto & MIT</td><td>2015.12</td></tr>
+    <tr><td>Project Gutenberg</td><td>书籍</td><td>70K 电子书</td><td>UNC</td><td>持续更新</td></tr>
+    <tr><td>arXiv Dataset</td><td>论文</td><td>1.1TB</td><td>Cornell Univ.</td><td>2019.04</td></tr>
+    <tr><td>S2ORC / peS2o</td><td>论文</td><td>136M篇</td><td>Allen AI</td><td>2023.06</td></tr>
+    <tr><td>BigQuery</td><td>代码</td><td>-</td><td>Google</td><td>-</td></tr>
+    <tr><td>The Stack v1.2</td><td>代码</td><td>6.4TB</td><td>BigCode/HuggingFace</td><td>2022.11</td></tr>
+    <tr><td>StarCoder</td><td>代码</td><td>783GB</td><td>BigCode</td><td>2023.05</td></tr>
+    <tr><td>The Pile</td><td>混合</td><td>800GB</td><td>EleutherAI</td><td>2020.12</td></tr>
+    <tr><td>ROOTS</td><td>混合</td><td>1.6TB</td><td>BigScience</td><td>2022.06</td></tr>
+    <tr><td>Dolma</td><td>混合</td><td>6TB</td><td>Allen AI</td><td>2024.01</td></tr>
+  </tbody>
+</table>
+
+<h3 id="s3-2-2">3.2.2 网页数据</h3>
+
+<p>网页是最主要的数据来源，包含新闻报道、博客文章、论坛讨论等多样化文本。</p>
+
+<div class="two-col">
+  <div class="tech-card blue">
+    <h4>Common Crawl</h4>
+    <ul>
+      <li>规模：PB 级，2008年至今持续更新</li>
+      <li>内容：原始网页数据 + 元数据 + 提取文本</li>
+      <li>注意：<strong>噪声和低质量数据极多</strong>，必须使用 CCNet 等工具清洗</li>
+      <li>多数网页数据集均基于 Common Crawl 构建</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <h4>C4（Colossal Clean Crawled Corpus）</h4>
+    <ul>
+      <li>规模：800GB，包含超过 <strong>156B tokens</strong></li>
+      <li>来源：2019.04 的 Common Crawl，超过 365M 个互联网域</li>
+      <li>子版本：en(806G)、en.noclean(6T)、realnewslike(36G)、multilingual(38T)</li>
+      <li>使用模型：UL2、LLaMA</li>
+    </ul>
+  </div>
+  <div class="tech-card yellow">
+    <h4>RefinedWeb</h4>
+    <ul>
+      <li>规模：<strong>5T tokens</strong> 原始数据，开源部分 <strong>600B tokens（500GB）</strong></li>
+      <li>来源：2008-2023.06 所有 Common Crawl 记录，严格筛选去重</li>
+      <li>解压需要 2.8TB 本地存储</li>
+      <li>使用模型：<strong>Falcon</strong>（主要训练数据）</li>
+    </ul>
+  </div>
+  <div class="tech-card purple">
+    <h4>RedPajama-Data</h4>
+    <ul>
+      <li>规模：100B 份文档，经过滤去重后约 <strong>30T tokens</strong></li>
+      <li>语言：英/法/西/德/意 5 种语言</li>
+      <li>特色：40余种预标注数据注释，支持按标准筛选重加权</li>
+      <li>数据处理脚本完全开源</li>
+    </ul>
+  </div>
+</div>
+
+<h4>中文网页数据集</h4>
+<div class="three-col">
+  <div class="tech-card blue">
+    <h4>ChineseWebText</h4>
+    <p>中科院自动化所，1.42TB，2021-2023年网页快照，每篇附有质量评分，配套 EvalWeb 清洗工具</p>
+  </div>
+  <div class="tech-card green">
+    <h4>WanJuan 1.0 Text</h4>
+    <p>上海AI Lab，1TB+，500M 文档，多来源（网页+书籍），用于 InternMultimodal 和 InternPuyu 训练</p>
+  </div>
+  <div class="tech-card yellow">
+    <h4>WuDaoCorpora Text</h4>
+    <p>北京智源"悟道"项目，5TB（开源200GB），来源100TB原始网页，含50+行业数据标签</p>
+  </div>
+</div>
+
+<h3 id="s3-2-3">3.2.3 书籍与论文数据</h3>
+
+<div class="two-col">
+  <div class="tech-card blue">
+    <h4>BookCorpus</h4>
+    <ul>
+      <li>11,038 本未出版书籍，约 74M 句子、1B 单词，5GB</li>
+      <li>涵盖16种主题（浪漫/历史/冒险等）</li>
+      <li>使用模型：GPT、GPT-2、MT-NLG、LLaMA</li>
+      <li>原始数据不再公开，可用 BookCorpusOpen 镜像版（17,868本，9GB）</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <h4>arXiv Dataset</h4>
+    <ul>
+      <li>约 <strong>1.7M 篇</strong>预印本（物理/数学/CS等），总量 <strong>1.1TB</strong></li>
+      <li>每篇包含文本/图表/作者/引文/分类/元数据</li>
+      <li>可在 Kaggle 下载</li>
+    </ul>
+  </div>
+  <div class="tech-card yellow">
+    <h4>S2ORC / peS2o</h4>
+    <ul>
+      <li>来源：Semantic Scholar 学术论文</li>
+      <li>S2ORC 已更新至 <strong>136M 篇</strong>论文</li>
+      <li>peS2o v2：约 <strong>42B tokens</strong>，Hugging Face 可下载</li>
+    </ul>
+  </div>
+  <div class="tech-card purple">
+    <h4>Project Gutenberg</h4>
+    <ul>
+      <li>70K 部免费电子书，主要西方文学（小说/诗歌/戏剧）</li>
+      <li>多语言：英/法/德等</li>
+      <li>持续更新，官网免费下载</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="s3-2-4">3.2.4 代码数据</h3>
+
+<div class="tech-card blue">
+  <h4>The Stack v1.2（BigCode / Hugging Face）</h4>
+  <ul>
+    <li>来源：GHArchive 2015.01.01 - 2022.03.31 GitHub 活跃仓库</li>
+    <li>初始版本：3TB（30种编程语言），v1.2 扩展至 <strong>358种编程语言，6TB</strong></li>
+    <li>处理流程：数据筛选 + 过滤 + 许可证检测</li>
+  </ul>
+</div>
+<div class="tech-card green">
+  <h4>StarCoder（BigCode）</h4>
+  <ul>
+    <li>基于 The Stack v1.2，从 358 种语言中筛选 <strong>86 种</strong></li>
+    <li>进行人工抽样审核，确认为人类编写代码</li>
+    <li>最终数据量：<strong>783GB</strong></li>
+    <li>用于训练同名模型 StarCoder (15.5B)</li>
+  </ul>
+</div>
+
+<h3 id="s3-2-5">3.2.5 混合型数据集</h3>
+
+<div class="three-col">
+  <div class="tech-card blue">
+    <h4>The Pile（EleutherAI）</h4>
+    <p>800GB+，<strong>22个多样化高质量子集</strong>混合，包含书籍/网站/代码/科学论文/社交媒体，按质量加权混合。用于 GPT-J(6B)、CodeGen(16B)、Megatron-Turing NLG(530B)。</p>
+  </div>
+  <div class="tech-card green">
+    <h4>ROOTS（BigScience）</h4>
+    <p>1.6TB，<strong>59种语言</strong>（46种自然语言+13种编程语言），英语占30%，Java/PHP/C++超过一半代码。用于训练 BLOOM (176B)。</p>
+  </div>
+  <div class="tech-card yellow">
+    <h4>Dolma（Allen AI）</h4>
+    <p>6TB（v1.6），来源：Common Crawl + Semantic Scholar + GitHub + 书籍 + Reddit + 维基百科，共3T tokens。配套高性能工具包，支持语言/质量/内容过滤和去重。用于训练 OLMo。</p>
+  </div>
+</div>
+
+<hr>
+
+<!-- ==================== 3.3 ==================== -->
+<h2 id="s3-3">3.3 常用微调数据集</h2>
+
+<p>大语言模型预训练后通常需要两步微调：<strong>指令微调（SFT）</strong>和<strong>对齐微调（RLHF/DPO）</strong>。</p>
+
+<h3 id="s3-3-1">3.3.1 指令微调数据集</h3>
+
+<p>按构建方法分为三类：NLP任务数据集、日常对话数据集、合成数据集。</p>
+
+<table>
+  <thead>
+    <tr><th>类别</th><th>数据集</th><th>时间</th><th>样本数</th><th>来源</th></tr>
+  </thead>
+  <tbody>
+    <tr><td rowspan="7" style="vertical-align:middle;color:var(--heading);">NLP任务</td>
+        <td>Nat. Inst.</td><td>2021.04</td><td>193K</td><td>Allen AI</td></tr>
+    <tr><td>FLAN</td><td>2021.09</td><td>4.4M</td><td>Google</td></tr>
+    <tr><td>P3</td><td>2021.10</td><td>12.1M</td><td>BigScience</td></tr>
+    <tr><td>Super Nat. Inst.</td><td>2022.04</td><td>5M</td><td>Allen AI</td></tr>
+    <tr><td>MVPCorpus</td><td>2022.06</td><td>41M</td><td>人民大学</td></tr>
+    <tr><td>xP3</td><td>2022.11</td><td>81M</td><td>BigScience</td></tr>
+    <tr><td>OIG</td><td>2023.03</td><td>43M</td><td>LAION-AI</td></tr>
+    <tr><td rowspan="6" style="vertical-align:middle;color:var(--heading);">日常对话</td>
+        <td>HH-RLHF</td><td>2022.04</td><td>160K</td><td>Anthropic</td></tr>
+    <tr><td>HC3</td><td>2023.01</td><td>87K</td><td>SimpleAI</td></tr>
+    <tr><td>ShareGPT</td><td>2023.03</td><td>90K</td><td>TechCrunch</td></tr>
+    <tr><td>Dolly</td><td>2023.04</td><td>15K</td><td>Databricks</td></tr>
+    <tr><td>OpenAssistant</td><td>2023.04</td><td>161K</td><td>LAION-AI</td></tr>
+    <tr><td>LIMA</td><td>2023.06</td><td>1K</td><td>Meta AI</td></tr>
+    <tr><td rowspan="8" style="vertical-align:middle;color:var(--heading);">合成数据</td>
+        <td>Self-Instruct</td><td>2022.12</td><td>82K</td><td>UWashington</td></tr>
+    <tr><td>Alpaca-52K</td><td>2023.03</td><td>52K</td><td>Stanford</td></tr>
+    <tr><td>Guanaco</td><td>2023.03</td><td>535K</td><td>-</td></tr>
+    <tr><td>Baize</td><td>2023.04</td><td>158K</td><td>UC San Diego</td></tr>
+    <tr><td>Belle</td><td>2023.04</td><td>1.5M</td><td>LianjiaTech</td></tr>
+    <tr><td>Alpaca-GPT4</td><td>2023.04</td><td>52K</td><td>Microsoft</td></tr>
+    <tr><td>Evol-Instruct</td><td>2023.06</td><td>52K</td><td>Microsoft</td></tr>
+    <tr><td>UltraChat</td><td>2023.06</td><td>675K</td><td>清华大学</td></tr>
+  </tbody>
+</table>
+
+<h4>重要数据集详解</h4>
+
+<div class="two-col">
+  <div class="tech-card blue">
+    <h4>P3（Public Pool of Prompts）</h4>
+    <ul>
+      <li>超过 270 个 NLP 任务数据集 + 2,000+ 种提示</li>
+      <li>涵盖多选QA、提取式QA、情感分类、文本摘要、自然语言推断等</li>
+      <li>通过 Promptsource 众包平台收集</li>
+      <li>子集用于训练 T0 模型</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <h4>FLAN-v2</h4>
+    <ul>
+      <li>4个子集：Muffin(88任务) + T0-SF + NIV2 + CoT</li>
+      <li>推荐混合比例：Muffin 52% + NIV2 30% + T0-SF 15% + CoT 3%</li>
+      <li>CoT 子集专门增强推理能力</li>
+    </ul>
+  </div>
+  <div class="tech-card yellow">
+    <h4>ShareGPT</h4>
+    <ul>
+      <li>用户通过浏览器插件上传与 ChatGPT 的真实对话</li>
+      <li>查询来自真实用户，回复为 ChatGPT 生成</li>
+      <li>主要英语和西方语言，约 90K 条</li>
+    </ul>
+  </div>
+  <div class="tech-card purple">
+    <h4>OpenAssistant</h4>
+    <ul>
+      <li>人工创建的多语言对话语料库</li>
+      <li>91,829 条用户提示，69,614 条助手回复</li>
+      <li>35 种语言，附有人工质量评级（有用性/无害性）</li>
+      <li>所有数据由用户真实提供（非模型生成）</li>
+    </ul>
+  </div>
+  <div class="tech-card blue">
+    <h4>Self-Instruct-52K</h4>
+    <ul>
+      <li>175 个人工种子任务 → GPT-3 生成新指令 → 迭代扩展</li>
+      <li>最终：52K 条指令 + 82K 个输入输出实例</li>
+      <li>Stanford Alpaca 基于此方法构建</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <h4>Alpaca-52K</h4>
+    <ul>
+      <li>基于 Self-Instruct 175 种子任务，用 text-davinci-003 生成</li>
+      <li>52K 条不重复指令，每条指令对应一个输入输出实例</li>
+      <li>40% 数据包含输入部分，提供两种提示模板</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="s3-3-2">3.3.2 人类对齐数据集</h3>
+
+<p>对齐目标聚焦三个方面：<strong>有用性（Helpfulness）</strong>、<strong>诚实性（Honesty）</strong>、<strong>无害性（Harmlessness）</strong>。</p>
+
+<table>
+  <thead>
+    <tr><th>数据集</th><th>时间</th><th>样本数</th><th>来源</th><th>对齐目标</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Summarize from Feedback</td><td>2020.09</td><td>193K</td><td>OpenAI</td><td>有用性</td></tr>
+    <tr><td>SHP</td><td>2021.10</td><td>385K</td><td>StanfordNLP</td><td>有用性</td></tr>
+    <tr><td>WebGPT Comparisons</td><td>2021.12</td><td>19K</td><td>OpenAI</td><td>有用性</td></tr>
+    <tr><td>Stack Exchange Preferences</td><td>2021.12</td><td>10M</td><td>HuggingFaceH4</td><td>有用性</td></tr>
+    <tr><td><strong>HH-RLHF</strong></td><td>2022.04</td><td>169K</td><td>Anthropic</td><td>有用性 + 无害性</td></tr>
+    <tr><td>Sandbox Alignment Data</td><td>2023.05</td><td>169K</td><td>Google</td><td>有用性 + 诚实性 + 无害性</td></tr>
+    <tr><td>CValues</td><td>2023.07</td><td>145K</td><td>Alibaba</td><td>无害性（中文）</td></tr>
+    <tr><td><strong>PKU-SafeRLHF</strong></td><td>2023.10</td><td>330K</td><td>PKU-Alignment</td><td>有用性 + 无害性</td></tr>
+  </tbody>
+</table>
+
+<div class="two-col">
+  <div class="tech-card blue">
+    <h4>HH-RLHF（Anthropic）</h4>
+    <ul>
+      <li>169K 开放式对话，众包工作者与助手交互</li>
+      <li>每个查询有两个回复，一个被选一个被拒</li>
+      <li>有用性子集：选择更有用的回复</li>
+      <li>无害性子集：选择更有害的回复（用于训练拒绝有害内容）</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <h4>PKU-SafeRLHF</h4>
+    <ul>
+      <li>330K 专家标注实例</li>
+      <li>每个实例：1个问题 + 2个回答</li>
+      <li>每个回答附有安全性标签</li>
+      <li>细粒度比较：有用性 + 无害性双维度偏好注释</li>
+    </ul>
+  </div>
+  <div class="tech-card yellow">
+    <h4>SHP（Stanford Human Preferences）</h4>
+    <ul>
+      <li>385K 实例，18个主题领域（烹饪/法律等）</li>
+      <li>基于 Reddit 帖子构建，人类真实回复（非模型生成）</li>
+      <li>两个排名较高的评论，标注哪个更有用</li>
+    </ul>
+  </div>
+  <div class="tech-card purple">
+    <h4>CValues（阿里巴巴）</h4>
+    <ul>
+      <li>面向中文的对齐数据集，安全性 + 责任性</li>
+      <li>安全性提示：1,300个（内容敏感，未完全开源）</li>
+      <li>责任性提示：800个（领域专家提供并打分）</li>
+      <li>对比数据集：145K 样本（提示 + 正例 + 负例），完全开源</li>
+    </ul>
+  </div>
+</div>
+
+<hr>
+
+<!-- ==================== 3.4 ==================== -->
+<h2 id="s3-4">3.4 代码库资源</h2>
+
+<h3 id="s3-4-1">3.4.1 Hugging Face 开源社区</h3>
+
+<p>Hugging Face 是推动 NLP 技术进步的核心开源社区，提供完整的 LLM 开发工具链。</p>
+
+<pre class="mermaid">
+flowchart TB
+    subgraph "Hugging Face 生态"
+        TF["Transformers\n统一模型API\nAutoModel / AutoTokenizer\n数以万计预训练模型"]
+        DS["Datasets\n高效数据加载\nApache Arrow零拷贝读取\n一行代码加载数据集"]
+        ACC["Accelerate\n分布式训练抽象\n混合精度训练\n多设备自动管理"]
+        PEFT["PEFT\nLoRA / Prefix Tuning\nPrompt Tuning\n参数高效微调"]
+        TRL["TRL\nSFT Trainer\nReward Model\nPPO Trainer"]
+    end
+    TF --> FULL["完整 LLM 训练/微调/推理流水线"]
+    DS --> FULL
+    ACC --> FULL
+    PEFT --> FULL
+    TRL --> FULL
+    style TF fill:#1e3a5f,stroke:#89b4fa,color:#cdd6f4
+    style DS fill:#1e3a2e,stroke:#a6e3a1,color:#cdd6f4
+    style ACC fill:#2e2a1e,stroke:#f9e2af,color:#cdd6f4
+    style PEFT fill:#2e1e3a,stroke:#cba6f7,color:#cdd6f4
+    style TRL fill:#3a1e1e,stroke:#f38ba8,color:#cdd6f4
+</pre>
+
+<div class="tech-card blue">
+  <h4>Transformers 库核心优势</h4>
+  <ol>
+    <li><strong>易于使用</strong>：统一 API 封装（模型/配置/分词器三个核心类），快速上手</li>
+    <li><strong>节省资源</strong>：鼓励模型开源共享，减少重复训练</li>
+    <li><strong>广泛支持</strong>：数以万计预训练模型，满足多样化需求</li>
+    <li><strong>全周期管理</strong>：简化训练到部署，支持跨框架（PyTorch/TensorFlow/JAX）模型转换</li>
+  </ol>
+</div>
+
+<div class="tech-card green">
+  <h4>Datasets 库</h4>
+  <ul>
+    <li>基于 <strong>Apache Arrow</strong> 格式，实现大型数据集<strong>零拷贝读取</strong></li>
+    <li>显著减少内存占用，提升数据处理效率</li>
+    <li>支持从 Hugging Face Hub 流式加载，无需完整下载</li>
+  </ul>
+</div>
+
+<div class="tech-card yellow">
+  <h4>Accelerate 库</h4>
+  <ul>
+    <li>专为 PyTorch 设计的分布式训练简化库</li>
+    <li>全面支持分布式训练（单卡/多卡/多机/TPU）</li>
+    <li>混合精度训练（FP16/BF16）自动管理</li>
+    <li>少量代码修改即可在各种分布式配置中运行</li>
+    <li>提供可配置命令行界面简化训练环境配置</li>
+  </ul>
+</div>
+
+<h3 id="s3-4-2">3.4.2 DeepSpeed（微软）</h3>
+
+<p>DeepSpeed 是微软开发的高性能深度学习训练库，广泛用于 MT-NLG、BLOOM 等超大模型训练。</p>
+
+<h4>ZeRO（Zero Redundancy Optimizer）内存优化</h4>
+
+<div class="formula-box">
+  <p>对于 $N$ 个参数的模型，在混合精度训练中，每个参数的内存开销：</p>
+  <ul>
+    <li>参数（FP16）：2 bytes</li>
+    <li>梯度（FP16）：2 bytes</li>
+    <li>优化器状态（FP32 参数副本 + 一阶矩 + 二阶矩）：12 bytes</li>
+    <li>总计：<strong>16 bytes/参数</strong></li>
+  </ul>
+  <p>ZeRO 通过在 $N_d$ 个 GPU 间分片来减少每卡内存：</p>
+  $$\text{ZeRO-1（优化器状态分片）}: \frac{2+2+12}{N_d} + 2+2 = \frac{12}{N_d} + 4 \text{ bytes/参数}$$
+  $$\text{ZeRO-2（+ 梯度分片）}: \frac{2+12}{N_d} + 2 = \frac{14}{N_d} + 2 \text{ bytes/参数}$$
+  $$\text{ZeRO-3（+ 参数分片）}: \frac{16}{N_d} \text{ bytes/参数}$$
+  <p>当 $N_d = 64$ 时，ZeRO-3 可将每卡内存从 16B/参数降至约 0.25B/参数，实现约 <strong>64× 内存压缩</strong>。</p>
+</div>
+
+<div class="two-col">
+  <div class="tech-card blue">
+    <h4>DeepSpeed-MII（推理优化）</h4>
+    <ul>
+      <li><strong>块状键值缓存</strong>：将 KV Cache 分割为固定大小块，减少内存碎片化，提升吞吐量</li>
+      <li><strong>连续批处理</strong>：每次前向传播独立调度，细粒度调度优化内存效率</li>
+      <li><strong>SplitFuse 技术</strong>：动态分解提示和生成结果，进一步改善连续批处理</li>
+      <li>支持：LLaMA、Mistral、Falcon、Mixtral、Qwen</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <h4>DeepSpeed-Chat（RLHF 训练）</h4>
+    <ul>
+      <li>完整复现 InstructGPT 训练流程：<strong>SFT → RM → PPO</strong></li>
+      <li>数据抽象和混合功能，支持完整训练流程</li>
+      <li>混合引擎（Hybrid Engine）：在 PPO 中无缝切换训练/生成模式</li>
+      <li>简单脚本即可实现多步骤训练，提供对话测试 API</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="s3-4-3">3.4.3 Megatron-LM（NVIDIA）</h3>
+
+<p>Megatron-LM 是 NVIDIA 专为超大规模 LLM 训练设计的深度学习框架，解决显存限制、计算效率和通信问题。</p>
+
+<table>
+  <thead>
+    <tr><th>并行策略</th><th>原理</th><th>适用场景</th><th>通信开销</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>数据并行（DP）</strong></td>
+      <td>每个工作节点复制完整模型，输入数据切分多份，定期同步梯度</td>
+      <td>标准扩展，批大小增大</td>
+      <td>低（梯度同步）</td>
+    </tr>
+    <tr>
+      <td><strong>张量并行（TP）</strong></td>
+      <td>单个矩阵运算切分到多 GPU（行/列切分）</td>
+      <td>单层参数超过单卡容量</td>
+      <td>高（每层 all-reduce）</td>
+    </tr>
+    <tr>
+      <td><strong>流水线并行（PP）</strong></td>
+      <td>不同层分配到不同设备，微批次流水执行</td>
+      <td>模型层数极多</td>
+      <td>中（层间通信）</td>
+    </tr>
+    <tr>
+      <td><strong>序列并行（SP）</strong></td>
+      <td>LayerNorm/Dropout 沿序列维度切分</td>
+      <td>超长序列训练</td>
+      <td>低</td>
+    </tr>
+  </tbody>
+</table>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph "3D 并行策略（DP × TP × PP）"
+        subgraph "数据并行组"
+            subgraph "流水线阶段1"
+                G1["GPU 0\nLayer 1-4\nTP分片A"]
+                G2["GPU 1\nLayer 1-4\nTP分片B"]
+            end
+            subgraph "流水线阶段2"
+                G3["GPU 2\nLayer 5-8\nTP分片A"]
+                G4["GPU 3\nLayer 5-8\nTP分片B"]
+            end
+        end
+        subgraph "数据并行组（副本）"
+            subgraph "流水线阶段1（副本）"
+                G5["GPU 4\nLayer 1-4\nTP分片A"]
+                G6["GPU 5\nLayer 1-4\nTP分片B"]
+            end
+            subgraph "流水线阶段2（副本）"
+                G7["GPU 6\nLayer 5-8\nTP分片A"]
+                G8["GPU 7\nLayer 5-8\nTP分片B"]
+            end
+        end
+    end
+    G1 <-->|"TP all-reduce"| G2
+    G3 <-->|"TP all-reduce"| G4
+    G1 -->|"PP 激活传递"| G3
+    G2 -->|"PP 激活传递"| G4
+    G1 <-->|"DP 梯度同步"| G5
+    G3 <-->|"DP 梯度同步"| G7
+</pre>
+
+<div class="tech-card blue">
+  <h4>FlashAttention 集成</h4>
+  <p>Megatron-LM 集成了 FlashAttention，通过 IO-aware 分块计算避免存储完整注意力矩阵：</p>
+  <ul>
+    <li>标准注意力：内存 $O(n^2)$，需要将 $n \times n$ 注意力矩阵写入 HBM</li>
+    <li>FlashAttention：内存 $O(n)$，分块计算 $\text{softmax}$，只在 SRAM 中保留中间结果</li>
+    <li>速度：相比标准注意力快 2-4×，使超长序列（32K+）训练成为可能</li>
+  </ul>
+  <div class="formula-box">
+    $$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+    <p>FlashAttention 将 $Q, K, V$ 分块，逐块计算并使用在线 softmax 技术合并结果，避免 $O(n^2)$ 的中间矩阵存储。</p>
+  </div>
+</div>
+
+<hr>
+
+<!-- ==================== 3.5 架构对比 ==================== -->
+<h2 id="s3-5">3.5 主流开源 LLM 架构对比</h2>
+
+<p>主流开源 LLM 在架构细节上趋于收敛，但在归一化方式、位置编码、注意力机制等方面仍有重要差异。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>特性</th>
+      <th>LLaMA-2</th>
+      <th>Qwen</th>
+      <th>Mistral 7B</th>
+      <th>ChatGLM-3</th>
+      <th>Falcon</th>
+      <th>DeepSeek</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>归一化位置</strong></td>
+      <td>Pre-Norm</td><td>Pre-Norm</td><td>Pre-Norm</td><td>Pre-Norm</td><td>Pre-Norm</td><td>Pre-Norm</td>
+    </tr>
+    <tr>
+      <td><strong>归一化类型</strong></td>
+      <td>RMSNorm</td><td>RMSNorm</td><td>RMSNorm</td><td>RMSNorm</td><td>LayerNorm</td><td>RMSNorm</td>
+    </tr>
+    <tr>
+      <td><strong>激活函数</strong></td>
+      <td>SwiGLU</td><td>SwiGLU</td><td>SwiGLU</td><td>SwiGLU</td><td>GELU</td><td>SwiGLU</td>
+    </tr>
+    <tr>
+      <td><strong>位置编码</strong></td>
+      <td>RoPE</td><td>RoPE</td><td>RoPE</td><td>RoPE</td><td>ALiBi</td><td>RoPE</td>
+    </tr>
+    <tr>
+      <td><strong>注意力机制</strong></td>
+      <td>GQA (70B)</td><td>MHA</td><td>GQA + SWA</td><td>MHA</td><td>MQA</td><td>MHA</td>
+    </tr>
+    <tr>
+      <td><strong>词表大小</strong></td>
+      <td>32K</td><td>152K</td><td>32K</td><td>65K</td><td>65K</td><td>100K</td>
+    </tr>
+    <tr>
+      <td><strong>上下文长度</strong></td>
+      <td>4,096</td><td>32,768</td><td>32,768</td><td>8,192</td><td>4,096</td><td>4,096</td>
+    </tr>
+    <tr>
+      <td><strong>训练数据</strong></td>
+      <td>2T tokens</td><td>3T tokens</td><td>-</td><td>中英双语</td><td>3.5T tokens</td><td>2T tokens</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s3-5-1">3.5.1 关键技术解析</h3>
+
+<div class="two-col">
+  <div class="tech-card blue">
+    <h4>RMSNorm vs LayerNorm</h4>
+    <p>LayerNorm 对每层输出进行均值和方差归一化：</p>
+    <div class="formula-box">
+      $$\text{LayerNorm}(x) = \frac{x - \mu}{\sigma} \cdot \gamma + \beta$$
+    </div>
+    <p>RMSNorm 省去均值中心化步骤，只做方差归一化：</p>
+    <div class="formula-box">
+      $$\text{RMSNorm}(x) = \frac{x}{\sqrt{\frac{1}{n}\sum_{i=1}^n x_i^2 + \epsilon}} \cdot \gamma$$
+    </div>
+    <p>RMSNorm 计算量减少约 7-15%，实践中效果与 LayerNorm 相当，已成为大多数开源 LLM 的默认选择。</p>
+  </div>
+  <div class="tech-card green">
+    <h4>SwiGLU 激活函数</h4>
+    <p>由 Noam Shazeer 提出，在 FFN 层中引入门控机制：</p>
+    <div class="formula-box">
+      $$\text{SwiGLU}(x, W, V) = \text{Swish}(xW) \odot (xV)$$
+      $$\text{Swish}(x) = x \cdot \sigma(\beta x)$$
+    </div>
+    <p>其中 $\odot$ 是逐元素乘法，$\sigma$ 是 Sigmoid 函数。相比 ReLU，SwiGLU 的平滑性和门控机制使模型在相同参数量下性能更好，但 FFN 的隐藏层维度通常需要调整为 $\frac{2}{3} \times 4d$（以保持参数量不变）。</p>
+  </div>
+  <div class="tech-card yellow">
+    <h4>RoPE 旋转位置编码</h4>
+    <p>将位置信息编码为旋转变换，作用于 Q、K 矩阵：</p>
+    <div class="formula-box">
+      $$q_m^T k_n = \text{Re}[(W_q x_m)^* \cdot e^{i(m-n)\theta}(W_k x_n)]$$
+    </div>
+    <p>RoPE 的优势：相对位置感知（只依赖 $m-n$）、外推性好（可通过插值扩展上下文）、无需额外参数。LLaMA、Mistral、Qwen、DeepSeek 均采用 RoPE。</p>
+  </div>
+  <div class="tech-card purple">
+    <h4>GQA vs MQA vs MHA</h4>
+    <div class="formula-box">
+      <p><strong>MHA（Multi-Head Attention）</strong>：$n_h$ 个 Q 头，$n_h$ 个 KV 头，KV Cache $\propto n_h$</p>
+      <p><strong>MQA（Multi-Query Attention）</strong>：$n_h$ 个 Q 头，<strong>1</strong> 个 KV 头，KV Cache 减少 $n_h$ 倍</p>
+      <p><strong>GQA（Grouped Query Attention）</strong>：$n_h$ 个 Q 头，<strong>$n_g$</strong> 个 KV 头（$1 &lt; n_g &lt; n_h$），KV Cache 减少 $n_h/n_g$ 倍</p>
+    </div>
+    <p>GQA 是 MHA 和 MQA 的折中，在几乎不损失性能的前提下显著减少推理内存。LLaMA-2 (70B)、Mistral 7B 采用 GQA；Falcon 采用 MQA。</p>
+  </div>
+</div>
+
+<h3 id="s3-5-2">3.5.2 Mistral 滑动窗口注意力（SWA）</h3>
+
+<div class="tech-card blue">
+  <p>Mistral 7B 引入滑动窗口注意力解决长序列计算效率问题：</p>
+  <ul>
+    <li>每层注意力只关注最近 $w$ 个 token（窗口大小 $w = 4,096$）</li>
+    <li>但通过层叠效果，第 $k$ 层的有效感受野为 $k \times w$</li>
+    <li>在 16K 序列长度下，相比标准注意力速度提升 <strong>2×</strong></li>
+  </ul>
+  <div class="formula-box">
+    $$\text{第 } k \text{ 层有效感受野} = k \times w$$
+    <p>对于 32 层、$w=4096$ 的 Mistral，最后一层有效感受野为 $32 \times 4096 = 131,072$ tokens，远超实际窗口大小。</p>
+  </div>
+</div>
+
+<hr>
+
+<!-- ==================== 3.6 时间线 ==================== -->
+<h2 id="s3-6">3.6 大语言模型发展时间线</h2>
+
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">2019–2021</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">闭源</span><br>
+          <strong>GPT-2</strong> (2019.02)<br>1.5B，WebText
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>T5</strong> (2019.10)<br>11B，1000B tokens
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">闭源</span><br>
+          <strong>GPT-3</strong> (2020.05)<br>175B，300B tokens
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">闭源</span><br>
+          <strong>InstructGPT</strong> (2022.03)<br>RLHF 对齐
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2022</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>OPT</strong> (2022.05)<br>175B，180B tokens
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>BLOOM</strong> (2022.11)<br>176B，366B tokens<br>384 A100，105天
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">闭源</span><br>
+          <strong>PaLM</strong> (2022.04)<br>540B，780B tokens
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">闭源</span><br>
+          <strong>Chinchilla</strong> (2022.03)<br>70B，1400B tokens<br>Scaling Law
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2023 上半年</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>LLaMA</strong> (2023.02)<br>65B，1.4T tokens<br>2048 A100，21天
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>ChatGLM</strong> (2023.05)<br>6B，中英双语
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">闭源</span><br>
+          <strong>GPT-4</strong> (2023.03)<br>多模态，RLHF
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>Falcon</strong> (2023.05/09)<br>180B，3.5T tokens
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2023 下半年</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>LLaMA-2</strong> (2023.07)<br>70B，2T tokens，GQA
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>Mistral 7B</strong> (2023.09)<br>SWA + GQA
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>Qwen</strong> (2023.09)<br>0.5B~72B，3T tokens
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>DeepSeek LLM</strong> (2023.11)<br>67B，2T tokens
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag green">MoE</span><br>
+          <strong>Mixtral 8×7B</strong> (2023.12)<br>46.7B总/12.9B激活
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024 Q1</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>DeepSeek</strong> (2024.01)<br>67B，2T tokens，SFT+RLHF
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>InternLM-2</strong> (2024.01)<br>1.8B/7B/20B
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>Gemma</strong> (2024.02)<br>2B/7B，谷歌轻量级
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>MiniCPM</strong> (2024.02)<br>2B，沙盒实验训练
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">开源</span><br>
+          <strong>Qwen-1.5</strong> (2024.02)<br>72B，超越LLaMA-2 70B
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ==================== 3.7 小结 ==================== -->
+<h2 id="s3-7">3.7 本章小结</h2>
+
+<div class="three-col">
+  <div class="tech-card blue">
+    <h4>模型资源层面</h4>
+    <ul>
+      <li>LLaMA 系列建立开源 LLM 技术标准（Pre-Norm + RMSNorm + SwiGLU + RoPE）</li>
+      <li>中文模型（ChatGLM、Qwen、InternLM）填补中文语境空白</li>
+      <li>Mistral/Mixtral 展示高效架构设计（SWA、GQA、MoE）</li>
+      <li>闭源 API（GPT-4 Turbo、Claude 3）仍是性能最强选择</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <h4>数据资源层面</h4>
+    <ul>
+      <li>网页数据（Common Crawl 及衍生）是最主要来源</li>
+      <li>中文数据集（ChineseWebText、WanJuan、WuDaoCorpora）支撑中文 LLM</li>
+      <li>代码数据（The Stack、StarCoder）增强推理和代码能力</li>
+      <li>混合数据集（The Pile、Dolma）降低数据工程门槛</li>
+    </ul>
+  </div>
+  <div class="tech-card yellow">
+    <h4>框架资源层面</h4>
+    <ul>
+      <li>Hugging Face 生态提供研究基础设施（Transformers/Datasets/Accelerate）</li>
+      <li>DeepSpeed ZeRO 技术解决显存瓶颈，实现 $N_d$ 倍内存压缩</li>
+      <li>Megatron-LM 3D 并行（DP×TP×PP）支撑超大规模训练</li>
+      <li>本书配套：LLMSurvey + YuLan-Chat + LLMBox</li>
+    </ul>
+  </div>
+</div>
+
+<blockquote>
+开源生态的繁荣使 LLM 研究从少数科技巨头的专属领域，扩展为全球学术界和工业界共同参与的开放研究平台。Stanford Alpaca 证明了"廉价指令微调"的可行性（$600 + 3小时），LLaVA 等多模态模型拓展了 LLM 的感知边界，领域专精模型展示了 LLM 的专业化路径。
+</blockquote>
+
+<hr>
+<p style="color:#6c7086;font-size:.85em;text-align:center;">报告基于《大语言模型》（赵鑫等著）第3章（第46–70页）整理，结合领域知识深化展开 · 中国人民大学 AI Box</p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');
+  a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');
+  toc.appendChild(a);
+});
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  });
+},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多臂老虎机 · 动手学强化学习</title>
+  <style>
+    :root { --bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.9}
+    #toc{position:fixed;top:0;left:0;width:232px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border)}
+    #toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #toc a:hover{background:var(--border)}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600}
+    #toc a.toc-h3{padding-left:20px;font-size:11.5px;opacity:.8}
+    main{margin-left:252px;max-width:none;padding:40px 52px 80px}
+    h1{color:var(--heading);font-size:1.85em;margin-bottom:8px;line-height:1.3}
+    h2{color:var(--heading);font-size:1.38em;margin:2.4em 0 .65em;border-bottom:1px solid var(--border);padding-bottom:6px}
+    h3{color:var(--heading);font-size:1.08em;margin:1.5em 0 .45em}
+    h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .35em}
+    p{margin:.65em 0}
+    a{color:var(--link)}
+    strong{color:var(--strong)}
+    ul,ol{margin:.6em 0 .6em 1.6em}
+    li{margin:.3em 0}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em}
+    th{background:#2a2a3e;color:var(--heading);padding:9px 13px;text-align:left;border:1px solid var(--border)}
+    td{padding:8px 13px;border:1px solid var(--border)}
+    tr:hover td{background:#2a2a3e}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em}
+    code{font-family:'JetBrains Mono','Fira Code',monospace}
+    p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.86em}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center}
+    .echarts-container{margin:1em 0;border-radius:6px;overflow:hidden}
+    hr{border:none;border-top:1px solid var(--border);margin:2.2em 0}
+    .card{background:#23233a;border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0}
+    .card.blue{border-left:4px solid var(--heading)}
+    .card.green{border-left:4px solid var(--strong)}
+    .card.yellow{border-left:4px solid var(--yellow)}
+    .card.purple{border-left:4px solid var(--purple)}
+    .card.red{border-left:4px solid var(--red)}
+    .card-title{font-weight:700;color:var(--heading);margin-bottom:10px;font-size:1em}
+    .fbox{background:#2a2a3e;border-radius:6px;padding:14px 20px;margin:.9em 0;overflow-x:auto;border-left:3px solid var(--heading)}
+    .fbox.derive{border-left-color:var(--strong)}
+    .fbox.def{border-left-color:var(--yellow)}
+    .steps{counter-reset:step;margin:.8em 0}
+    .step{display:flex;gap:12px;align-items:flex-start;margin:.7em 0}
+    .step-n{counter-increment:step;display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:50%;background:var(--heading);color:#1e1e2e;font-weight:700;font-size:.8em;flex-shrink:0;margin-top:4px}
+    .step-n::before{content:counter(step)}
+    .step-body{flex:1}
+    .cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1.2em 0}
+    .cmp-col{border-radius:8px;padding:16px 18px}
+    .cmp-col.a{background:#1e2840;border:1px solid var(--heading)}
+    .cmp-col.b{background:#1e3028;border:1px solid var(--strong)}
+    .cmp-label{font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px}
+    .cmp-label.a{color:var(--heading)}
+    .cmp-label.b{color:var(--strong)}
+    .hl-g{color:var(--strong);font-weight:700}
+    .hl-r{color:var(--red);font-weight:700}
+    .hl-y{color:var(--yellow);font-weight:700}
+    .hl-b{color:var(--heading);font-weight:700}
+    .sym-table td:first-child{font-family:'JetBrains Mono','Fira Code',monospace;color:var(--yellow);font-size:.88em;white-space:nowrap}
+    .tech-card{background:#23233a;border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin:1.4em 0}
+    .tech-card .tc-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .tc-badge{background:var(--heading);color:#1e1e2e;font-size:.72em;font-weight:700;padding:2px 10px;border-radius:20px;letter-spacing:.05em}
+    .tc-badge.green{background:var(--strong)}
+    .tc-badge.yellow{background:var(--yellow)}
+    .tc-badge.purple{background:var(--purple)}
+    .tc-badge.red{background:var(--red)}
+    .tc-title{font-weight:700;color:var(--heading);font-size:1em}
+    .formula-box{background:#1a1a2e;border:1px solid var(--heading);border-radius:8px;padding:16px 22px;margin:1em 0;text-align:center}
+    .formula-box.green{border-color:var(--strong)}
+    .formula-box.yellow{border-color:var(--yellow)}
+    .formula-box.purple{border-color:var(--purple)}
+    .formula-label{font-size:.76em;color:var(--heading);font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;text-align:left}
+    .formula-label.green{color:var(--strong)}
+    .formula-label.yellow{color:var(--yellow)}
+    .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1.2em 0}
+    .diff-cell{border-radius:8px;padding:16px 18px}
+    .diff-cell.neg{background:#2e1e1e;border:1px solid var(--red)}
+    .diff-cell.pos{background:#1e2e1e;border:1px solid var(--strong)}
+    .diff-cell .diff-label{font-size:.76em;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    .diff-cell.neg .diff-label{color:var(--red)}
+    .diff-cell.pos .diff-label{color:var(--strong)}
+    .tag{display:inline-block;background:var(--bg-code);border:1px solid var(--border);border-radius:4px;padding:1px 8px;font-size:.8em;margin:2px 3px}
+    .tag.blue{border-color:var(--heading);color:var(--heading)}
+    .tag.green{border-color:var(--strong);color:var(--strong)}
+    .tag.yellow{border-color:var(--yellow);color:var(--yellow)}
+    .tag.red{border-color:var(--red);color:var(--red)}
+    .summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:1.2em 0}
+    .summary-item{background:#23233a;border:1px solid var(--border);border-radius:8px;padding:14px 18px}
+    .summary-item .si-label{font-size:.76em;color:var(--text);opacity:.7;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+    .summary-item .si-val{font-size:1.1em;font-weight:700;color:var(--heading)}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}}</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<!-- ===== 标题 ===== -->
+<h1>多臂老虎机</h1>
+<p style="color:var(--text);opacity:.7;font-size:.93em;margin-bottom:1.6em">
+  动手学强化学习 · 第二章 &nbsp;|&nbsp; K-Armed Bandit Problem
+</p>
+
+<blockquote>
+  多臂老虎机（Multi-Armed Bandit）是强化学习中最简单的序列决策模型——没有状态转移，只有<strong>探索与利用的核心权衡</strong>。掌握它是理解完整 RL 框架的第一步。
+</blockquote>
+
+<hr>
+
+<!-- ===== 符号总表 ===== -->
+<h2 id="symbols">符号总表</h2>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge">Notation</span>
+    <span class="tc-title">K 臂老虎机核心符号</span>
+  </div>
+  <table class="sym-table">
+    <thead>
+      <tr><th>符号</th><th>含义</th><th>备注</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>$K$</td><td>摇臂（动作）总数</td><td>问题规模</td></tr>
+      <tr><td>$t$</td><td>当前时间步（$t = 1, 2, \ldots, T$）</td><td>离散时间索引</td></tr>
+      <tr><td>$a_t$</td><td>第 $t$ 步选择的动作（臂）</td><td>$a_t \in \{1,\ldots,K\}$</td></tr>
+      <tr><td>$r_t$</td><td>第 $t$ 步获得的随机奖励</td><td>$r_t \sim p(\cdot \mid a_t)$</td></tr>
+      <tr><td>$Q(a)$</td><td>动作 $a$ 的真实期望奖励</td><td>$Q(a) = \mathbb{E}[r \mid A=a]$</td></tr>
+      <tr><td>$\hat{Q}_n(a)$</td><td>动作 $a$ 被选 $n$ 次后的估计期望奖励</td><td>样本均值</td></tr>
+      <tr><td>$N(a)$</td><td>到当前为止动作 $a$ 被选择的次数</td><td>计数器</td></tr>
+      <tr><td>$a^*$</td><td>最优动作</td><td>$a^* = \arg\max_a Q(a)$</td></tr>
+      <tr><td>$\varepsilon$</td><td>$\varepsilon$-贪婪算法的探索概率</td><td>$\varepsilon \in [0,1]$</td></tr>
+      <tr><td>$c$</td><td>UCB 算法的置信度系数</td><td>控制探索强度</td></tr>
+      <tr><td>$L_T$</td><td>$T$ 步内的累积懊悔</td><td>$L_T = \sum_{t=1}^T [Q(a^*) - Q(a_t)]$</td></tr>
+      <tr><td>$\Delta_a$</td><td>动作 $a$ 的次优差距</td><td>$\Delta_a = Q(a^*) - Q(a)$</td></tr>
+      <tr><td>$\alpha_a, \beta_a$</td><td>汤普森采样中臂 $a$ 的 Beta 分布参数</td><td>成功/失败计数</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<hr>
+
+<!-- ===== 2.1 问题定义 ===== -->
+<h2 id="def">2.1 问题定义</h2>
+
+<h3 id="def-bandit">K 臂老虎机</h3>
+
+<p>
+  想象一排 $K$ 台老虎机（摇臂机），每台机器在被拉动时会吐出随机奖励。
+  智能体每个时间步选择一台机器拉动，目标是在 $T$ 步内累积尽可能多的奖励。
+</p>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge">Definition</span>
+    <span class="tc-title">K 臂老虎机正式定义</span>
+  </div>
+  <ul>
+    <li>动作空间：$\mathcal{A} = \{1, 2, \ldots, K\}$，共 $K$ 个臂</li>
+    <li>每步 $t$，智能体选择动作 $a_t \in \mathcal{A}$</li>
+    <li>环境返回随机奖励 $r_t$，其分布仅依赖于 $a_t$（<strong>无状态转移</strong>）</li>
+    <li>奖励分布 $p(r \mid a)$ 对智能体未知，需通过交互估计</li>
+  </ul>
+</div>
+
+<h3 id="def-qvalue">期望奖励与最优动作</h3>
+
+<div class="formula-box">
+  <div class="formula-label">期望奖励（真实价值）</div>
+  $$Q(a) = \mathbb{E}[r \mid A = a] = \int r \cdot p(r \mid a)\, dr$$
+</div>
+
+<div class="formula-box green">
+  <div class="formula-label green">最优动作</div>
+  $$a^* = \arg\max_{a \in \mathcal{A}} Q(a)$$
+</div>
+
+<p>
+  由于 $Q(a)$ 未知，智能体只能通过观测到的奖励样本来构造<strong>估计值</strong> $\hat{Q}(a)$。
+  最自然的估计量是样本均值：
+</p>
+
+<div class="fbox def">
+  $$\hat{Q}_n(a) = \frac{1}{N(a)} \sum_{i=1}^{N(a)} r_i^{(a)}$$
+  <p style="margin-top:8px;font-size:.9em;opacity:.8">其中 $r_i^{(a)}$ 是第 $i$ 次选择臂 $a$ 时获得的奖励，$N(a)$ 为选择次数。</p>
+</div>
+
+<h3 id="def-regret">懊悔（Regret）</h3>
+
+<p>
+  <strong>懊悔</strong>衡量智能体因未能每步都选最优动作而损失的期望奖励总量。
+  这是评价探索-利用算法优劣的核心指标。
+</p>
+
+<div class="formula-box yellow">
+  <div class="formula-label yellow">累积懊悔定义</div>
+  $$L_T = \sum_{t=1}^{T} \left[ Q(a^*) - Q(a_t) \right] = \sum_{t=1}^{T} \Delta_{a_t}$$
+</div>
+
+<p>
+  其中 $\Delta_a = Q(a^*) - Q(a) \geq 0$ 称为动作 $a$ 的<strong>次优差距</strong>（suboptimality gap）。
+  $L_T$ 越小，算法越优秀。
+</p>
+
+<div class="diff-grid">
+  <div class="diff-cell neg">
+    <div class="diff-label">不好的情形</div>
+    <p>每步都选次优臂，$\Delta_a > 0$ 持续累积</p>
+    <p>$L_T = \Delta \cdot T$，<span class="hl-r">线性增长</span></p>
+  </div>
+  <div class="diff-cell pos">
+    <div class="diff-label">理想情形</div>
+    <p>越来越多选最优臂，$\Delta_{a_t} \to 0$</p>
+    <p>$L_T = O(\ln T)$，<span class="hl-g">次线性增长</span></p>
+  </div>
+</div>
+
+<blockquote>
+  <strong>目标</strong>：设计算法使累积懊悔 $L_T$ 尽可能小，理想情况下实现次线性（对数级）增长。
+</blockquote>
+
+<hr>
+
+<!-- ===== 2.2 探索与利用 ===== -->
+<h2 id="explore-exploit">2.2 探索与利用的权衡</h2>
+
+<h3 id="dilemma">核心困境</h3>
+
+<p>
+  智能体面临的根本矛盾：
+</p>
+
+<div class="cmp">
+  <div class="cmp-col a">
+    <div class="cmp-label a">利用（Exploitation）</div>
+    <p>根据<strong>当前估计</strong>选择最优臂</p>
+    <ul>
+      <li>最大化即时奖励</li>
+      <li>可能陷入局部最优</li>
+      <li>估计值可能不准确（样本少）</li>
+    </ul>
+  </div>
+  <div class="cmp-col b">
+    <div class="cmp-label b">探索（Exploration）</div>
+    <p>尝试<strong>未充分探索</strong>的臂</p>
+    <ul>
+      <li>收集更多信息，改善估计</li>
+      <li>短期牺牲，长期收益</li>
+      <li>可能浪费资源在次优臂上</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="pure-strategies">纯策略的缺陷</h3>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge red">缺陷</span>
+    <span class="tc-title">纯利用（Greedy）</span>
+  </div>
+  <p>
+    始终选择 $a_t = \arg\max_a \hat{Q}(a)$。若初始估计偏差大，将永远锁定在次优臂，
+    累积懊悔 $L_T = \Theta(T)$，<span class="hl-r">线性增长</span>。
+  </p>
+</div>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge red">缺陷</span>
+    <span class="tc-title">纯探索（Random）</span>
+  </div>
+  <p>
+    每步均匀随机选臂。虽然估计最终收敛，但始终以概率 $\frac{K-1}{K}$ 选非最优臂，
+    累积懊悔同样 $L_T = \Theta(T)$，<span class="hl-r">线性增长</span>。
+  </p>
+</div>
+
+<p>
+  两种极端策略都导致线性懊悔。好的算法必须<strong>自适应地平衡</strong>探索与利用。
+</p>
+
+<pre class="mermaid">
+flowchart LR
+    A["智能体"] -->|"选择动作 $a_t$"| B["K 臂老虎机"]
+    B -->|"返回奖励 $r_t$"| A
+    A -->|"更新估计 $\hat{Q}(a_t)$"| A
+    A -->|"更新计数 $N(a_t)$"| A
+
+    subgraph 决策策略
+        D["利用：选当前最优臂"]
+        E["探索：尝试其他臂"]
+        D <-->|"权衡"| E
+    end
+    A --> 决策策略
+</pre>
+
+<hr>
+
+<!-- ===== 2.3 ε-贪婪 ===== -->
+<h2 id="epsilon-greedy">2.3 ε-贪婪算法</h2>
+
+<h3 id="eg-def">算法定义</h3>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge">Algorithm</span>
+    <span class="tc-title">ε-贪婪（ε-Greedy）</span>
+  </div>
+  <div class="formula-box">
+    <div class="formula-label">动作选择规则</div>
+    $$a_t = \begin{cases} \text{随机选} a \in \mathcal{A} & \text{以概率 } \varepsilon \\ \arg\max_a \hat{Q}(a) & \text{以概率 } 1 - \varepsilon \end{cases}$$
+  </div>
+  <ul style="margin-top:10px">
+    <li><span class="hl-y">探索分支（概率 $\varepsilon$）</span>：从所有 $K$ 个臂中均匀随机选一个</li>
+    <li><span class="hl-g">利用分支（概率 $1-\varepsilon$）</span>：选当前估计最优臂（贪婪）</li>
+    <li>超参数 $\varepsilon \in (0,1)$ 控制探索强度，通常取 $0.01 \sim 0.1$</li>
+  </ul>
+</div>
+
+<h3 id="eg-update">增量式更新公式</h3>
+
+<p>
+  每次选择臂 $a$ 并获得奖励 $r$ 后，需更新估计值。
+  朴素做法是存储所有历史奖励再求均值，但这需要 $O(N(a))$ 空间。
+  增量式更新只需 $O(1)$ 空间：
+</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>展开旧均值</strong>：设 $\hat{Q}_n(a)$ 为前 $n$ 次的均值
+      <div class="fbox derive">
+        $$\hat{Q}_n(a) = \frac{1}{n} \sum_{i=1}^{n} r_i$$
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>加入第 $n+1$ 次观测</strong>
+      <div class="fbox derive">
+        $$\hat{Q}_{n+1}(a) = \frac{1}{n+1} \sum_{i=1}^{n+1} r_i = \frac{1}{n+1}\left(r_{n+1} + n \cdot \hat{Q}_n(a)\right)$$
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>整理为增量形式</strong>
+      <div class="fbox derive">
+        $$\hat{Q}_{n+1}(a) = \hat{Q}_n(a) + \frac{1}{n+1}\left(r_{n+1} - \hat{Q}_n(a)\right)$$
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>用 $N(a)$ 替换 $n+1$（选择后已更新计数）</strong>
+      <div class="formula-box green">
+        <div class="formula-label green">增量式均值更新（核心公式）</div>
+        $$\hat{Q}_{N(a)}(a) \leftarrow \hat{Q}_{N(a)-1}(a) + \frac{1}{N(a)}\left(r - \hat{Q}_{N(a)-1}(a)\right)$$
+      </div>
+      <p>
+        形式为：<span class="hl-b">新估计 = 旧估计 + 步长 × (目标 - 旧估计)</span>，
+        这是 RL 中<strong>时序差分更新</strong>的原型。
+      </p>
+    </div>
+  </div>
+</div>
+
+<h3 id="eg-fixed">固定 ε 的问题：线性懊悔</h3>
+
+<p>
+  当 $\varepsilon$ 固定时，即使已经充分探索，算法仍以概率 $\varepsilon$ 随机选臂。
+  设最优臂为 $a^*$，次优差距为 $\Delta_{\min} = \min_{a \neq a^*} \Delta_a > 0$，则：
+</p>
+
+<div class="fbox">
+  $$\mathbb{E}[L_T] \geq \varepsilon \cdot \frac{K-1}{K} \cdot \Delta_{\min} \cdot T = \Omega(T)$$
+</div>
+
+<p>
+  固定 $\varepsilon$ 的 ε-贪婪累积懊悔<span class="hl-r">线性增长</span>，不是渐近最优的。
+</p>
+
+<h3 id="eg-decay">ε 衰减方案：实现次线性懊悔</h3>
+
+<p>
+  解决方案：随时间步增加，逐渐减小探索概率，让算法"越来越自信"。
+</p>
+
+<div class="formula-box yellow">
+  <div class="formula-label yellow">ε 衰减方案（反比例衰减）</div>
+  $$\varepsilon_t = \frac{1}{t}$$
+</div>
+
+<p>
+  直觉：早期探索多（$\varepsilon_1 = 1$），后期利用多（$\varepsilon_t \to 0$）。
+  在此衰减方案下，可以证明：
+</p>
+
+<div class="fbox derive">
+  $$\mathbb{E}[L_T] = O(\ln T)$$
+</div>
+
+<p>
+  次线性增长，渐近最优（匹配 Lai-Robbins 下界 $\Omega(\ln T)$）。
+</p>
+
+<div class="card yellow">
+  <div class="card-title">实践中的衰减方案选择</div>
+  <ul>
+    <li>$\varepsilon_t = 1/t$：理论最优，但早期探索过多，实际效果不稳定</li>
+    <li>$\varepsilon_t = \min(1,\; c/(d^2 \cdot t))$：带问题相关参数，更实用</li>
+    <li>指数衰减 $\varepsilon_t = \varepsilon_0 \cdot \gamma^t$：工程常用，简单有效</li>
+    <li>线性衰减 $\varepsilon_t = \max(\varepsilon_{\min},\; \varepsilon_0 - \delta \cdot t)$：深度 RL 中常见</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- ===== 2.4 UCB ===== -->
+<h2 id="ucb">2.4 上置信界算法（UCB）</h2>
+
+<h3 id="ucb-idea">核心思想</h3>
+
+<blockquote>
+  <strong>乐观面对不确定性（Optimism in the Face of Uncertainty）</strong>：
+  对于不确定性高的臂，赋予更高的"乐观奖励上界"，从而驱动探索。
+</blockquote>
+
+<p>
+  ε-贪婪的探索是<strong>盲目的</strong>——随机选臂，不考虑哪些臂更值得探索。
+  UCB 的探索是<strong>有针对性的</strong>——优先探索那些估计不确定性高的臂。
+</p>
+
+<h3 id="ucb-formula">UCB 公式</h3>
+
+<div class="formula-box">
+  <div class="formula-label">UCB 动作选择</div>
+  $$A_t = \arg\max_{a \in \mathcal{A}} \left[ \hat{Q}(a) + c \cdot \sqrt{\frac{\ln t}{2 N(a)}} \right]$$
+</div>
+
+<p>公式由两部分组成：</p>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge green">利用项</span>
+    <span class="tc-title">$\hat{Q}(a)$：当前估计均值</span>
+  </div>
+  <p>
+    反映臂 $a$ 已知的平均奖励水平。选择此项最大的臂即为贪婪策略。
+  </p>
+</div>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge yellow">探索项</span>
+    <span class="tc-title">$c \cdot \sqrt{\dfrac{\ln t}{2 N(a)}}$：不确定性奖励</span>
+  </div>
+  <ul>
+    <li>$N(a)$ 越小（臂被选次数少），不确定性越高，探索奖励越大</li>
+    <li>$t$ 越大（总步数多），探索奖励随 $\ln t$ 缓慢增长，保证长期探索</li>
+    <li>$c$ 控制探索强度，$c=1$ 对应标准 UCB1</li>
+  </ul>
+</div>
+
+<h3 id="ucb-derive">推导：Hoeffding 不等式</h3>
+
+<p>
+  UCB 公式的置信界来自 <strong>Hoeffding 不等式</strong>（适用于有界随机变量）：
+</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>Hoeffding 不等式</strong>：设 $X_1,\ldots,X_n$ 独立同分布，$X_i \in [0,1]$，$\bar{X}_n = \frac{1}{n}\sum X_i$，则
+      <div class="fbox derive">
+        $$P\!\left(\bar{X}_n \geq \mathbb{E}[X] + u\right) \leq \exp\!\left(-2nu^2\right)$$
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>应用到臂 $a$</strong>：令 $n = N(a)$，$\bar{X}_n = \hat{Q}(a)$，$\mathbb{E}[X] = Q(a)$
+      <div class="fbox derive">
+        $$P\!\left(\hat{Q}(a) \geq Q(a) + u\right) \leq \exp\!\left(-2N(a)u^2\right)$$
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>设置置信水平</strong>：令右侧等于 $t^{-4}$（随 $t$ 衰减，控制全局失败概率）
+      <div class="fbox derive">
+        $$\exp\!\left(-2N(a)u^2\right) = t^{-4}$$
+        $$\Rightarrow \quad -2N(a)u^2 = -4\ln t$$
+        $$\Rightarrow \quad u^2 = \frac{2\ln t}{N(a)}$$
+        $$\Rightarrow \quad u = \sqrt{\frac{2\ln t}{N(a)}}$$
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>得到置信上界</strong>：以至少 $1 - t^{-4}$ 的概率，真实值 $Q(a)$ 不超过
+      <div class="formula-box green">
+        <div class="formula-label green">UCB 置信上界</div>
+        $$\text{UCB}(a) = \hat{Q}(a) + \sqrt{\frac{2\ln t}{N(a)}}$$
+      </div>
+      加入系数 $c$ 后得到完整公式，其中 $c \cdot \sqrt{\frac{\ln t}{2N(a)}} = \sqrt{\frac{c^2 \ln t}{2N(a)}}$。
+    </div>
+  </div>
+</div>
+
+<h3 id="ucb-regret">UCB 的懊悔上界</h3>
+
+<div class="card green">
+  <div class="card-title">UCB1 定理</div>
+  <p>
+    对于 $K$ 臂老虎机，UCB1 算法的期望累积懊悔满足：
+  </p>
+  <div class="fbox derive">
+    $$\mathbb{E}[L_T] \leq \sum_{a:\Delta_a > 0} \left(\frac{8\ln T}{\Delta_a} + \left(1 + \frac{\pi^2}{3}\right)\Delta_a\right) = O\!\left(\sqrt{KT\ln T}\right)$$
+  </div>
+  <p>
+    主项为 $O(\ln T)$，次线性增长，匹配 Lai-Robbins 下界的阶。
+  </p>
+</div>
+
+<pre class="mermaid">
+flowchart TD
+    A["初始化：所有臂各选一次"] --> B["t = K+1"]
+    B --> C["计算 UCB(a) = Q̂(a) + c·√(ln t / 2N(a)) 对所有臂 a"]
+    C --> D["选择 A_t = argmax UCB(a)"]
+    D --> E["执行动作，获得奖励 r_t"]
+    E --> F["更新 N(A_t) += 1"]
+    F --> G["增量更新 Q̂(A_t)"]
+    G --> H{"t < T?"}
+    H -->|"是"| I["t += 1"]
+    I --> C
+    H -->|"否"| J["输出结果"]
+</pre>
+
+<hr>
+
+<!-- ===== 2.5 汤普森采样 ===== -->
+<h2 id="thompson">2.5 汤普森采样（Thompson Sampling）</h2>
+
+<h3 id="ts-idea">贝叶斯视角</h3>
+
+<p>
+  汤普森采样（Thompson Sampling，TS）是一种<strong>贝叶斯方法</strong>：
+  不是维护点估计 $\hat{Q}(a)$，而是维护每个臂奖励概率的<strong>后验分布</strong>，
+  通过从分布中采样来平衡探索与利用。
+</p>
+
+<blockquote>
+  <strong>核心思想</strong>：以正比于"该臂为最优臂的后验概率"的概率选择该臂。
+</blockquote>
+
+<h3 id="ts-beta">Beta 分布与伯努利奖励</h3>
+
+<p>
+  对于奖励为 $\{0, 1\}$ 的伯努利老虎机，汤普森采样使用 <strong>Beta 分布</strong>作为先验/后验：
+</p>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge purple">Beta 分布</span>
+    <span class="tc-title">$\text{Beta}(\alpha, \beta)$ 的基本性质</span>
+  </div>
+  <div class="formula-box purple">
+    <div class="formula-label" style="color:var(--purple)">概率密度函数</div>
+    $$p(\theta; \alpha, \beta) = \frac{\theta^{\alpha-1}(1-\theta)^{\beta-1}}{B(\alpha,\beta)}, \quad \theta \in [0,1]$$
+  </div>
+  <ul style="margin-top:10px">
+    <li><strong>均值</strong>：$\mathbb{E}[\theta] = \dfrac{\alpha}{\alpha + \beta}$</li>
+    <li><strong>众数</strong>：$\dfrac{\alpha-1}{\alpha+\beta-2}$（$\alpha,\beta > 1$ 时）</li>
+    <li><strong>方差</strong>：$\text{Var}[\theta] = \dfrac{\alpha\beta}{(\alpha+\beta)^2(\alpha+\beta+1)}$</li>
+    <li>$\alpha = \beta = 1$ 时退化为均匀分布（无信息先验）</li>
+  </ul>
+</div>
+
+<h3 id="ts-conjugate">贝叶斯更新：共轭性质</h3>
+
+<p>
+  Beta 分布是伯努利/二项分布的<strong>共轭先验</strong>，使得后验更新有解析解：
+</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>先验</strong>：臂 $a$ 的奖励概率 $\theta_a$ 服从 $\text{Beta}(\alpha_a, \beta_a)$
+      <div class="fbox">
+        $$\theta_a \sim \text{Beta}(\alpha_a, \beta_a)$$
+        初始时 $\alpha_a = \beta_a = 1$（均匀先验，无偏见）
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>似然</strong>：选择臂 $a$，获得奖励 $r \in \{0,1\}$，似然为伯努利
+      <div class="fbox">
+        $$p(r \mid \theta_a) = \theta_a^r (1-\theta_a)^{1-r}$$
+      </div>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>后验</strong>（贝叶斯定理 + 共轭性）
+      <div class="formula-box green">
+        <div class="formula-label green">Beta 后验更新规则</div>
+        $$\text{若 } r=1：\quad \alpha_a \leftarrow \alpha_a + 1$$
+        $$\text{若 } r=0：\quad \beta_a \leftarrow \beta_a + 1$$
+        $$\Rightarrow \quad \theta_a \mid \text{数据} \sim \text{Beta}(\alpha_a, \beta_a)$$
+      </div>
+      <p>
+        $\alpha_a$ 累积"成功"次数，$\beta_a$ 累积"失败"次数。
+        后验均值 $= \alpha_a / (\alpha_a + \beta_a)$ 即经验成功率。
+      </p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n"></div>
+    <div class="step-body">
+      <strong>采样决策</strong>：每步从每个臂的后验分布中各采样一个值，选采样值最大的臂
+      <div class="fbox">
+        $$\tilde{\theta}_a \sim \text{Beta}(\alpha_a, \beta_a) \quad \forall a \in \mathcal{A}$$
+        $$A_t = \arg\max_a \tilde{\theta}_a$$
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 id="ts-intuition">直觉理解</h3>
+
+<div class="diff-grid">
+  <div class="diff-cell pos">
+    <div class="diff-label">充分探索的臂</div>
+    <p>$\alpha_a + \beta_a$ 大，Beta 分布<strong>集中</strong>在均值附近，方差小</p>
+    <p>采样值接近真实期望，<span class="hl-g">主要靠利用</span></p>
+  </div>
+  <div class="diff-cell neg">
+    <div class="diff-label">未充分探索的臂</div>
+    <p>$\alpha_a + \beta_a$ 小，Beta 分布<strong>扁平</strong>，方差大</p>
+    <p>采样值可能很高，<span class="hl-r">自然驱动探索</span></p>
+  </div>
+</div>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph 初始化
+        A1["臂1: Beta(1,1)"]
+        A2["臂2: Beta(1,1)"]
+        AK["臂K: Beta(1,1)"]
+    end
+    subgraph 每步决策
+        B["从每个臂后验采样 θ̃_a"]
+        C["选 A_t = argmax θ̃_a"]
+        D["获得奖励 r_t ∈ {0,1}"]
+        E{"r_t = 1?"}
+        F["α_{A_t} += 1"]
+        G["β_{A_t} += 1"]
+    end
+    初始化 --> B
+    B --> C --> D --> E
+    E -->|"是"| F
+    E -->|"否"| G
+    F --> B
+    G --> B
+</pre>
+
+<div class="card purple">
+  <div class="card-title">汤普森采样的理论保证</div>
+  <p>
+    汤普森采样同样可以实现 $O(\ln T)$ 的期望累积懊悔，
+    且在实践中往往<strong>优于 UCB</strong>，因为它天然地融合了不确定性量化，
+    无需手动调节置信系数 $c$。
+  </p>
+</div>
+
+<hr>
+
+<!-- ===== 2.6 算法对比 ===== -->
+<h2 id="comparison">2.6 算法对比</h2>
+
+<h3 id="cmp-table">四种算法综合比较</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>算法</th>
+      <th>累积懊悔增长率</th>
+      <th>超参数</th>
+      <th>计算复杂度</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>ε-贪婪（固定）</strong></td>
+      <td><span class="hl-r">$O(T)$ 线性</span></td>
+      <td>$\varepsilon \in (0,1)$</td>
+      <td>$O(K)$ / 步</td>
+      <td>简单基线，快速实现</td>
+    </tr>
+    <tr>
+      <td><strong>ε-贪婪（衰减）</strong></td>
+      <td><span class="hl-g">$O(\ln T)$ 次线性</span></td>
+      <td>$\varepsilon_t = 1/t$ 或类似</td>
+      <td>$O(K)$ / 步</td>
+      <td>非平稳环境，工程实践</td>
+    </tr>
+    <tr>
+      <td><strong>UCB</strong></td>
+      <td><span class="hl-g">$O(\ln T)$ 次线性</span></td>
+      <td>置信系数 $c > 0$</td>
+      <td>$O(K)$ / 步</td>
+      <td>理论保证强，无先验知识</td>
+    </tr>
+    <tr>
+      <td><strong>汤普森采样</strong></td>
+      <td><span class="hl-g">$O(\ln T)$ 次线性</span></td>
+      <td>先验分布形状（可无信息）</td>
+      <td>$O(K)$ / 步 + 采样</td>
+      <td>贝叶斯框架，实践效果最优</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="cmp-chart">累积懊悔增长趋势（ECharts 示意）</h3>
+
+<div class="echarts-container">
+  <div id="regret-chart" style="height:320px;background:#23233a;border-radius:8px;border:1px solid var(--border)"></div>
+</div>
+
+<p style="font-size:.87em;opacity:.7;margin-top:4px">
+  注：此图为示意性对比，展示线性增长与对数增长的本质差异，非实验数据。
+</p>
+
+<h3 id="cmp-scenarios">场景选择指南</h3>
+
+<div class="summary-grid">
+  <div class="summary-item">
+    <div class="si-label">快速原型 / 基线</div>
+    <div class="si-val" style="color:var(--text);font-size:.95em">ε-贪婪（固定）</div>
+    <p style="font-size:.85em;margin-top:6px;opacity:.8">实现最简单，$\varepsilon=0.1$ 即可跑通</p>
+  </div>
+  <div class="summary-item">
+    <div class="si-label">需要理论保证</div>
+    <div class="si-val" style="color:var(--heading);font-size:.95em">UCB1</div>
+    <p style="font-size:.85em;margin-top:6px;opacity:.8">确定性策略，懊悔上界可证明</p>
+  </div>
+  <div class="summary-item">
+    <div class="si-label">有先验知识 / 实践最优</div>
+    <div class="si-val" style="color:var(--purple);font-size:.95em">汤普森采样</div>
+    <p style="font-size:.85em;margin-top:6px;opacity:.8">贝叶斯框架，实验表现通常最好</p>
+  </div>
+  <div class="summary-item">
+    <div class="si-label">非平稳环境</div>
+    <div class="si-val" style="color:var(--yellow);font-size:.95em">ε-贪婪（衰减）</div>
+    <p style="font-size:.85em;margin-top:6px;opacity:.8">衰减方案可适应奖励分布变化</p>
+  </div>
+</div>
+
+<hr>
+
+<!-- ===== 小结 ===== -->
+<h2 id="summary">小结</h2>
+
+<div class="tech-card">
+  <div class="tc-header">
+    <span class="tc-badge green">Key Takeaways</span>
+    <span class="tc-title">本章核心要点</span>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        <strong>问题本质</strong>：K 臂老虎机是<span class="hl-b">无状态的序列决策问题</span>，
+        核心挑战是探索（获取信息）与利用（最大化奖励）的权衡。
+        懊悔 $L_T = \sum_t \Delta_{a_t}$ 是衡量算法好坏的核心指标。
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        <strong>ε-贪婪（固定）</strong>：实现最简单，但固定探索率导致
+        <span class="hl-r">线性累积懊悔 $O(T)$</span>，不是渐近最优。
+        增量式更新公式 $\hat{Q} \leftarrow \hat{Q} + \frac{1}{N}(r - \hat{Q})$ 是 RL 更新规则的原型。
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        <strong>ε 衰减</strong>：$\varepsilon_t = 1/t$ 使探索概率随时间减小，
+        实现<span class="hl-g">次线性累积懊悔 $O(\ln T)$</span>，
+        但需要合理设计衰减方案。
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        <strong>UCB</strong>：基于 Hoeffding 不等式构造置信上界，
+        实现<span class="hl-g">$O(\ln T)$ 懊悔</span>，
+        探索有针对性（优先探索不确定性高的臂），无需先验知识。
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        <strong>汤普森采样</strong>：贝叶斯框架，维护后验分布，
+        通过采样自然平衡探索与利用，
+        实现<span class="hl-g">$O(\ln T)$ 懊悔</span>，实践效果通常最优。
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        <strong>与完整 RL 的关系</strong>：多臂老虎机是完整强化学习问题的<span class="hl-b">简化版</span>——
+        去掉了状态转移，只保留了探索-利用权衡这一核心挑战。
+        理解多臂老虎机的算法思想，为后续 Q-learning、策略梯度等方法奠定基础。
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card blue" style="margin-top:2em">
+  <div class="card-title">懊悔增长率速查</div>
+  <table>
+    <thead>
+      <tr><th>算法</th><th>懊悔增长率</th><th>是否渐近最优</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>ε-贪婪（固定 ε）</td>
+        <td><span class="hl-r">$\Theta(T)$</span>，线性</td>
+        <td><span class="hl-r">否</span></td>
+      </tr>
+      <tr>
+        <td>ε-贪婪（$\varepsilon_t = 1/t$）</td>
+        <td><span class="hl-g">$O(\ln T)$</span>，对数</td>
+        <td><span class="hl-g">是</span></td>
+      </tr>
+      <tr>
+        <td>UCB1</td>
+        <td><span class="hl-g">$O(\ln T)$</span>，对数</td>
+        <td><span class="hl-g">是</span></td>
+      </tr>
+      <tr>
+        <td>汤普森采样</td>
+        <td><span class="hl-g">$O(\ln T)$</span>，对数</td>
+        <td><span class="hl-g">是</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="margin-top:10px;font-size:.9em;opacity:.8">
+    Lai-Robbins 下界：任何一致性算法的期望累积懊悔至少为 $\Omega(\ln T)$，
+    因此对数增长是信息论意义上的最优阶。
+  </p>
+</div>
+
+</main>
+
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+
+  // ECharts 累积懊悔对比图
+  (function(){
+    const dom = document.getElementById('regret-chart');
+    if(!dom) return;
+    const chart = echarts.init(dom, 'dark');
+    const T = 200;
+    const steps = Array.from({length:T}, (_,i) => i+1);
+
+    // 模拟数据
+    const greedy_fixed = steps.map(t => 0.15 * t);                          // 线性
+    const greedy_decay = steps.map(t => 2.8 * Math.log(t + 1));             // 对数（稍慢）
+    const ucb          = steps.map(t => 2.0 * Math.log(t + 1));             // 对数
+    const thompson     = steps.map(t => 1.5 * Math.log(t + 1));             // 对数（最优）
+
+    chart.setOption({
+      backgroundColor: '#23233a',
+      title: {
+        text: '四种算法累积懊悔对比（示意）',
+        left: 'center',
+        top: 12,
+        textStyle: { color: '#89b4fa', fontSize: 14 }
+      },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: '#313244',
+        borderColor: '#45475a',
+        textStyle: { color: '#cdd6f4' }
+      },
+      legend: {
+        bottom: 10,
+        textStyle: { color: '#cdd6f4', fontSize: 12 },
+        itemWidth: 20
+      },
+      grid: { top: 55, left: 55, right: 30, bottom: 48 },
+      xAxis: {
+        type: 'value',
+        name: '时间步 t',
+        nameLocation: 'end',
+        nameTextStyle: { color: '#cdd6f4' },
+        axisLabel: { color: '#cdd6f4' },
+        axisLine: { lineStyle: { color: '#45475a' } },
+        splitLine: { lineStyle: { color: '#2a2a3e' } }
+      },
+      yAxis: {
+        type: 'value',
+        name: '累积懊悔 L_T',
+        nameTextStyle: { color: '#cdd6f4' },
+        axisLabel: { color: '#cdd6f4' },
+        axisLine: { lineStyle: { color: '#45475a' } },
+        splitLine: { lineStyle: { color: '#2a2a3e' } }
+      },
+      series: [
+        {
+          name: 'ε-贪婪（固定）',
+          type: 'line',
+          data: steps.map((t,i) => [t, greedy_fixed[i]]),
+          lineStyle: { color: '#f38ba8', width: 2.5 },
+          symbol: 'none',
+          smooth: false
+        },
+        {
+          name: 'ε-贪婪（衰减）',
+          type: 'line',
+          data: steps.map((t,i) => [t, greedy_decay[i]]),
+          lineStyle: { color: '#f9e2af', width: 2.5, type: 'dashed' },
+          symbol: 'none',
+          smooth: true
+        },
+        {
+          name: 'UCB',
+          type: 'line',
+          data: steps.map((t,i) => [t, ucb[i]]),
+          lineStyle: { color: '#89b4fa', width: 2.5 },
+          symbol: 'none',
+          smooth: true
+        },
+        {
+          name: '汤普森采样',
+          type: 'line',
+          data: steps.map((t,i) => [t, thompson[i]]),
+          lineStyle: { color: '#a6e3a1', width: 2.5 },
+          symbol: 'none',
+          smooth: true
+        }
+      ]
+    });
+
+    window.addEventListener('resize', () => chart.resize());
+  })();
+
+  // 目录生成
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'sec-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  // 目录高亮
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const lk = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (lk) lk.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第4-5章 策略梯度与PPO算法</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; width: calc(100% - 240px); padding: 40px 48px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.5em; }
+    li { margin: 0.3em 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+  <h1>第4-5章 策略梯度与PPO算法</h1>
+  <blockquote>
+    <strong>来源</strong>：蘑菇书 EasyRL &nbsp;|&nbsp;
+    <strong>章节合并原因</strong>：第4章建立策略梯度基础理论（REINFORCE），第5章PPO是其直接延伸，解决同策略采样效率低的问题
+  </blockquote>
+
+  <h2>概述</h2>
+  <p>策略梯度方法直接对策略参数求梯度，绕过了价值函数的中间表示，是现代强化学习算法的重要支柱之一。第4章推导策略梯度的核心公式，引入基线和优势函数降低方差，给出REINFORCE算法的完整实现。第5章指出REINFORCE的根本局限——每次更新后必须重新采样（同策略）——并通过重要性采样将其扩展为异策略，进而引入PPO的KL惩罚和裁剪机制，实现高效稳定的策略优化。</p>
+
+  <h2>算法演进脉络</h2>
+  <pre class="mermaid">flowchart LR
+    A["REINFORCE<br>同策略 MC 策略梯度"] -->|"引入重要性采样<br>变为异策略"| B["异策略策略梯度<br>可复用旧数据"]
+    B -->|"KL散度约束<br>防止更新过大"| C["TRPO<br>信任域约束优化"]
+    C -->|"将约束内嵌<br>目标函数"| D["PPO-Penalty<br>KL惩罚版"]
+    C -->|"裁剪比值<br>更简单高效"| E["PPO-Clip<br>裁剪版 PPO2"]
+</pre>
+
+  <h2>第4章：策略梯度</h2>
+
+  <h3>核心思路</h3>
+  <p>强化学习三要素：<strong>演员（Actor）</strong>决策、<strong>环境</strong>反馈、<strong>奖励函数</strong>评估。策略梯度直接参数化策略 $\pi_\theta$（通常为神经网络），通过最大化期望累积奖励来优化参数 $\theta$。</p>
+  <p><strong>期望奖励</strong>：</p>
+  <p>$$\bar{R}_\theta = \sum_\tau R(\tau) p_\theta(\tau) = \mathbb{E}_{\tau \sim p_\theta(\tau)}[R(\tau)]$$</p>
+
+  <h3>策略梯度推导：完整步骤</h3>
+  <p><strong>第1步：将梯度移入求和</strong></p>
+  <p>$$\nabla_\theta \bar{R}_\theta = \nabla_\theta \sum_\tau R(\tau) p_\theta(\tau) = \sum_\tau R(\tau) \nabla_\theta p_\theta(\tau)$$</p>
+  <p>（$R(\tau)$ 是环境给出的奖励，与 $\theta$ 无关，故梯度只作用于 $p_\theta(\tau)$。）</p>
+
+  <p><strong>第2步：对数导数技巧</strong>（将无法采样的梯度变为可采样的期望）</p>
+  <p>利用恒等式 $\nabla f = f \cdot \nabla \log f$，令 $f = p_\theta(\tau)$：</p>
+  <p>$$\sum_\tau R(\tau) \nabla_\theta p_\theta(\tau) = \sum_\tau R(\tau)\, p_\theta(\tau)\, \nabla_\theta \log p_\theta(\tau) = \mathbb{E}_{\tau \sim p_\theta(\tau)}\!\left[R(\tau)\nabla_\theta \log p_\theta(\tau)\right]$$</p>
+
+  <p><strong>第3步：展开轨迹概率，消去与 $\theta$ 无关的项</strong></p>
+  <p>轨迹概率按时间步展开为：</p>
+  <p>$$p_\theta(\tau) = p(s_1) \prod_{t=1}^{T} \underbrace{p_\theta(a_t|s_t)}_{\text{策略，含}\theta} \cdot \underbrace{p(s_{t+1}|s_t,a_t)}_{\text{环境动态，不含}\theta}$$</p>
+  <p>取对数后求梯度，环境动态项 $\log p(s_{t+1}|s_t,a_t)$ 和初始分布 $\log p(s_1)$ 对 $\theta$ 的梯度为0，消去后得到：</p>
+  <p>$$\nabla_\theta \log p_\theta(\tau) = \sum_{t=1}^{T} \nabla_\theta \log p_\theta(a_t | s_t)$$</p>
+
+  <p><strong>第4步：蒙特卡洛采样近似期望</strong></p>
+  <p>用 $N$ 条由当前策略 $\pi_\theta$ 采集的轨迹近似：</p>
+  <p>$$\nabla_\theta \bar{R}_\theta \approx \frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{T_n} R(\tau^n) \nabla_\theta \log p_\theta(a_t^n | s_t^n)$$</p>
+  <p>直觉：若轨迹 $\tau$ 总奖励 $R(\tau) > 0$，则增大该轨迹中各动作的概率；若 $R(\tau) < 0$ 则减小。</p>
+
+  <h3>技巧1：添加基线</h3>
+  <p><strong>问题</strong>：若所有轨迹的 $R(\tau)$ 均为正，某些本来不好的动作因采样不足而被"无辜提升"概率。</p>
+  <p><strong>解决</strong>：减去基线 $b \approx \mathbb{E}[R(\tau)]$（通常取平均奖励），让奖励有正有负：</p>
+  <p>$$\nabla \bar{R}_\theta \approx \frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{T_n}(R(\tau^n) - b)\nabla \log p_\theta(a_t^n | s_t^n)$$</p>
+  <p><strong>为什么合法——证明减去基线不改变梯度期望</strong>：需证 $\mathbb{E}_\tau[b \cdot \nabla_\theta \log p_\theta(\tau)] = 0$（$b$ 为与轨迹无关的常数）：</p>
+  <p>$$\mathbb{E}_\tau\!\left[b \nabla_\theta \log p_\theta(\tau)\right] = \sum_\tau p_\theta(\tau)\, b\, \nabla_\theta \log p_\theta(\tau) = b \sum_\tau \nabla_\theta p_\theta(\tau) = b\, \nabla_\theta \sum_\tau p_\theta(\tau) = b\, \nabla_\theta 1 = 0$$</p>
+  <p>关键步骤：$\sum_\tau p_\theta(\tau) = 1$ 是概率归一化，其梯度恒为0。因此减去任意与轨迹无关的基线 $b(s)$ 均不改变策略梯度的期望，但可显著降低方差（选 $b \approx \mathbb{E}[R(\tau)]$ 时效果最好）。</p>
+
+  <h3>技巧2：分配合适的分数（优势函数）</h3>
+  <p><strong>问题</strong>：用整条轨迹的总奖励 $R(\tau)$ 加权，时间步 $t$ 之前的动作对后续奖励无贡献，却被"污染"。</p>
+  <p><strong>解决</strong>：只用时间步 $t$ 之后的折扣奖励，并减去基线，构成<strong>优势函数</strong> $A^\theta(s_t, a_t)$：</p>
+  <p>$$\nabla \bar{R}_\theta \approx \frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{T_n} A^\theta(s_t^n, a_t^n) \nabla \log p_\theta(a_t^n | s_t^n)$$</p>
+  <p>其中 $A^\theta(s_t, a_t) = \sum_{t'=t}^{T_n}\gamma^{t'-t}r_{t'}^n - b$，衡量动作 $a_t$ 相对"平均水平"的好坏。</p>
+
+  <h3>REINFORCE 算法</h3>
+  <p>REINFORCE 是最基础的策略梯度算法，使用蒙特卡洛采样估计梯度：</p>
+
+  <figure>
+    <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch4/4.22.png" alt="REINFORCE算法">
+    <figcaption>图：REINFORCE算法流程（来源：原文）</figcaption>
+  </figure>
+
+  <pre><code class="language-python">def reinforce(env, policy_net, optimizer, gamma=0.99, n_episodes=1000):
+    for episode in range(n_episodes):
+        states, actions, rewards = [], [], []
+        state = env.reset()
+        done = False
+        while not done:
+            action = policy_net.sample(state)   # 按概率采样动作
+            next_state, reward, done, _ = env.step(action)
+            states.append(state); actions.append(action); rewards.append(reward)
+            state = next_state
+
+        # 计算每步折扣回报 G_t
+        G = 0
+        returns = []
+        for r in reversed(rewards):
+            G = r + gamma * G
+            returns.insert(0, G)
+
+        # 构造损失并更新
+        loss = -sum(G_t * log_prob(s, a) for G_t, s, a in zip(returns, states, actions))
+        optimizer.zero_grad(); loss.backward(); optimizer.step()
+</code></pre>
+
+  <p><strong>关键性质</strong>：REINFORCE 属于<strong>同策略（on-policy）</strong>——每次梯度更新后，旧数据作废，必须用新策略重新采样，采样效率极低。</p>
+
+  <hr>
+
+  <h2>第5章：近端策略优化（PPO）</h2>
+
+  <h3>重要性采样：从同策略到异策略</h3>
+  <p><strong>核心恒等式</strong>：</p>
+  <p>$$\mathbb{E}_{x \sim p}[f(x)] = \sum_x p(x)f(x) = \sum_x q(x)\frac{p(x)}{q(x)}f(x) = \mathbb{E}_{x \sim q}\!\left[f(x)\frac{p(x)}{q(x)}\right]$$</p>
+  <p>这允许用分布 $q$ 的样本来估计分布 $p$ 下的期望，只要乘以重要性权重 $w(x) = p(x)/q(x)$。</p>
+
+  <p><strong>完整推导：同策略梯度 → 异策略目标函数</strong></p>
+  <p>同策略梯度（用 $\pi_\theta$ 采样）：</p>
+  <p>$$\nabla_\theta \bar{R}_\theta = \mathbb{E}_{(s_t,a_t)\sim\pi_\theta}\!\left[A^\theta(s_t,a_t)\nabla_\theta\log\pi_\theta(a_t|s_t)\right]$$</p>
+  <p>对 $\log\pi_\theta$ 用恒等式 $\nabla\log f = \nabla f / f$ 反向还原，将期望用 $\pi_{\theta'}$ 重写：</p>
+  <p>$$= \mathbb{E}_{(s_t,a_t)\sim\pi_{\theta'}}\!\left[\frac{p_\theta(a_t|s_t)}{p_{\theta'}(a_t|s_t)} A^{\theta'}(s_t,a_t)\nabla_\theta\log\pi_\theta(a_t|s_t)\right]$$</p>
+  <p>此梯度对应异策略目标函数（对 $\theta$ 求梯度即还原上式）：</p>
+  <p>$$J^{\theta'}(\theta) = \mathbb{E}_{(s_t,a_t)\sim\pi_{\theta'}}\!\left[\frac{p_\theta(a_t|s_t)}{p_{\theta'}(a_t|s_t)} A^{\theta'}(s_t,a_t)\right]$$</p>
+  <p><strong>方差问题</strong>：重要性权重 $\frac{p_\theta}{p_{\theta'}}$ 若过大，方差爆炸。可以证明：</p>
+  <p>$$\operatorname{Var}_{x\sim q}\!\left[f(x)\frac{p(x)}{q(x)}\right] = \mathbb{E}_{x\sim p}\!\left[f(x)^2\frac{p(x)}{q(x)}\right] - \left(\mathbb{E}_{x\sim p}[f(x)]\right)^2$$</p>
+  <p>当 $p/q$ 局部很大时，方差可以无界。因此两个策略不能差异过大，这是PPO需要约束更新幅度的根本原因。</p>
+
+  <h3>TRPO：约束优化</h3>
+  <p>TRPO（信任域策略优化）通过硬约束限制更新幅度：</p>
+  <p>$$\max_\theta J^{\theta^k}(\theta) \quad \text{s.t.} \quad \text{KL}(\theta, \theta^k) < \delta$$</p>
+  <p><strong>缺陷</strong>：约束优化需要二阶方法（共轭梯度+线搜索），实现复杂，计算成本高。</p>
+
+  <h3>PPO-Penalty：KL惩罚版</h3>
+  <p>将KL约束从外部约束变为目标函数中的惩罚项：</p>
+  <p>$$J_\text{PPO}^{\theta^k}(\theta) = J^{\theta^k}(\theta) - \beta \cdot \text{KL}(\theta, \theta^k)$$</p>
+  <p><strong>自适应 $\beta$ 调整</strong>：动态调整惩罚强度，使KL散度保持在目标范围内：</p>
+  <ul>
+    <li>若 $\text{KL} > \text{KL}_\text{max}$：<strong>增大</strong> $\beta$，收紧约束</li>
+    <li>若 $\text{KL} < \text{KL}_\text{min}$：<strong>减小</strong> $\beta$，放松约束</li>
+  </ul>
+
+  <h3>PPO-Clip：裁剪版（PPO2）</h3>
+  <p>更简单高效的方案：直接裁剪重要性权重比值，防止更新过大：</p>
+  <p>$$J_\text{PPO2}^{\theta^k}(\theta) = \sum_{(s_t,a_t)} \min\left(\frac{p_\theta(a_t|s_t)}{p_{\theta^k}(a_t|s_t)} A^{\theta^k}, \;\text{clip}\!\left(\frac{p_\theta}{p_{\theta^k}}, 1-\varepsilon, 1+\varepsilon\right) A^{\theta^k}\right)$$</p>
+  <p>其中 $\varepsilon$ 通常取 0.1 或 0.2。</p>
+
+  <h3>裁剪机制的直觉</h3>
+  <table>
+    <tr><th>情形</th><th>含义</th><th>裁剪行为</th></tr>
+    <tr><td>$A > 0$（动作好）</td><td>希望增大该动作概率</td><td>比值上限为 $1+\varepsilon$，防止过度增大</td></tr>
+    <tr><td>$A < 0$（动作坏）</td><td>希望减小该动作概率</td><td>比值下限为 $1-\varepsilon$，防止过度减小</td></tr>
+  </table>
+
+  <figure>
+    <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch5/5.2.png" alt="PPO裁剪函数">
+    <figcaption>图：PPO裁剪函数示意（来源：原文）</figcaption>
+  </figure>
+
+  <h3>算法对比</h3>
+  <div id="chart-pg" class="echarts-container" style="height:320px"></div>
+  <script>
+    echarts.init(document.getElementById('chart-pg'), 'dark').setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '策略梯度算法对比', textStyle: { color: '#89b4fa' } },
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['实现复杂度', '采样效率', '训练稳定性'], textStyle: { color: '#cdd6f4' } },
+      xAxis: { type: 'category', data: ['REINFORCE', 'TRPO', 'PPO-Penalty', 'PPO-Clip'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', max: 5, axisLabel: { color: '#cdd6f4' } },
+      series: [
+        { name: '实现复杂度', type: 'bar', data: [1, 5, 3, 2], itemStyle: { color: '#f38ba8' } },
+        { name: '采样效率', type: 'bar', data: [1, 3, 4, 4], itemStyle: { color: '#a6e3a1' } },
+        { name: '训练稳定性', type: 'bar', data: [2, 4, 4, 4], itemStyle: { color: '#89b4fa' } }
+      ]
+    });
+  </script>
+
+  <table>
+    <tr><th>算法</th><th>策略类型</th><th>约束方式</th><th>实现难度</th><th>使用频率</th></tr>
+    <tr><td>REINFORCE</td><td>同策略</td><td>无约束</td><td>低</td><td>教学为主</td></tr>
+    <tr><td>TRPO</td><td>异策略</td><td>硬KL约束</td><td>高</td><td>较少</td></tr>
+    <tr><td>PPO-Penalty</td><td>异策略</td><td>软KL惩罚</td><td>中</td><td>较少</td></tr>
+    <tr><td>PPO-Clip</td><td>异策略</td><td>比值裁剪</td><td>低</td><td>广泛应用</td></tr>
+  </table>
+
+  <h2>总结与启发</h2>
+  <p>策略梯度方法以"最大化期望奖励"为目标直接优化策略，核心推导依赖对数导数技巧。基线和优势函数是降低方差的关键工程技巧，二者不改变梯度期望但显著提升训练稳定性。PPO通过裁剪重要性权重，在异策略复用数据的同时防止策略更新过大，兼顾了效率与稳定性，成为目前最广泛使用的策略梯度算法之一（ChatGPT的RLHF阶段即使用PPO）。</p>
+
+  <h2>参考文献</h2>
+  <ul>
+    <li>Schulman et al., <em>Proximal Policy Optimization Algorithms</em> (2017)</li>
+    <li>Schulman et al., <em>Trust Region Policy Optimization</em> (2015)</li>
+    <li>Williams, R.J., <em>Simple Statistical Gradient-Following Algorithms for Connectionist RL</em> (1992)</li>
+  </ul>
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  hljs.highlightAll();
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

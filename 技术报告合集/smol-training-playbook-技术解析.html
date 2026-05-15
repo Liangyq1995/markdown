@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Smol Training Playbook 技术解析</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+    .highlight-box { background: #2a2a3e; border-left: 3px solid #a6e3a1; border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 1em 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>《The Smol Training Playbook》技术解析</h1>
+    <blockquote>
+      <strong>原文链接：</strong><a href="https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook">https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook</a>
+      &nbsp;|&nbsp;
+      <strong>作者：</strong>Hugging Face SmolLM 团队（HuggingFaceTB）
+      &nbsp;|&nbsp;
+      <strong>案例模型：</strong>SmolLM3（3B 参数，11T tokens）
+    </blockquote>
+
+    <h2>概述</h2>
+    <p>
+      《The Smol Training Playbook》是 Hugging Face SmolLM 团队以 SmolLM3 训练为案例，系统整理的大模型训练实战手册。
+      与偏理论的技术报告不同，本书以"避免踩坑"为核心价值，涵盖从战略决策（是否需要训练）、架构设计、数据配比、
+      超参调优、Post-training 对齐，到基础设施调试的全链路经验。
+      SmolLM3 是一个 3B 参数的多语言推理模型，在 437,760 GPU 小时内完成训练，超过 50% 的算力消耗在消融实验和调试上。
+    </p>
+
+    <h2>全流程架构总览</h2>
+    <pre class="mermaid">
+graph TD
+    subgraph 战略层["第一步：训练罗盘（Training Compass）"]
+        WHY["Why：为什么训练？<br>现有模型是否满足需求？"]
+        WHAT["What：训练什么？<br>目标能力、规模、成本预算"]
+        HOW["How：如何训练？<br>框架、硬件、流程"]
+    end
+
+    subgraph 消融层["第二步：小规模消融（Ablation）"]
+        BL["选择基线模型<br>Llama 3.1 / Qwen3 / DeepSeek-V3"]
+        ARCH["架构消融<br>Attention类型 / 位置编码 / 嵌入共享"]
+        DATA["数据消融<br>数据混合比例 / 质量过滤"]
+        EVAL["评估套件<br>MMLU / ARC / GSM8K / HumanEval"]
+    end
+
+    subgraph 预训练层["第三步：预训练（Pretraining）"]
+        HP["超参数确定<br>LR / Batch Size / WSD Schedule"]
+        INFRA["基础设施<br>框架选择 / 并行策略 / 监控"]
+        SPIKE["Loss Spike 处理<br>检测 / 回滚 / 分析"]
+        MID["中期训练调整<br>数据配比调整 / 长上下文扩展"]
+    end
+
+    subgraph 后训练层["第四步：Post-Training"]
+        SFT["SFT 监督微调<br>数据格式 / 质量控制"]
+        DPO["DPO 偏好对齐<br>偏好数据构造"]
+        GRPO["GRPO 强化学习<br>推理能力强化"]
+        MERGE["模型合并<br>多模型融合"]
+    end
+
+    WHY --> WHAT --> HOW
+    HOW --> BL --> ARCH --> DATA --> EVAL
+    EVAL --> HP --> INFRA --> SPIKE --> MID
+    MID --> SFT --> DPO --> GRPO --> MERGE
+    </pre>
+
+    <h2>1. 训练罗盘：先问为什么</h2>
+    <p>
+      本书的第一章直接挑战了"为什么要训练自己的模型"这个很多团队绕过的问题。
+      作者将其称为"The Question Nobody Wants to Answer"——因为答案往往是"不需要"。
+    </p>
+
+    <h3>1.1 决策框架</h3>
+    <ul>
+      <li><strong>Why：</strong>现有开源模型（Llama、Qwen、DeepSeek）是否已经满足需求？微调是否足够？</li>
+      <li><strong>What：</strong>明确目标能力（多语言/推理/代码/长上下文），决定模型规模、训练 token 数、部署约束。</li>
+      <li><strong>How：</strong>选择训练框架，制定消融计划，确定 GPU 预算，搭建监控体系。</li>
+    </ul>
+
+    <div class="highlight-box">
+      <strong>SmolLM3 的目标定义示例：</strong>强大的端侧模型 + 有竞争力的多语言性能 + 扎实的数学和代码能力 + 鲁棒的长上下文处理。
+      这些目标直接决定了采用 Dense 而非 MoE、参数量定在 3B、以及从一开始就支持 NoPE 长上下文编码。
+    </div>
+
+    <h3>1.2 训练框架选择</h3>
+    <table>
+      <tr><th>框架</th><th>成熟度</th><th>代码量（核心）</th><th>特点</th></tr>
+      <tr><td>Megatron-LM</td><td>高（Kimi K2、Nemotron）</td><td>93k 行</td><td>功能最全，上手难度大</td></tr>
+      <tr><td>DeepSpeed</td><td>高（BLOOM、GLM）</td><td>94k 行</td><td>ZeRO 支持最完整，配置复杂</td></tr>
+      <tr><td>TorchTitan</td><td>中（较新）</td><td>7k 行</td><td>代码简洁，扩展性中等</td></tr>
+      <tr><td>Nanotron</td><td>高（StarCoder、SmolLM）</td><td>15k 行</td><td>HF 内部框架，易于扩展和调试</td></tr>
+    </table>
+
+    <h2>2. 消融实验：小而精的迭代策略</h2>
+    <p>
+      消融实验是本书最强调的工程纪律。SmolLM3 训练中，<strong>超过 50% 的算力花在消融和调试上</strong>。
+      正确的消融设计可以用极小的代价获得关键决策的可靠信号。
+    </p>
+
+    <h3>2.1 消融设计原则</h3>
+    <ul>
+      <li><strong>每次只变一个变量：</strong>架构消融时固定数据，数据消融时固定架构，不混合变量。</li>
+      <li><strong>使用代理规模：</strong>在 1B 模型上跑 45B tokens（~35B 为 Chinchilla 最优），获得稳定信号。</li>
+      <li><strong>标准化评估套件：</strong>使用固定 benchmark，避免因评估方式不同导致的假阳性结论。</li>
+      <li><strong>评估格式选择 CF（Cloze Formulation）：</strong>比 MCF（Multiple Choice）对小模型更公平。</li>
+    </ul>
+
+    <h3>2.2 评估 Benchmark 套件</h3>
+    <table>
+      <tr><th>Benchmark</th><th>领域</th><th>题型</th><th>题目数</th></tr>
+      <tr><td>MMLU</td><td>综合知识</td><td>多选题</td><td>14k</td></tr>
+      <tr><td>ARC</td><td>科学推理</td><td>多选题</td><td>7k</td></tr>
+      <tr><td>HellaSwag</td><td>常识推理</td><td>多选题</td><td>10k</td></tr>
+      <tr><td>WinoGrande</td><td>常识推理</td><td>二选一</td><td>1.7k</td></tr>
+      <tr><td>GSM8K</td><td>数学</td><td>生成式</td><td>1.3k</td></tr>
+      <tr><td>HumanEval</td><td>代码</td><td>生成式</td><td>164</td></tr>
+    </table>
+
+    <h3>2.3 基线模型选择建议</h3>
+    <table>
+      <tr><th>架构类型</th><th>推荐基线</th><th>规模范围</th></tr>
+      <tr><td>Dense（密集模型）</td><td>Llama 3.1 / Qwen3</td><td>0.6B–70B</td></tr>
+      <tr><td>MoE（专家混合）</td><td>DeepSeek-V3 / Kimi K2</td><td>671B-A37B / 1T-A32B</td></tr>
+      <tr><td>Hybrid（混合架构）</td><td>Falcon-H1 / MiniMax-01</td><td>0.5B–456B</td></tr>
+    </table>
+
+    <h2>3. 模型架构设计</h2>
+    <p>
+      架构选择的每个细节都有实验支撑。本章深入分析了 Attention 机制、位置编码、嵌入共享等关键决策。
+    </p>
+
+    <h3>3.1 Attention 机制对比</h3>
+    <p>
+      现代 LLM 使用四种主流 Attention 变体，核心差异在于 KV Cache 大小与模型性能的权衡：
+    </p>
+    <p>$$s_{KV} = 2 \times n_\text{bytes} \times \text{seq} \times n_\text{layers} \times n_\text{heads} \times \text{dim}_\text{heads}$$</p>
+
+    <div id="kv-cache-chart" class="echarts-container" style="height:340px"></div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var chart = echarts.init(document.getElementById('kv-cache-chart'));
+        chart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: 'KV Cache 大小对比（以 MHA 为基准 1.0）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'axis' },
+          xAxis: { type: 'category', data: ['MHA\n（多头注意力）', 'GQA g=4\n（分组查询）', 'GQA g=8', 'MQA\n（多查询）', 'MLA\n（DeepSeek）'], axisLabel: { color: '#cdd6f4', interval: 0 } },
+          yAxis: { type: 'value', name: '相对 KV Cache 大小', axisLabel: { color: '#cdd6f4' }, nameTextStyle: { color: '#cdd6f4' } },
+          series: [{
+            type: 'bar',
+            data: [
+              { value: 1.0, itemStyle: { color: '#89b4fa' } },
+              { value: 0.25, itemStyle: { color: '#a6e3a1' } },
+              { value: 0.125, itemStyle: { color: '#a6e3a1' } },
+              { value: 0.0312, itemStyle: { color: '#fab387' } },
+              { value: 0.14, itemStyle: { color: '#cba6f7' } }
+            ],
+            label: { show: true, position: 'top', color: '#cdd6f4' }
+          }]
+        });
+      });
+    </script>
+
+    <table>
+      <tr><th>机制</th><th>KV Cache（per token）</th><th>性能</th><th>SmolLM3 选择</th></tr>
+      <tr><td>MHA（多头注意力）</td><td>$2 \times n_\text{heads} \times n_\text{layers} \times d_\text{head}$</td><td>最强基线</td><td>否</td></tr>
+      <tr><td>GQA（分组查询，g=4）</td><td>$2 \times g \times n_\text{layers} \times d_\text{head}$</td><td>与 MHA 持平</td><td><strong>是（g=4）</strong></td></tr>
+      <tr><td>MQA（多查询）</td><td>$2 \times 1 \times n_\text{layers} \times d_\text{head}$</td><td>显著下降</td><td>否</td></tr>
+      <tr><td>MLA（DeepSeek 低秩压缩）</td><td>$4.5 \times n_\text{layers} \times d_\text{head}$</td><td>接近 MHA</td><td>否（复杂度高）</td></tr>
+    </table>
+
+    <blockquote>
+      <strong>消融结论：</strong>GQA ratio 4~8 与 MHA 性能相当；ratio 16 和 MQA 性能明显下降。SmolLM3 选择 GQA with g=4（32 attention heads，8 KV heads）。
+    </blockquote>
+
+    <h3>3.2 位置编码选择</h3>
+    <p>
+      SmolLM3 最终采用 <strong>NoPE（No Positional Encoding）混合</strong>策略，每隔一层不加位置编码，核心动机是长上下文扩展能力。
+    </p>
+
+    <table>
+      <tr><th>位置编码</th><th>特点</th><th>长度外推</th><th>SmolLM3 选择</th></tr>
+      <tr><td>RoPE（旋转位置编码）</td><td>主流方案，相对位置信息</td><td>需要 ABF/YaRN 等扩展</td><td>部分层</td></tr>
+      <tr><td>ALiBi</td><td>线性 bias，无编码向量</td><td>较好但有上限</td><td>否</td></tr>
+      <tr><td>NoPE（无位置编码）</td><td>依赖上下文隐式编码位置</td><td>优秀</td><td><strong>是（混合）</strong></td></tr>
+    </table>
+
+    <p>RoPE 旋转角公式：</p>
+    <p>$$\theta_{p,k} = p \times \text{base}^{-k/(d/2)}$$</p>
+    <p>其中 $p$ 为位置，$k$ 为维度对索引，$d$ 为维度数，<code>base</code> 通常为 10000 或调整后的更大值（ABF）。</p>
+
+    <h3>3.3 其他架构选择</h3>
+    <ul>
+      <li><strong>嵌入共享（Tied Embeddings）：</strong>输入嵌入和输出矩阵共享参数。消融结论：性能与非共享的更大模型相当，深度比嵌入解绑更重要。SmolLM3 采用共享。</li>
+      <li><strong>文档 Masking（Document Masking）：</strong>训练时防止跨文档 attention 泄露。对短上下文影响小，对长上下文至关重要。SmolLM3 默认开启。</li>
+    </ul>
+
+    <pre><code class="language-yaml"># 在 Nanotron 中开启文档 Masking
+model_config:
+  _attn_implementation: flash_attention_2
+  _use_doc_masking: true  # 从 false 改为 true</code></pre>
+
+    <h3>3.4 主流模型架构对比（2025）</h3>
+    <table>
+      <tr><th>模型</th><th>架构</th><th>Attention</th><th>位置编码</th><th>优化器</th></tr>
+      <tr><td>DeepSeek LLM 7B</td><td>Dense</td><td>GQA</td><td>RoPE</td><td>AdamW</td></tr>
+      <tr><td>DeepSeek-V3</td><td>MoE 671B（37B激活）</td><td>MLA</td><td>Partial RoPE</td><td>AdamW</td></tr>
+      <tr><td>Kimi K2</td><td>MoE 1T（32B激活）</td><td>MLA</td><td>Partial RoPE</td><td>MuonClip</td></tr>
+      <tr><td>OLMo 2 7B</td><td>Dense</td><td>MHA</td><td>RoPE</td><td>AdamW</td></tr>
+      <tr><td><strong>SmolLM3</strong></td><td><strong>Dense 3B</strong></td><td><strong>GQA</strong></td><td><strong>NoPE（混合）</strong></td><td><strong>AdamW</strong></td></tr>
+    </table>
+
+    <h2>4. 数据：质量与配比</h2>
+    <p>
+      数据是预训练效果的核心决定因素，也是调试最难的环节。SmolLM3 使用了 11T tokens，数据配比经过多轮消融验证。
+    </p>
+
+    <h3>4.1 数据消融策略</h3>
+    <p>
+      <strong>关键原则：</strong>架构消融和数据消融要分开做——架构消融时固定高质量数据集，数据消融时固定最优架构。
+      混合变量会导致结论无法复现。
+    </p>
+
+    <pre><code class="language-yaml"># SmolLM3 消融阶段数据配置示例
+data_stages:
+- data:
+    dataset:
+      dataset_folder:
+      - fineweb-edu      # 教育质量过滤的网页文本
+      - stack-edu-python # Python 代码
+      - finemath-3plus   # 数学内容
+      dataset_weights:
+      - 0.7
+      - 0.2
+      - 0.1</code></pre>
+
+    <h3>4.2 训练算力预算（SmolLM3 实际消耗）</h3>
+
+    <div id="compute-chart" class="echarts-container" style="height:320px"></div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var chart = echarts.init(document.getElementById('compute-chart'));
+        chart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: 'SmolLM3 训练算力分布（GPU 小时）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'item', formatter: '{b}: {c} GPU·h ({d}%)' },
+          legend: { textStyle: { color: '#cdd6f4' }, bottom: 0 },
+          series: [{
+            type: 'pie',
+            radius: ['40%', '70%'],
+            center: ['50%', '50%'],
+            data: [
+              { value: 276480, name: '主预训练\n384GPU×30天', itemStyle: { color: '#89b4fa' } },
+              { value: 69120, name: '预训练消融\n192GPU×15天', itemStyle: { color: '#a6e3a1' } },
+              { value: 46080, name: '中期训练消融\n192GPU×10天', itemStyle: { color: '#fab387' } },
+              { value: 46080, name: '调试/重启\n384/192GPU×3-4天', itemStyle: { color: '#f38ba8' } }
+            ],
+            label: { color: '#cdd6f4', fontSize: 12 }
+          }]
+        });
+      });
+    </script>
+
+    <blockquote>
+      消融 + 调试消耗了总算力的 <strong>36.7%</strong>（161,280 GPU 小时），这正是作者最强调的经验：
+      "消融实验不是奢侈品，是保险。"
+    </blockquote>
+
+    <h2>5. 超参数：经验与数据双重验证</h2>
+    <p>
+      超参数设置看似简单，实则有大量细节。本章梳理了 SmolLM3 的完整配置，并与业界主流模型对比。
+    </p>
+
+    <h3>5.1 SmolLM3 基线配置</h3>
+    <pre><code class="language-yaml"># SmolLM3 核心超参数（消融基准 1B 配置）
+model:
+  model_config:
+    hidden_size: 2048
+    num_hidden_layers: 16
+    num_attention_heads: 32
+    num_key_value_heads: 8          # GQA，ratio=4
+    intermediate_size: 8192
+    max_position_embeddings: 4096
+    rope_theta: 50000.0
+    tie_word_embeddings: true       # 共享嵌入
+
+optimizer:
+  clip_grad: 1.0
+  learning_rate_scheduler:
+    learning_rate: 0.0005           # 峰值 LR
+    lr_decay_style: cosine          # 余弦衰减
+    lr_warmup_steps: 2000           # 线性热身
+    lr_decay_starting_step: 2000
+    lr_decay_steps: 18000
+    min_decay_lr: 5.0e-05
+
+tokens:
+  batch_accumulation_per_replica: 16
+  micro_batch_size: 3
+  sequence_length: 4096
+  train_steps: 20000               # GBS × 20000 ≈ 30B tokens</code></pre>
+
+    <h3>5.2 主流模型超参对比</h3>
+    <table>
+      <tr><th>模型</th><th>峰值 LR</th><th>优化器</th><th>LR 调度</th><th>Warmup</th><th>批大小</th></tr>
+      <tr><td>DeepSeek LLM 7B</td><td>4.2×10⁻⁴</td><td>AdamW</td><td>Multi-step</td><td>2k</td><td>9.4M tokens</td></tr>
+      <tr><td>DeepSeek-V3</td><td>2.2×10⁻⁴</td><td>AdamW</td><td>Multi-step+cosine</td><td>2k</td><td>12.6M→62.9M</td></tr>
+      <tr><td>Kimi K2</td><td>2×10⁻⁴</td><td>MuonClip</td><td>WSD</td><td>500</td><td>67M tokens</td></tr>
+      <tr><td>OLMo 2 7B</td><td>3×10⁻⁴</td><td>AdamW</td><td>Cosine</td><td>2k</td><td>4.2M tokens</td></tr>
+      <tr><td><strong>SmolLM3</strong></td><td><strong>2×10⁻⁴</strong></td><td><strong>AdamW</strong></td><td><strong>WSD</strong></td><td><strong>2k</strong></td><td><strong>2.3M tokens</strong></td></tr>
+    </table>
+
+    <p>SmolLM3 采用 <strong>WSD（Warmup-Stable-Decay）调度</strong>而非传统 Cosine，在稳定阶段保持恒定 LR，便于在训练途中进行数据配比调整。</p>
+
+    <h2>6. 基础设施与调试</h2>
+    <p>
+      本书最独特的价值之一是"Infrastructure"章节——大多数论文不写这些，但这些往往是训练失败的真实原因。
+    </p>
+
+    <h3>6.1 GPU 集群通信拓扑</h3>
+    <p>
+      理解硬件拓扑对选择并行策略至关重要。SmolLM3 在 384 × H100 GPU 集群上训练，节点内 NVLink 带宽约 600 GB/s，
+      节点间 InfiniBand 约 400 Gb/s（50 GB/s）。
+    </p>
+
+    <pre class="mermaid">
+graph LR
+    subgraph 节点内["单节点（8×H100）NVLink ~600 GB/s"]
+        G0["GPU 0"] --- G1["GPU 1"]
+        G1 --- G2["GPU 2"]
+        G2 --- G3["GPU 3"]
+        G3 --- G4["GPU 4"]
+        G4 --- G5["GPU 5"]
+        G5 --- G6["GPU 6"]
+        G6 --- G7["GPU 7"]
+        G7 --- G0
+    end
+
+    subgraph 节点间["节点间 InfiniBand ~50 GB/s（慢 12×）"]
+        节点A["节点 A"] ---|"IB"| 节点B["节点 B"]
+        节点B ---|"IB"| 节点C["节点 C"]
+        节点C ---|"IB"| 节点D["节点 D"]
+    end
+    </pre>
+
+    <h3>6.2 Loss Spike 处理</h3>
+    <p>
+      Loss Spike（损失突增）是大规模训练中几乎必然遇到的问题。原文描述了 SmolLM3 在训练中真实遇到的 spike 和处理策略：
+    </p>
+    <ul>
+      <li><strong>监控：</strong>实时追踪 loss、gradient norm、激活统计，设置阈值告警。</li>
+      <li><strong>回滚：</strong>定期保存 checkpoint，检测到 spike 后回滚到最近稳定点。</li>
+      <li><strong>诊断：</strong>检查 bad batch（包含异常长序列或格式错误的数据）、梯度裁剪效果、学习率是否过高。</li>
+      <li><strong>预防：</strong>使用 gradient clipping（clip_grad=1.0），数据严格清洗，避免在训练后期大幅改变数据分布。</li>
+    </ul>
+
+    <blockquote>
+      SmolLM3 团队在训练 1T tokens 后发现了一个隐式的 scaling pathology，不得不重启训练。
+      这个"战伤"被完整记录在 playbook 中，是对其他团队最宝贵的警示。
+    </blockquote>
+
+    <h3>6.3 吞吐量参考</h3>
+    <p>SmolLM3 训练吞吐量达到 <strong>42,000 tokens/秒/GPU</strong>，这是在 H100 上使用 Nanotron + Flash Attention + 完整并行优化后的实测数值。</p>
+
+    <h2>7. Post-Training：对齐全流程</h2>
+    <p>
+      Post-training 是将预训练基座模型变成实用助手的关键阶段。SmolLM3 完整走完了 SFT → DPO → GRPO 的标准流程，
+      并结合了模型合并（Model Merging）技术。
+    </p>
+
+    <h3>7.1 SFT（监督微调）</h3>
+    <p>
+      <strong>是什么：</strong>在高质量的指令-回答对上做监督学习，让模型学会遵循指令格式。<br>
+      <strong>为什么：</strong>预训练基座模型只会续写，不会对话。SFT 是让模型"开口说话"的第一步。<br>
+      <strong>关键注意点：</strong>数据质量远比数量重要，1 万条高质量 SFT 数据往往胜过 100 万条低质量数据。
+    </p>
+
+    <h3>7.2 DPO（直接偏好优化）</h3>
+    <p>
+      <strong>是什么：</strong>用人类偏好数据（chosen/rejected 对）直接优化模型，无需额外训练奖励模型。<br>
+      <strong>为什么优于 RLHF：</strong>消除了 PPO 训练的不稳定性，减少约 50% 计算开销，无需维护独立奖励模型。<br>
+      <strong>DPO 损失函数：</strong>
+    </p>
+    <p>$$\mathcal{L}_\text{DPO} = -\mathbb{E}\left[\log \sigma\left(\beta \log \frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}\right)\right]$$</p>
+    <p>其中 $y_w$ 为优选回答，$y_l$ 为劣选回答，$\pi_\text{ref}$ 为参考模型（SFT 后的模型），$\beta$ 控制偏离程度。</p>
+
+    <h3>7.3 GRPO（组相对策略优化）</h3>
+    <p>
+      <strong>是什么：</strong>DeepSeek 提出的强化学习变体，用于增强推理能力（数学/代码）。<br>
+      <strong>为什么：</strong>对于需要多步推理的任务，DPO 效果有限，GRPO 通过采样多个回答并用组内相对奖励训练，
+      能更有效地强化正确的推理链。<br>
+      <strong>核心改进：</strong>无需 critic 模型，用同一 prompt 采样多个回答的相对得分作为优势估计，大幅降低计算成本。
+    </p>
+
+    <pre class="mermaid">
+sequenceDiagram
+    participant M as 模型 π
+    participant E as 评估器（规则/模型）
+    participant O as 优化器
+
+    M->>M: 对同一 prompt 采样 G 个回答
+    M->>E: 发送 G 个回答
+    E->>E: 计算每个回答的奖励 r_i
+    E->>O: 返回奖励列表 [r_1, ..., r_G]
+    O->>O: 计算组内优势 A_i = (r_i - mean) / std
+    O->>M: 更新策略（提高高奖励回答概率）
+    </pre>
+
+    <h3>7.4 模型合并（Model Merging）</h3>
+    <p>
+      <strong>是什么：</strong>将多个在不同任务上微调的模型权重合并为单一模型。<br>
+      <strong>为什么：</strong>避免灾难性遗忘——单独对数学优化可能损害代码性能，合并可以保留各自优势。<br>
+      <strong>常用方法：</strong>SLERP（球面线性插值）、TIES（修剪+投票+合并）、DARE（随机丢弃参数后合并）。
+    </p>
+
+    <h2>8. 关键消融结论汇总</h2>
+
+    <div id="ablation-chart" class="echarts-container" style="height:380px"></div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        var chart = echarts.init(document.getElementById('ablation-chart'));
+        chart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: 'SmolLM3 关键架构消融结论（相对基线分数）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          legend: { data: ['GSM8K 数学', 'HumanEval 代码', 'MMLU 知识'], textStyle: { color: '#cdd6f4' }, bottom: 0 },
+          grid: { left: '3%', right: '4%', bottom: '60px', top: '60px', containLabel: true },
+          xAxis: { type: 'category', data: ['基线\nMHA+RoPE', 'GQA(g=4)\n+RoPE', 'GQA(g=4)\n+NoPE混合', 'Tied\nEmbeddings', 'Doc\nMasking'], axisLabel: { color: '#cdd6f4', interval: 0, fontSize: 11 } },
+          yAxis: { type: 'value', min: 85, max: 105, axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, nameTextStyle: { color: '#cdd6f4' } },
+          series: [
+            { name: 'GSM8K 数学', type: 'bar', data: [100, 99.5, 101.2, 100.8, 101.0], itemStyle: { color: '#89b4fa' } },
+            { name: 'HumanEval 代码', type: 'bar', data: [100, 100.2, 99.8, 101.5, 100.3], itemStyle: { color: '#a6e3a1' } },
+            { name: 'MMLU 知识', type: 'bar', data: [100, 100.0, 99.9, 100.1, 100.0], itemStyle: { color: '#fab387' } }
+          ]
+        });
+      });
+    </script>
+
+    <table>
+      <tr><th>实验变量</th><th>结论</th><th>SmolLM3 决策</th></tr>
+      <tr><td>GQA ratio（g=4 vs 16）</td><td>g=4 与 MHA 性能持平；g=16 和 MQA 明显下降</td><td>GQA with g=4</td></tr>
+      <tr><td>嵌入共享（Tied）</td><td>与等参数量非共享模型性能相当；深度 &gt; 嵌入解绑</td><td>采用共享嵌入</td></tr>
+      <tr><td>文档 Masking</td><td>短上下文影响极小；长上下文关键</td><td>默认开启</td></tr>
+      <tr><td>NoPE（混合 RoPE+NoPE）</td><td>短上下文 benchmark 与纯 RoPE 相当；长上下文更好</td><td>采用 NoPE 混合</td></tr>
+      <tr><td>WSD vs Cosine 调度</td><td>WSD 允许中期调整数据配比，更灵活</td><td>WSD 调度</td></tr>
+    </table>
+
+    <h2>9. 总结与启发</h2>
+    <p>
+      《The Smol Training Playbook》的核心价值在于"血泪经验"的系统化输出。几个最值得记住的结论：
+    </p>
+    <ul>
+      <li><strong>消融实验是最划算的投资：</strong>SmolLM3 超过 50% 的算力花在消融和调试上，这不是浪费，而是避免了在 11T token 规模上走弯路。</li>
+      <li><strong>架构选择的影响常被高估：</strong>在本书测试的大多数场景下，GQA 与 MHA 性能相当，NoPE 与 RoPE 短上下文性能相当。真正的差距来自数据质量和训练稳定性。</li>
+      <li><strong>数据配比和质量是核心：</strong>FineWeb-Edu + FineMath + Python-Edu 的组合在 SmolLM3 上效果显著，但这需要反复消融验证而非经验主义。</li>
+      <li><strong>Post-training 需要全流程：</strong>SFT 打基础，DPO 对齐偏好，GRPO 强化推理，模型合并保留各维度能力——缺少任何一环都会留下短板。</li>
+      <li><strong>Infrastructure 不是运维问题：</strong>loss spike、并行配置、checkpoint 策略直接影响最终模型质量，需要在训练设计阶段就充分考虑。</li>
+    </ul>
+    <blockquote>
+      "Most of the knowledge about making these algorithms work well is learned through painful lessons, and we'll share our experience here to hopefully spare you some of them." — 原文
+    </blockquote>
+
+    <h2>参考资料</h2>
+    <ul>
+      <li><a href="https://huggingface.co/spaces/HuggingFaceTB/smol-training-playbook">The Smol Training Playbook（Hugging Face Space）</a></li>
+      <li>SmolLM3 技术报告（Hugging Face）</li>
+      <li>Penedo et al., "FineWeb-Edu: a high-quality web dataset for LLM training"（2024）</li>
+      <li>Rafailov et al., "Direct Preference Optimization: Your Language Model is Secretly a Reward Model"（2023）</li>
+      <li>DeepSeek-R1 技术报告（GRPO 算法）</li>
+      <li>Su et al., "RoFormer: Enhanced Transformer with Rotary Position Embedding"（RoPE）</li>
+      <li>Ainslie et al., "GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints"（GQA）</li>
+      <li>Kimi K2 技术报告（MuonClip 优化器）</li>
+    </ul>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

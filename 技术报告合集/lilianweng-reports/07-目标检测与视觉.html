@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>目标检测与视觉 — Lilian Weng 博客精选</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--yellow:#f9e2af;--purple:#cba6f7;--red:#f38ba8;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #toc a:hover{background:var(--border);}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+    #toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+    main{margin-left:240px;max-width:none;padding:40px 64px;}
+    h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+    h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+    h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+    p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+    ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+    th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+    td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+    code{font-family:'JetBrains Mono','Fira Code',monospace;}
+    p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+    .echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+    .tag{display:inline-block;background:#2a2a3e;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:.8em;margin:2px;}
+    .tag-year{border-color:var(--heading);color:var(--heading);}
+    .tag-model{border-color:var(--purple);color:var(--purple);}
+    .info-box{background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:1em 0;}
+    .info-box.tip{border-left:3px solid var(--strong);}
+    .info-box.warn{border-left:3px solid var(--yellow);}
+    .info-box.note{border-left:3px solid var(--heading);}
+    .meta{color:#6c7086;font-size:.88em;margin-bottom:1.5em;}
+    .formula-block{background:#2a2a3e;border-left:3px solid var(--purple);padding:12px 20px;margin:1em 0;border-radius:0 6px 6px 0;overflow-x:auto;}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>目标检测与视觉语言模型</h1>
+<p class="meta">来源：Lilian Weng 博客 · 整理时间：2026-05-14 · 涵盖 6 篇文章（2017–2022）</p>
+
+<blockquote>
+  本报告系统梳理了目标检测领域从传统特征工程到深度学习端到端检测的演进历程，以及视觉语言模型和神经架构搜索的最新进展。内容涵盖图像梯度基础、HOG特征、Selective Search、R-CNN家族、YOLO/SSD快速检测、CLIP/Flamingo视觉语言模型，以及DARTS等NAS方法。
+</blockquote>
+
+<!-- ==================== 检测器演进时间线 ==================== -->
+<h2>检测器演进总览</h2>
+
+<p>目标检测的发展可以分为三个主要阶段：<strong>传统特征工程时代</strong>（HOG、DPM）、<strong>深度学习两阶段检测时代</strong>（R-CNN 家族）和<strong>端到端单阶段检测时代</strong>（YOLO、SSD、RetinaNet）。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>年份</th>
+      <th>模型/方法</th>
+      <th>类型</th>
+      <th>核心创新</th>
+      <th>速度</th>
+      <th>精度（mAP）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>2005</td>
+      <td>HOG + SVM</td>
+      <td>传统</td>
+      <td>方向梯度直方图特征描述子</td>
+      <td>慢</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2008</td>
+      <td>DPM</td>
+      <td>传统</td>
+      <td>可变形部件模型，潜在SVM</td>
+      <td>慢</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2013</td>
+      <td>R-CNN</td>
+      <td>两阶段</td>
+      <td>CNN特征 + Selective Search候选框</td>
+      <td>47s/图</td>
+      <td>53.3%</td>
+    </tr>
+    <tr>
+      <td>2013</td>
+      <td>OverFeat</td>
+      <td>单阶段</td>
+      <td>多尺度滑动窗口CNN，最早端到端</td>
+      <td>较慢</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>2015</td>
+      <td>Fast R-CNN</td>
+      <td>两阶段</td>
+      <td>共享卷积特征 + RoI Pooling</td>
+      <td>2s/图</td>
+      <td>70.0%</td>
+    </tr>
+    <tr>
+      <td>2015</td>
+      <td>Faster R-CNN</td>
+      <td>两阶段</td>
+      <td>RPN替代Selective Search，端到端</td>
+      <td>0.2s/图</td>
+      <td>73.2%</td>
+    </tr>
+    <tr>
+      <td>2015</td>
+      <td>SSD</td>
+      <td>单阶段</td>
+      <td>多尺度特征图 + Default Boxes</td>
+      <td>59 FPS</td>
+      <td>74.3%</td>
+    </tr>
+    <tr>
+      <td>2015</td>
+      <td>YOLO v1</td>
+      <td>单阶段</td>
+      <td>网格划分，直接回归bbox，实时</td>
+      <td>45 FPS</td>
+      <td>63.4%</td>
+    </tr>
+    <tr>
+      <td>2017</td>
+      <td>YOLO v2</td>
+      <td>单阶段</td>
+      <td>Anchor Boxes + BatchNorm + 多尺度</td>
+      <td>67 FPS</td>
+      <td>76.8%</td>
+    </tr>
+    <tr>
+      <td>2017</td>
+      <td>FPN</td>
+      <td>两阶段</td>
+      <td>特征金字塔网络，多尺度特征融合</td>
+      <td>—</td>
+      <td>59.1% (COCO)</td>
+    </tr>
+    <tr>
+      <td>2017</td>
+      <td>Mask R-CNN</td>
+      <td>两阶段</td>
+      <td>增加分割头 + RoI Align，实例分割</td>
+      <td>5 FPS</td>
+      <td>37.1% (COCO)</td>
+    </tr>
+    <tr>
+      <td>2018</td>
+      <td>RetinaNet</td>
+      <td>单阶段</td>
+      <td>Focal Loss解决类别不平衡</td>
+      <td>~5 FPS</td>
+      <td>40.8% (COCO)</td>
+    </tr>
+    <tr>
+      <td>2018</td>
+      <td>YOLO v3</td>
+      <td>单阶段</td>
+      <td>DarkNet-53 + 3尺度预测</td>
+      <td>30 FPS</td>
+      <td>33.0% (COCO)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="mermaid">
+timeline
+    title 目标检测发展时间线
+    2005 : HOG+SVM (传统特征)
+    2008 : DPM (可变形部件)
+    2013 : R-CNN · OverFeat
+    2015 : Fast R-CNN · Faster R-CNN · SSD · YOLO v1
+    2017 : FPN · Mask R-CNN · YOLO v2
+    2018 : RetinaNet · YOLO v3
+    2022 : CLIP · Flamingo · BLIP (视觉语言)
+</div>
+
+<!-- ==================== Part 1: 图像基础 ==================== -->
+<h2>Part 1：图像基础特征工程（2017-10-29）</h2>
+
+<h3>图像梯度与 Sobel 算子</h3>
+
+<p>图像梯度描述了像素强度的局部变化方向和速率，是目标检测中边缘检测和特征提取的基础。<strong>Sobel 算子</strong>通过卷积核近似计算图像在水平和垂直方向的偏导数。</p>
+
+<div class="formula-block">
+$$G_x = \begin{bmatrix} -1 & 0 & +1 \\ -2 & 0 & +2 \\ -1 & 0 & +1 \end{bmatrix} * A, \quad G_y = \begin{bmatrix} -1 & -2 & -1 \\ 0 & 0 & 0 \\ +1 & +2 & +1 \end{bmatrix} * A$$
+</div>
+
+<p>梯度的<strong>幅度</strong>和<strong>方向</strong>由以下公式计算：</p>
+
+<div class="formula-block">
+$$|G| = \sqrt{G_x^2 + G_y^2}, \quad \theta = \arctan\!\left(\frac{G_y}{G_x}\right)$$
+</div>
+
+<ul>
+  <li><strong>幅度 $|G|$</strong>：反映边缘强度，值越大表示边缘越明显</li>
+  <li><strong>方向 $\theta$</strong>：反映边缘朝向，范围通常为 $[0°, 180°]$（无符号）</li>
+</ul>
+
+<h3>HOG 特征描述子</h3>
+
+<p><strong>方向梯度直方图（Histogram of Oriented Gradients, HOG）</strong>是 Dalal & Triggs（2005）提出的经典行人检测特征，其核心思想是用局部区域内梯度方向的分布来描述目标外观。</p>
+
+<div class="info-box note">
+  <strong>HOG 计算流程：</strong>
+  <ol style="margin:.4em 0 0 1.2em;">
+    <li>将图像划分为若干 <strong>Cell</strong>（如 8×8 像素）</li>
+    <li>在每个 Cell 内统计 <strong>9 个方向 bins</strong>（0°–180°，每 20° 一个 bin）的梯度幅度</li>
+    <li>将相邻 Cell 组成 <strong>Block</strong>（如 2×2 个 Cell），对 Block 内所有 Cell 的直方图做 L2 归一化</li>
+    <li>将所有 Block 的归一化特征拼接成最终特征向量</li>
+  </ol>
+</div>
+
+<div class="mermaid">
+flowchart LR
+    A["输入图像\n(64×128)"] --> B["计算梯度\nSobel算子"]
+    B --> C["划分Cell\n8×8像素"]
+    C --> D["每Cell统计\n9个方向bins"]
+    D --> E["组成Block\n2×2 Cells"]
+    E --> F["Block内L2归一化"]
+    F --> G["拼接特征向量\n3780维"]
+    G --> H["SVM分类器"]
+</div>
+
+<p>HOG 的优势在于对光照变化和几何变形具有一定鲁棒性，因为归一化操作消除了局部光照影响，而局部统计的方式保留了结构信息。</p>
+
+<h3>图像分割：Felzenszwalb 算法</h3>
+
+<p><strong>Felzenszwalb 图像分割算法</strong>（2004）基于图论的最小生成树思想，将图像建模为无向图 $G = (V, E)$：</p>
+
+<ul>
+  <li>顶点 $V$：每个像素</li>
+  <li>边 $E$：相邻像素之间的边，权重为像素差异（颜色、亮度等）</li>
+</ul>
+
+<p>算法通过最小化<strong>图割代价</strong>来确定区域合并：定义内部差异 $\text{Int}(C)$ 为区域内最小生成树的最大边权，区域间差异 $\text{Diff}(C_1, C_2)$ 为两区域间最小权重边。合并条件为：</p>
+
+<div class="formula-block">
+$$\text{Diff}(C_1, C_2) \leq \min\!\left(\text{Int}(C_1) + \frac{k}{|C_1|},\ \text{Int}(C_2) + \frac{k}{|C_2|}\right)$$
+</div>
+
+<p>其中 $k$ 是控制分割粒度的超参数，$|C|$ 是区域大小。该算法复杂度接近线性，为后续 Selective Search 提供了初始分割基础。</p>
+
+<h3>Selective Search：候选框生成</h3>
+
+<p><strong>Selective Search</strong>（Uijlings et al., 2013）是 R-CNN 系列检测器的核心预处理步骤，通过层次化合并图像区域来生成高质量的候选框（Region Proposals）。</p>
+
+<div class="mermaid">
+flowchart TD
+    A["输入图像"] --> B["Felzenszwalb初始分割\n生成细粒度区域"]
+    B --> C["计算相邻区域相似度\n颜色+纹理+尺寸+填充度"]
+    C --> D["合并相似度最高的两个区域"]
+    D --> E["将新区域加入候选集\n记录对应边界框"]
+    E --> F{还有相邻区域?}
+    F -->|是| C
+    F -->|否| G["输出约2000个候选框"]
+</div>
+
+<p>相似度计算综合四个维度：</p>
+<ul>
+  <li><strong>颜色相似度</strong>：各通道颜色直方图的交集</li>
+  <li><strong>纹理相似度</strong>：HOG 特征直方图的交集</li>
+  <li><strong>尺寸相似度</strong>：优先合并小区域，避免单一大区域吞并所有</li>
+  <li><strong>填充相似度</strong>：衡量两区域合并后的紧凑程度</li>
+</ul>
+
+<div class="info-box tip">
+  <strong>关键优势：</strong>Selective Search 在保持高召回率（约 99%）的同时，将候选框数量从数万个滑动窗口压缩到约 2000 个，极大降低了后续分类的计算量。
+</div>
+
+<!-- ==================== Part 2: CNN与早期检测 ==================== -->
+<h2>Part 2：CNN 与早期深度检测（2017-12-15）</h2>
+
+<h3>CNN 分类网络演进</h3>
+
+<p>深度卷积神经网络的发展为目标检测提供了强大的特征提取骨干网络。</p>
+
+<table>
+  <thead>
+    <tr><th>网络</th><th>年份</th><th>深度</th><th>核心创新</th><th>Top-5错误率</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>AlexNet</td><td>2012</td><td>8层</td><td>ReLU、Dropout、数据增强、GPU训练</td><td>15.3%</td></tr>
+    <tr><td>VGGNet</td><td>2014</td><td>16/19层</td><td>全部使用3×3小卷积核，网络更深</td><td>7.3%</td></tr>
+    <tr><td>GoogLeNet</td><td>2014</td><td>22层</td><td>Inception模块，多尺度并行卷积</td><td>6.7%</td></tr>
+    <tr><td>ResNet</td><td>2015</td><td>50/101/152层</td><td>残差连接解决梯度消失，极深网络</td><td>3.6%</td></tr>
+  </tbody>
+</table>
+
+<h3>DPM：可变形部件模型</h3>
+
+<p><strong>Deformable Parts Model (DPM)</strong>（Felzenszwalb et al., 2008）是深度学习之前最强的目标检测方法，连续三年（2007–2009）赢得 PASCAL VOC 冠军。</p>
+
+<div class="mermaid">
+flowchart LR
+    subgraph DPM模型结构
+        A["根滤波器\n(Root Filter)\n低分辨率全局外观"]
+        B["部件滤波器1\n(Part Filter)\n高分辨率局部特征"]
+        C["部件滤波器2"]
+        D["部件滤波器N"]
+        E["变形代价\n(Deformation Cost)\n弹簧模型惩罚偏移"]
+    end
+    A --> F["综合得分"]
+    B --> F
+    C --> F
+    D --> F
+    E --> F
+</div>
+
+<p>DPM 的核心思想：</p>
+<ul>
+  <li><strong>根滤波器</strong>：在低分辨率（半尺寸）HOG 特征图上捕获目标整体外观</li>
+  <li><strong>部件滤波器</strong>：在高分辨率（全尺寸）HOG 特征图上捕获局部细节（如人的头部、手臂）</li>
+  <li><strong>变形代价</strong>：用二次函数惩罚部件偏离理想位置的程度，模拟弹簧连接</li>
+  <li><strong>潜在 SVM（Latent SVM）</strong>：部件位置作为隐变量，通过坐标下降优化</li>
+</ul>
+
+<div class="formula-block">
+$$\text{score}(x, z) = \beta_0 \cdot F_0(x) + \sum_{i=1}^{n} \max_{z_i} \left[\beta_i \cdot F_i(p_i) - d_i(z_i)\right]$$
+</div>
+
+<p>其中 $F_0$ 是根滤波器响应，$F_i$ 是第 $i$ 个部件滤波器响应，$d_i(z_i)$ 是变形代价，$z_i$ 是部件位置（隐变量）。</p>
+
+<h3>OverFeat：最早的端到端 CNN 检测</h3>
+
+<p><strong>OverFeat</strong>（Sermanet et al., 2013）是第一个将 CNN 用于目标检测的端到端框架，在 ILSVRC 2013 定位任务中获胜。</p>
+
+<div class="mermaid">
+flowchart TD
+    A["输入图像（多尺度）"] --> B["在不同尺度上滑动CNN窗口"]
+    B --> C["共享卷积特征提取\n(AlexNet骨干)"]
+    C --> D["分类头\n预测类别"]
+    C --> E["回归头\n预测bbox偏移"]
+    D --> F["非极大值抑制NMS"]
+    E --> F
+    F --> G["最终检测结果"]
+</div>
+
+<p>OverFeat 的关键贡献：</p>
+<ul>
+  <li><strong>多尺度滑动窗口</strong>：在多个尺度上密集地应用 CNN，避免了固定大小的限制</li>
+  <li><strong>全卷积网络</strong>：将全连接层替换为卷积层，可处理任意尺寸输入</li>
+  <li><strong>联合训练</strong>：分类和定位任务共享特征，同时优化</li>
+  <li><strong>局限性</strong>：滑动窗口仍然存在大量冗余计算，无法利用区域间的上下文信息</li>
+</ul>
+
+<!-- ==================== Part 3: R-CNN家族 ==================== -->
+<h2>Part 3：R-CNN 家族（2017-12-31）</h2>
+
+<h3>R-CNN：奠基之作</h3>
+
+<p><strong>R-CNN</strong>（Girshick et al., 2013）将深度学习引入目标检测，开创了"候选区域 + CNN 特征"的两阶段检测范式。</p>
+
+<div class="mermaid">
+flowchart LR
+    A["输入图像"] --> B["Selective Search\n生成~2000个候选框"]
+    B --> C["每个候选框\n缩放到227×227"]
+    C --> D["AlexNet\n提取4096维特征"]
+    D --> E["SVM分类器\n(每类一个)"]
+    D --> F["边界框回归器\n精修坐标"]
+    E --> G["NMS后处理"]
+    F --> G
+    G --> H["检测结果"]
+</div>
+
+<p><strong>R-CNN 训练流程：</strong></p>
+<ol>
+  <li>在 ImageNet 上预训练 AlexNet（分类任务）</li>
+  <li>在检测数据集上 fine-tune（将最后一层改为 N+1 类）</li>
+  <li>用 fine-tuned CNN 提取所有候选框特征，训练 SVM 分类器</li>
+  <li>训练边界框回归器精修位置</li>
+</ol>
+
+<div class="info-box warn">
+  <strong>R-CNN 的主要缺点：</strong>
+  <ul style="margin:.4em 0 0 1.2em;">
+    <li>每张图片需要对约 2000 个候选框分别过一遍 CNN，推理极慢（47秒/图）</li>
+    <li>训练是多阶段的（预训练 → fine-tune → SVM → 回归），流程复杂</li>
+    <li>候选框特征无法共享，存在大量冗余计算</li>
+  </ul>
+</div>
+
+<h3>Fast R-CNN：共享特征图</h3>
+
+<p><strong>Fast R-CNN</strong>（Girshick, 2015）的核心改进是先对整张图像提取卷积特征，再从特征图上裁取候选区域，实现特征共享。</p>
+
+<div class="mermaid">
+flowchart TD
+    A["输入图像"] --> B["VGG16骨干网络\n提取整图卷积特征图"]
+    C["Selective Search\n生成候选框"] --> D["RoI Pooling\n将候选框映射到特征图\n并池化为固定大小"]
+    B --> D
+    D --> E["全连接层"]
+    E --> F["Softmax分类器\n(多分类联合)"]
+    E --> G["边界框回归器"]
+    F --> H["多任务Loss\n联合训练"]
+    G --> H
+</div>
+
+<h4>RoI Pooling</h4>
+
+<p><strong>Region of Interest Pooling</strong> 是 Fast R-CNN 的关键模块，将任意大小的候选区域映射到固定大小（如 7×7）的特征图：</p>
+
+<ol>
+  <li>将候选框坐标按特征图缩放比例（通常 1/16）映射到特征图上</li>
+  <li>将映射后的区域划分为 $H \times W$（如 7×7）个子区域</li>
+  <li>对每个子区域做 Max Pooling</li>
+</ol>
+
+<div class="info-box note">
+  <strong>RoI Pooling 的量化误差问题：</strong>坐标映射时需要取整（量化），导致候选框与特征区域之间存在对齐误差，对精确分割任务影响较大。这一问题在 Mask R-CNN 中通过 <strong>RoI Align</strong> 解决。
+</div>
+
+<p><strong>Fast R-CNN 改进效果：</strong>训练速度提升 9 倍，推理速度提升 213 倍（不含候选框生成），mAP 从 66.9% 提升到 70.0%。</p>
+
+<h3>Faster R-CNN：端到端检测</h3>
+
+<p><strong>Faster R-CNN</strong>（Ren et al., 2015）用<strong>区域候选网络（Region Proposal Network, RPN）</strong>替代 Selective Search，实现真正的端到端训练。</p>
+
+<div class="mermaid">
+flowchart TD
+    A["输入图像"] --> B["共享卷积骨干网络\n(VGG / ResNet)"]
+    B --> C["RPN\n区域候选网络"]
+    B --> D["RoI Pooling"]
+    C --> E["Anchor Boxes\n9种(3尺度×3比例)"]
+    E --> F["前景/背景二分类\n+ bbox回归"]
+    F --> G["NMS过滤\n保留约300个候选框"]
+    G --> D
+    D --> H["检测头\n分类 + 精修回归"]
+    H --> I["最终检测结果"]
+</div>
+
+<h4>RPN 详解</h4>
+
+<p>RPN 在特征图的每个位置预设 $k$ 个不同尺度和长宽比的 <strong>Anchor Boxes</strong>（通常 $k=9$：3个尺度 × 3个比例），对每个 Anchor 输出：</p>
+
+<ul>
+  <li><strong>前景/背景得分</strong>：2 个值，判断该 Anchor 是否包含目标</li>
+  <li><strong>边界框偏移</strong>：4 个值 $(t_x, t_y, t_w, t_h)$，精修 Anchor 位置</li>
+</ul>
+
+<p>Anchor 的正负样本划分：</p>
+<ul>
+  <li>与任意 GT 框 IoU &gt; 0.7 → 正样本</li>
+  <li>与所有 GT 框 IoU &lt; 0.3 → 负样本</li>
+  <li>其余 → 忽略</li>
+</ul>
+
+<p><strong>四步交替训练策略：</strong></p>
+<ol>
+  <li>用 ImageNet 预训练权重初始化，单独训练 RPN</li>
+  <li>用 RPN 生成的候选框，单独训练 Fast R-CNN 检测网络</li>
+  <li>固定共享卷积层，fine-tune RPN（共享层不更新）</li>
+  <li>固定共享卷积层，fine-tune 检测网络</li>
+</ol>
+
+<h3>Mask R-CNN：实例分割</h3>
+
+<p><strong>Mask R-CNN</strong>（He et al., 2017）在 Faster R-CNN 基础上增加了像素级分割头，同时完成目标检测和实例分割。</p>
+
+<div class="mermaid">
+flowchart LR
+    A["输入图像"] --> B["ResNet + FPN\n特征金字塔骨干"]
+    B --> C["RPN"]
+    C --> D["RoI Align\n(替代RoI Pooling)"]
+    B --> D
+    D --> E["共享全连接层"]
+    E --> F["分类头\n类别概率"]
+    E --> G["回归头\n边界框"]
+    E --> H["掩码头\n FCN输出\n28×28二值掩码"]
+</div>
+
+<h4>RoI Align vs RoI Pooling</h4>
+
+<table>
+  <thead>
+    <tr><th>特性</th><th>RoI Pooling</th><th>RoI Align</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>坐标量化</td><td>有（取整两次）</td><td>无（保持浮点坐标）</td></tr>
+    <tr><td>特征采样</td><td>Max Pooling</td><td>双线性插值 + Max/Avg Pooling</td></tr>
+    <tr><td>对齐误差</td><td>最多约半个像素</td><td>几乎为零</td></tr>
+    <tr><td>适用场景</td><td>检测任务（误差可接受）</td><td>分割任务（需精确对齐）</td></tr>
+    <tr><td>实现复杂度</td><td>低</td><td>较高</td></tr>
+  </tbody>
+</table>
+
+<p><strong>双线性插值</strong>的计算方式：对于浮点坐标 $(x, y)$，取其四个相邻整数坐标 $(x_1,y_1),(x_2,y_1),(x_1,y_2),(x_2,y_2)$ 处的特征值，按距离加权平均：</p>
+
+<div class="formula-block">
+$$f(x,y) \approx \frac{(x_2-x)(y_2-y)}{(x_2-x_1)(y_2-y_1)}f_{11} + \frac{(x-x_1)(y_2-y)}{(x_2-x_1)(y_2-y_1)}f_{21} + \cdots$$
+</div>
+
+<!-- ==================== Part 4: 快速检测 ==================== -->
+<h2>Part 4：快速检测模型（2018-12-27）</h2>
+
+<h3>单阶段 vs 两阶段检测器</h3>
+
+<table>
+  <thead>
+    <tr><th>维度</th><th>两阶段检测器</th><th>单阶段检测器</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>代表模型</td><td>R-CNN, Fast/Faster R-CNN, Mask R-CNN</td><td>YOLO, SSD, RetinaNet</td></tr>
+    <tr><td>流程</td><td>候选框生成 → 分类与精修</td><td>直接在特征图上预测</td></tr>
+    <tr><td>速度</td><td>慢（5–10 FPS）</td><td>快（30–100+ FPS）</td></tr>
+    <tr><td>精度</td><td>高（尤其小目标）</td><td>稍低（早期），近年逐渐追平</td></tr>
+    <tr><td>类别不平衡</td><td>RPN过滤后缓解</td><td>严重（大量背景锚框）</td></tr>
+    <tr><td>适用场景</td><td>精度优先，离线处理</td><td>速度优先，实时应用</td></tr>
+  </tbody>
+</table>
+
+<h3>SSD：多尺度单阶段检测</h3>
+
+<p><strong>SSD（Single Shot MultiBox Detector）</strong>（Liu et al., 2015）通过在多个卷积层的特征图上同时预测，实现对不同尺度目标的检测。</p>
+
+<div class="mermaid">
+flowchart TD
+    A["输入图像\n300×300"] --> B["VGG16骨干\n(截至conv5_3)"]
+    B --> C["conv4_3\n38×38特征图"]
+    B --> D["fc7(conv化)\n19×19特征图"]
+    D --> E["conv6\n10×10特征图"]
+    E --> F["conv7\n5×5特征图"]
+    F --> G["conv8\n3×3特征图"]
+    G --> H["conv9\n1×1特征图"]
+    C --> I["预测头\n分类+回归\n(4个default boxes)"]
+    D --> J["预测头\n(6个default boxes)"]
+    E --> K["预测头\n(6个default boxes)"]
+    F --> L["预测头\n(6个default boxes)"]
+    G --> M["预测头\n(4个default boxes)"]
+    H --> N["预测头\n(4个default boxes)"]
+    I --> O["NMS后处理"]
+    J --> O
+    K --> O
+    L --> O
+    M --> O
+    N --> O
+</div>
+
+<p><strong>Default Boxes（先验框）：</strong>SSD 在每个特征图位置预设多个不同尺度和长宽比的先验框（类似 Faster R-CNN 的 Anchor），通过回归预测相对于先验框的偏移量。</p>
+
+<ul>
+  <li>不同特征图尺度对应不同大小的目标：大特征图（38×38）检测小目标，小特征图（1×1）检测大目标</li>
+  <li>每个位置预设 4 或 6 个先验框（不同长宽比：1, 2, 3, 1/2, 1/3）</li>
+  <li>SSD-300 共约 8732 个预测框</li>
+</ul>
+
+<h3>YOLO：实时目标检测</h3>
+
+<p><strong>YOLO（You Only Look Once）</strong>（Redmon et al., 2015）将目标检测定义为单一回归问题，直接从图像像素预测边界框和类别概率。</p>
+
+<div class="mermaid">
+flowchart LR
+    A["输入图像\n448×448"] --> B["划分为\nS×S网格\n(S=7)"]
+    B --> C["每个网格单元\n预测B个bbox\n+ C个类别概率"]
+    C --> D["每个bbox:\n(x,y,w,h,confidence)"]
+    C --> E["条件类别概率:\nP(class|object)"]
+    D --> F["最终预测张量\nS×S×(B*5+C)"]
+    E --> F
+    F --> G["NMS过滤\n得到最终检测"]
+</div>
+
+<h4>YOLO v1 预测格式</h4>
+
+<p>网格大小 $S=7$，每格预测 $B=2$ 个 bbox，PASCAL VOC 有 $C=20$ 类，输出张量为 $7 \times 7 \times 30$（$30 = 2 \times 5 + 20$）。</p>
+
+<p>每个 bbox 的 <strong>置信度</strong>定义为：</p>
+<div class="formula-block">
+$$\text{Confidence} = P(\text{Object}) \times \text{IoU}^{\text{truth}}_{\text{pred}}$$
+</div>
+
+<p>若该格内无目标，则 $P(\text{Object}) = 0$，置信度为 0；若有目标，置信度等于预测框与真实框的 IoU。</p>
+
+<h4>YOLO v2 改进</h4>
+
+<ul>
+  <li><strong>Batch Normalization</strong>：替代 Dropout，mAP 提升约 2%</li>
+  <li><strong>高分辨率分类器</strong>：先在 448×448 上 fine-tune 分类器 10 个 epoch</li>
+  <li><strong>Anchor Boxes</strong>：用 K-means 聚类训练集 bbox，得到 5 个先验框尺寸</li>
+  <li><strong>多尺度训练</strong>：每 10 个 batch 随机改变输入尺寸（320–608）</li>
+  <li><strong>Darknet-19 骨干</strong>：比 VGG 快 2 倍，准确率相当</li>
+</ul>
+
+<h4>YOLO v3 改进</h4>
+
+<ul>
+  <li><strong>Darknet-53</strong>：引入残差连接，53 层深度网络</li>
+  <li><strong>3 个尺度预测</strong>：在 13×13、26×26、52×52 三个尺度上分别预测，改善小目标检测</li>
+  <li><strong>多标签分类</strong>：用 Logistic 替代 Softmax，支持多标签（一个目标属于多个类别）</li>
+</ul>
+
+<h3>FPN：特征金字塔网络</h3>
+
+<p><strong>Feature Pyramid Network（FPN）</strong>（Lin et al., 2017）通过自顶向下的路径和横向连接，将高层语义特征与低层细节特征融合，构建多尺度特征金字塔。</p>
+
+<div class="mermaid">
+flowchart LR
+    subgraph "自底向上（骨干网络）"
+        C2["C2\n高分辨率\n低语义"]
+        C3["C3"]
+        C4["C4"]
+        C5["C5\n低分辨率\n高语义"]
+        C2 --> C3 --> C4 --> C5
+    end
+    subgraph "自顶向下（FPN）"
+        P5["P5\n1×1卷积\n上采样"]
+        P4["P4\n融合+3×3卷积"]
+        P3["P3\n融合+3×3卷积"]
+        P2["P2\n融合+3×3卷积"]
+        P5 --> P4 --> P3 --> P2
+    end
+    C5 --> P5
+    C4 --> P4
+    C3 --> P3
+    C2 --> P2
+    P5 --> D5["检测大目标"]
+    P4 --> D4["检测中目标"]
+    P3 --> D3["检测小目标"]
+    P2 --> D2["检测极小目标"]
+</div>
+
+<h3>RetinaNet 与 Focal Loss</h3>
+
+<p><strong>RetinaNet</strong>（Lin et al., 2017）的核心贡献是提出 <strong>Focal Loss</strong>，解决单阶段检测器中严重的正负样本不平衡问题（背景框远多于前景框）。</p>
+
+<h4>Focal Loss 推导</h4>
+
+<p>标准交叉熵损失：</p>
+<div class="formula-block">
+$$\text{CE}(p, y) = -\log(p_t), \quad p_t = \begin{cases} p & \text{if } y=1 \\ 1-p & \text{otherwise} \end{cases}$$
+</div>
+
+<p>加入 $\alpha$ 平衡因子（处理正负样本数量不平衡）：</p>
+<div class="formula-block">
+$$\text{CE}_\alpha(p_t) = -\alpha_t \log(p_t)$$
+</div>
+
+<p><strong>Focal Loss</strong>（在 $\alpha$ 基础上进一步加入调制因子）：</p>
+<div class="formula-block">
+$$FL(p_t) = -\alpha_t (1-p_t)^\gamma \log(p_t)$$
+</div>
+
+<p>其中 $(1-p_t)^\gamma$ 是<strong>调制因子</strong>（focusing parameter $\gamma \geq 0$）：</p>
+<ul>
+  <li>对于<strong>易分样本</strong>（$p_t$ 接近 1，即模型很确信），$(1-p_t)^\gamma \approx 0$，损失被大幅下调</li>
+  <li>对于<strong>难分样本</strong>（$p_t$ 较小），$(1-p_t)^\gamma \approx 1$，损失基本不变</li>
+  <li>通常取 $\gamma=2, \alpha=0.25$，使模型聚焦于难例（前景目标）</li>
+</ul>
+
+<div id="focal-loss-chart" class="echarts-container" style="height:300px;"></div>
+
+<div class="mermaid">
+flowchart TD
+    A["输入图像"] --> B["ResNet骨干网络"]
+    B --> C["FPN特征金字塔\n5个尺度"]
+    C --> D["分类子网络\n4×Conv3×3 + Sigmoid\n输出: K×A类别概率"]
+    C --> E["回归子网络\n4×Conv3×3 + Linear\n输出: 4A个bbox偏移"]
+    D --> F["Focal Loss\n分类损失"]
+    E --> G["Smooth L1 Loss\n回归损失"]
+    F --> H["总损失\n联合优化"]
+    G --> H
+</div>
+
+<p><strong>RetinaNet 架构说明：</strong>两个子网络（分类和回归）共享 FPN 特征，但参数不共享。每个 FPN 层有 $A=9$ 个 Anchor（3尺度 × 3比例），分类子网络为每个 Anchor 预测 $K$ 个类别（Sigmoid 激活，支持多标签），回归子网络预测 4 个偏移量。</p>
+
+<!-- ==================== 视觉语言模型 ==================== -->
+<h2>视觉语言模型（2022-06-09）</h2>
+
+<p>视觉语言模型（VLM）将视觉理解与语言生成能力结合，实现图文跨模态的理解与生成。Lilian Weng 的文章系统梳理了从对比学习到生成式 VLM 的发展脉络。</p>
+
+<h3>VLM 发展概览</h3>
+
+<div class="mermaid">
+flowchart TD
+    A["图文对比学习\nCLIP / ALIGN"] --> B["统一生成式预训练\nSimVLM"]
+    B --> C["冻结LLM + 视觉适配\nFlamingo"]
+    C --> D["引导式自举\nBLIP"]
+    A --> E["Zero-shot迁移\n无需任务特定数据"]
+    C --> F["Few-shot VQA\n强大的上下文学习"]
+</div>
+
+<h3>CLIP：对比图文预训练</h3>
+
+<p><strong>CLIP（Contrastive Language-Image Pre-training）</strong>（Radford et al., 2021）通过大规模图文对的对比学习，学习通用的图文对齐表示，实现强大的 zero-shot 迁移能力。</p>
+
+<div class="mermaid">
+flowchart LR
+    subgraph "训练阶段（对比学习）"
+        I1["图像1"] --> IE["图像编码器\n(ViT / ResNet)"]
+        I2["图像2"] --> IE
+        T1["文本1"] --> TE["文本编码器\n(Transformer)"]
+        T2["文本2"] --> TE
+        IE --> IM["图像嵌入\n归一化"]
+        TE --> TM["文本嵌入\n归一化"]
+        IM --> CL["对比损失\n最大化匹配对相似度\n最小化不匹配对相似度"]
+        TM --> CL
+    end
+    subgraph "推理阶段（Zero-shot）"
+        NI["新图像"] --> NIE["图像编码器"]
+        P1["a photo of a cat"] --> NTE["文本编码器"]
+        P2["a photo of a dog"] --> NTE
+        NIE --> SIM["余弦相似度计算"]
+        NTE --> SIM
+        SIM --> PRED["取相似度最高的类别"]
+    end
+</div>
+
+<p><strong>CLIP 训练细节：</strong></p>
+<ul>
+  <li><strong>数据规模</strong>：从互联网收集 4 亿图文对（WebImageText, WIT）</li>
+  <li><strong>批次大小</strong>：32768，每批次构成 $N^2$ 个图文对，其中 $N$ 个正样本，$N^2 - N$ 个负样本</li>
+  <li><strong>损失函数</strong>：对称交叉熵损失，同时最大化图→文和文→图的匹配</li>
+  <li><strong>Zero-shot 推理</strong>：将类别名称填入模板（如"a photo of a {class}"），与图像嵌入计算相似度</li>
+</ul>
+
+<div class="formula-block">
+$$\mathcal{L} = -\frac{1}{2N}\sum_{i=1}^{N}\left[\log\frac{\exp(s_{ii}/\tau)}{\sum_j \exp(s_{ij}/\tau)} + \log\frac{\exp(s_{ii}/\tau)}{\sum_j \exp(s_{ji}/\tau)}\right]$$
+</div>
+
+<p>其中 $s_{ij} = \langle \mathbf{v}_i, \mathbf{t}_j \rangle$ 是第 $i$ 张图像与第 $j$ 段文本的余弦相似度，$\tau$ 是可学习的温度参数。</p>
+
+<h3>ALIGN：大规模噪声数据</h3>
+
+<p><strong>ALIGN（A Large-scale ImaGe and Noisy-text Embedding）</strong>（Jia et al., 2021）与 CLIP 架构类似，但核心贡献在于证明了<strong>规模可以弥补噪声</strong>：</p>
+
+<ul>
+  <li><strong>数据集</strong>：18 亿图文对（vs CLIP 的 4 亿），仅做简单的基于频率的过滤，不做人工清洗</li>
+  <li><strong>图像编码器</strong>：EfficientNet-L2</li>
+  <li><strong>文本编码器</strong>：BERT</li>
+  <li><strong>结论</strong>：足够大的噪声数据集可以达到甚至超过精心策划的小数据集的效果</li>
+</ul>
+
+<h3>SimVLM：统一前缀语言建模</h3>
+
+<p><strong>SimVLM（Simple Visual Language Model）</strong>（Wang et al., 2021）用统一的<strong>前缀语言建模（Prefix LM）</strong>目标训练视觉语言模型，无需复杂的多任务损失设计。</p>
+
+<div class="mermaid">
+flowchart LR
+    A["图像"] --> B["ResNet提取\n视觉Token序列"]
+    C["文本前缀"] --> D["Tokenize\n文本Token序列"]
+    B --> E["拼接\n[视觉Token; 文本前缀Token]"]
+    D --> E
+    E --> F["Transformer编码器-解码器\n前缀部分：双向注意力\n生成部分：自回归"]
+    F --> G["生成后续文本\n(描述/问答/分类等)"]
+</div>
+
+<p>SimVLM 的关键设计：</p>
+<ul>
+  <li>图像 patch 作为"前缀"，文本作为待预测序列</li>
+  <li>单一的语言建模损失（最大化条件似然），无需对比损失或 ITM 损失</li>
+  <li>在 1.8B 图文对上预训练，在多个 VQA 和图像描述任务上达到 SOTA</li>
+</ul>
+
+<h3>Flamingo：视觉感知 + 冻结 LLM</h3>
+
+<p><strong>Flamingo</strong>（Alayrac et al., 2022）的核心思想是：冻结预训练的大语言模型（LLM），只训练视觉编码器和少量跨模态连接层，实现强大的 few-shot VQA 能力。</p>
+
+<div class="mermaid">
+flowchart TD
+    A["输入：交错的图文序列\n(图1, 文1, 图2, 文2, ...)"]
+    A --> B["视觉编码器\n(NFNet, 冻结)"]
+    A --> C["文本Tokenizer"]
+    B --> D["Perceiver Resampler\n将变长视觉特征\n压缩为固定数量Token\n(如64个)"]
+    D --> E["Gated Cross-Attention\n新增的跨模态注意力层\n(只训练这些层)"]
+    C --> F["预训练LLM\n(Chinchilla, 冻结)"]
+    E --> F
+    F --> G["自回归生成文本输出"]
+</div>
+
+<p><strong>Flamingo 的关键设计：</strong></p>
+<ul>
+  <li><strong>Perceiver Resampler</strong>：用可学习的 Query Token 通过交叉注意力从视觉特征中提取固定数量的视觉 Token，解决不同分辨率图像产生不同数量特征的问题</li>
+  <li><strong>Gated Cross-Attention</strong>：在冻结 LLM 的每个 Transformer 层之间插入跨模态注意力层（带 $\tanh$ 门控），初始化为零输出，保证训练初期不破坏 LLM 能力</li>
+  <li><strong>冻结策略</strong>：LLM 和视觉编码器均冻结，只训练新增的跨模态层（参数量约占总量的 10%）</li>
+  <li><strong>Few-shot 能力</strong>：通过 in-context learning，仅需几个示例即可适应新任务</li>
+</ul>
+
+<h3>BLIP：引导语言-图像预训练</h3>
+
+<p><strong>BLIP（Bootstrapping Language-Image Pre-training）</strong>（Li et al., 2022）提出了一种数据自举（Bootstrapping）框架，通过过滤和生成来提升噪声网络数据的质量。</p>
+
+<div class="mermaid">
+flowchart TD
+    subgraph "BLIP模型架构"
+        A["图像编码器\n(ViT)"] --> B["图像特征"]
+        C["文本编码器\n(BERT)"] --> D["文本特征"]
+        B --> E["ITC损失\n图文对比学习"]
+        D --> E
+        B --> F["ITM损失\n图文匹配分类"]
+        D --> F
+        B --> G["LM损失\n图文生成"]
+        D --> G
+    end
+    subgraph "Captioner + Filter Bootstrap"
+        H["噪声图文对"] --> I["Captioner\n生成合成描述"]
+        I --> J["Filter\n过滤低质量描述"]
+        J --> K["清洗后的训练数据"]
+        K --> H
+    end
+</div>
+
+<p><strong>BLIP 三个预训练目标：</strong></p>
+<ul>
+  <li><strong>ITC（Image-Text Contrastive）</strong>：对比学习，对齐图文表示（类似 CLIP）</li>
+  <li><strong>ITM（Image-Text Matching）</strong>：二分类任务，判断图文是否匹配，使用难负样本挖掘</li>
+  <li><strong>LM（Language Modeling）</strong>：自回归生成图像描述，使用因果自注意力</li>
+</ul>
+
+<p><strong>Bootstrapping 流程：</strong>先用干净数据训练 BLIP，然后用 Captioner 为噪声图像生成描述，再用 Filter 过滤掉与图像不匹配的描述（无论是原始噪声描述还是生成描述），最后用过滤后的数据重新训练，循环迭代。</p>
+
+<h3>VLM 模型对比</h3>
+
+<table>
+  <thead>
+    <tr><th>模型</th><th>年份</th><th>训练数据</th><th>核心方法</th><th>主要能力</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>CLIP</td><td>2021</td><td>4亿图文对</td><td>对比学习，双编码器</td><td>Zero-shot分类/检索</td></tr>
+    <tr><td>ALIGN</td><td>2021</td><td>18亿噪声图文对</td><td>对比学习，规模优先</td><td>Zero-shot分类/检索</td></tr>
+    <tr><td>SimVLM</td><td>2021</td><td>1.8B图文对</td><td>前缀语言建模</td><td>VQA、图像描述</td></tr>
+    <tr><td>Flamingo</td><td>2022</td><td>M3W + 图文对</td><td>冻结LLM + 跨模态层</td><td>Few-shot VQA、对话</td></tr>
+    <tr><td>BLIP</td><td>2022</td><td>115M图文对+自举</td><td>ITC+ITM+LM+Bootstrap</td><td>VQA、检索、描述</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== NAS ==================== -->
+<h2>神经架构搜索（NAS）（2020-08-06）</h2>
+
+<p><strong>神经架构搜索（Neural Architecture Search, NAS）</strong>旨在自动化设计神经网络架构，减少人工设计的工作量。NAS 的三个核心组件：<strong>搜索空间</strong>、<strong>搜索策略</strong>、<strong>性能评估</strong>。</p>
+
+<h3>NAS 框架概览</h3>
+
+<div class="mermaid">
+flowchart TD
+    A["搜索空间\n(Search Space)"] --> B["定义可能的架构集合\n层类型、连接方式\n超参数范围"]
+    B --> C["搜索策略\n(Search Strategy)"]
+    C --> D["RL控制器"]
+    C --> E["进化算法"]
+    C --> F["梯度方法DARTS"]
+    C --> G["贝叶斯优化SMBO"]
+    D --> H["性能评估\n(Performance Estimation)"]
+    E --> H
+    F --> H
+    G --> H
+    H --> I["验证集精度\n代理任务\n权重共享"]
+    I --> J["反馈更新搜索策略"]
+    J --> C
+</div>
+
+<h3>搜索空间设计</h3>
+
+<p>NAS 的搜索空间决定了可以找到什么样的架构。常见的搜索空间类型：</p>
+
+<ul>
+  <li><strong>链式结构</strong>：顺序堆叠的层，搜索每层的类型（Conv、Pool、BN 等）和超参数（核大小、通道数）</li>
+  <li><strong>多分支结构</strong>：允许跳跃连接和并行分支（如 ResNet、Inception 风格）</li>
+  <li><strong>Cell-based 搜索</strong>：搜索可重复使用的 Normal Cell 和 Reduction Cell，再堆叠成完整网络（NASNet、DARTS）</li>
+  <li><strong>层次化搜索</strong>：分层次定义宏观结构（网络级）和微观结构（Cell 级）</li>
+</ul>
+
+<h3>RL 控制器：NAS 原始方法</h3>
+
+<p>Zoph & Le（2016）提出用<strong>强化学习控制器</strong>生成网络架构描述字符串，通过训练子网络获得验证精度作为奖励信号。</p>
+
+<div class="mermaid">
+flowchart LR
+    A["LSTM控制器"] --> B["生成架构描述\n(Token序列)"]
+    B --> C["构建子网络\n从头训练到收敛"]
+    C --> D["计算验证精度R\n作为奖励"]
+    D --> E["REINFORCE策略梯度\n更新LSTM参数"]
+    E --> A
+</div>
+
+<div class="formula-block">
+$$\nabla_\theta J(\theta) = \sum_{t=1}^{T} \mathbb{E}\left[\nabla_\theta \log P(a_t | a_{t-1:1}; \theta) \cdot (R - b)\right]$$
+</div>
+
+<p>其中 $a_t$ 是控制器在时间步 $t$ 采样的动作（架构决策），$R$ 是验证精度，$b$ 是基线（减少方差）。</p>
+
+<p><strong>主要缺点：</strong>每个候选架构需要从头训练到收敛，计算代价极高（原始方法需要 800 GPU × 28 天）。</p>
+
+<h3>Progressive NAS：由简到繁</h3>
+
+<p><strong>Progressive NAS（PNAS）</strong>（Liu et al., 2017）采用<strong>渐进式搜索</strong>和<strong>代理模型（SMBO）</strong>加速搜索过程：</p>
+
+<ol>
+  <li>从最简单的 Cell 结构（1个块）开始搜索</li>
+  <li>用代理预测器（LSTM）预测架构性能，只实际训练预测最优的 $K$ 个</li>
+  <li>逐步增加 Cell 复杂度（2个块、3个块...），利用前一阶段结果初始化代理</li>
+  <li>最终找到 5 个块的最优 Cell 结构</li>
+</ol>
+
+<p>相比原始 NAS，PNAS 搜索效率提升约 8 倍，同时保持相近的精度。</p>
+
+<h3>DARTS：可微分架构搜索</h3>
+
+<p><strong>DARTS（Differentiable Architecture Search）</strong>（Liu et al., 2018）将离散的架构搜索问题转化为连续优化问题，通过梯度下降搜索架构。</p>
+
+<h4>连续 Relaxation</h4>
+
+<p>对于每条边 $(i,j)$，DARTS 不是选择单一操作，而是对所有候选操作做<strong>加权混合</strong>：</p>
+
+<div class="formula-block">
+$$\bar{o}^{(i,j)}(x) = \sum_{o \in \mathcal{O}} \frac{\exp(\alpha_o^{(i,j)})}{\sum_{o' \in \mathcal{O}} \exp(\alpha_{o'}^{(i,j)})} \cdot o(x)$$
+</div>
+
+<p>其中 $\alpha_o^{(i,j)}$ 是操作 $o$ 在边 $(i,j)$ 上的架构参数（可学习），Softmax 归一化后作为混合权重。</p>
+
+<h4>双层优化</h4>
+
+<p>DARTS 需要同时优化<strong>网络权重 $w$</strong>（用训练集）和<strong>架构参数 $\alpha$</strong>（用验证集）：</p>
+
+<div class="formula-block">
+$$\min_\alpha \mathcal{L}_{val}(w^*(\alpha), \alpha), \quad \text{s.t. } w^*(\alpha) = \arg\min_w \mathcal{L}_{train}(w, \alpha)$$
+</div>
+
+<p>近似求解：交替更新 $w$（固定 $\alpha$，梯度下降一步）和 $\alpha$（固定 $w$，梯度下降一步）。</p>
+
+<h4>架构离散化</h4>
+
+<p>搜索完成后，通过取每条边上权重最大的操作，将连续架构离散化为最终网络结构，然后从头重新训练。</p>
+
+<div class="mermaid">
+flowchart LR
+    A["初始化混合操作图\n每条边含所有候选操作"] --> B["交替优化:\n训练集更新权重w\n验证集更新架构参数α"]
+    B --> C["收敛后离散化:\n每条边取argmax操作"]
+    C --> D["从头训练最终架构"]
+    D --> E["评估测试集精度"]
+</div>
+
+<h3>进化算法：AmoebaNet</h3>
+
+<p><strong>AmoebaNet</strong>（Real et al., 2018）将进化算法引入 NAS，提出<strong>老化进化（Aging Evolution）</strong>策略：</p>
+
+<div class="mermaid">
+flowchart TD
+    A["初始化随机架构种群\n(大小P)"] --> B["随机采样竞争者\n(大小S < P)"]
+    B --> C["选择竞争者中精度最高的\n作为父代"]
+    C --> D["随机变异\n(操作替换/连接修改)"]
+    D --> E["训练子代架构\n评估精度"]
+    E --> F["将子代加入种群"]
+    F --> G["移除种群中最老的个体\n(Aging: 不是最差的)"]
+    G --> B
+</div>
+
+<p>老化进化的关键：移除<strong>最老</strong>的个体（而非最差的），这促进了种群的多样性，避免过早收敛到局部最优。AmoebaNet-A 在 CIFAR-10 上达到 3.34% 错误率，超过人工设计网络。</p>
+
+<h3>NAS 方法对比</h3>
+
+<table>
+  <thead>
+    <tr><th>方法</th><th>搜索策略</th><th>搜索代价</th><th>CIFAR-10错误率</th><th>核心优势</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>NAS (RL)</td><td>强化学习</td><td>22400 GPU天</td><td>3.65%</td><td>首次验证NAS可行性</td></tr>
+    <tr><td>NASNet</td><td>强化学习+Cell</td><td>2000 GPU天</td><td>2.65%</td><td>可迁移的Cell结构</td></tr>
+    <tr><td>PNAS</td><td>渐进式SMBO</td><td>225 GPU天</td><td>3.41%</td><td>代理模型加速搜索</td></tr>
+    <tr><td>AmoebaNet</td><td>进化算法</td><td>3150 GPU天</td><td>3.34%</td><td>老化进化多样性</td></tr>
+    <tr><td>DARTS</td><td>梯度下降</td><td>4 GPU天</td><td>3.00%</td><td>极高搜索效率</td></tr>
+    <tr><td>SNAS</td><td>随机NAS</td><td>1.5 GPU天</td><td>2.85%</td><td>更高效的梯度估计</td></tr>
+  </tbody>
+</table>
+
+<!-- ==================== 总结 ==================== -->
+<h2>总结与展望</h2>
+
+<p>目标检测领域在过去十年经历了从传统特征工程到端到端深度学习的根本性变革：</p>
+
+<ol>
+  <li><strong>特征工程时代</strong>（HOG、DPM）：手工设计特征，速度慢，泛化能力有限</li>
+  <li><strong>深度两阶段时代</strong>（R-CNN 家族）：CNN 特征大幅提升精度，RPN 实现端到端，但速度仍受限</li>
+  <li><strong>单阶段实时检测时代</strong>（YOLO、SSD、RetinaNet）：Focal Loss 解决类别不平衡，单阶段精度逐渐追平两阶段</li>
+  <li><strong>视觉语言融合时代</strong>（CLIP、Flamingo、BLIP）：大规模预训练实现 zero-shot 和 few-shot 能力，检测任务向开放词汇方向发展</li>
+</ol>
+
+<div class="info-box tip">
+  <strong>关键技术演进线索：</strong>
+  <ul style="margin:.4em 0 0 1.2em;">
+    <li><strong>特征共享</strong>：R-CNN → Fast R-CNN（整图特征共享）</li>
+    <li><strong>候选框生成</strong>：Selective Search → RPN（端到端可训练）</li>
+    <li><strong>多尺度检测</strong>：SSD多特征图 → FPN特征融合</li>
+    <li><strong>损失设计</strong>：CE → Focal Loss（解决类别不平衡）</li>
+    <li><strong>对齐精度</strong>：RoI Pooling → RoI Align（双线性插值）</li>
+    <li><strong>预训练范式</strong>：监督分类预训练 → 对比图文预训练（CLIP）→ 生成式预训练</li>
+  </ul>
+</div>
+
+<p>未来方向：<strong>开放词汇检测</strong>（GLIP、OWL-ViT）将 CLIP 的 zero-shot 能力与检测框架结合；<strong>多模态大模型</strong>（GPT-4V、LLaVA）进一步统一视觉理解与语言推理；<strong>高效 NAS</strong>（One-shot NAS、Zero-shot NAS）继续降低架构搜索代价。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.85em;text-align:center;">
+  整理自 Lilian Weng 博客 (lilianweng.github.io) · 6篇文章 · 2017–2022
+  <br>报告生成时间：2026-05-14
+</p>
+
+</main>
+
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+
+  // Focal Loss 图表
+  window.addEventListener('load', function() {
+    var chart = echarts.init(document.getElementById('focal-loss-chart'));
+    var pts = [];
+    for (var p = 0.01; p <= 0.99; p += 0.01) {
+      pts.push([+p.toFixed(2), +(-Math.log(p)).toFixed(4)]);
+    }
+    var pts1 = [], pts2 = [], pts5 = [];
+    for (var p = 0.01; p <= 0.99; p += 0.01) {
+      var ce = -Math.log(p);
+      pts1.push([+p.toFixed(2), +(Math.pow(1-p,1)*ce).toFixed(4)]);
+      pts2.push([+p.toFixed(2), +(Math.pow(1-p,2)*ce).toFixed(4)]);
+      pts5.push([+p.toFixed(2), +(Math.pow(1-p,5)*ce).toFixed(4)]);
+    }
+    chart.setOption({
+      backgroundColor:'#2a2a3e',
+      title:{text:'Focal Loss vs. 交叉熵（不同γ值）',textStyle:{color:'#89b4fa',fontSize:13},left:'center'},
+      legend:{data:['CE (γ=0)','FL (γ=1)','FL (γ=2)','FL (γ=5)'],textStyle:{color:'#cdd6f4'},bottom:0},
+      xAxis:{name:'p_t（预测为正类的概率）',nameTextStyle:{color:'#6c7086'},type:'value',min:0,max:1,axisLabel:{color:'#6c7086'},splitLine:{lineStyle:{color:'#45475a'}}},
+      yAxis:{name:'Loss',nameTextStyle:{color:'#6c7086'},type:'value',min:0,max:5,axisLabel:{color:'#6c7086'},splitLine:{lineStyle:{color:'#45475a'}}},
+      series:[
+        {name:'CE (γ=0)',type:'line',data:pts,smooth:true,lineStyle:{color:'#f38ba8',width:2},symbol:'none'},
+        {name:'FL (γ=1)',type:'line',data:pts1,smooth:true,lineStyle:{color:'#fab387',width:2},symbol:'none'},
+        {name:'FL (γ=2)',type:'line',data:pts2,smooth:true,lineStyle:{color:'#a6e3a1',width:2,type:'dashed'},symbol:'none'},
+        {name:'FL (γ=5)',type:'line',data:pts5,smooth:true,lineStyle:{color:'#89b4fa',width:2,type:'dotted'},symbol:'none'}
+      ],
+      tooltip:{trigger:'axis',backgroundColor:'#313244',borderColor:'#45475a',textStyle:{color:'#cdd6f4'}}
+    });
+  });
+
+  // TOC 生成
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i) => {
+    if(!h.id) h.id = 's' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if(h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  // 滚动高亮
+  const obs = new IntersectionObserver(es => es.forEach(e => {
+    const l = toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(l) l.classList.toggle('active', e.isIntersecting);
+  }), {rootMargin: '-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h => obs.observe(h));
+</script>
+</body>
+</html>

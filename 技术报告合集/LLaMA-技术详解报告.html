@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>LLaMA 系列技术详解报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1em 0;}
+.diff-old{background:#2e1e1e;border:1px solid var(--red);border-radius:6px;padding:14px 18px;}
+.diff-new{background:#1e2e1e;border:1px solid var(--strong);border-radius:6px;padding:14px 18px;}
+.diff-label{font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
+.diff-label.old{color:var(--red);}.diff-label.new{color:var(--strong);}
+.timeline-wrap{overflow-x:auto;margin:1em 0;}
+.timeline{display:flex;gap:0;min-width:900px;}
+.tl-col{flex:1;display:flex;flex-direction:column;}
+.tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 4px;font-size:.9em;border-radius:6px 6px 0 0;}
+.tl-body{flex:1;padding:10px 6px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px;}
+.tl-item{background:#313244;border-radius:5px;padding:6px 8px;margin-bottom:6px;font-size:.83em;line-height:1.5;}
+.tl-item:last-child{margin-bottom:0;}
+.tl-tag{display:inline-block;font-size:.72em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:3px;background:var(--heading);color:#1e1e2e;}
+.tl-tag.orange{background:#fab387;}.tl-tag.green{background:#a6e3a1;}.tl-tag.purple{background:#cba6f7;}
+.badge{display:inline-block;font-size:.75em;font-weight:700;padding:2px 8px;border-radius:10px;margin:0 3px;}
+.badge-blue{background:#1e3a5f;color:#89b4fa;border:1px solid #89b4fa;}
+.badge-green{background:#1e3a1e;color:#a6e3a1;border:1px solid #a6e3a1;}
+.badge-yellow{background:#3a2e1e;color:#f9e2af;border:1px solid #f9e2af;}
+.badge-purple{background:#2e1e3a;color:#cba6f7;border:1px solid #cba6f7;}
+.badge-red{background:#3a1e1e;color:#f38ba8;border:1px solid #f38ba8;}
+.highlight-box{background:#1e2e3e;border:1px solid #89b4fa;border-radius:6px;padding:14px 18px;margin:.8em 0;}
+.step-list{counter-reset:step;}
+.step-list li{counter-increment:step;list-style:none;margin:.5em 0;padding-left:2.2em;position:relative;}
+.step-list li::before{content:counter(step);position:absolute;left:0;top:.1em;background:var(--heading);color:#1e1e2e;width:1.5em;height:1.5em;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<!-- ===== 标题 ===== -->
+<h1>LLaMA 系列技术详解报告</h1>
+<p style="color:#6c7086;font-size:.9em;">Meta AI 开源大语言模型全系列架构深度解析 · 2023–2025 · <span class="badge badge-blue">LLaMA 1/2/3/3.1/4</span></p>
+<hr>
+
+<!-- ===== 一、概述 ===== -->
+<h2 id="overview">一、概述与设计哲学</h2>
+
+<div class="tech-card blue">
+  <h4>核心哲学：更少参数，更强性能</h4>
+  <p>LLaMA（Large Language Model Meta AI）系列的核心设计哲学是：<strong>通过更高质量的数据和更优化的训练策略，使较小参数量的模型超越更大参数量的竞品</strong>。这一哲学在 LLaMA 1 中首次得到验证——13B 参数的 LLaMA 1 在多数基准上超过了 175B 的 GPT-3，彻底改变了"更大即更好"的行业共识。</p>
+  <ul>
+    <li><strong>开源优先</strong>：完整权重开放，推动学术界和工业界广泛研究</li>
+    <li><strong>效率优先</strong>：优先考虑推理效率，而非单纯追求参数规模</li>
+    <li><strong>数据质量优先</strong>：精心筛选的高质量数据优于堆砌数据量</li>
+    <li><strong>架构创新驱动</strong>：每代引入新的架构改进（RMSNorm、RoPE、SwiGLU、GQA、MoE）</li>
+  </ul>
+</div>
+
+<h2 id="timeline">二、版本演进时间线</h2>
+
+<div class="timeline-wrap">
+<div class="timeline">
+  <div class="tl-col">
+    <div class="tl-period">LLaMA 1<br><small>2023-02</small></div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">规模</span><br>7B / 13B / 30B / 65B</div>
+      <div class="tl-item"><span class="tl-tag">注意力</span><br>MHA（多头注意力）</div>
+      <div class="tl-item"><span class="tl-tag">上下文</span><br>2048 tokens</div>
+      <div class="tl-item"><span class="tl-tag orange">数据</span><br>1T tokens<br>CommonCrawl+GitHub+ArXiv等</div>
+      <div class="tl-item"><span class="tl-tag green">词表</span><br>32K BPE</div>
+      <div class="tl-item"><span class="tl-tag purple">位置编码</span><br>RoPE base=10000</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">LLaMA 2<br><small>2023-07</small></div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">规模</span><br>7B / 13B / 34B / 70B</div>
+      <div class="tl-item"><span class="tl-tag">注意力</span><br>GQA（仅70B）<br>其余仍 MHA</div>
+      <div class="tl-item"><span class="tl-tag">上下文</span><br>4096 tokens（翻倍）</div>
+      <div class="tl-item"><span class="tl-tag orange">数据</span><br>2T tokens（翻倍）</div>
+      <div class="tl-item"><span class="tl-tag green">词表</span><br>32K BPE</div>
+      <div class="tl-item"><span class="tl-tag purple">对齐</span><br>RLHF + Ghost Attention</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">LLaMA 3<br><small>2024-04</small></div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">规模</span><br>8B / 70B</div>
+      <div class="tl-item"><span class="tl-tag">注意力</span><br>GQA 全面采用</div>
+      <div class="tl-item"><span class="tl-tag">上下文</span><br>8K tokens</div>
+      <div class="tl-item"><span class="tl-tag orange">数据</span><br>15T tokens（7.5倍跃升）</div>
+      <div class="tl-item"><span class="tl-tag green">词表</span><br>128K tiktoken BPE</div>
+      <div class="tl-item"><span class="tl-tag purple">特色</span><br>代码/数学数据大幅增加</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">LLaMA 3.1<br><small>2024-07</small></div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">规模</span><br>8B / 70B / 405B</div>
+      <div class="tl-item"><span class="tl-tag">注意力</span><br>GQA 全系列</div>
+      <div class="tl-item"><span class="tl-tag">上下文</span><br>128K tokens（16倍跃升）</div>
+      <div class="tl-item"><span class="tl-tag orange">数据</span><br>~15T tokens（同 LLaMA 3）</div>
+      <div class="tl-item"><span class="tl-tag green">位置编码</span><br>RoPE base=500K</div>
+      <div class="tl-item"><span class="tl-tag purple">特色</span><br>405B 对标 GPT-4</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">LLaMA 4 Scout<br><small>2025-04</small></div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">规模</span><br>109B总 / 17B激活</div>
+      <div class="tl-item"><span class="tl-tag">架构</span><br>MoE：16专家<br>每token激活1个</div>
+      <div class="tl-item"><span class="tl-tag">上下文</span><br>10M tokens（破纪录）</div>
+      <div class="tl-item"><span class="tl-tag orange">位置编码</span><br>iRoPE（交错NoPE）</div>
+      <div class="tl-item"><span class="tl-tag green">多模态</span><br>原生视觉+文本</div>
+      <div class="tl-item"><span class="tl-tag purple">特色</span><br>单GPU可运行</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">LLaMA 4 Maverick<br><small>2025-04</small></div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">规模</span><br>400B总 / 17B激活</div>
+      <div class="tl-item"><span class="tl-tag">架构</span><br>MoE：128专家<br>每token激活1个</div>
+      <div class="tl-item"><span class="tl-tag">上下文</span><br>1M tokens</div>
+      <div class="tl-item"><span class="tl-tag orange">位置编码</span><br>iRoPE</div>
+      <div class="tl-item"><span class="tl-tag green">多模态</span><br>原生视觉+文本</div>
+      <div class="tl-item"><span class="tl-tag purple">特色</span><br>多模态旗舰</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<h3 id="spec-table">各代规格对比表</h3>
+<table>
+  <tr>
+    <th>版本</th><th>最大参数量</th><th>上下文长度</th><th>训练数据</th><th>注意力机制</th><th>词表大小</th><th>位置编码 base</th>
+  </tr>
+  <tr><td><strong>LLaMA 1</strong></td><td>65B</td><td>2,048</td><td>1T tokens</td><td>MHA</td><td>32K</td><td>10,000</td></tr>
+  <tr><td><strong>LLaMA 2</strong></td><td>70B</td><td>4,096</td><td>2T tokens</td><td>MHA / GQA(70B)</td><td>32K</td><td>10,000</td></tr>
+  <tr><td><strong>LLaMA 3</strong></td><td>70B</td><td>8,192</td><td>15T tokens</td><td>GQA（全系）</td><td>128K</td><td>500,000</td></tr>
+  <tr><td><strong>LLaMA 3.1</strong></td><td>405B</td><td>131,072</td><td>~15T tokens</td><td>GQA（全系）</td><td>128K</td><td>500,000</td></tr>
+  <tr><td><strong>LLaMA 4 Scout</strong></td><td>109B(总)</td><td>10,485,760</td><td>—</td><td>GQA + MoE</td><td>200K+</td><td>iRoPE</td></tr>
+  <tr><td><strong>LLaMA 4 Maverick</strong></td><td>400B(总)</td><td>1,048,576</td><td>—</td><td>GQA + MoE</td><td>200K+</td><td>iRoPE</td></tr>
+</table>
+
+<!-- ECharts：上下文长度演进 -->
+<h3 id="ctx-chart">上下文长度演进折线图</h3>
+<div id="ctx-chart-div" class="echarts-container" style="height:340px;background:#24243e;border-radius:8px;"></div>
+
+<hr>
+
+<!-- ===== 二、核心架构 ===== -->
+<h2 id="arch">三、核心架构：四大改进协同效应</h2>
+
+<div class="tech-card blue">
+  <h4>LLaMA 相对于原始 Transformer 的四大改进</h4>
+  <p>LLaMA 系列在 Transformer 解码器架构基础上做了四项关键改进，这四项改进并非孤立的，而是相互协同的：</p>
+  <ul>
+    <li><strong>Pre-RMSNorm</strong>：解决深层网络梯度消失/爆炸问题，使训练更稳定</li>
+    <li><strong>RoPE</strong>：相对位置编码，天然支持长度外推，无需训练位置参数</li>
+    <li><strong>SwiGLU</strong>：门控激活函数，提升 FFN 的表达能力，参数效率更高</li>
+    <li><strong>GQA</strong>：减少 KV Cache 内存占用，大幅提升推理吞吐量</li>
+  </ul>
+</div>
+
+<div class="mermaid">
+flowchart LR
+    subgraph Input
+        A[Input Tokens]
+        B[Token Embedding]
+    end
+    subgraph TransformerBlock["Transformer Block × N"]
+        direction TB
+        C[Pre-RMSNorm] --> D[GQA Attention + RoPE]
+        D --> E[残差连接]
+        E --> F[Pre-RMSNorm]
+        F --> G[SwiGLU FFN]
+        G --> H[残差连接]
+    end
+    subgraph Output
+        I[RMSNorm]
+        J[Linear + Softmax]
+    end
+    A --> B --> C
+    H --> I --> J
+</div>
+
+<p>上图展示了 LLaMA 的基本 Transformer 块结构。与原始 Transformer 的主要差异：</p>
+<ul>
+  <li>归一化从 Post-Norm 改为 <strong>Pre-Norm</strong>，且从 LayerNorm 改为 <strong>RMSNorm</strong></li>
+  <li>位置编码从绝对正弦编码改为 <strong>RoPE</strong>（注入到 Q/K 计算中，而非加到 embedding）</li>
+  <li>FFN 激活函数从 ReLU 改为 <strong>SwiGLU</strong>（三矩阵结构）</li>
+  <li>注意力从 MHA 改为 <strong>GQA</strong>（LLaMA 2 70B 起）</li>
+</ul>
+
+<hr>
+
+<!-- ===== 三、Pre-RMSNorm ===== -->
+<h2 id="rmsnorm">四、Pre-RMSNorm：归一化方案详解</h2>
+
+<h3 id="postnorm-problem">4.1 Post-Norm 的梯度问题</h3>
+
+<p>原始 Transformer 使用 Post-Norm，即在残差连接<strong>之后</strong>进行归一化：</p>
+
+<div class="formula-box">
+$$y_l = \text{LN}(x_l + F_l(x_l))$$
+</div>
+
+<p>对于 $L$ 层网络，反向传播时梯度需要穿过所有层的归一化操作。设损失为 $\mathcal{L}$，对第 0 层输入的梯度为：</p>
+
+<div class="formula-box">
+$$\frac{\partial \mathcal{L}}{\partial x_0} \approx \prod_{l=1}^{L} \left(\frac{\partial \text{LN}}{\partial x_l} \cdot \frac{\partial F_l}{\partial x_l}\right)$$
+</div>
+
+<p>LayerNorm 的 Jacobian 矩阵的特征值普遍小于 1（归一化操作本质上是压缩操作），这导致梯度随层数 $L$ 指数级衰减，即<strong>梯度消失</strong>问题。这也是为什么原始 Transformer 需要精心设计学习率预热（warmup）策略的根本原因。</p>
+
+<h3 id="prenorm-advantage">4.2 Pre-Norm 的梯度优势</h3>
+
+<p>Pre-Norm 将归一化移到残差连接<strong>之前</strong>：</p>
+
+<div class="formula-box">
+$$y_l = x_l + F_l(\text{Norm}(x_l))$$
+</div>
+
+<p>对 $x_l$ 求梯度：</p>
+
+<div class="formula-box">
+$$\frac{\partial y_l}{\partial x_l} = \mathbf{I} + \frac{\partial F_l(\text{Norm}(x_l))}{\partial x_l}$$
+</div>
+
+<p>关键在于单位矩阵 $\mathbf{I}$ 的存在！无论 $\frac{\partial F_l}{\partial x_l}$ 多小，梯度通路始终有一条"高速公路"（恒等映射）保证梯度不消失。这与 ResNet 的核心思想完全一致。</p>
+
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">Post-Norm（原始 Transformer）</div>
+    <p>$y_l = \text{LN}(x_l + F_l(x_l))$</p>
+    <ul>
+      <li>梯度需穿过 LN 的 Jacobian</li>
+      <li>LN Jacobian 特征值 &lt; 1</li>
+      <li>L 层后梯度指数衰减</li>
+      <li>需要精心设计 warmup</li>
+      <li>训练不稳定，易出现损失尖峰</li>
+    </ul>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">Pre-Norm（LLaMA）</div>
+    <p>$y_l = x_l + F_l(\text{Norm}(x_l))$</p>
+    <ul>
+      <li>梯度通路含单位矩阵 $\mathbf{I}$</li>
+      <li>恒等映射保证梯度畅通</li>
+      <li>梯度稳定，无指数衰减</li>
+      <li>warmup 需求大幅降低</li>
+      <li>训练稳定，支持更大学习率</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="layernorm-formula">4.3 LayerNorm 完整公式</h3>
+
+<p>标准 LayerNorm 对每个样本的隐藏状态 $\mathbf{x} \in \mathbb{R}^d$ 进行归一化：</p>
+
+<div class="formula-box">
+$$\text{LN}(\mathbf{x}) = \gamma \cdot \frac{\mathbf{x} - \mu}{\sqrt{\text{Var}(\mathbf{x}) + \varepsilon}} + \beta$$
+</div>
+
+<p>其中：</p>
+<ul>
+  <li>$\mu = \frac{1}{d}\sum_{i=1}^{d} x_i$（均值）</li>
+  <li>$\text{Var}(\mathbf{x}) = \frac{1}{d}\sum_{i=1}^{d}(x_i - \mu)^2$（方差）</li>
+  <li>$\gamma, \beta \in \mathbb{R}^d$：可学习的缩放和偏移参数</li>
+  <li>$\varepsilon$：数值稳定性小量（通常 $10^{-5}$）</li>
+</ul>
+
+<h3 id="rmsnorm-formula">4.4 RMSNorm 公式与优化</h3>
+
+<p>RMSNorm（Root Mean Square Layer Normalization）去掉了均值中心化步骤：</p>
+
+<div class="formula-box">
+$$\text{RMSNorm}(\mathbf{x}) = \gamma \cdot \frac{\mathbf{x}}{\text{RMS}(\mathbf{x})}$$
+$$\text{RMS}(\mathbf{x}) = \sqrt{\frac{1}{d}\sum_{i=1}^{d} x_i^2 + \varepsilon}$$
+</div>
+
+<p>注意：RMSNorm <strong>没有偏移参数 $\beta$</strong>，只有缩放参数 $\gamma$。</p>
+
+<h4>为何可以去掉均值中心化？</h4>
+
+<div class="tech-card yellow">
+  <p>在 Pre-Norm 框架下，归一化的输入 $\mathbf{x}$ 已经是经过残差连接后的激活值。由于残差连接的累积效应，深层网络中的激活值<strong>已经近似零均值</strong>（因为每层的更新量 $F_l(\cdot)$ 相对于残差项较小）。</p>
+  <p>因此，减去均值 $\mu$ 这一步的实际效果接近于 $\mu \approx 0$，计算收益极低，而计算代价相对显著。去掉均值中心化后：</p>
+  <ul>
+    <li>计算量减少约 <strong>15–20%</strong>（省去均值计算和减法操作）</li>
+    <li>参数量减少 <strong>50%</strong>（省去 $\beta$ 参数，$d$ 维向量）</li>
+    <li>具有<strong>平移不变性</strong>：$\text{RMSNorm}(\mathbf{x} + c\mathbf{1}) \neq \text{RMSNorm}(\mathbf{x})$（这在 Pre-Norm 下不是问题）</li>
+  </ul>
+</div>
+
+<h3 id="norm-compare">4.5 归一化方案对比</h3>
+<table>
+  <tr><th>方案</th><th>公式</th><th>均值中心化</th><th>偏移参数</th><th>计算量</th><th>代表模型</th></tr>
+  <tr><td>Post-LayerNorm</td><td>LN(x+F(x))</td><td>✓</td><td>✓</td><td>基准</td><td>原始 Transformer, BERT</td></tr>
+  <tr><td>Pre-LayerNorm</td><td>x+F(LN(x))</td><td>✓</td><td>✓</td><td>基准</td><td>GPT-2, GPT-3</td></tr>
+  <tr><td>Pre-RMSNorm</td><td>x+F(RMS(x))</td><td>✗</td><td>✗</td><td>-15~20%</td><td>LLaMA 全系列, PaLM</td></tr>
+  <tr><td>DeepNorm</td><td>LN(αx+F(x))</td><td>✓</td><td>✓</td><td>基准</td><td>DeepSeek V1</td></tr>
+</table>
+
+<hr>
+
+<!-- ===== 四、RoPE ===== -->
+<h2 id="rope">五、RoPE：旋转位置编码完整推导</h2>
+
+<h3 id="rope-goal">5.1 设计目标</h3>
+
+<div class="tech-card blue">
+  <h4>核心问题：如何编码位置使注意力只依赖相对距离？</h4>
+  <p>我们希望找到一个位置编码函数 $f(\mathbf{q}, m)$，使得 Query 向量在位置 $m$ 处的编码与 Key 向量在位置 $n$ 处的编码的内积，<strong>只依赖于相对距离 $m-n$</strong>，而不依赖绝对位置：</p>
+</div>
+
+<div class="formula-box">
+$$\langle f(\mathbf{q}, m),\, f(\mathbf{k}, n) \rangle = g(\mathbf{q}, \mathbf{k}, m-n)$$
+</div>
+
+<p>这个性质称为<strong>相对位置不变性</strong>，它保证了模型在推理时能正确处理不同位置的 token 之间的关系，且理论上支持任意长度的序列。</p>
+
+<h3 id="rope-2d">5.2 二维复数空间推导</h3>
+
+<p>首先在二维情形下推导。将 $\mathbf{q} = (q_1, q_2)$ 视为复数 $q = q_1 + iq_2$，定义位置编码函数：</p>
+
+<div class="formula-box">
+$$f(\mathbf{q}, m) = \mathbf{q} \cdot e^{im\theta} = (q_1 + iq_2)(\cos m\theta + i\sin m\theta)$$
+</div>
+
+<p>展开得：</p>
+
+<div class="formula-box">
+$$f(\mathbf{q}, m) = (q_1 \cos m\theta - q_2 \sin m\theta) + i(q_1 \sin m\theta + q_2 \cos m\theta)$$
+</div>
+
+<p>计算内积（复数内积取实部）：</p>
+
+<div class="formula-box">
+$$\langle f(\mathbf{q}, m), f(\mathbf{k}, n) \rangle = \text{Re}[f(\mathbf{q}, m) \cdot \overline{f(\mathbf{k}, n)}]$$
+$$= \text{Re}[\mathbf{q} \cdot e^{im\theta} \cdot \bar{\mathbf{k}} \cdot e^{-in\theta}]$$
+$$= \text{Re}[\mathbf{q}\bar{\mathbf{k}} \cdot e^{i(m-n)\theta}]$$
+</div>
+
+<p>结果只含相对距离 $m-n$，完美满足设计目标！</p>
+
+<h3 id="rope-highdim">5.3 高维推广：块对角旋转矩阵</h3>
+
+<p>对于 $d$ 维向量（$d$ 为偶数），将维度两两配对，第 $i$ 对（$i = 0, 1, \ldots, d/2-1$）使用频率 $\theta_i$：</p>
+
+<div class="formula-box">
+$$\theta_i = \text{base}^{-2i/d}, \quad i = 0, 1, \ldots, \frac{d}{2}-1$$
+</div>
+
+<p>对应的旋转矩阵为块对角形式：</p>
+
+<div class="formula-box">
+$$\mathbf{R}_m = \begin{pmatrix}
+\cos m\theta_0 & -\sin m\theta_0 & 0 & 0 & \cdots \\
+\sin m\theta_0 & \cos m\theta_0 & 0 & 0 & \cdots \\
+0 & 0 & \cos m\theta_1 & -\sin m\theta_1 & \cdots \\
+0 & 0 & \sin m\theta_1 & \cos m\theta_1 & \cdots \\
+\vdots & \vdots & \vdots & \vdots & \ddots
+\end{pmatrix}$$
+</div>
+
+<p>每对维度独立旋转，整体旋转矩阵为正交矩阵：$\mathbf{R}_m^T = \mathbf{R}_{-m}$，$\mathbf{R}_m^T\mathbf{R}_m = \mathbf{I}$。</p>
+
+<h3 id="rope-verify">5.4 验证相对位置性质</h3>
+
+<div class="formula-box">
+$$\text{score}(m, n) = (\mathbf{R}_m \mathbf{q})^T (\mathbf{R}_n \mathbf{k})$$
+$$= \mathbf{q}^T \mathbf{R}_m^T \mathbf{R}_n \mathbf{k}$$
+$$= \mathbf{q}^T \mathbf{R}_{-m} \mathbf{R}_n \mathbf{k} \quad (\because \mathbf{R}_m^T = \mathbf{R}_{-m})$$
+$$= \mathbf{q}^T \mathbf{R}_{n-m} \mathbf{k} \quad (\because \mathbf{R}_a\mathbf{R}_b = \mathbf{R}_{a+b})$$
+</div>
+
+<p>注意力得分 $\text{score}(m,n)$ 只依赖于 $n-m$（相对距离），验证了 RoPE 的相对位置性质。</p>
+
+<h3 id="rope-base">5.5 base 参数与上下文长度的关系</h3>
+
+<div class="tech-card yellow">
+  <h4>数值示例：base=10000 vs base=500000</h4>
+  <p>以 $d=128$（LLaMA 2 70B 的头维度）为例：</p>
+  <ul>
+    <li>最低频分量（$i = d/2 - 1 = 63$）的频率：$\theta_{63} = 10000^{-126/128} \approx 1.26 \times 10^{-4}$</li>
+    <li>对应波长：$\lambda_{63} = 2\pi / \theta_{63} \approx 49813$（约 5 万）</li>
+    <li>可有效区分的相对距离约为波长的 1/2，即约 <strong>25000 个位置</strong></li>
+  </ul>
+  <p>当 base=500000 时：</p>
+  <ul>
+    <li>$\theta_{63} = 500000^{-126/128} \approx 2.7 \times 10^{-6}$</li>
+    <li>波长扩大约 <strong>47 倍</strong>，可区分约 <strong>120 万个位置</strong></li>
+    <li>这正是 LLaMA 3.1 支持 128K 上下文的位置编码基础</li>
+  </ul>
+</div>
+
+<div class="formula-box">
+$$\theta_i^{\text{LLaMA 1/2}} = \frac{1}{10000^{2i/d}}, \quad \theta_i^{\text{LLaMA 3.1}} = \frac{1}{500000^{2i/d}}$$
+</div>
+
+<h3 id="rope-yarn">5.6 YaRN/NTK-Aware 上下文扩展</h3>
+
+<p>当需要在不重新训练的情况下扩展上下文长度时，可以通过修改 $\theta_i$ 的分布来实现：</p>
+
+<div class="tech-card purple">
+  <h4>NTK-Aware 缩放（Neural Tangent Kernel 启发）</h4>
+  <p>核心思想：将 base 替换为 $\text{base} \cdot s^{d/(d-2)}$，其中 $s$ 为上下文扩展比例。这等价于对不同频率分量进行非均匀缩放，<strong>高频分量几乎不变，低频分量被大幅拉伸</strong>，从而在不破坏局部位置关系的同时扩展全局位置范围。</p>
+  <p>YaRN（Yet another RoPE extensioN method）进一步引入了温度缩放和分段策略，在 LLaMA 3.1 的长上下文训练中被采用。</p>
+</div>
+
+<h3 id="pos-compare">5.7 位置编码方案对比</h3>
+<table>
+  <tr><th>方案</th><th>类型</th><th>外推能力</th><th>相对位置</th><th>参数量</th><th>代表模型</th></tr>
+  <tr><td>Learned APE</td><td>绝对/可学习</td><td>差（硬截断）</td><td>✗</td><td>$d \times L_{\max}$</td><td>BERT, GPT-1</td></tr>
+  <tr><td>Sinusoidal APE</td><td>绝对/固定</td><td>一般</td><td>✗</td><td>0</td><td>原始 Transformer</td></tr>
+  <tr><td>ALiBi</td><td>相对/偏置</td><td>好（线性惩罚）</td><td>✓</td><td>0</td><td>BLOOM, MPT</td></tr>
+  <tr><td>RoPE</td><td>相对/旋转</td><td>优（可调 base）</td><td>✓</td><td>0</td><td>LLaMA, PaLM, Qwen</td></tr>
+  <tr><td>iRoPE</td><td>混合</td><td>极优（10M+）</td><td>✓</td><td>0</td><td>LLaMA 4</td></tr>
+</table>
+
+<hr>
+
+<!-- ===== 五、SwiGLU ===== -->
+<h2 id="swiglu">六、SwiGLU：门控激活函数详解</h2>
+
+<h3 id="glu-family">6.1 GLU 家族</h3>
+
+<p>门控线性单元（Gated Linear Unit, GLU）的核心思想是用一个<strong>门控信号</strong>来控制信息流通：</p>
+
+<div class="formula-box">
+$$\text{GLU}(\mathbf{x}, \mathbf{W}, \mathbf{V}) = \sigma(\mathbf{x}\mathbf{W}) \odot (\mathbf{x}\mathbf{V})$$
+</div>
+
+<p>其中 $\sigma$ 是 sigmoid 函数，$\odot$ 是逐元素乘法。左边的 $\sigma(\mathbf{x}\mathbf{W})$ 是门控信号（值域 [0,1]），右边的 $\mathbf{x}\mathbf{V}$ 是被门控的信息流。</p>
+
+<h3 id="swiglu-formula">6.2 SwiGLU 完整公式</h3>
+
+<p>SwiGLU 将门控激活函数从 sigmoid 替换为 SiLU（Sigmoid Linear Unit）：</p>
+
+<div class="formula-box">
+$$\text{SiLU}(x) = x \cdot \sigma(x) = \frac{x}{1 + e^{-x}}$$
+</div>
+
+<div class="formula-box">
+$$\text{SwiGLU}(\mathbf{x}, \mathbf{W}_1, \mathbf{W}_3, \mathbf{W}_2) = \left(\text{SiLU}(\mathbf{x}\mathbf{W}_1) \odot \mathbf{x}\mathbf{W}_3\right) \cdot \mathbf{W}_2$$
+</div>
+
+<p>LLaMA FFN 层的完整实现：</p>
+<pre><code class="language-python">def swiglu_ffn(x, W1, W2, W3):
+    # W1: d_model -> d_ff' (gate projection)
+    # W3: d_model -> d_ff' (up projection)
+    # W2: d_ff' -> d_model (down projection)
+    gate = F.silu(x @ W1)  # SiLU 激活
+    up   = x @ W3          # 线性变换
+    return (gate * up) @ W2  # 门控 + 投影</code></pre>
+
+<h3 id="swiglu-why">6.3 为何优于 ReLU / GELU？</h3>
+
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">ReLU / GELU（单路径）</div>
+    <p><strong>ReLU</strong>：$\max(0, x)$</p>
+    <ul>
+      <li>负区间梯度恒为 0</li>
+      <li>Dying Neuron 问题</li>
+      <li>硬截断，损失负值信息</li>
+      <li>单一线性变换路径</li>
+    </ul>
+    <p><strong>GELU</strong>：$x \cdot \Phi(x)$</p>
+    <ul>
+      <li>软激活，无 Dying Neuron</li>
+      <li>但仍是单路径，无乘法交互</li>
+      <li>表达能力受限</li>
+    </ul>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">SwiGLU（双路径门控）</div>
+    <ul>
+      <li>乘法门控：等价于隐式二阶多项式</li>
+      <li>$\text{SiLU}(xW_1) \odot xW_3 \approx$ 二阶交叉项</li>
+      <li>无 Dying Neuron（SiLU 负区间有梯度）</li>
+      <li>两路特征交互，表达能力更强</li>
+      <li>实验证明在相同参数量下性能更好</li>
+      <li>PaLM/LLaMA/Mistral 等广泛采用</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="swiglu-params">6.4 参数量平衡推导</h3>
+
+<div class="tech-card green">
+  <h4>为什么 LLaMA 的 FFN 维度是 $\frac{8}{3} d_{\text{model}}$？</h4>
+  <p>标准 Transformer FFN（两矩阵，ReLU）的参数量：</p>
+  <div class="formula-box">
+    $$P_{\text{std}} = 2 \times d_{\text{model}} \times d_{\text{ff}} = 2 \times d_{\text{model}} \times 4d_{\text{model}} = 8 d_{\text{model}}^2$$
+  </div>
+  <p>SwiGLU FFN（三矩阵：$\mathbf{W}_1, \mathbf{W}_3, \mathbf{W}_2$）的参数量：</p>
+  <div class="formula-box">
+    $$P_{\text{SwiGLU}} = 3 \times d_{\text{model}} \times d_{\text{ff}}'$$
+  </div>
+  <p>令参数量相等：$3 \times d_{\text{model}} \times d_{\text{ff}}' = 8 d_{\text{model}}^2$，解得：</p>
+  <div class="formula-box">
+    $$d_{\text{ff}}' = \frac{8}{3} d_{\text{model}} \approx 2.667 \times d_{\text{model}}$$
+  </div>
+  <p><strong>数值示例（LLaMA 2 7B）</strong>：$d_{\text{model}} = 4096$</p>
+  <ul>
+    <li>理论值：$d_{\text{ff}}' = \frac{8}{3} \times 4096 = 10922.67$</li>
+    <li>实际取 256 的倍数对齐：$d_{\text{ff}}' = \mathbf{11008}$（$= 43 \times 256$）</li>
+    <li>对比标准 FFN：$4 \times 4096 = 16384$（SwiGLU 节省了约 33% 的 FFN 参数）</li>
+  </ul>
+</div>
+
+<h3 id="glu-compare">6.5 GLU 家族对比</h3>
+<table>
+  <tr><th>激活函数</th><th>公式</th><th>门控</th><th>死神经元</th><th>负区间梯度</th><th>代表模型</th></tr>
+  <tr><td>ReLU FFN</td><td>$\max(0, xW_1)W_2$</td><td>✗</td><td>有</td><td>0</td><td>原始 Transformer</td></tr>
+  <tr><td>GELU FFN</td><td>$x\Phi(x)W_1 \cdot W_2$</td><td>✗</td><td>无</td><td>小</td><td>GPT-2/3, BERT</td></tr>
+  <tr><td>SiLU/Swish</td><td>$x\sigma(x)W_1 \cdot W_2$</td><td>✗</td><td>无</td><td>小</td><td>EfficientNet</td></tr>
+  <tr><td><strong>SwiGLU</strong></td><td>$(x\sigma(xW_1)) \odot xW_3 \cdot W_2$</td><td>✓</td><td>无</td><td>有</td><td><strong>LLaMA, PaLM</strong></td></tr>
+  <tr><td>GeGLU</td><td>$(x\Phi(xW_1)) \odot xW_3 \cdot W_2$</td><td>✓</td><td>无</td><td>有</td><td>T5, Flan-T5</td></tr>
+  <tr><td>ReGLU</td><td>$\max(0,xW_1) \odot xW_3 \cdot W_2$</td><td>✓</td><td>有</td><td>0</td><td>—</td></tr>
+</table>
+
+<hr>
+
+<!-- ===== 六、GQA ===== -->
+<h2 id="gqa">七、GQA：分组查询注意力详解</h2>
+
+<h3 id="kvcache-bottleneck">7.1 KV Cache 瓶颈分析</h3>
+
+<p>在自回归推理中，为避免重复计算，所有历史 token 的 Key 和 Value 矩阵需要缓存（KV Cache）。KV Cache 的内存占用为：</p>
+
+<div class="formula-box">
+$$\text{KV Cache} = 2 \times L \times H_Q \times N \times d_h \times \text{bytes}$$
+</div>
+
+<p>其中：$L$ 为层数，$H_Q$ 为 Query 头数，$N$ 为序列长度，$d_h$ 为每头维度，$\times 2$ 是因为 K 和 V 各一份。</p>
+
+<div class="tech-card yellow">
+  <h4>数值示例：LLaMA 2 70B（MHA）</h4>
+  <ul>
+    <li>$L = 80$ 层，$H_Q = 64$ 头，$d_h = 128$，$N = 4096$，fp16（2 bytes）</li>
+    <li>$\text{KV Cache} = 2 \times 80 \times 64 \times 4096 \times 128 \times 2 \approx \mathbf{10.7 \text{ GB}}$</li>
+    <li>这相当于一张 A100 80GB GPU 内存的 13%，极大限制了批处理大小</li>
+  </ul>
+</div>
+
+<h3 id="gqa-compression">7.2 GQA 压缩原理</h3>
+
+<p>GQA（Grouped Query Attention）将 $H_Q$ 个 Query 头分为 $G$ 组，每组内的所有 Query 头<strong>共享同一对 KV 头</strong>：</p>
+
+<div class="formula-box">
+$$\text{KV Cache}_{\text{GQA}} = \frac{G}{H_Q} \times \text{KV Cache}_{\text{MHA}}$$
+</div>
+
+<div class="tech-card green">
+  <h4>LLaMA 2 70B GQA 效果</h4>
+  <ul>
+    <li>$H_Q = 64$ 个 Query 头，$G = 8$ 个 KV 头</li>
+    <li>每组 $H_Q / G = 64/8 = 8$ 个 Query 头共享一对 KV</li>
+    <li>压缩比 = $G/H_Q = 8/64 = 1/8$</li>
+    <li>KV Cache：$10.7 \text{ GB} \times (8/64) = \mathbf{1.34 \text{ GB}}$</li>
+    <li><strong>节省 87.5% 的 KV Cache 内存！</strong></li>
+  </ul>
+</div>
+
+<h3 id="gqa-formal">7.3 形式化定义</h3>
+
+<p>设 Query 头数为 $H_Q$，KV 头数为 $G$，每头维度为 $d_h$：</p>
+
+<div class="formula-box">
+$$\text{Attention}_i(\mathbf{Q}_i, \mathbf{K}_{\lfloor iG/H_Q \rfloor}, \mathbf{V}_{\lfloor iG/H_Q \rfloor}) = \text{softmax}\left(\frac{\mathbf{Q}_i \mathbf{K}_{\lfloor iG/H_Q \rfloor}^T}{\sqrt{d_h}}\right)\mathbf{V}_{\lfloor iG/H_Q \rfloor}$$
+</div>
+
+<p>其中第 $i$ 个 Query 头对应第 $\lfloor iG/H_Q \rfloor$ 个 KV 组。退化条件：</p>
+<ul>
+  <li>$G = H_Q$：每个 Query 头有独立 KV → <strong>MHA</strong>（Multi-Head Attention）</li>
+  <li>$G = 1$：所有 Query 头共享同一对 KV → <strong>MQA</strong>（Multi-Query Attention）</li>
+  <li>$1 < G < H_Q$：介于两者之间 → <strong>GQA</strong></li>
+</ul>
+
+<h3 id="gqa-quality">7.4 质量损失极小的原因</h3>
+
+<div class="tech-card blue">
+  <h4>从 MHA Checkpoint 快速恢复</h4>
+  <p>GQA 论文（Ainslie et al., 2023）发现：从已训练好的 MHA 模型出发，通过<strong>Mean Pooling</strong>（对同组 KV 头取均值）初始化 GQA 的 KV 头，然后只需继续训练约 <strong>5% 的原始训练步数</strong>，即可恢复 99%+ 的原始 MHA 性能。</p>
+  <p>这说明多个 KV 头之间存在大量冗余信息，共享 KV 头的信息损失极小。LLaMA 2 70B 直接采用 GQA 从头训练，在 MMLU、HumanEval 等基准上与 MHA 版本性能相当。</p>
+</div>
+
+<!-- ECharts：KV Cache 对比柱状图 -->
+<h3 id="kvcache-chart">7.5 KV Cache 内存对比图</h3>
+<div id="kvcache-chart-div" class="echarts-container" style="height:360px;background:#24243e;border-radius:8px;"></div>
+
+<h3 id="attn-compare">7.6 注意力机制全面对比</h3>
+<table>
+  <tr><th>机制</th><th>KV 头数</th><th>KV Cache</th><th>推理速度</th><th>模型质量</th><th>代表模型</th></tr>
+  <tr><td><strong>MHA</strong></td><td>$= H_Q$</td><td>100%</td><td>基准</td><td>最高</td><td>LLaMA 1, GPT-3</td></tr>
+  <tr><td><strong>MQA</strong></td><td>$= 1$</td><td>1/H_Q</td><td>最快</td><td>略低</td><td>Falcon, PaLM</td></tr>
+  <tr><td><strong>GQA</strong></td><td>$= G$（$1 < G < H_Q$）</td><td>$G/H_Q$</td><td>快</td><td>接近 MHA</td><td>LLaMA 2/3, Mistral</td></tr>
+  <tr><td><strong>MLA</strong></td><td>低秩压缩</td><td>极小</td><td>极快</td><td>高</td><td>DeepSeek V2/V3</td></tr>
+  <tr><td><strong>Sliding Window</strong></td><td>$= H_Q$（局部）</td><td>$W/N$</td><td>快</td><td>局部高</td><td>Mistral（部分层）</td></tr>
+</table>
+
+<hr>
+
+<!-- ===== 七、LLaMA 3/3.1 预训练 ===== -->
+<h2 id="pretrain">八、LLaMA 3/3.1 预训练技术</h2>
+
+<h3 id="data-scale">8.1 数据规模与构成</h3>
+
+<div class="tech-card blue">
+  <h4>15T Tokens 数据工程</h4>
+  <p>LLaMA 3 的训练数据相比 LLaMA 2 增加了 7.5 倍，且数据质量显著提升：</p>
+  <ul>
+    <li><strong>通用网页文本</strong>：约 50%（CommonCrawl 精选）</li>
+    <li><strong>数学数据</strong>：约 25%（数学推理能力的核心来源）</li>
+    <li><strong>代码数据</strong>：约 17%（GitHub、Stack Exchange 等）</li>
+    <li><strong>多语言数据</strong>：约 8%（30+ 种语言）</li>
+  </ul>
+  <p>这一数据配比是经过大量消融实验确定的，数学和代码数据的高比例是 LLaMA 3 推理能力大幅提升的关键。</p>
+</div>
+
+<h3 id="data-pipeline">8.2 数据处理流水线</h3>
+
+<div class="mermaid">
+flowchart LR
+    A[原始网页数据\nCommonCrawl等] --> B[启发式过滤\n去除低质量/色情/暴力]
+    B --> C[语义去重\nMinHash + LSH]
+    C --> D[质量分类器\n快速线性分类器+Roberta]
+    D --> E[类别平衡\n上采样稀缺高质量数据]
+    E --> F[最终训练集\n15T tokens]
+    style A fill:#313244
+    style F fill:#1e3a1e
+</div>
+
+<p>数据处理的关键步骤：</p>
+<ol class="step-list">
+  <li><strong>启发式过滤</strong>：基于规则过滤（URL 黑名单、重复行比例、字母比例等），去除明显低质量内容</li>
+  <li><strong>语义去重</strong>：使用 MinHash + LSH 算法在文档级别去重，避免训练数据中的重复内容导致模型记忆而非泛化</li>
+  <li><strong>质量分类器</strong>：训练两种分类器——快速线性分类器用于粗筛，Roberta 模型用于精筛，判断文档是否"类似维基百科/教科书"</li>
+  <li><strong>类别平衡</strong>：对稀缺但高质量的数据（如数学教科书、高质量代码）进行上采样，确保模型获得足够的专业知识</li>
+</ol>
+
+<h3 id="compute-scale">8.3 计算规模与 Scaling Law</h3>
+
+<div class="tech-card yellow">
+  <h4>LLaMA 3.1 405B 的计算量</h4>
+  <p>总计算量约 $3.8 \times 10^{25}$ FLOPs，是 LLaMA 2 的约 50 倍。</p>
+  <p>根据 Chinchilla Scaling Law，给定计算预算 $C$，最优参数量 $N^*$ 和训练数据量 $D^*$ 满足：</p>
+  <div class="formula-box">
+    $$N^* \approx \left(\frac{C}{6}\right)^{0.5}, \quad D^* \approx \frac{C}{6N^*}$$
+  </div>
+  <p>Meta 的实际决策：Scaling Law 预测最优配置为 402B 参数 + 16.55T tokens，实际训练了 <strong>405B 参数</strong>（略大于最优，为了更好的推理效率）。</p>
+  <p>在 <strong>16,384 块 H100 GPU</strong> 上训练，总训练时间约 54 天。</p>
+</div>
+
+<h3 id="optimizer">8.4 优化器配置</h3>
+
+<table>
+  <tr><th>超参数</th><th>值</th><th>说明</th></tr>
+  <tr><td>优化器</td><td>AdamW</td><td>Adam + 权重衰减</td></tr>
+  <tr><td>$\beta_1$</td><td>0.9</td><td>一阶矩估计衰减率</td></tr>
+  <tr><td>$\beta_2$</td><td>0.95</td><td>二阶矩估计衰减率（比默认 0.999 更激进）</td></tr>
+  <tr><td>$\varepsilon$</td><td>$10^{-5}$</td><td>数值稳定项</td></tr>
+  <tr><td>学习率调度</td><td>Cosine Decay</td><td>从峰值学习率余弦衰减到 0.1×</td></tr>
+  <tr><td>梯度裁剪</td><td>1.0</td><td>防止梯度爆炸</td></tr>
+  <tr><td>权重衰减</td><td>0.1</td><td>L2 正则化系数</td></tr>
+  <tr><td>峰值学习率</td><td>$3 \times 10^{-4}$（8B）/ $8 \times 10^{-5}$（405B）</td><td>更大模型用更小学习率</td></tr>
+</table>
+
+<h3 id="long-context">8.5 长上下文扩展：6 阶段渐进训练</h3>
+
+<p>LLaMA 3.1 的 128K 上下文并非一步到位，而是通过 6 个阶段逐步扩展：</p>
+
+<div class="mermaid">
+flowchart LR
+    A[8K\nbase=500K] --> B[16K\n+长文档数据]
+    B --> C[32K\n+长文档数据]
+    C --> D[64K\n+合成长序列]
+    D --> E[128K\n+合成长序列]
+    E --> F[最终模型\n128K上下文]
+    style A fill:#1e3a5f
+    style F fill:#1e3a1e
+</div>
+
+<p>每个阶段增加专门的长上下文数据（包括合成生成的长推理链和长文档），同时 RoPE base 从训练初始就设置为 500,000：</p>
+
+<div class="formula-box">
+$$\theta_i^{\text{LLaMA 3.1}} = \frac{1}{500000^{2i/d}}, \quad i = 0, 1, \ldots, \frac{d}{2}-1$$
+</div>
+
+<p>对比 LLaMA 1/2 的 base=10000：</p>
+
+<div class="formula-box">
+$$\theta_i^{\text{LLaMA 1/2}} = \frac{1}{10000^{2i/d}}$$
+</div>
+
+<p>base 从 10000 增大到 500000，使得最低频率分量的波长扩大约 47 倍，从而支持更长的序列。</p>
+
+<hr>
+
+<!-- ===== 八、后训练 ===== -->
+<h2 id="post-training">九、LLaMA 3.1 后训练（Post-Training）</h2>
+
+<h3 id="pt-pipeline">9.1 后训练整体流程</h3>
+
+<div class="mermaid">
+flowchart TD
+    A[预训练模型\nPre-trained LLM] --> B[监督微调 SFT\n高质量指令数据]
+    B --> C[拒绝采样 RS\n生成多个候选，筛选最优]
+    C --> D[奖励模型训练 RM\nBradley-Terry 偏好对]
+    D --> E[DPO 训练\n直接偏好优化]
+    E --> F{质量达标?}
+    F -->|否| C
+    F -->|是| G[最终对齐模型\nInstruct Model]
+    style A fill:#1e3a5f
+    style G fill:#1e3a1e
+</div>
+
+<h3 id="reward-model">9.2 奖励模型训练</h3>
+
+<div class="tech-card blue">
+  <h4>Bradley-Terry 偏好模型</h4>
+  <p>奖励模型基于 Bradley-Terry 模型，将人类偏好建模为：</p>
+  <div class="formula-box">
+    $$P(y_w \succ y_l | x) = \frac{\exp(r(x, y_w))}{\exp(r(x, y_w)) + \exp(r(x, y_l))} = \sigma(r(x, y_w) - r(x, y_l))$$
+  </div>
+  <p>其中 $r(x, y)$ 是奖励函数，$y_w$ 是"更好"的回答，$y_l$ 是"更差"的回答。</p>
+  <p>LLaMA 3.1 的改进：</p>
+  <ul>
+    <li><strong>4 级偏好强度</strong>：Significantly Better / Better / Slightly Better / Negligibly Better</li>
+    <li><strong>只使用强偏好数据</strong>：只用 "Significantly Better" 和 "Better" 的数据对训练 DPO，过滤掉噪声大的边界情况</li>
+  </ul>
+</div>
+
+<h3 id="dpo-derivation">9.3 DPO 完整推导</h3>
+
+<h4>Step 1：RLHF 最优策略的闭合形式</h4>
+
+<p>RLHF 的目标是在 KL 散度约束下最大化期望奖励：</p>
+
+<div class="formula-box">
+$$\max_\pi \mathbb{E}_{y \sim \pi(\cdot|x)}[r(x,y)] - \beta \cdot D_{\text{KL}}[\pi(\cdot|x) \| \pi_{\text{ref}}(\cdot|x)]$$
+</div>
+
+<p>这个优化问题有闭合解：</p>
+
+<div class="formula-box">
+$$\pi^*(y|x) = \frac{1}{Z(x)} \cdot \pi_{\text{ref}}(y|x) \cdot \exp\left(\frac{r(x,y)}{\beta}\right)$$
+</div>
+
+<p>其中 $Z(x) = \sum_y \pi_{\text{ref}}(y|x) \exp(r(x,y)/\beta)$ 是归一化配分函数。</p>
+
+<h4>Step 2：从最优策略反推奖励函数</h4>
+
+<p>对上式两边取对数并整理：</p>
+
+<div class="formula-box">
+$$r(x,y) = \beta \cdot \log \frac{\pi^*(y|x)}{\pi_{\text{ref}}(y|x)} + \beta \cdot \log Z(x)$$
+</div>
+
+<h4>Step 3：代入 Bradley-Terry 模型（$Z(x)$ 相消）</h4>
+
+<div class="formula-box">
+$$P(y_w \succ y_l | x) = \sigma\left(\beta \cdot \log \frac{\pi^*(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \beta \cdot \log \frac{\pi^*(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)$$
+</div>
+
+<p>注意 $Z(x)$ 在相减时完全消掉了！这是 DPO 的核心技巧。</p>
+
+<h4>Step 4：DPO 损失函数</h4>
+
+<p>将 $\pi^*$ 替换为参数化模型 $\pi_\theta$，最大化偏好对数似然：</p>
+
+<div class="formula-box">
+$$\mathcal{L}_{\text{DPO}}(\theta) = -\mathbb{E}_{(x, y_w, y_l)}\left[\log \sigma\left(\beta \cdot \log \frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \beta \cdot \log \frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right)\right]$$
+</div>
+
+<p>这个损失函数<strong>完全不需要奖励模型</strong>，直接用偏好数据对（$y_w, y_l$）优化策略模型，大幅简化了 RLHF 流程。</p>
+
+<h3 id="dpo-improvements">9.4 LLaMA 3.1 DPO 的两项改进</h3>
+
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">标准 DPO 的问题</div>
+    <ul>
+      <li>格式 token（如 <code>&lt;|begin_of_text|&gt;</code>）也参与损失计算</li>
+      <li>模型可能通过操控格式 token 来"作弊"</li>
+      <li>长时间训练后模型可能退化（生成空洞回答）</li>
+      <li>chosen 回答的语言能力可能下降</li>
+    </ul>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">LLaMA 3.1 的改进</div>
+    <p><strong>改进 1：Mask 格式 Token</strong></p>
+    <ul>
+      <li>屏蔽 header/termination 等格式 token 的损失</li>
+      <li>避免优化目标与格式 token 的冲突</li>
+    </ul>
+    <p><strong>改进 2：NLL 正则化</strong></p>
+    <div class="formula-box" style="font-size:.85em;">
+      $$\mathcal{L} = \mathcal{L}_{\text{DPO}} + \lambda \cdot \mathcal{L}_{\text{NLL}}(y_w)$$
+    </div>
+    <ul>
+      <li>加入 chosen 回答的负对数似然项</li>
+      <li>防止模型退化，保持语言能力</li>
+    </ul>
+  </div>
+</div>
+
+<hr>
+
+<!-- ===== 九、LLaMA 4 ===== -->
+<h2 id="llama4">十、LLaMA 4：MoE + 原生多模态</h2>
+
+<h3 id="scout-maverick">10.1 Scout vs Maverick 对比</h3>
+
+<table>
+  <tr><th>特性</th><th>LLaMA 4 Scout</th><th>LLaMA 4 Maverick</th></tr>
+  <tr><td>总参数量</td><td>109B</td><td>400B</td></tr>
+  <tr><td>激活参数量</td><td>17B</td><td>17B</td></tr>
+  <tr><td>专家数量</td><td>16 个专家</td><td>128 个专家</td></tr>
+  <tr><td>每 token 激活专家</td><td>1 个</td><td>1 个</td></tr>
+  <tr><td>共享专家</td><td>1 个</td><td>1 个</td></tr>
+  <tr><td>层结构</td><td>交错 Dense+MoE</td><td>交错 Dense+MoE</td></tr>
+  <tr><td>上下文长度</td><td>10M tokens</td><td>1M tokens</td></tr>
+  <tr><td>位置编码</td><td>iRoPE</td><td>iRoPE</td></tr>
+  <tr><td>多模态</td><td>原生视觉+文本</td><td>原生视觉+文本</td></tr>
+  <tr><td>部署需求</td><td>单 GPU 可运行</td><td>多 GPU 集群</td></tr>
+  <tr><td>定位</td><td>效率型旗舰</td><td>多模态旗舰</td></tr>
+</table>
+
+<h3 id="moe-gating">10.2 MoE 门控机制</h3>
+
+<p>混合专家（Mixture of Experts, MoE）的核心是稀疏激活：每个 token 只激活少数几个专家网络，而非全部 FFN 参数：</p>
+
+<div class="formula-box">
+$$\text{MoE}(\mathbf{x}) = \sum_{e \in \text{TopK}(G(\mathbf{x}))} G(\mathbf{x})_e \cdot \text{FFN}_e(\mathbf{x}) + \text{FFN}_{\text{shared}}(\mathbf{x})$$
+</div>
+
+<p>门控函数 $G(\mathbf{x})$：</p>
+
+<div class="formula-box">
+$$G(\mathbf{x}) = \text{Softmax}(\text{TopK}(\mathbf{x}\mathbf{W}_g))$$
+</div>
+
+<p>其中 $\text{TopK}$ 只保留得分最高的 $K$ 个专家（其余设为 $-\infty$ 后 softmax），$\mathbf{W}_g \in \mathbb{R}^{d \times E}$ 是门控权重矩阵，$E$ 为专家总数。</p>
+
+<div class="tech-card green">
+  <h4>LLaMA 4 的 MoE 设计细节</h4>
+  <ul>
+    <li><strong>共享专家（Shared Expert）</strong>：始终激活的专家，处理所有 token 的通用特征，避免专家间的信息孤岛</li>
+    <li><strong>路由专家（Routed Expert）</strong>：Scout 16 个中激活 1 个，Maverick 128 个中激活 1 个</li>
+    <li><strong>负载均衡损失</strong>：辅助损失确保各专家负载均衡，避免某些专家被过度使用</li>
+    <li><strong>Token Choice vs Expert Choice</strong>：采用 Token Choice 路由（每个 token 选择专家），而非 Expert Choice（每个专家选择 token）</li>
+  </ul>
+</div>
+
+<h3 id="irope">10.3 iRoPE：实现 10M 上下文的关键</h3>
+
+<div class="tech-card purple">
+  <h4>iRoPE = 交错 RoPE + NoPE（Interleaved RoPE + No Position Encoding）</h4>
+  <p>单纯增大 RoPE base 无法无限扩展上下文，因为极长序列中的位置编码会产生数值不稳定性。iRoPE 的解决方案是<strong>交错使用两种注意力层</strong>：</p>
+  <ul>
+    <li><strong>RoPE 层（多数，约 80%）</strong>：使用旋转位置编码，捕捉<strong>局部位置关系</strong>，处理短程依赖</li>
+    <li><strong>NoPE 层（少数，约 20%，交错分布）</strong>：<strong>不使用任何位置编码</strong>，纯内容注意力，允许任意位置的 token 自由交互，处理超长距离的语义关系</li>
+  </ul>
+  <p>推理时的温度缩放（稳定超长序列的注意力分布）：</p>
+  <div class="formula-box">
+    $$\text{scale} = \sqrt{\frac{d_k}{d_{k,\text{base}}}}$$
+  </div>
+  <p>其中 $d_{k,\text{base}}$ 是训练时的默认头维度。当序列极长时，注意力 logits 的方差会增大，温度缩放可以压制这种方差增长，保持 softmax 输出的稳定性。</p>
+</div>
+
+<div class="mermaid">
+flowchart LR
+    subgraph iRoPE架构
+        A[Layer 1\nRoPE] --> B[Layer 2\nRoPE]
+        B --> C[Layer 3\nNoPE]
+        C --> D[Layer 4\nRoPE]
+        D --> E[Layer 5\nRoPE]
+        E --> F[Layer 6\nNoPE]
+        F --> G[...]
+    end
+    style C fill:#2e1e3a
+    style F fill:#2e1e3a
+</div>
+
+<h3 id="early-fusion">10.4 Early Fusion 原生多模态</h3>
+
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">Late Fusion（LLaMA 3.2 等）</div>
+    <ul>
+      <li>独立的视觉编码器（如 CLIP ViT）</li>
+      <li>Cross-Attention 桥接视觉和语言</li>
+      <li>视觉和语言特征在高层才融合</li>
+      <li>视觉编码器通常冻结或少量微调</li>
+      <li>模态间交互受限</li>
+    </ul>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">Early Fusion（LLaMA 4）</div>
+    <ul>
+      <li>视觉 patch 和文本 token 在第一层统一处理</li>
+      <li>无独立视觉编码器，无 Cross-Attention 桥接</li>
+      <li>从最底层开始视觉-文本联合建模</li>
+      <li>所有 Transformer 层都参与视觉理解</li>
+      <li>模态间深度融合，视觉推理能力更强</li>
+    </ul>
+  </div>
+</div>
+
+<p>Early Fusion 的实现：将图像划分为固定大小的 patch（如 14×14 像素），通过线性投影层将每个 patch 映射为与文本 token 相同维度的向量，然后与文本 token 拼接，一起输入 Transformer 的第一层。整个模型统一处理视觉和文本信息，无需任何额外的跨模态注意力机制。</p>
+
+<hr>
+
+<!-- ===== 十、横向对比 ===== -->
+<h2 id="comparison">十一、横向对比：2023–2025 主流模型架构</h2>
+
+<table>
+  <tr>
+    <th>模型</th><th>归一化</th><th>位置编码</th><th>激活函数</th><th>注意力</th><th>MoE</th><th>特殊设计</th>
+  </tr>
+  <tr>
+    <td><strong>LLaMA 1</strong></td>
+    <td>Pre-RMSNorm</td>
+    <td>RoPE (base=10K)</td>
+    <td>SwiGLU</td>
+    <td>MHA</td>
+    <td>✗</td>
+    <td>首个开源高效基座</td>
+  </tr>
+  <tr>
+    <td><strong>LLaMA 2</strong></td>
+    <td>Pre-RMSNorm</td>
+    <td>RoPE (base=10K)</td>
+    <td>SwiGLU</td>
+    <td>GQA(70B)/MHA</td>
+    <td>✗</td>
+    <td>Ghost Attention, RLHF</td>
+  </tr>
+  <tr>
+    <td><strong>LLaMA 3/3.1</strong></td>
+    <td>Pre-RMSNorm</td>
+    <td>RoPE (base=500K)</td>
+    <td>SwiGLU</td>
+    <td>GQA（全系）</td>
+    <td>✗</td>
+    <td>128K词表, 128K上下文</td>
+  </tr>
+  <tr>
+    <td><strong>LLaMA 4 Scout/Maverick</strong></td>
+    <td>Pre-RMSNorm</td>
+    <td>iRoPE</td>
+    <td>SwiGLU</td>
+    <td>GQA</td>
+    <td>✓（16/128专家）</td>
+    <td>Early Fusion多模态, 10M上下文</td>
+  </tr>
+  <tr>
+    <td><strong>Mistral 7B</strong></td>
+    <td>Pre-RMSNorm</td>
+    <td>RoPE</td>
+    <td>SwiGLU</td>
+    <td>GQA</td>
+    <td>✗</td>
+    <td>Sliding Window Attention</td>
+  </tr>
+  <tr>
+    <td><strong>Mixtral 8×7B</strong></td>
+    <td>Pre-RMSNorm</td>
+    <td>RoPE</td>
+    <td>SwiGLU</td>
+    <td>GQA</td>
+    <td>✓（8专家，激活2）</td>
+    <td>首个主流开源 MoE</td>
+  </tr>
+  <tr>
+    <td><strong>DeepSeek V3</strong></td>
+    <td>Pre-RMSNorm</td>
+    <td>RoPE</td>
+    <td>SwiGLU</td>
+    <td>MLA</td>
+    <td>✓（256专家，激活8）</td>
+    <td>MLA低秩KV压缩, 辅助无损负载均衡</td>
+  </tr>
+  <tr>
+    <td><strong>Gemma 3</strong></td>
+    <td>Pre-RMSNorm</td>
+    <td>RoPE</td>
+    <td>GeGLU</td>
+    <td>GQA</td>
+    <td>✗</td>
+    <td>局部+全局注意力交错</td>
+  </tr>
+</table>
+
+<div class="tech-card blue">
+  <h4>架构趋势总结</h4>
+  <p>从 2023 年到 2025 年，主流大语言模型的架构演进呈现出以下趋势：</p>
+  <ul>
+    <li><strong>归一化</strong>：Pre-RMSNorm 已成为事实标准，几乎所有主流模型都采用</li>
+    <li><strong>位置编码</strong>：RoPE 占据主导，base 值持续增大以支持更长上下文</li>
+    <li><strong>激活函数</strong>：SwiGLU/GeGLU 等门控激活函数全面取代 ReLU/GELU</li>
+    <li><strong>注意力</strong>：GQA 成为标配，MLA（DeepSeek）代表更激进的 KV 压缩方向</li>
+    <li><strong>MoE</strong>：从实验性到主流，LLaMA 4/Mixtral/DeepSeek V3 等均采用，稀疏激活大幅提升参数效率</li>
+    <li><strong>多模态</strong>：从 Late Fusion 向 Early Fusion 演进，视觉-语言深度融合</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2 id="summary">十二、总结</h2>
+
+<div class="tech-card green">
+  <h4>LLaMA 系列的技术贡献</h4>
+  <p>LLaMA 系列在两年多的时间里（2023-2025）推动了开源大语言模型的快速发展，其核心技术贡献可以归纳为：</p>
+  <ol class="step-list">
+    <li><strong>证明了数据质量胜于参数规模</strong>：LLaMA 1 以 13B 参数超越 175B GPT-3，颠覆了"更大即更好"的范式</li>
+    <li><strong>建立了高效 Transformer 架构标准</strong>：Pre-RMSNorm + RoPE + SwiGLU + GQA 的组合已成为行业标准</li>
+    <li><strong>推动了长上下文技术发展</strong>：从 2K 到 10M 的上下文扩展，每代都有重大突破</li>
+    <li><strong>开源 MoE 的里程碑</strong>：LLaMA 4 的开源 MoE 设计为社区提供了大规模 MoE 的参考实现</li>
+    <li><strong>原生多模态的探索</strong>：Early Fusion 架构为统一多模态模型提供了新的方向</li>
+  </ol>
+</div>
+
+<p style="color:#6c7086;font-size:.85em;margin-top:2em;">报告生成时间：2025年5月 · 数据截止：LLaMA 4（2025-04）</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+
+// TOC 生成
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);
+});
+
+// TOC 高亮
+const obs=new IntersectionObserver(e=>e.forEach(e=>{
+  const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+  if(l)l.classList.toggle('active',e.isIntersecting);
+}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+
+// ECharts：上下文长度演进
+const ctxChart = echarts.init(document.getElementById('ctx-chart-div'));
+ctxChart.setOption({
+  backgroundColor: '#24243e',
+  title: { text: 'LLaMA 系列上下文长度演进', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+  tooltip: { trigger: 'axis', formatter: function(params) {
+    return params[0].name + '<br/>上下文长度：' + params[0].value.toLocaleString() + ' tokens';
+  }},
+  grid: { left: 80, right: 40, top: 60, bottom: 60 },
+  xAxis: {
+    type: 'category',
+    data: ['LLaMA 1\n(2023-02)', 'LLaMA 2\n(2023-07)', 'LLaMA 3\n(2024-04)', 'LLaMA 3.1\n(2024-07)', 'LLaMA 4 Maverick\n(2025-04)', 'LLaMA 4 Scout\n(2025-04)'],
+    axisLabel: { color: '#cdd6f4', fontSize: 11 },
+    axisLine: { lineStyle: { color: '#45475a' } }
+  },
+  yAxis: {
+    type: 'log',
+    name: '上下文长度（tokens，对数轴）',
+    nameTextStyle: { color: '#89b4fa', fontSize: 11 },
+    axisLabel: { color: '#cdd6f4', formatter: function(v) {
+      if(v >= 1000000) return (v/1000000).toFixed(0)+'M';
+      if(v >= 1000) return (v/1000).toFixed(0)+'K';
+      return v;
+    }},
+    axisLine: { lineStyle: { color: '#45475a' } },
+    splitLine: { lineStyle: { color: '#313244' } }
+  },
+  series: [{
+    type: 'line',
+    data: [2048, 4096, 8192, 131072, 1048576, 10485760],
+    smooth: false,
+    lineStyle: { color: '#89b4fa', width: 3 },
+    itemStyle: { color: '#89b4fa', borderWidth: 2 },
+    symbol: 'circle', symbolSize: 10,
+    label: {
+      show: true, position: 'top', color: '#f9e2af', fontSize: 11,
+      formatter: function(params) {
+        const v = params.value;
+        if(v >= 1000000) return (v/1000000).toFixed(0)+'M';
+        if(v >= 1000) return (v/1000).toFixed(0)+'K';
+        return v;
+      }
+    },
+    areaStyle: { color: { type: 'linear', x:0, y:0, x2:0, y2:1, colorStops:[{offset:0,color:'rgba(137,180,250,0.3)'},{offset:1,color:'rgba(137,180,250,0.02)'}] } }
+  }]
+});
+
+// ECharts：KV Cache 对比柱状图
+const kvChart = echarts.init(document.getElementById('kvcache-chart-div'));
+kvChart.setOption({
+  backgroundColor: '#24243e',
+  title: { text: 'LLaMA 2 70B KV Cache 内存占用对比（序列长度 4096，fp16）', textStyle: { color: '#89b4fa', fontSize: 13 }, left: 'center', top: 10 },
+  tooltip: { trigger: 'axis', formatter: function(params) {
+    return params[0].name + '<br/>KV Cache：' + params[0].value.toFixed(2) + ' GB';
+  }},
+  grid: { left: 80, right: 40, top: 70, bottom: 60 },
+  xAxis: {
+    type: 'category',
+    data: ['MHA\n(H_KV=64)', 'GQA G=32\n(H_KV=32)', 'GQA G=16\n(H_KV=16)', 'GQA G=8\n(H_KV=8，实际)', 'GQA G=4\n(H_KV=4)', 'MQA\n(H_KV=1)'],
+    axisLabel: { color: '#cdd6f4', fontSize: 11 },
+    axisLine: { lineStyle: { color: '#45475a' } }
+  },
+  yAxis: {
+    type: 'value',
+    name: 'KV Cache (GB)',
+    nameTextStyle: { color: '#89b4fa', fontSize: 11 },
+    axisLabel: { color: '#cdd6f4', formatter: '{value} GB' },
+    axisLine: { lineStyle: { color: '#45475a' } },
+    splitLine: { lineStyle: { color: '#313244' } }
+  },
+  series: [{
+    type: 'bar',
+    data: [
+      { value: 10.74, itemStyle: { color: '#f38ba8' } },
+      { value: 5.37,  itemStyle: { color: '#fab387' } },
+      { value: 2.68,  itemStyle: { color: '#f9e2af' } },
+      { value: 1.34,  itemStyle: { color: '#a6e3a1', borderWidth: 2 } },
+      { value: 0.67,  itemStyle: { color: '#89dceb' } },
+      { value: 0.17,  itemStyle: { color: '#89b4fa' } }
+    ],
+    barWidth: '50%',
+    label: {
+      show: true, position: 'top', color: '#cdd6f4', fontSize: 12,
+      formatter: function(params) { return params.value.toFixed(2) + ' GB'; }
+    }
+  }],
+  graphic: [{
+    type: 'text', left: 'center', bottom: 8,
+    style: { text: '★ 绿色柱为 LLaMA 2 70B 实际采用的 GQA G=8 配置，相比 MHA 节省 87.5% KV Cache', fill: '#a6e3a1', fontSize: 11 }
+  }]
+});
+
+window.addEventListener('resize', function() {
+  ctxChart.resize();
+  kvChart.resize();
+});
+</script>
+</body>
+</html>

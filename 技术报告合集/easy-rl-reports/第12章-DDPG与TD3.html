@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第12章 DDPG与TD3</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; width: calc(100% - 240px); padding: 40px 48px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.5em; }
+    li { margin: 0.3em 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+  <h1>第12章 深度确定性策略梯度（DDPG与TD3）</h1>
+  <blockquote>
+    <strong>来源</strong>：蘑菇书 EasyRL &nbsp;|&nbsp;
+    <strong>定位</strong>：本章将Actor-Critic架构（第9章）与DQN技术（第6-8章）融合，专门解决连续动作空间的控制问题
+  </blockquote>
+
+  <h2>概述</h2>
+  <p>连续动作控制（机器人、自动驾驶、物理仿真）是强化学习最重要的应用场景之一。DQN无法直接处理连续动作（需要 $\arg\max$ 操作），纯策略梯度方法（PPO）稳定性较差且采样效率低。DDPG（Deep Deterministic Policy Gradient）结合DQN的经验回放+目标网络与Actor-Critic的策略网络，成为连续控制的基准算法。TD3（Twin Delayed DDPG）针对DDPG的Q值高估问题引入三项改进，进一步提升性能和稳定性。</p>
+
+  <h2>从DQN到DDPG的演化</h2>
+  <pre class="mermaid">flowchart LR
+    A["Q-Learning<br>离散动作"] -->|"深度网络近似"| B["DQN<br>目标网络+经验回放"]
+    B -->|"连续动作：无法argmax"| C["路径衍生策略梯度<br>用策略网络替代argmax"]
+    C -->|"加入目标策略网络<br>+训练稳定技巧"| D["DDPG<br>连续控制基准"]
+    D -->|"解决Q值高估<br>+延迟更新+平滑"| E["TD3<br>Twin Delayed DDPG"]
+</pre>
+
+  <h2>离散动作与连续动作</h2>
+  <table>
+    <tr><th>维度</th><th>离散动作</th><th>连续动作</th></tr>
+    <tr><td>定义</td><td>有限个可枚举动作</td><td>实值向量，不可穷举</td></tr>
+    <tr><td>示例</td><td>游戏按键、棋盘落子</td><td>关节角度、转向角、推力大小</td></tr>
+    <tr><td>输出层</td><td>Softmax → 概率分布</td><td>Tanh → 缩放到动作范围</td></tr>
+    <tr><td>$\arg\max$ 问题</td><td>可枚举，O(|A|)</td><td>不可枚举，需优化求解</td></tr>
+    <tr><td>策略类型</td><td>随机性策略 $\pi_\theta(a|s)$</td><td>确定性策略 $\mu_\theta(s)$</td></tr>
+  </table>
+
+  <h2>DDPG 算法</h2>
+
+  <h3>名称解析</h3>
+  <ul>
+    <li><strong>深度（Deep）</strong>：使用深度神经网络</li>
+    <li><strong>确定性（Deterministic）</strong>：策略输出固定动作，而非概率分布</li>
+    <li><strong>策略梯度（Policy Gradient）</strong>：通过梯度上升优化策略网络</li>
+  </ul>
+
+  <h3>四网络架构</h3>
+  <pre class="mermaid">graph TD
+    subgraph 在线网络
+      A["策略网络 μ_θ(s)<br>演员：输出动作"]
+      B["Q网络 Q_w(s,a)<br>评论员：评估Q值"]
+    end
+    subgraph 目标网络
+      C["目标策略网络 μ_θ'(s)"]
+      D["目标Q网络 Q_w'(s,a)"]
+    end
+    A -->|"软更新 τ"| C
+    B -->|"软更新 τ"| D
+    C -->|"计算目标动作"| D
+    D -->|"计算TD目标 y"| B
+    B -->|"Q梯度指导"| A
+</pre>
+
+  <h3>训练流程与核心公式</h3>
+  <table>
+    <tr><th>步骤</th><th>操作</th><th>目的</th></tr>
+    <tr><td>1. 收集数据</td><td>$a = \mu_\theta(s) + \mathcal{N}(0,\sigma)$，存入 Replay Buffer</td><td>探索：训练时加噪声，测试时不加</td></tr>
+    <tr><td>2. 采样批次</td><td>从 Buffer 随机采样 $(s,a,r,s')$</td><td>打破时序相关性</td></tr>
+    <tr><td>3. 计算TD目标</td><td>$y = r + \gamma Q_{w'}(s', \mu_{\theta'}(s'))$</td><td>用目标网络稳定训练</td></tr>
+    <tr><td>4. 更新评论员</td><td>最小化 $\text{MSE}(Q_w(s,a), y)$</td><td>学习准确的Q值估计</td></tr>
+    <tr><td>5. 更新演员</td><td>最大化 $Q_w(s, \mu_\theta(s))$，即梯度上升</td><td>使演员输出能获得更高Q值的动作</td></tr>
+    <tr><td>6. 软更新目标网络</td><td>$\theta' \leftarrow \tau\theta + (1-\tau)\theta'$，$\tau \ll 1$</td><td>目标网络缓慢跟随在线网络</td></tr>
+  </table>
+
+  <p><strong>评论员损失（完整推导）</strong>：TD目标为：</p>
+  <p>$$y = r + \gamma Q_{w'}(s', \mu_{\theta'}(s'))$$</p>
+  <p>评论员参数 $w$ 的损失函数与梯度：</p>
+  <p>$$\mathcal{L}(w) = \mathbb{E}_{(s,a,r,s')\sim\mathcal{D}}\!\left[\left(Q_w(s,a) - y\right)^2\right], \quad \nabla_w\mathcal{L} = -2(y - Q_w(s,a))\nabla_w Q_w(s,a)$$</p>
+
+  <p><strong>演员梯度（确定性策略梯度定理，DPG）</strong>：演员 $\mu_\theta$ 的目标是最大化Q值，梯度为：</p>
+  <p>$$\nabla_\theta J \approx \mathbb{E}_{s\sim\mathcal{D}}\!\left[\nabla_a Q_w(s,a)\big|_{a=\mu_\theta(s)} \cdot \nabla_\theta \mu_\theta(s)\right]$$</p>
+  <p>即：先对动作 $a$ 求Q的梯度，再通过链式法则传给策略参数 $\theta$。这一定理由 Silver et al. (2014) 正式提出，是DDPG的理论基础。</p>
+
+  <p><strong>软更新 vs 硬复制</strong>：DQN每C步硬复制参数，DDPG采用软更新（$\tau \approx 0.005$），使目标网络更平滑稳定。软更新等价于对参数做指数移动平均，降低目标值的波动频率。</p>
+
+  <figure>
+    <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch12/12.4.png" alt="DDPG架构">
+    <figcaption>图：DDPG整体架构（来源：原文）</figcaption>
+  </figure>
+
+  <h3>探索机制</h3>
+  <p>确定性策略本身不产生探索，需在动作上叠加噪声：</p>
+  <ul>
+    <li><strong>训练时</strong>：$a = \mu_\theta(s) + \epsilon$，$\epsilon \sim \mathcal{N}(0,\sigma)$ 或 OU 噪声</li>
+    <li><strong>测试时</strong>：$a = \mu_\theta(s)$，不加噪声</li>
+  </ul>
+  <p>OU噪声（Ornstein-Uhlenbeck）具有时间相关性，更适合物理控制任务；实践中均值为0的高斯噪声同样有效。</p>
+
+  <hr>
+
+  <h2>TD3：双延迟深度确定性策略梯度</h2>
+
+  <h3>DDPG的根本问题：Q值高估</h3>
+  <p>DDPG评论员倾向于高估Q值，高估的Q值引导演员走向次优动作，进一步被高估……正反馈循环导致训练崩溃。</p>
+
+  <h3>改进1：截断双Q学习（Clipped Double Q-Learning）</h3>
+  <p>同时学习两个独立的Q网络，用较小值计算TD目标，系统性消除高估偏差：</p>
+  <p>$$y = r + \gamma(1-d)\min_{i=1,2} Q_{\phi_{i,\text{targ}}}(s', a_\text{TD3}(s'))$$</p>
+  <p>两个网络的误差独立，取 $\min$ 后高估的概率大幅降低。</p>
+
+  <h3>改进2：延迟策略更新</h3>
+  <p>Q函数更新频率 ＞ 策略更新频率——每更新2次Q网络才更新1次策略网络。</p>
+  <p><strong>为什么</strong>：Q值估计不准时，立即用其引导策略更新会积累误差。等Q值更稳定再更新策略，减少策略被误导的风险。</p>
+
+  <h3>改进3：目标策略平滑（Target Policy Smoothing）</h3>
+  <p>在目标动作上加截断噪声，平滑Q函数，防止策略利用Q函数的局部尖峰：</p>
+  <p>$$a_\text{TD3}(s') = \text{clip}\!\left(\mu_{\theta,\text{targ}}(s') + \text{clip}(\epsilon, -c, c),\; a_\text{low},\; a_\text{high}\right)$$</p>
+  <p>其中 $\epsilon \sim \mathcal{N}(0,\sigma)$。这一技术类似对抗训练，增强了Q函数对相似动作的一致性。</p>
+
+  <h3>TD3 vs DDPG 对比</h3>
+  <div id="chart-td3" class="echarts-container" style="height:300px"></div>
+  <script>
+    echarts.init(document.getElementById('chart-td3'), 'dark').setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'DDPG vs TD3 性能对比维度', textStyle: { color: '#89b4fa' } },
+      tooltip: {},
+      legend: { data: ['DDPG', 'TD3'], textStyle: { color: '#cdd6f4' } },
+      xAxis: { type: 'category', data: ['Q值准确性', '训练稳定性', '超参鲁棒性', '最终性能', '实现复杂度'], axisLabel: { color: '#cdd6f4', rotate: 10 } },
+      yAxis: { type: 'value', max: 5, axisLabel: { color: '#cdd6f4' } },
+      series: [
+        { name: 'DDPG', type: 'bar', data: [2, 2, 2, 3, 4], itemStyle: { color: '#89b4fa' } },
+        { name: 'TD3', type: 'bar', data: [4, 4, 4, 4, 3], itemStyle: { color: '#a6e3a1' } }
+      ]
+    });
+  </script>
+
+  <table>
+    <tr><th>特性</th><th>DDPG</th><th>TD3</th></tr>
+    <tr><td>Q网络数量</td><td>1（+1目标网络）</td><td>2（+2目标网络）</td></tr>
+    <tr><td>Q值高估</td><td>严重</td><td>显著缓解</td></tr>
+    <tr><td>策略更新频率</td><td>与Q网络相同</td><td>Q网络更新2次才更新1次</td></tr>
+    <tr><td>目标动作噪声</td><td>无</td><td>截断高斯噪声平滑目标</td></tr>
+    <tr><td>超参数敏感性</td><td>高</td><td>较低</td></tr>
+    <tr><td>适用场景</td><td>连续控制基准</td><td>更难的连续控制任务</td></tr>
+  </table>
+
+  <h2>连续控制算法全景</h2>
+  <table>
+    <tr><th>算法</th><th>策略类型</th><th>策略</th><th>on/off policy</th><th>特点</th></tr>
+    <tr><td>PPO</td><td>随机性</td><td>策略网络输出分布</td><td>on-policy</td><td>稳定、简单、广泛应用</td></tr>
+    <tr><td>DDPG</td><td>确定性</td><td>策略网络输出动作</td><td>off-policy</td><td>高效、不稳定</td></tr>
+    <tr><td>TD3</td><td>确定性</td><td>策略网络输出动作</td><td>off-policy</td><td>稳定、高效</td></tr>
+    <tr><td>SAC</td><td>随机性（最大熵）</td><td>策略网络输出分布</td><td>off-policy</td><td>最稳定、样本效率高</td></tr>
+  </table>
+
+  <h2>总结与启发</h2>
+  <p>DDPG将Actor-Critic架构与DQN的工程技巧（经验回放、目标网络）有机融合，成为连续控制领域的基准算法。软更新替代硬复制是对DQN目标网络机制的改进，探索机制从动作空间转移到动作加噪是确定性策略的特殊处理。TD3的三项改进——截断双Q、延迟更新、目标平滑——系统解决了DDPG的Q值高估问题，体现了"发现问题→定位根源→精准改进"的算法设计哲学。强化学习算法对初始条件极为敏感，实现细节（噪声类型、网络大小、学习率）往往决定成败。</p>
+
+  <h2>参考文献</h2>
+  <ul>
+    <li>Lillicrap et al., <em>Continuous control with deep reinforcement learning</em> (DDPG, 2016)</li>
+    <li>Fujimoto et al., <em>Addressing Function Approximation Error in Actor-Critic Methods</em> (TD3, 2018)</li>
+    <li>OpenAI Spinning Up: <a href="https://spinningup.openai.com/en/latest/algorithms/ddpg.html">spinningup.openai.com</a></li>
+    <li>TD3官方实现: <a href="https://github.com/sfujim/TD3">github.com/sfujim/TD3</a></li>
+  </ul>
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  hljs.highlightAll();
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>强化学习基础 — Lilian Weng 博客精选</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--yellow:#f9e2af;--purple:#cba6f7;--red:#f38ba8;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #toc a:hover{background:var(--border);}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+    #toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+    main{margin-left:240px;max-width:none;padding:40px 64px;}
+    h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+    h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+    h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+    p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+    ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+    th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+    td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+    code{font-family:'JetBrains Mono','Fira Code',monospace;}
+    p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+    .echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+    .formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<!-- ===== 标题 ===== -->
+<h1>强化学习基础</h1>
+<blockquote>
+  <strong>来源：</strong>Lilian Weng 博客（lilianweng.github.io）精选六篇文章综合整理<br>
+  <strong>涵盖：</strong>
+  A Long Peek into Reinforcement Learning (2018-02-19) ·
+  The Multi-Armed Bandit Problem and Its Solutions (2018-01-23) ·
+  Policy Gradient Algorithms (2018-04-08) ·
+  Curriculum for Reinforcement Learning (2020-01-29) ·
+  Exploration Strategies in Deep Reinforcement Learning (2020-06-07) ·
+  Implementing DRL Models with TensorFlow + OpenAI Gym (2018-05-05)
+</blockquote>
+
+<!-- ===== 第一章：强化学习基础概念 ===== -->
+<h2 id="rl-basics">一、强化学习基础概念</h2>
+
+<p>
+强化学习（Reinforcement Learning，RL）是机器学习的一个分支，研究<strong>智能体（Agent）</strong>如何在与<strong>环境（Environment）</strong>的交互中，通过试错（trial-and-error）学习最优行为策略。其核心思想是：智能体在每个时间步选择动作，环境反馈奖励信号，智能体以最大化长期累积奖励为目标。
+</p>
+
+<h3 id="core-elements">1.1 核心要素</h3>
+
+<p>一个完整的强化学习系统由以下要素构成：</p>
+
+<table>
+  <thead>
+    <tr><th>要素</th><th>符号</th><th>含义</th><th>示例（棋类游戏）</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>状态</strong> State</td><td>$s \in \mathcal{S}$</td><td>环境的完整描述</td><td>棋盘当前布局</td></tr>
+    <tr><td><strong>动作</strong> Action</td><td>$a \in \mathcal{A}$</td><td>智能体可执行的操作</td><td>落子位置</td></tr>
+    <tr><td><strong>奖励</strong> Reward</td><td>$R_t \in \mathbb{R}$</td><td>环境对动作的即时反馈</td><td>赢棋 +1，输棋 -1，平局 0</td></tr>
+    <tr><td><strong>策略</strong> Policy</td><td>$\pi(a|s)$</td><td>状态到动作的映射（概率分布）</td><td>给定棋局选择落子的规则</td></tr>
+    <tr><td><strong>价值函数</strong></td><td>$V_\pi(s)$</td><td>从状态 $s$ 出发遵循策略 $\pi$ 的期望回报</td><td>某棋局的胜率估计</td></tr>
+    <tr><td><strong>模型</strong> Model</td><td>$P(s'|s,a)$</td><td>环境转移概率（可选）</td><td>落子后棋局变化规律</td></tr>
+  </tbody>
+</table>
+
+<h3 id="mdp">1.2 马尔可夫决策过程（MDP）</h3>
+
+<p>
+强化学习问题通常形式化为<strong>马尔可夫决策过程</strong>，满足马尔可夫性质：未来状态仅依赖当前状态与动作，与历史无关。
+</p>
+
+<div class="formula-box">
+$$\text{MDP} = (\mathcal{S},\ \mathcal{A},\ P,\ R,\ \gamma)$$
+$$P(s_{t+1}|s_t, a_t) \quad \text{（状态转移概率）}$$
+$$R(s_t, a_t) \quad \text{（奖励函数）}$$
+$$\gamma \in [0,1) \quad \text{（折扣因子）}$$
+</div>
+
+<p><strong>折扣回报（Discounted Return）</strong>定义为从时间步 $t$ 开始的加权累积奖励：</p>
+
+<div class="formula-box">
+$$G_t = \sum_{k=0}^{\infty} \gamma^k R_{t+k+1} = R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + \cdots$$
+</div>
+
+<p>
+折扣因子 $\gamma$ 的作用：$\gamma \to 0$ 时智能体只关注即时奖励（短视），$\gamma \to 1$ 时等权重对待所有未来奖励（远视）。实践中常取 $\gamma = 0.99$。
+</p>
+
+<h3 id="value-functions">1.3 价值函数与 Bellman 方程</h3>
+
+<p><strong>状态价值函数</strong>表示从状态 $s$ 出发，遵循策略 $\pi$ 的期望折扣回报：</p>
+
+<div class="formula-box">
+$$V_\pi(s) = \mathbb{E}_\pi\left[G_t \mid s_t = s\right] = \mathbb{E}_\pi\left[\sum_{k=0}^{\infty} \gamma^k R_{t+k+1} \mid s_t = s\right]$$
+</div>
+
+<p><strong>动作价值函数（Q 函数）</strong>表示从状态 $s$ 执行动作 $a$ 后，遵循策略 $\pi$ 的期望回报：</p>
+
+<div class="formula-box">
+$$Q_\pi(s, a) = \mathbb{E}_\pi\left[G_t \mid s_t = s, a_t = a\right]$$
+</div>
+
+<p>两者关系：$V_\pi(s) = \sum_{a} \pi(a|s)\, Q_\pi(s,a)$</p>
+
+<p><strong>Bellman 期望方程</strong>揭示了价值函数的递归结构：</p>
+
+<div class="formula-box">
+$$V_\pi(s) = \sum_{a} \pi(a|s) \sum_{s'} P(s'|s,a)\left[R(s,a,s') + \gamma V_\pi(s')\right]$$
+$$Q_\pi(s,a) = \sum_{s'} P(s'|s,a)\left[R(s,a,s') + \gamma \sum_{a'} \pi(a'|s') Q_\pi(s',a')\right]$$
+</div>
+
+<p><strong>Bellman 最优方程</strong>（最优策略 $\pi^*$ 下）：</p>
+
+<div class="formula-box">
+$$V^*(s) = \max_a \sum_{s'} P(s'|s,a)\left[R(s,a,s') + \gamma V^*(s')\right]$$
+$$Q^*(s,a) = \sum_{s'} P(s'|s,a)\left[R(s,a,s') + \gamma \max_{a'} Q^*(s',a')\right]$$
+</div>
+
+<h3 id="rl-taxonomy">1.4 强化学习算法分类</h3>
+
+<pre class="mermaid">
+flowchart TD
+    RL["强化学习算法"] --> MB["Model-Based\n（有模型）"]
+    RL --> MF["Model-Free\n（无模型）"]
+    MB --> Dyna["Dyna-Q\nWorld Model"]
+    MB --> MBPO["MBPO\nDreamer"]
+    MF --> VB["Value-Based\n（基于价值）"]
+    MF --> PG["Policy Gradient\n（策略梯度）"]
+    MF --> AC["Actor-Critic\n（演员-评论家）"]
+    VB --> QL["Q-Learning\nSARSA"]
+    VB --> DQN["DQN\nDueling DQN\nPrioritized ER"]
+    PG --> REINFORCE["REINFORCE\nVPG"]
+    PG --> PPO["PPO\nTRPO"]
+    AC --> A3C["A3C / A2C\nIMPALA"]
+    AC --> SAC["SAC\nTD3"]
+    style RL fill:#313244,color:#89b4fa
+    style MB fill:#2a2a3e,color:#cba6f7
+    style MF fill:#2a2a3e,color:#cba6f7
+</pre>
+
+<table>
+  <thead>
+    <tr><th>维度</th><th>Model-Based</th><th>Model-Free</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>是否需要环境模型</td><td>是（学习或给定 $P(s'|s,a)$）</td><td>否</td></tr>
+    <tr><td>样本效率</td><td>高（可用模型生成虚拟数据）</td><td>低（需大量真实交互）</td></tr>
+    <tr><td>计算复杂度</td><td>高（规划开销大）</td><td>相对较低</td></tr>
+    <tr><td>典型算法</td><td>Dyna-Q, MBPO, Dreamer</td><td>DQN, PPO, SAC</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr><th>维度</th><th>On-Policy（同策略）</th><th>Off-Policy（异策略）</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>数据来源</td><td>当前策略 $\pi$ 生成的数据</td><td>任意行为策略 $\mu$ 生成的数据</td></tr>
+    <tr><td>经验重用</td><td>不能（数据过期即丢弃）</td><td>可以（经验回放池）</td></tr>
+    <tr><td>稳定性</td><td>更稳定</td><td>可能不稳定（需重要性采样）</td></tr>
+    <tr><td>典型算法</td><td>SARSA, PPO, A3C</td><td>Q-Learning, DQN, SAC</td></tr>
+  </tbody>
+</table>
+
+<!-- ===== 第二章：多臂老虎机 ===== -->
+<h2 id="bandit">二、多臂老虎机问题</h2>
+
+<blockquote>
+  原文：<em>The Multi-Armed Bandit Problem and Its Solutions</em>（2018-01-23）<br>
+  多臂老虎机是强化学习的简化版本，没有状态转移，只有"选择动作—获得奖励"的单步决策。它完美地提炼出了 RL 最核心的矛盾：<strong>探索（Exploration）vs 利用（Exploitation）</strong>。
+</blockquote>
+
+<h3 id="bandit-definition">2.1 问题定义</h3>
+
+<p>
+设有 $K$ 台老虎机（臂），每台臂 $i$ 的奖励服从未知分布，期望奖励为 $\mu_i$。智能体每次选择一台臂拉动，获得随机奖励 $r$。目标是在 $T$ 轮内最大化累积奖励，等价于最小化<strong>遗憾（Regret）</strong>：
+</p>
+
+<div class="formula-box">
+$$\mathcal{L}_T = T \cdot \mu^* - \sum_{t=1}^{T} r_t = \sum_{i=1}^{K} \Delta_i \cdot \mathbb{E}[N_i(T)]$$
+</div>
+
+<p>其中 $\mu^* = \max_i \mu_i$ 是最优臂的期望奖励，$\Delta_i = \mu^* - \mu_i$ 是次优间隙，$N_i(T)$ 是臂 $i$ 被选择的次数。</p>
+
+<h3 id="epsilon-greedy">2.2 ε-Greedy 算法</h3>
+
+<p>
+<strong>核心思想：</strong>大多数时候（概率 $1-\varepsilon$）选择当前估计最优的臂（利用），以小概率 $\varepsilon$ 随机探索其他臂。
+</p>
+
+<div class="formula-box">
+$$a_t = \begin{cases} \arg\max_i \hat{\mu}_i & \text{以概率 } 1 - \varepsilon \\ \text{随机选择} & \text{以概率 } \varepsilon \end{cases}$$
+$$\hat{\mu}_i \leftarrow \hat{\mu}_i + \frac{1}{N_i}(r - \hat{\mu}_i) \quad \text{（增量更新均值）}$$
+</div>
+
+<pre class="mermaid">
+flowchart TD
+    Start["初始化：$\hat{\mu}_i = 0$，$N_i = 0$"] --> Loop["每轮 t = 1,...,T"]
+    Loop --> Flip{"随机数 $u \sim U[0,1]$"}
+    Flip -->|"$u < \varepsilon$（探索）"| Random["随机选择臂 $a_t$"]
+    Flip -->|"$u \geq \varepsilon$（利用）"| Greedy["选择 $a_t = \arg\max_i \hat{\mu}_i$"]
+    Random --> Pull["拉动臂 $a_t$，获得奖励 $r_t$"]
+    Greedy --> Pull
+    Pull --> Update["更新：$N_{a_t}$++，$\hat{\mu}_{a_t} \leftarrow \hat{\mu}_{a_t} + \frac{r_t - \hat{\mu}_{a_t}}{N_{a_t}}$"]
+    Update --> Loop
+</pre>
+
+<p><strong>缺点：</strong>固定的 $\varepsilon$ 在后期仍以相同概率探索已知次优臂，浪费资源。改进方案：衰减 $\varepsilon_t = \varepsilon_0 / \sqrt{t}$。</p>
+
+<h3 id="ucb">2.3 UCB1 算法（置信上界）</h3>
+
+<p>
+<strong>核心思想：</strong>为每个臂维护一个<strong>乐观上界</strong>，选择置信上界最大的臂。不确定性高的臂（被选次数少）上界更大，自然被优先探索。这体现了"乐观面对不确定性（Optimism in the Face of Uncertainty）"原则。
+</p>
+
+<div class="formula-box">
+$$a_t = \arg\max_{i} \left[ \hat{\mu}_i + \sqrt{\frac{2 \ln t}{N_i(t)}} \right]$$
+</div>
+
+<p>
+第一项 $\hat{\mu}_i$ 是利用项（当前最优估计），第二项 $\sqrt{\frac{2\ln t}{N_i}}$ 是探索项（不确定性奖励）。随着 $N_i$ 增大，探索项缩小，算法趋向纯利用。
+</p>
+
+<p><strong>理论保证：</strong>UCB1 的遗憾上界为 $O(\sqrt{KT \ln T})$，达到近似最优。</p>
+
+<pre class="mermaid">
+flowchart LR
+    Init["前 K 轮：每臂各拉一次"] --> Main["轮 t = K+1,...,T"]
+    Main --> Calc["计算每臂 UCB 值\n$UCB_i = \hat{\mu}_i + \sqrt{2\ln t / N_i}$"]
+    Calc --> Select["选择 $a_t = \arg\max_i UCB_i$"]
+    Select --> Reward["获得奖励 $r_t$，更新 $\hat{\mu}_{a_t}$，$N_{a_t}$++"]
+    Reward --> Main
+</pre>
+
+<h3 id="thompson">2.4 Thompson Sampling（汤普森采样）</h3>
+
+<p>
+<strong>核心思想：</strong>贝叶斯方法。为每个臂的期望奖励维护一个后验分布，每轮从各臂后验中采样一个值，选择采样值最大的臂。后验分布随观测数据更新，越来越准确。
+</p>
+
+<p>对于 Bernoulli 奖励（0/1），使用 Beta 分布作为共轭先验：</p>
+
+<div class="formula-box">
+$$\theta_i \sim \text{Beta}(\alpha_i, \beta_i)$$
+$$\text{选择 } a_t = \arg\max_i \theta_i$$
+$$\text{若奖励 } r_t = 1: \alpha_{a_t} \leftarrow \alpha_{a_t} + 1$$
+$$\text{若奖励 } r_t = 0: \beta_{a_t} \leftarrow \beta_{a_t} + 1$$
+</div>
+
+<table>
+  <thead>
+    <tr><th>算法</th><th>探索机制</th><th>先验知识</th><th>遗憾界</th><th>适用场景</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>ε-Greedy</td><td>随机均匀探索</td><td>不需要</td><td>$O(K \cdot T^\varepsilon)$</td><td>简单基线</td></tr>
+    <tr><td>UCB1</td><td>置信上界（频率派）</td><td>不需要</td><td>$O(\sqrt{KT\ln T})$</td><td>奖励有界场景</td></tr>
+    <tr><td>Thompson Sampling</td><td>后验概率采样（贝叶斯）</td><td>可指定先验</td><td>$O(\sqrt{KT\ln K})$</td><td>有先验知识时</td></tr>
+  </tbody>
+</table>
+
+<!-- ===== 第三章：策略梯度算法 ===== -->
+<h2 id="policy-gradient">三、策略梯度算法</h2>
+
+<blockquote>
+  原文：<em>Policy Gradient Algorithms</em>（2018-04-08）<br>
+  策略梯度方法直接参数化策略 $\pi_\theta$，通过梯度上升最大化期望回报，无需显式建模价值函数，天然适用于连续动作空间。
+</blockquote>
+
+<h3 id="pg-theorem">3.1 策略梯度定理</h3>
+
+<p>
+设策略参数为 $\theta$，目标函数为期望回报 $J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}[G(\tau)]$，其中 $\tau = (s_0, a_0, r_0, s_1, \ldots)$ 为轨迹。
+</p>
+
+<p><strong>策略梯度定理</strong>给出目标函数对参数的梯度：</p>
+
+<div class="formula-box">
+$$\nabla_\theta J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot G_t\right]$$
+</div>
+
+<p>
+直觉理解：若某轨迹回报高，则增大该轨迹上各动作的概率（$\log \pi$ 梯度为正方向）；若回报低，则降低概率。
+</p>
+
+<h3 id="reinforce">3.2 REINFORCE 算法</h3>
+
+<p>
+<strong>是什么：</strong>最简单的蒙特卡洛策略梯度算法，使用完整轨迹的回报 $G_t$ 作为梯度估计。
+</p>
+
+<div class="formula-box">
+$$\theta \leftarrow \theta + \alpha \sum_{t=0}^{T} \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot G_t$$
+</div>
+
+<p>
+<strong>方差问题：</strong>$G_t$ 方差很大，导致训练不稳定。引入<strong>基线（Baseline）</strong> $b(s_t)$ 减小方差（不影响期望）：
+</p>
+
+<div class="formula-box">
+$$\nabla_\theta J(\theta) = \mathbb{E}\left[\sum_t \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot (G_t - b(s_t))\right]$$
+</div>
+
+<p>常用基线：$b(s_t) = V_\pi(s_t)$，此时 $G_t - V_\pi(s_t)$ 称为<strong>优势函数（Advantage）</strong>$A_\pi(s_t, a_t)$。</p>
+
+<h3 id="actor-critic">3.3 Actor-Critic 架构</h3>
+
+<p>
+<strong>是什么：</strong>同时维护策略网络（Actor，$\pi_\theta$）和价值网络（Critic，$V_\phi$）。Actor 负责选动作，Critic 负责评估状态价值并为 Actor 提供低方差的梯度估计。
+</p>
+
+<pre class="mermaid">
+flowchart LR
+    Env["环境"] -->|"$s_t$"| Actor["Actor\n$\pi_\theta(a|s)$"]
+    Actor -->|"$a_t$"| Env
+    Env -->|"$r_t, s_{t+1}$"| Critic["Critic\n$V_\phi(s)$"]
+    Critic -->|"TD 误差\n$\delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)$"| Actor
+    Critic -->|"价值损失\n$L = \delta_t^2$"| CriticUpdate["更新 $\phi$"]
+    Actor -->|"策略梯度\n$\nabla_\theta \log\pi_\theta(a_t|s_t) \cdot \delta_t$"| ActorUpdate["更新 $\theta$"]
+</pre>
+
+<p><strong>TD 误差</strong>作为优势函数的单步估计：</p>
+
+<div class="formula-box">
+$$\delta_t = r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t) \approx A_\pi(s_t, a_t)$$
+</div>
+
+<h3 id="a3c">3.4 A3C / A2C</h3>
+
+<p>
+<strong>A3C（Asynchronous Advantage Actor-Critic）</strong>：多个工作进程（Worker）异步并行与环境交互，各自计算梯度后异步更新全局网络参数，打破数据相关性，提高训练效率。
+</p>
+
+<p>
+<strong>A2C（Advantage Actor-Critic）</strong>：A3C 的同步版本，所有 Worker 同步收集数据后统一更新，实践中效果与 A3C 相当但更稳定。
+</p>
+
+<div class="formula-box">
+$$\mathcal{L}_{total} = \mathcal{L}_{actor} + c_v \mathcal{L}_{critic} - c_e \mathcal{H}(\pi_\theta)$$
+$$\mathcal{L}_{actor} = -\mathbb{E}\left[\log \pi_\theta(a_t|s_t) \cdot A_t\right]$$
+$$\mathcal{L}_{critic} = \mathbb{E}\left[(V_\phi(s_t) - G_t)^2\right]$$
+$$\mathcal{H}(\pi_\theta) = -\sum_a \pi_\theta(a|s)\log\pi_\theta(a|s) \quad \text{（熵正则化，鼓励探索）}$$
+</div>
+
+<h3 id="ppo">3.5 PPO（近端策略优化）</h3>
+
+<p>
+<strong>是什么：</strong>Proximal Policy Optimization，OpenAI 2017 年提出。核心问题：策略梯度更新步长难以控制，步子太大导致策略崩溃（Catastrophic Forgetting）。PPO 通过裁剪目标函数约束策略更新幅度，在效果和简洁性之间取得最佳平衡。
+</p>
+
+<p><strong>重要性采样比率：</strong></p>
+
+<div class="formula-box">
+$$r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$$
+</div>
+
+<p><strong>PPO-Clip 目标函数（核心）：</strong></p>
+
+<div class="formula-box">
+$$\mathcal{L}^{CLIP}(\theta) = \mathbb{E}_t\left[\min\left(r_t(\theta) A_t,\ \text{clip}(r_t(\theta), 1-\varepsilon, 1+\varepsilon) A_t\right)\right]$$
+</div>
+
+<p>
+当 $A_t > 0$（好动作）：若 $r_t > 1+\varepsilon$（新策略概率远大于旧策略），裁剪阻止过度增大；
+当 $A_t < 0$（坏动作）：若 $r_t < 1-\varepsilon$，裁剪阻止过度减小。
+</p>
+
+<pre class="mermaid">
+flowchart TD
+    Collect["收集轨迹数据\n用旧策略 $\pi_{\theta_{old}}$"] --> Compute["计算优势估计 $\hat{A}_t$\n（GAE 广义优势估计）"]
+    Compute --> Epochs["多轮 mini-batch 更新\n（通常 3-10 个 epoch）"]
+    Epochs --> ClipLoss["计算裁剪目标\n$\mathcal{L}^{CLIP}$"]
+    ClipLoss --> Update["梯度上升更新 $\theta$"]
+    Update --> Check{"$r_t(\theta)$ 是否\n超出 $[1-\varepsilon, 1+\varepsilon]$？"}
+    Check -->|"是，裁剪"| Clip["限制更新幅度"]
+    Check -->|"否，正常"| Normal["正常梯度更新"]
+    Clip --> NewPolicy["更新 $\theta_{old} \leftarrow \theta$"]
+    Normal --> NewPolicy
+    NewPolicy --> Collect
+</pre>
+
+<h3 id="sac">3.6 SAC（软演员-评论家）</h3>
+
+<p>
+<strong>是什么：</strong>Soft Actor-Critic，最大熵强化学习框架。在最大化累积奖励的同时，最大化策略的熵，鼓励多样性探索，提高鲁棒性。
+</p>
+
+<div class="formula-box">
+$$J(\pi) = \sum_{t=0}^{T} \mathbb{E}_{(s_t,a_t)\sim\rho_\pi}\left[r(s_t, a_t) + \alpha \mathcal{H}(\pi(\cdot|s_t))\right]$$
+$$= \sum_{t=0}^{T} \mathbb{E}\left[r(s_t, a_t) - \alpha \log \pi(a_t|s_t)\right]$$
+</div>
+
+<p>
+温度参数 $\alpha$ 控制探索-利用权衡。SAC 使用<strong>双 Q 网络</strong>（取最小值）缓解 Q 值过估计，并通过<strong>重参数化技巧</strong>实现连续动作空间的高效梯度传播。
+</p>
+
+<h3 id="td3">3.7 TD3（双延迟深度确定性策略梯度）</h3>
+
+<p>
+<strong>是什么：</strong>Twin Delayed DDPG，针对 DDPG 中 Q 值过估计问题的改进。三大核心技巧：
+</p>
+
+<ol>
+  <li><strong>双 Q 网络（Clipped Double Q）：</strong>维护两个 Critic，取最小值作为目标，减少过估计偏差</li>
+  <li><strong>延迟策略更新：</strong>Actor 每 2 步更新一次，Critic 每步更新，让价值估计更稳定后再更新策略</li>
+  <li><strong>目标策略平滑：</strong>在目标动作上加噪声，防止 Critic 对特定动作过拟合</li>
+</ol>
+
+<div class="formula-box">
+$$y = r + \gamma \min_{i=1,2} Q_{\phi_i'}\left(s', \tilde{a}'\right), \quad \tilde{a}' = \pi_{\theta'}(s') + \text{clip}(\mathcal{N}(0,\sigma), -c, c)$$
+</div>
+
+<h3 id="impala">3.8 IMPALA（分布式训练框架）</h3>
+
+<p>
+<strong>是什么：</strong>Importance Weighted Actor-Learner Architecture，DeepMind 提出的大规模分布式 RL 框架。多个 Actor 异步收集数据发送给中央 Learner，Learner 高效批量更新。
+</p>
+
+<p>
+由于 Actor 与 Learner 使用不同版本策略，引入<strong>V-trace 离策略修正</strong>：
+</p>
+
+<div class="formula-box">
+$$v_s = V(x_s) + \sum_{t=s}^{s+n-1} \gamma^{t-s} \left(\prod_{i=s}^{t-1} c_i\right) \delta_t V$$
+$$\delta_t V = \rho_t \left(r_t + \gamma V(x_{t+1}) - V(x_t)\right)$$
+$$\rho_t = \min\left(\bar{\rho},\ \frac{\pi(a_t|x_t)}{\mu(a_t|x_t)}\right), \quad c_i = \min\left(\bar{c},\ \frac{\pi(a_i|x_i)}{\mu(a_i|x_i)}\right)$$
+</div>
+
+<div id="pg-compare" class="echarts-container" style="height:360px"></div>
+
+<!-- ===== 第四章：课程学习 ===== -->
+<h2 id="curriculum">四、强化学习中的课程学习</h2>
+
+<blockquote>
+  原文：<em>Curriculum for Reinforcement Learning</em>（2020-01-29）<br>
+  受人类教育启发：先学简单任务，再逐步挑战复杂任务。课程学习（Curriculum Learning）通过设计合理的任务序列，加速 RL 智能体的学习进程，尤其对稀疏奖励环境效果显著。
+</blockquote>
+
+<h3 id="curriculum-def">4.1 课程学习定义与动机</h3>
+
+<p>
+在稀疏奖励环境中，随机探索极难触发有意义的奖励信号（如迷宫中随机走动很少到达终点）。课程学习的核心思想是：
+</p>
+
+<ul>
+  <li><strong>从易到难：</strong>先在简单任务（目标近、障碍少）上学习基础技能</li>
+  <li><strong>迁移知识：</strong>将简单任务习得的策略迁移到复杂任务</li>
+  <li><strong>自动课程：</strong>自动生成合适难度的任务，无需手动设计</li>
+</ul>
+
+<pre class="mermaid">
+flowchart LR
+    T1["任务 1\n（最简单）"] --> T2["任务 2\n（稍难）"] --> T3["任务 3\n（中等）"] --> T4["任务 N\n（目标难度）"]
+    T1 -->|"策略迁移"| T2
+    T2 -->|"策略迁移"| T3
+    T3 -->|"策略迁移"| T4
+    style T1 fill:#2a2a3e,color:#a6e3a1
+    style T4 fill:#2a2a3e,color:#f38ba8
+</pre>
+
+<h3 id="curriculum-types">4.2 课程设计方法</h3>
+
+<h4>目标可达性与覆盖率</h4>
+
+<p>自动课程生成需要平衡两个目标：</p>
+
+<div class="formula-box">
+$$\mathcal{L}_{total} = \mathcal{L}_{feas} + \lambda \mathcal{L}_{cov}$$
+$$\mathcal{L}_{feas} = \mathbb{E}_{g \sim p_G}\left[\mathbb{1}[\text{任务 } g \text{ 可解}]\right] \quad \text{（可行性：任务应可被当前策略完成）}$$
+$$\mathcal{L}_{cov} = D_{KL}(p_G \| p_{target}) \quad \text{（覆盖率：任务分布应覆盖目标分布）}$$
+</div>
+
+<h4>Progressive Neural Network（渐进神经网络）</h4>
+
+<p>
+为每个任务训练独立的神经网络列（Column），新任务网络通过横向连接（Lateral Connection）从已训练的旧任务网络中提取特征，实现知识迁移且不遗忘旧任务。
+</p>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph Col1["任务 1 网络"]
+        H11["隐层 1"] --> H12["隐层 2"] --> O1["输出 1"]
+    end
+    subgraph Col2["任务 2 网络"]
+        H21["隐层 1"] --> H22["隐层 2"] --> O2["输出 2"]
+    end
+    subgraph Col3["任务 3 网络"]
+        H31["隐层 1"] --> H32["隐层 2"] --> O3["输出 3"]
+    end
+    H11 -->|"横向连接"| H22
+    H12 -->|"横向连接"| H32
+    H21 -->|"横向连接"| H32
+</pre>
+
+<h4>SP-GAIL（自步生成对抗模仿学习）</h4>
+
+<p>
+结合自步学习（Self-Paced Learning）与 GAIL，让智能体从最容易模仿的专家轨迹片段开始学习，逐渐扩展到全部轨迹：
+</p>
+
+<div class="formula-box">
+$$\min_\pi \max_D \mathbb{E}_{\tau \sim \pi}\left[\log D(s,a)\right] + \mathbb{E}_{\tau_E \sim \mathcal{C}}\left[\log(1 - D(s,a))\right]$$
+$$\text{其中课程选择器 } \mathcal{C} \text{ 根据当前策略能力选取适合难度的专家轨迹子集}$$
+</div>
+
+<h3 id="curriculum-automatic">4.3 自动课程生成</h3>
+
+<table>
+  <thead>
+    <tr><th>方法</th><th>核心思想</th><th>难度度量</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>ALP-GMM</td><td>最大化学习进度（绝对学习进度）</td><td>奖励增长速率</td></tr>
+    <tr><td>RIAC</td><td>区域兴趣自适应采样</td><td>局部学习进度</td></tr>
+    <tr><td>GoalGAN</td><td>用 GAN 生成合适难度目标</td><td>成功率接近 0.5</td></tr>
+    <tr><td>POET</td><td>配对的开放式探索与训练</td><td>环境复杂度</td></tr>
+  </tbody>
+</table>
+
+<!-- ===== 第五章：探索策略 ===== -->
+<h2 id="exploration">五、深度强化学习中的探索策略</h2>
+
+<blockquote>
+  原文：<em>Exploration Strategies in Deep Reinforcement Learning</em>（2020-06-07）<br>
+  探索是 RL 的核心挑战之一。在稀疏奖励、高维状态空间中，纯随机探索（ε-Greedy）极其低效。本章介绍基于内在动机的系统性探索方法。
+</blockquote>
+
+<h3 id="exploration-taxonomy">5.1 探索策略分类</h3>
+
+<pre class="mermaid">
+flowchart TD
+    Exp["探索策略"] --> Rand["随机探索\nε-Greedy, Boltzmann"]
+    Exp --> IM["内在动机\nIntrinsic Motivation"]
+    Exp --> Bayes["贝叶斯方法\nBayesian RL"]
+    Exp --> Info["信息论方法\nInformation-Theoretic"]
+    IM --> Count["计数奖励\nCount-Based"]
+    IM --> Pred["预测误差\nPrediction Error"]
+    IM --> Novelty["新颖性\nNovelty-Based"]
+    Count --> HashCount["局部敏感哈希\nSimHash"]
+    Count --> PseudoCount["伪计数\nPseudo-Count"]
+    Pred --> ICM["内在好奇心模块\nICM"]
+    Pred --> RND["随机网络蒸馏\nRND"]
+    Bayes --> BNN["贝叶斯神经网络\nBNN"]
+    Bayes --> NoisyNet["NoisyNet"]
+    Info --> VIC["变分信息控制\nVIC"]
+    Info --> VIME["变分信息最大化探索\nVIME"]
+</pre>
+
+<h3 id="count-based">5.2 计数奖励（Count-Based Exploration）</h3>
+
+<p>
+<strong>核心思想：</strong>访问次数少的状态更"新颖"，给予额外的内在奖励鼓励探索。
+</p>
+
+<div class="formula-box">
+$$r_t^{total} = r_t^{ext} + \beta \cdot r_t^{int}$$
+$$r_t^{int} = \frac{1}{\sqrt{N(s_t)}} \quad \text{（访问次数 $N(s_t)$ 越少，内在奖励越大）}$$
+</div>
+
+<p>
+<strong>问题：</strong>高维连续状态空间中，每个状态几乎只被访问一次，计数无意义。<br>
+<strong>解决方案：</strong><strong>伪计数（Pseudo-Count）</strong>，通过密度模型 $\rho_n(s)$ 估计状态的访问频率：
+</p>
+
+<div class="formula-box">
+$$\hat{N}(s) = \frac{\rho_n(s)(1 - \rho_n'(s))}{\rho_n'(s) - \rho_n(s)}, \quad r^{int}(s) = \frac{1}{\sqrt{\hat{N}(s) + 0.01}}$$
+$$\text{其中 } \rho_n'(s) \text{ 是将 } s \text{ 加入数据集后重训练的密度模型}$$
+</div>
+
+<h3 id="icm">5.3 ICM — 内在好奇心模块</h3>
+
+<p>
+<strong>是什么：</strong>Intrinsic Curiosity Module，通过预测误差衡量状态新颖性。智能体对"难以预测"的状态感到好奇，主动探索。
+</p>
+
+<pre class="mermaid">
+flowchart LR
+    St["$s_t$"] --> Enc["特征编码器\n$\phi(s_t)$"]
+    St1["$s_{t+1}$"] --> Enc2["特征编码器\n$\phi(s_{t+1})$"]
+    Enc --> Inv["逆向模型\n预测 $\hat{a}_t$"]
+    Enc2 --> Inv
+    Inv -->|"逆向损失\n$L_I$"| Total["总损失"]
+    Enc --> Fwd["前向模型\n预测 $\hat{\phi}(s_{t+1})$"]
+    At["$a_t$"] --> Fwd
+    Fwd -->|"预测误差\n$r^{int} = \|\hat{\phi}(s_{t+1}) - \phi(s_{t+1})\|^2$"| Total
+    Total -->|"内在奖励"| Policy["策略网络"]
+</pre>
+
+<div class="formula-box">
+$$r_t^{int} = \frac{\eta}{2}\left\|\hat{\phi}(s_{t+1}) - \phi(s_{t+1})\right\|^2$$
+$$\mathcal{L}_{ICM} = (1-\beta)\mathcal{L}_{inv} + \beta \mathcal{L}_{fwd}$$
+</div>
+
+<p>
+<strong>逆向模型</strong>通过预测动作学习与动作相关的特征，过滤掉环境中无法控制的随机噪声（如电视噪声问题）。
+</p>
+
+<h3 id="rnd">5.4 RND — 随机网络蒸馏</h3>
+
+<p>
+<strong>是什么：</strong>Random Network Distillation，OpenAI 2018。维护一个<strong>固定随机目标网络</strong>和一个<strong>可训练预测网络</strong>，预测误差作为内在奖励。对未曾访问的状态，预测误差大（奖励高）；反之则小。
+</p>
+
+<div class="formula-box">
+$$r_t^{int} = \left\|f(s_{t+1};\theta_{pred}) - f(s_{t+1};\theta_{fixed})\right\|^2$$
+</div>
+
+<p>
+<strong>优势：</strong>无需建模状态转移，计算简单高效；固定目标网络保证奖励信号稳定。在 Montezuma's Revenge 等稀疏奖励游戏上取得当时最优成绩。
+</p>
+
+<h3 id="vic">5.5 VIC — 变分信息控制</h3>
+
+<p>
+<strong>是什么：</strong>Variational Intrinsic Control，通过最大化技能（子目标）与轨迹之间的互信息，让智能体学习多样化的可区分技能。
+</p>
+
+<div class="formula-box">
+$$\max_\pi I(\Omega; s_T | s_0) = \max_\pi H(\Omega | s_0) - H(\Omega | s_T, s_0)$$
+$$\text{等价于最大化 ELBO: } \mathbb{E}_{\omega, \tau}\left[\log q(\omega | s_T, s_0)\right] + H(\Omega | s_0)$$
+</div>
+
+<p>其中 $\Omega$ 是技能（潜变量），$s_T$ 是终止状态，$q(\omega|s_T, s_0)$ 是技能判别器。</p>
+
+<h3 id="noisy-net">5.6 NoisyNet 与贝叶斯不确定性</h3>
+
+<p>
+<strong>NoisyNet：</strong>在网络权重中注入参数化噪声，替代 ε-Greedy 探索。噪声参数随训练自适应调整，在需要探索的状态自动增大随机性。
+</p>
+
+<div class="formula-box">
+$$y = (\mu^w + \sigma^w \odot \varepsilon^w)x + (\mu^b + \sigma^b \odot \varepsilon^b)$$
+$$\text{其中 } \varepsilon^w, \varepsilon^b \sim \mathcal{N}(0, I) \text{ 为随机噪声}$$
+</div>
+
+<p>
+<strong>贝叶斯神经网络（BNN）：</strong>对网络权重维护后验分布 $p(w|D)$，通过不确定性估计引导探索——对不确定状态（权重后验方差大）给予更多探索。
+</p>
+
+<table>
+  <thead>
+    <tr><th>方法</th><th>内在奖励来源</th><th>计算开销</th><th>适用场景</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>计数奖励</td><td>状态访问频率</td><td>低（离散空间）</td><td>小型离散状态空间</td></tr>
+    <tr><td>伪计数</td><td>密度模型变化</td><td>中</td><td>Atari 游戏</td></tr>
+    <tr><td>ICM</td><td>前向预测误差</td><td>中（需训练两个网络）</td><td>视觉输入，连续控制</td></tr>
+    <tr><td>RND</td><td>随机网络预测误差</td><td>低（目标网络固定）</td><td>稀疏奖励游戏</td></tr>
+    <tr><td>NoisyNet</td><td>权重噪声</td><td>低（替换 ε-Greedy）</td><td>DQN/A3C 替代探索</td></tr>
+    <tr><td>VIC</td><td>技能-轨迹互信息</td><td>高（需判别器）</td><td>无监督技能发现</td></tr>
+  </tbody>
+</table>
+
+<!-- ===== 第六章：TensorFlow + OpenAI Gym 实现 ===== -->
+<h2 id="implementation">六、DRL 模型实现（TensorFlow + OpenAI Gym）</h2>
+
+<blockquote>
+  原文：<em>Implementing DRL Models with TensorFlow + OpenAI Gym</em>（2018-05-05）<br>
+  本章介绍 Q-Learning、DQN、Actor-Critic 的核心实现思路与代码骨架。
+</blockquote>
+
+<h3 id="q-learning-impl">6.1 Q-Learning 实现</h3>
+
+<p>
+<strong>Q-Learning 更新公式：</strong>无模型、离策略的时序差分方法，直接学习最优 Q 函数。
+</p>
+
+<div class="formula-box">
+$$Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha \left[r_t + \gamma \max_{a'} Q(s_{t+1}, a') - Q(s_t, a_t)\right]$$
+$$\text{TD 目标：} y_t = r_t + \gamma \max_{a'} Q(s_{t+1}, a')$$
+$$\text{TD 误差：} \delta_t = y_t - Q(s_t, a_t)$$
+</div>
+
+<pre><code class="language-python">import numpy as np
+
+class QLearning:
+    def __init__(self, n_states, n_actions, lr=0.01, gamma=0.99, epsilon=0.1):
+        self.Q = np.zeros((n_states, n_actions))
+        self.lr, self.gamma, self.epsilon = lr, gamma, epsilon
+
+    def choose_action(self, state):
+        if np.random.rand() < self.epsilon:
+            return np.random.randint(self.Q.shape[1])
+        return np.argmax(self.Q[state])
+
+    def update(self, s, a, r, s_next, done):
+        td_target = r if done else r + self.gamma * np.max(self.Q[s_next])
+        td_error = td_target - self.Q[s, a]
+        self.Q[s, a] += self.lr * td_error
+</code></pre>
+
+<h3 id="dqn-impl">6.2 DQN 实现</h3>
+
+<p>
+<strong>DQN（Deep Q-Network）</strong>用神经网络近似 Q 函数，解决大状态空间问题。两大关键技术：
+</p>
+
+<ul>
+  <li><strong>经验回放（Experience Replay）：</strong>将转移样本 $(s, a, r, s')$ 存入回放池，随机采样 mini-batch 打破数据相关性</li>
+  <li><strong>目标网络（Target Network）：</strong>维护参数 $\theta^-$ 固定的目标网络计算 TD 目标，每 $C$ 步同步一次，稳定训练</li>
+</ul>
+
+<div class="formula-box">
+$$\mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}}\left[\left(r + \gamma \max_{a'} Q(s', a'; \theta^-) - Q(s, a; \theta)\right)^2\right]$$
+</div>
+
+<pre><code class="language-python">import tensorflow as tf
+import numpy as np
+from collections import deque
+import random
+
+class DQN:
+    def __init__(self, state_dim, n_actions, lr=1e-3, gamma=0.99,
+                 buffer_size=10000, batch_size=64, target_update_freq=100):
+        self.n_actions = n_actions
+        self.gamma = gamma
+        self.batch_size = batch_size
+        self.target_update_freq = target_update_freq
+        self.replay_buffer = deque(maxlen=buffer_size)
+        self.step_count = 0
+
+        # 在线网络（持续更新）
+        self.q_network = self._build_network(state_dim, n_actions)
+        # 目标网络（定期同步）
+        self.target_network = self._build_network(state_dim, n_actions)
+        self.target_network.set_weights(self.q_network.get_weights())
+
+        self.optimizer = tf.keras.optimizers.Adam(lr)
+
+    def _build_network(self, state_dim, n_actions):
+        return tf.keras.Sequential([
+            tf.keras.layers.Dense(128, activation='relu', input_shape=(state_dim,)),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dense(n_actions)
+        ])
+
+    def store(self, s, a, r, s_next, done):
+        self.replay_buffer.append((s, a, r, s_next, done))
+
+    def act(self, state, epsilon=0.1):
+        if np.random.rand() < epsilon:
+            return np.random.randint(self.n_actions)
+        q_values = self.q_network(state[np.newaxis], training=False)
+        return np.argmax(q_values[0])
+
+    @tf.function
+    def _train_step(self, states, actions, rewards, next_states, dones):
+        # 目标网络计算 TD 目标
+        next_q = self.target_network(next_states, training=False)
+        td_targets = rewards + self.gamma * tf.reduce_max(next_q, axis=1) * (1 - dones)
+
+        with tf.GradientTape() as tape:
+            q_values = self.q_network(states, training=True)
+            # 只对实际执行的动作计算损失
+            actions_onehot = tf.one_hot(actions, self.n_actions)
+            q_selected = tf.reduce_sum(q_values * actions_onehot, axis=1)
+            loss = tf.reduce_mean(tf.square(td_targets - q_selected))
+
+        grads = tape.gradient(loss, self.q_network.trainable_variables)
+        self.optimizer.apply_gradients(
+            zip(grads, self.q_network.trainable_variables))
+        return loss
+
+    def train(self):
+        if len(self.replay_buffer) < self.batch_size:
+            return
+        batch = random.sample(self.replay_buffer, self.batch_size)
+        states, actions, rewards, next_states, dones = map(
+            lambda x: np.array(x, dtype=np.float32), zip(*batch))
+        actions = actions.astype(np.int32)
+        self._train_step(states, actions, rewards, next_states, dones)
+
+        self.step_count += 1
+        # 定期同步目标网络
+        if self.step_count % self.target_update_freq == 0:
+            self.target_network.set_weights(self.q_network.get_weights())
+</code></pre>
+
+<pre class="mermaid">
+flowchart TD
+    Env["OpenAI Gym 环境"] -->|"$s_t$"| Agent["DQN Agent"]
+    Agent -->|"$a_t$（ε-Greedy）"| Env
+    Env -->|"$r_t, s_{t+1}, done$"| Buffer["经验回放池\nReplay Buffer\n$\mathcal{D}$"]
+    Buffer -->|"随机采样 mini-batch"| Train["训练在线网络\n$\min \mathcal{L}(\theta)$"]
+    Train -->|"每 C 步同步"| Target["目标网络\n$\theta^- \leftarrow \theta$"]
+    Target -->|"计算 TD 目标\n$y = r + \gamma\max_{a'} Q(s',a';\theta^-)$"| Train
+</pre>
+
+<h3 id="ac-impl">6.3 Actor-Critic TensorFlow 实现骨架</h3>
+
+<pre><code class="language-python">import tensorflow as tf
+import numpy as np
+
+class ActorCritic(tf.keras.Model):
+    """共享特征提取层的 Actor-Critic 网络"""
+    def __init__(self, state_dim, n_actions):
+        super().__init__()
+        # 共享特征层
+        self.shared = tf.keras.Sequential([
+            tf.keras.layers.Dense(256, activation='relu'),
+            tf.keras.layers.Dense(256, activation='relu'),
+        ])
+        # Actor 头：输出动作概率分布
+        self.actor_head = tf.keras.layers.Dense(n_actions, activation='softmax')
+        # Critic 头：输出状态价值
+        self.critic_head = tf.keras.layers.Dense(1)
+
+    def call(self, state):
+        features = self.shared(state)
+        policy = self.actor_head(features)   # π(a|s)
+        value = self.critic_head(features)   # V(s)
+        return policy, value
+
+
+class A2CAgent:
+    def __init__(self, state_dim, n_actions, lr=3e-4, gamma=0.99,
+                 value_coef=0.5, entropy_coef=0.01):
+        self.gamma = gamma
+        self.value_coef = value_coef
+        self.entropy_coef = entropy_coef
+        self.model = ActorCritic(state_dim, n_actions)
+        self.optimizer = tf.keras.optimizers.Adam(lr)
+
+    def compute_returns(self, rewards, dones, last_value):
+        """计算折扣回报（反向递推）"""
+        returns = []
+        R = last_value
+        for r, done in zip(reversed(rewards), reversed(dones)):
+            R = r + self.gamma * R * (1 - done)
+            returns.insert(0, R)
+        return np.array(returns, dtype=np.float32)
+
+    @tf.function
+    def train_step(self, states, actions, returns):
+        with tf.GradientTape() as tape:
+            policies, values = self.model(states, training=True)
+            values = tf.squeeze(values, axis=1)
+
+            # 优势估计
+            advantages = returns - values
+
+            # Actor 损失（策略梯度）
+            actions_onehot = tf.one_hot(actions, policies.shape[-1])
+            log_probs = tf.reduce_sum(
+                tf.math.log(policies + 1e-8) * actions_onehot, axis=1)
+            actor_loss = -tf.reduce_mean(log_probs * tf.stop_gradient(advantages))
+
+            # Critic 损失（均方误差）
+            critic_loss = tf.reduce_mean(tf.square(advantages))
+
+            # 熵正则化（鼓励探索）
+            entropy = -tf.reduce_sum(
+                policies * tf.math.log(policies + 1e-8), axis=1)
+            entropy_loss = -tf.reduce_mean(entropy)
+
+            # 总损失
+            total_loss = (actor_loss
+                         + self.value_coef * critic_loss
+                         + self.entropy_coef * entropy_loss)
+
+        grads = tape.gradient(total_loss, self.model.trainable_variables)
+        # 梯度裁剪防止梯度爆炸
+        grads, _ = tf.clip_by_global_norm(grads, 0.5)
+        self.optimizer.apply_gradients(
+            zip(grads, self.model.trainable_variables))
+        return actor_loss, critic_loss, entropy_loss
+</code></pre>
+
+<h3 id="gym-loop">6.4 OpenAI Gym 训练循环</h3>
+
+<pre><code class="language-python">import gym
+
+def train_dqn(env_name='CartPole-v1', n_episodes=500, epsilon_start=1.0,
+              epsilon_end=0.01, epsilon_decay=0.995):
+    env = gym.make(env_name)
+    state_dim = env.observation_space.shape[0]
+    n_actions = env.action_space.n
+
+    agent = DQN(state_dim, n_actions)
+    epsilon = epsilon_start
+
+    for episode in range(n_episodes):
+        state, _ = env.reset()
+        total_reward = 0
+
+        while True:
+            action = agent.act(state, epsilon)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
+
+            agent.store(state, action, reward, next_state, done)
+            agent.train()
+
+            state = next_state
+            total_reward += reward
+            if done:
+                break
+
+        # ε 衰减
+        epsilon = max(epsilon_end, epsilon * epsilon_decay)
+
+        if episode % 50 == 0:
+            print(f"Episode {episode}, Reward: {total_reward:.1f}, ε: {epsilon:.3f}")
+</code></pre>
+
+<!-- ===== 第七章：算法横向对比 ===== -->
+<h2 id="comparison">七、主要算法横向对比</h2>
+
+<h3 id="algo-table">7.1 算法特性对比表</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>算法</th>
+      <th>类型</th>
+      <th>策略</th>
+      <th>动作空间</th>
+      <th>核心创新</th>
+      <th>主要缺点</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Q-Learning</strong></td>
+      <td>Value-Based</td>
+      <td>Off-policy</td>
+      <td>离散</td>
+      <td>TD 学习，收敛性保证</td>
+      <td>无法处理大状态空间</td>
+    </tr>
+    <tr>
+      <td><strong>DQN</strong></td>
+      <td>Value-Based</td>
+      <td>Off-policy</td>
+      <td>离散</td>
+      <td>经验回放 + 目标网络</td>
+      <td>Q 值过估计，离散动作</td>
+    </tr>
+    <tr>
+      <td><strong>REINFORCE</strong></td>
+      <td>Policy Gradient</td>
+      <td>On-policy</td>
+      <td>离散/连续</td>
+      <td>直接优化策略，无偏估计</td>
+      <td>高方差，样本效率低</td>
+    </tr>
+    <tr>
+      <td><strong>A3C/A2C</strong></td>
+      <td>Actor-Critic</td>
+      <td>On-policy</td>
+      <td>离散/连续</td>
+      <td>并行训练，熵正则化</td>
+      <td>超参数敏感</td>
+    </tr>
+    <tr>
+      <td><strong>PPO</strong></td>
+      <td>Actor-Critic</td>
+      <td>On-policy</td>
+      <td>离散/连续</td>
+      <td>裁剪目标，简单稳定</td>
+      <td>样本效率不如 SAC</td>
+    </tr>
+    <tr>
+      <td><strong>SAC</strong></td>
+      <td>Actor-Critic</td>
+      <td>Off-policy</td>
+      <td>连续</td>
+      <td>最大熵，自动调温度</td>
+      <td>离散动作支持差</td>
+    </tr>
+    <tr>
+      <td><strong>TD3</strong></td>
+      <td>Actor-Critic</td>
+      <td>Off-policy</td>
+      <td>连续</td>
+      <td>双 Q + 延迟更新</td>
+      <td>超参数较多</td>
+    </tr>
+    <tr>
+      <td><strong>IMPALA</strong></td>
+      <td>Actor-Critic</td>
+      <td>Off-policy</td>
+      <td>离散/连续</td>
+      <td>V-trace 离策略修正，高吞吐</td>
+      <td>需要大规模分布式基础设施</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="performance-chart">7.2 算法维度雷达图</h3>
+
+<div id="radar-chart" class="echarts-container" style="height:420px"></div>
+
+<h3 id="timeline">7.3 RL 算法发展时间线</h3>
+
+<div id="timeline-chart" class="echarts-container" style="height:300px"></div>
+
+<!-- ===== 第八章：总结 ===== -->
+<h2 id="summary">八、总结与学习路径</h2>
+
+<h3 id="key-takeaways">8.1 核心要点回顾</h3>
+
+<ul>
+  <li><strong>MDP 框架</strong>是 RL 的数学基础，Bellman 方程揭示价值函数的递归结构，是所有 RL 算法的理论根基。</li>
+  <li><strong>多臂老虎机</strong>提炼了 RL 最核心的矛盾——探索与利用的权衡，UCB 和 Thompson Sampling 提供了理论最优解。</li>
+  <li><strong>策略梯度定理</strong>使得直接优化策略成为可能，PPO 是目前工程实践中最广泛使用的算法，SAC 在连续控制领域表现最优。</li>
+  <li><strong>课程学习</strong>通过设计合理的任务序列显著加速训练，在稀疏奖励和复杂技能学习中尤为关键。</li>
+  <li><strong>内在动机探索</strong>（ICM、RND）为稀疏奖励问题提供了实用解决方案，是现代 RL 系统的重要组件。</li>
+  <li><strong>工程实现</strong>中，经验回放、目标网络、梯度裁剪、熵正则化是提高训练稳定性的关键技巧。</li>
+</ul>
+
+<h3 id="learning-path">8.2 建议学习路径</h3>
+
+<pre class="mermaid">
+flowchart LR
+    Step1["1. RL 基础\nMDP, Bellman,\nDP 方法"] --> Step2["2. 表格型方法\nQ-Learning,\nSARSA, MC"]
+    Step2 --> Step3["3. 深度 Q 网络\nDQN, Double DQN,\nDueling DQN"]
+    Step3 --> Step4["4. 策略梯度\nREINFORCE,\nA3C/A2C"]
+    Step4 --> Step5["5. 现代算法\nPPO, SAC, TD3"]
+    Step5 --> Step6["6. 进阶主题\n探索策略,\n课程学习,\n分布式训练"]
+    style Step1 fill:#2a2a3e,color:#a6e3a1
+    style Step6 fill:#2a2a3e,color:#f38ba8
+</pre>
+
+<h3 id="resources">8.3 参考资源</h3>
+
+<ul>
+  <li><a href="https://lilianweng.github.io/posts/2018-02-19-rl-overview/" target="_blank">Lilian Weng: A Long Peek into Reinforcement Learning</a></li>
+  <li><a href="https://lilianweng.github.io/posts/2018-01-23-multi-armed-bandit/" target="_blank">Lilian Weng: The Multi-Armed Bandit Problem and Its Solutions</a></li>
+  <li><a href="https://lilianweng.github.io/posts/2018-04-08-policy-gradient/" target="_blank">Lilian Weng: Policy Gradient Algorithms</a></li>
+  <li><a href="https://lilianweng.github.io/posts/2020-01-29-curriculum-rl/" target="_blank">Lilian Weng: Curriculum for Reinforcement Learning</a></li>
+  <li><a href="https://lilianweng.github.io/posts/2020-06-07-exploration-drl/" target="_blank">Lilian Weng: Exploration Strategies in Deep Reinforcement Learning</a></li>
+  <li><a href="https://lilianweng.github.io/posts/2018-05-05-drl-implementation/" target="_blank">Lilian Weng: Implementing DRL Models with TensorFlow + OpenAI Gym</a></li>
+  <li>Sutton & Barto: <em>Reinforcement Learning: An Introduction</em>（第二版）</li>
+  <li>OpenAI Spinning Up: <a href="https://spinningup.openai.com/" target="_blank">spinningup.openai.com</a></li>
+</ul>
+
+<hr>
+<p style="color:var(--border);font-size:.85em;text-align:center;">
+  整理自 Lilian Weng 博客 · 2026-05 · 仅供学习参考
+</p>
+
+</main>
+
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+
+  /* ===== TOC 自动生成 ===== */
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h, i) => {
+    if (!h.id) h.id = 's' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  /* ===== 滚动高亮 ===== */
+  const obs = new IntersectionObserver(es => es.forEach(e => {
+    const l = toc.querySelector(`a[href="#${e.target.id}"]`);
+    if (l) l.classList.toggle('active', e.isIntersecting);
+  }), {rootMargin: '-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h => obs.observe(h));
+
+  /* ===== ECharts: 算法对比雷达图 ===== */
+  const radarChart = echarts.init(document.getElementById('radar-chart'), 'dark');
+  radarChart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: {text: '主流 RL 算法维度对比', textStyle: {color: '#89b4fa'}, left: 'center'},
+    tooltip: {trigger: 'item'},
+    legend: {
+      data: ['DQN', 'PPO', 'SAC', 'TD3', 'A3C'],
+      textStyle: {color: '#cdd6f4'},
+      bottom: 0
+    },
+    radar: {
+      indicator: [
+        {name: '样本效率', max: 10},
+        {name: '稳定性', max: 10},
+        {name: '连续动作', max: 10},
+        {name: '实现简单度', max: 10},
+        {name: '可扩展性', max: 10},
+        {name: '探索能力', max: 10}
+      ],
+      axisName: {color: '#cdd6f4'},
+      splitArea: {areaStyle: {color: ['#1e1e2e', '#2a2a3e']}},
+      splitLine: {lineStyle: {color: '#45475a'}}
+    },
+    series: [{
+      type: 'radar',
+      data: [
+        {value: [7, 6, 2, 8, 5, 5], name: 'DQN',
+         lineStyle: {color: '#89b4fa'}, areaStyle: {color: 'rgba(137,180,250,0.15)'}},
+        {value: [5, 9, 8, 9, 7, 6], name: 'PPO',
+         lineStyle: {color: '#a6e3a1'}, areaStyle: {color: 'rgba(166,227,161,0.15)'}},
+        {value: [8, 8, 9, 7, 6, 9], name: 'SAC',
+         lineStyle: {color: '#fab387'}, areaStyle: {color: 'rgba(250,179,135,0.15)'}},
+        {value: [8, 7, 9, 6, 6, 7], name: 'TD3',
+         lineStyle: {color: '#cba6f7'}, areaStyle: {color: 'rgba(203,166,247,0.15)'}},
+        {value: [4, 7, 7, 7, 9, 7], name: 'A3C',
+         lineStyle: {color: '#f9e2af'}, areaStyle: {color: 'rgba(249,226,175,0.15)'}}
+      ]
+    }]
+  });
+
+  /* ===== ECharts: 策略梯度算法对比柱状图 ===== */
+  const pgChart = echarts.init(document.getElementById('pg-compare'), 'dark');
+  pgChart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: {text: '策略梯度系列算法关键特性对比', textStyle: {color: '#89b4fa'}, left: 'center'},
+    tooltip: {trigger: 'axis', axisPointer: {type: 'shadow'}},
+    legend: {
+      data: ['方差', '偏差', '样本效率（x10）', '实现复杂度'],
+      textStyle: {color: '#cdd6f4'},
+      bottom: 0
+    },
+    grid: {left: '3%', right: '4%', bottom: '15%', containLabel: true},
+    xAxis: {
+      type: 'category',
+      data: ['REINFORCE', 'A2C', 'PPO', 'TRPO', 'SAC', 'TD3', 'IMPALA'],
+      axisLabel: {color: '#cdd6f4'}
+    },
+    yAxis: {
+      type: 'value', max: 10,
+      axisLabel: {color: '#cdd6f4'},
+      splitLine: {lineStyle: {color: '#45475a'}}
+    },
+    series: [
+      {name: '方差', type: 'bar', stack: null,
+       data: [9, 6, 4, 4, 3, 3, 5],
+       itemStyle: {color: '#f38ba8'}},
+      {name: '偏差', type: 'bar',
+       data: [1, 3, 3, 2, 2, 2, 4],
+       itemStyle: {color: '#fab387'}},
+      {name: '样本效率（x10）', type: 'bar',
+       data: [2, 4, 5, 4, 8, 8, 6],
+       itemStyle: {color: '#a6e3a1'}},
+      {name: '实现复杂度', type: 'bar',
+       data: [2, 5, 5, 8, 7, 7, 9],
+       itemStyle: {color: '#cba6f7'}}
+    ]
+  });
+
+  /* ===== ECharts: 时间线 ===== */
+  const tlChart = echarts.init(document.getElementById('timeline-chart'), 'dark');
+  tlChart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: {text: 'RL 算法发展时间线（重要里程碑）', textStyle: {color: '#89b4fa'}, left: 'center'},
+    tooltip: {trigger: 'axis'},
+    grid: {left: '2%', right: '2%', bottom: '15%', containLabel: true},
+    xAxis: {
+      type: 'category',
+      data: ['1989', '1992', '2013', '2015', '2016', '2017', '2018', '2018', '2018', '2019'],
+      axisLabel: {color: '#cdd6f4', rotate: 30}
+    },
+    yAxis: {show: false},
+    series: [{
+      type: 'scatter',
+      symbolSize: 20,
+      data: [
+        {value: [0, 5], name: 'Q-Learning (Watkins 1989)'},
+        {value: [1, 5], name: 'REINFORCE (Williams 1992)'},
+        {value: [2, 5], name: 'DQN (Mnih et al. 2013)'},
+        {value: [3, 5], name: 'DDPG (Lillicrap 2015)'},
+        {value: [4, 5], name: 'A3C (Mnih et al. 2016)'},
+        {value: [5, 5], name: 'PPO (Schulman 2017)'},
+        {value: [6, 5], name: 'SAC (Haarnoja 2018)'},
+        {value: [7, 5], name: 'TD3 (Fujimoto 2018)'},
+        {value: [8, 5], name: 'IMPALA (Espeholt 2018)'},
+        {value: [9, 5], name: 'RND (Burda 2019)'}
+      ],
+      label: {
+        show: true,
+        formatter: function(p) {
+          const names = [
+            'Q-Learning', 'REINFORCE', 'DQN', 'DDPG', 'A3C',
+            'PPO', 'SAC', 'TD3', 'IMPALA', 'RND'
+          ];
+          return names[p.dataIndex];
+        },
+        position: 'top',
+        color: '#cdd6f4',
+        fontSize: 11
+      },
+      itemStyle: {
+        color: function(p) {
+          const colors = ['#89b4fa','#89b4fa','#a6e3a1','#a6e3a1','#fab387',
+                          '#fab387','#cba6f7','#cba6f7','#f9e2af','#f38ba8'];
+          return colors[p.dataIndex];
+        }
+      }
+    }]
+  });
+
+  window.addEventListener('resize', () => {
+    radarChart.resize();
+    pgChart.resize();
+    tlChart.resize();
+  });
+</script>
+</body>
+</html>

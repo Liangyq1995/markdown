@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第11章 规划与智能体 | 大语言模型</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}
+strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}
+li{margin:.3em 0;}
+a{color:var(--link);}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}
+tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.badge{display:inline-block;background:#2a2a3e;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:.8em;margin:2px;}
+.badge.green{border-color:var(--strong);color:var(--strong);}
+.badge.blue{border-color:var(--heading);color:var(--heading);}
+.badge.yellow{border-color:var(--yellow);color:var(--yellow);}
+.badge.purple{border-color:var(--purple);color:var(--purple);}
+.highlight-box{background:#1a2a1a;border:1px solid var(--strong);border-radius:6px;padding:14px 18px;margin:1em 0;}
+.warn-box{background:#2a1a0a;border:1px solid var(--yellow);border-radius:6px;padding:14px 18px;margin:1em 0;}
+figure{margin:1.4em 0;text-align:center;}
+figcaption{color:#6c7086;font-size:.85em;margin-top:6px;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第11章：规划与智能体</h1>
+<blockquote>
+  <strong>《大语言模型》</strong> 赵鑫等著，中国人民大学 AI Box &nbsp;|&nbsp; 第272–288页 &nbsp;|&nbsp; 本章涵盖：规划框架、ReAct、Reflexion、记忆系统、工具使用、典型Agent系统与挑战
+</blockquote>
+
+<p>规划旨在为目标任务制定包含一系列动作的解决方案，是大语言模型解决复杂问题能力的重要体现，也是自主智能体最核心的能力。通过感知环境、规划解决方案以及执行相应动作，自主智能体能够有效完成既定目标任务。本章首先介绍基于大语言模型的基本规划框架（11.1节），然后深入探讨如何构建基于大语言模型的智能体系统及其应用（11.2节）。</p>
+
+<hr>
+
+<!-- ==================== SECTION 1 ==================== -->
+<h2 id="s1">1. 基于大语言模型的规划</h2>
+
+<p>虽然上下文学习和思维链提示在面对几何数学求解、游戏、代码编程以及日常生活等<strong>复杂任务</strong>时表现不佳，基于大语言模型的规划（Planning）通过将复杂任务分解为若干相关联的子任务，并围绕这些子任务制定包含一系列执行动作的解决方案，将复杂任务的求解转换为一系列更简单的子任务依次求解。</p>
+
+<h3 id="s1-1">1.1 整体框架：三大组件</h3>
+
+<p>如图11.1所示，基于大语言模型的规划方法由三个组件构成：</p>
+
+<div class="tech-card blue">
+  <ul>
+    <li><strong>任务规划器（Task Planner）</strong>：大语言模型担任，负责生成目标任务的解决方案，包含一系列执行动作，可以是自然语言描述或代码片段；对于长期任务还可引入存储机制</li>
+    <li><strong>规划执行器（Plan Executor）</strong>：负责执行解决方案中涉及的动作，可由大语言模型实现，也可由机器人等实体实现</li>
+    <li><strong>环境（Environment）</strong>：规划执行器实施动作的具体场景，如Web互联网或Minecraft等虚拟世界</li>
+  </ul>
+</div>
+
+<pre class="mermaid">
+graph TD
+    T["目标任务"] --> TP["任务规划器<br>（大语言模型）"]
+    TP -->|"方案/动作<br>（生成 &amp; 完善）"| PE["规划执行器"]
+    PE -->|执行| ENV["环境"]
+    ENV -->|反馈| TP
+    ENV --> EXT["外部环境"]
+    EXT --> E1["物理工具<br>代码解释器等"]
+    EXT --> E2["人类反馈<br>具身智能场景"]
+    EXT --> E3["虚拟世界<br>游戏/Web"]
+    TP --- MEM["存储机制<br>（长期任务）"]
+
+    style TP fill:#1a3a5c,stroke:#89b4fa,color:#cdd6f4
+    style PE fill:#1a3a3a,stroke:#a6e3a1,color:#cdd6f4
+    style ENV fill:#2a2a1a,stroke:#f9e2af,color:#cdd6f4
+    style MEM fill:#2a1a3a,stroke:#cba6f7,color:#cdd6f4
+</pre>
+
+<h3 id="s1-2">1.2 方案生成：两种模式</h3>
+
+<p>方案生成基于大语言模型的综合理解与推理能力，解决方案可采用<strong>自然语言表达</strong>或<strong>代码表达</strong>两种形式。自然语言较为直观但不能保证动作被完全正确执行；代码形式较为严谨规范，可使用外部工具（如代码解释器）保证动作被正确执行。</p>
+
+<table>
+  <thead>
+    <tr><th>生成模式</th><th>方式</th><th>优点</th><th>缺点</th><th>适用场景</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>一次性方案生成</strong></td>
+      <td>直接生成包含所有子步骤的完整动作序列</td>
+      <td>实现简单</td>
+      <td>容错性低，中间步骤出错易导致最终失败</td>
+      <td>简单线性任务</td>
+    </tr>
+    <tr>
+      <td><strong>迭代式方案生成</strong></td>
+      <td>与环境交互，逐步生成下一步动作计划</td>
+      <td>能根据环境反馈修正中间步骤</td>
+      <td>步骤多时效率较低</td>
+      <td>信息检索、复杂推理</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>语言表达 vs 代码表达示例</h4>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1em 0;">
+  <div class="tech-card green">
+    <h4>基于语言表达的解决方案</h4>
+    <p><em>输入：</em>如何制作番茄炒蛋？</p>
+    <pre><code class="language-text">1. 将鸡蛋打入碗中，用叉子搅拌均匀
+2. 将西红柿切成小块（约半英寸）
+3. 在不粘锅中，用中火加热植物油
+4. 油热后加入西红柿翻炒至软化（约2-3分钟）
+5. 加入搅拌好的鸡蛋，用铲子轻轻搅拌
+6. 随着鸡蛋凝固，继续搅拌至熟透（约3-4分钟）
+7. 加入盐和胡椒调味
+8. 撒上葱花，趁热享用！</code></pre>
+  </div>
+  <div class="tech-card blue">
+    <h4>基于代码表达的解决方案</h4>
+    <p><em>输入：</em>如何加速LLM推理解码速度？</p>
+    <pre><code class="language-python">import torch
+import torch.quantization as tq
+
+# 对预训练LLM进行动态量化
+model_quantized = tq.quantize_dynamic(
+    model,
+    {torch.nn.LSTM, torch.nn.Linear},
+    dtype=torch.qint8
+)
+
+def inference(input_data, model):
+    return model(input_data)
+
+output = inference(input_data, model_quantized)</code></pre>
+  </div>
+</div>
+
+<div class="highlight-box">
+  <strong>选择建议：</strong>若待解决任务需要较强的推理逻辑或数值计算能力，推荐使用<strong>基于代码表达</strong>的方案生成；若任务形式不固定、难以形式化表达（如多跳问答、信息检索或推荐任务），推荐使用<strong>基于自然语言</strong>的表达。
+</div>
+
+<h3 id="s1-3">1.3 迭代式方案生成：ReAct</h3>
+
+<p>ReAct（Yao et al., 2022）是迭代式方案生成的代表性方法，核心动机是让大语言模型在规划动作时模拟人类"<strong>先思考-再决策</strong>"的行为方式。</p>
+
+<div class="formula-box">
+  <p><strong>ReAct 轨迹形式化定义：</strong></p>
+  $$\tau = (o_1, a_1, r_1,\ o_2, a_2, r_2,\ \ldots,\ o_T, a_T, r_T)$$
+  <p>其中 $o_t$ 为观察（Observation / 思考），$a_t$ 为动作（Action），$r_t$ 为反馈（Result）；$T$ 为总步骤数。</p>
+</div>
+
+<p>每一步动作规划时，任务规划器基于历史动作及其反馈生成下一步的<strong>决策思考</strong>和<strong>相应动作</strong>，然后规划执行器执行动作并从环境中获得反馈，重复上述过程直至解决问题。</p>
+
+<h4>ReAct 完整示例（多跳问答任务）</h4>
+
+<pre><code class="language-text">问题：Grown-Ups starred the actor who was best known for which role on "Allo Allo!"?
+
+=== 第一轮规划 ===
+思考 1: I need to search Grown-Ups and "Allo Allo!", find the actor who starred in
+        Grown-Ups, then find the role he was best known for in "Allo Allo!".
+动作 1: Search[Grown-Ups]
+反馈 1: Grown-Ups is a 1980 British BBC television film devised and … on 28 November 1980.
+
+思考 2: Grown-Ups starred Lesley Manville, Philip Davis, Brenda Blethyn...
+        I need to search "Allo Allo!" to find which actor was best known for which role.
+动作 2: Search["Allo Allo!"]
+反馈 2: Could not find ["Allo Allo!"] ...
+
+思考 3: The paragraph does not mention the actor. I need to search the actor's name.
+动作 3: Search[Gorden Kaye]
+反馈 3: Gorden Kaye played womanising café owner René Artois in "Allo Allo!".
+
+思考 4: Gorden Kaye was best known for playing René Artois. So the answer is Rene Artois.
+动作 4: Finish[Rene Artois]
+反馈 4: Answer is INCORRECT
+
+=== 反思（Reflexion）===
+反思 1: I searched the wrong title for the show "Allo Allo!", which resulted in no results.
+        I should have searched the show's main character, Gorden Kaye, to find his role.
+
+=== 第二轮规划（携带反思）===
+思考 1: I need to search Grown-Ups … in "Allo Allo!".
+动作 1: Search[Grown-Ups]
+反馈 1: Grown-Ups is a 1980 British BBC television film...
+
+思考 2: I need to search the actor's name instead of the show title.  ← 修正点
+动作 2: Search[Sam Kelly]                                              ← 修正点
+反馈 2: Sam Kelly is best known as Captain Hans Geering in "Allo Allo!"
+
+思考 3: Sam Kelly is best known for his role as Captain Hans Geering.
+动作 3: Finish[Captain Hans Geering]
+反馈 3: Answer is CORRECT ✓</code></pre>
+
+<h3 id="s1-4">1.4 反馈获取：外部反馈与内部反馈</h3>
+
+<p>规划执行器在环境中执行动作后，会将环境的反馈信号传递给任务规划器，用于完善整体解决方案或规划下一步动作。反馈分为两类：</p>
+
+<table>
+  <thead>
+    <tr><th>反馈类型</th><th>来源</th><th>示例</th><th>特点</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>外部反馈</strong></td>
+      <td>物理工具（代码解释器）</td>
+      <td>代码执行错误信息</td>
+      <td>直接、精确，但信息量有限</td>
+    </tr>
+    <tr>
+      <td><strong>外部反馈</strong></td>
+      <td>人类（具身智能场景）</td>
+      <td>"抽屉当前是打开的"</td>
+      <td>实时、丰富，但依赖人工参与</td>
+    </tr>
+    <tr>
+      <td><strong>外部反馈</strong></td>
+      <td>虚拟环境（游戏）</td>
+      <td>游戏状态变化</td>
+      <td>自动化，反馈及时</td>
+    </tr>
+    <tr>
+      <td><strong>内部反馈</strong></td>
+      <td>大语言模型自身</td>
+      <td>Reflexion 生成的反思文本</td>
+      <td>信息丰富，能解释失败原因</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s1-5">1.5 Reflexion：元认知反思机制</h3>
+
+<p>Reflexion（Shinn et al., 2023）旨在借助大语言模型的分析与推理能力，对当前方案的执行结果给出具体的<strong>反思结果</strong>，用于改进已有的解决方案。相比ReAct，Reflexion增加了<strong>元认知层</strong>：当任务失败时，Agent生成文字反思，并将反思作为下一轮的额外输入。</p>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant U as 用户任务
+    participant A as Agent
+    participant E as 执行环境
+    participant RS as 反思存储
+
+    U->>A: 任务描述
+    RS->>A: 历史反思（若有）
+    loop ReAct循环
+        A->>A: 生成思考（Thought）
+        A->>E: 执行动作（Action）
+        E->>A: 环境反馈（Observation）
+    end
+    E->>A: 最终结果（成功/失败）
+    alt 任务失败
+        A->>A: 分析失败原因<br>生成自然语言反思
+        A->>RS: 存储反思文本
+        A->>U: 重新尝试（携带反思）
+    else 任务成功
+        A->>U: 返回最终答案
+    end
+</pre>
+
+<div class="tech-card purple">
+  <h4>Reflexion 的三类反思信号</h4>
+  <ol>
+    <li><strong>简单二值反馈</strong>：成功/失败（如代码测试通过/失败）</li>
+    <li><strong>环境反馈</strong>：来自外部环境的自然反馈（如游戏得分、执行结果）</li>
+    <li><strong>自我评估</strong>：LLM 自己判断结果是否满足要求（使用"Is the current action step being taken correct or not?"等指令）</li>
+  </ol>
+  <p style="margin-top:8px">实现方式：将已执行的任务方案及其环境反馈包含在提示里，可能还需引入相关的上下文示例，让大语言模型生成自然语言形式的反思总结。</p>
+</div>
+
+<hr>
+
+<!-- ==================== SECTION 2 ==================== -->
+<h2 id="s2">2. 基于大语言模型的智能体</h2>
+
+<p>智能体（Agent）是一个具备<strong>环境感知、决策制定及动作执行</strong>能力的自主算法系统。传统智能体依赖启发式规则或受限于特定环境约束，很大程度上限制了其在开放和动态场景中的适应性与扩展性。由于大语言模型在解决复杂任务方面展现出非常优秀的能力，越来越多的研究工作开始探索将大语言模型作为智能体的核心组件。</p>
+
+<h3 id="s2-1">2.1 智能体发展历程</h3>
+
+<table>
+  <thead>
+    <tr><th>阶段</th><th>技术路线</th><th>代表方法</th><th>局限性</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>早期</strong></td>
+      <td>基于规则</td>
+      <td>专家系统、决策树</td>
+      <td>适应性低，无法处理未见场景</td>
+    </tr>
+    <tr>
+      <td><strong>中期</strong></td>
+      <td>基于模型（强化学习）</td>
+      <td>DQN、AlphaGo</td>
+      <td>需要大量环境交互，泛化能力有限</td>
+    </tr>
+    <tr>
+      <td><strong>当前</strong></td>
+      <td>基于大语言模型</td>
+      <td>ReAct、MetaGPT、Generative Agents</td>
+      <td>长期规划退化、工具使用不稳定</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s2-2">2.2 大语言模型智能体的三大核心组件</h3>
+
+<p>大语言模型智能体的构建围绕三个基本组件展开：<strong>记忆组件（Memory）</strong>、<strong>规划组件（Planning）</strong>和<strong>执行组件（Execution）</strong>。通过这些组件共同协作，智能体能够有效地感知环境、制定决策并执行规划的动作。</p>
+
+<pre class="mermaid">
+graph TD
+    A["LLM-based Agent<br>（大语言模型智能体）"] --> B["记忆组件<br>Memory"]
+    A --> C["规划组件<br>Planning"]
+    A --> D["执行组件<br>Execution"]
+
+    B --> B1["短期记忆<br>上下文窗口内信息"]
+    B --> B2["长期记忆<br>外部存储（文本/数据库）"]
+
+    C --> C1["任务分解<br>复杂任务 → 子任务序列"]
+    C --> C2["候选方案生成<br>多方案评估择优"]
+    C --> C3["迭代优化<br>基于环境反馈调整"]
+
+    D --> D1["语言模型自身执行<br>直接生成动作"]
+    D --> D2["外部工具集成<br>搜索引擎/代码解释器/API"]
+    D --> D3["多Agent协作<br>任务分工并行执行"]
+
+    B1 -. "支持" .-> C
+    B2 -. "支持" .-> C
+    C -. "指导" .-> D
+    D -. "反馈" .-> B
+
+    style A fill:#1a3a5c,stroke:#89b4fa,color:#cdd6f4
+    style B fill:#1a3a2a,stroke:#a6e3a1,color:#cdd6f4
+    style C fill:#2a2a1a,stroke:#f9e2af,color:#cdd6f4
+    style D fill:#2a1a3a,stroke:#cba6f7,color:#cdd6f4
+</pre>
+
+<h3 id="s2-3">2.3 记忆组件详解</h3>
+
+<p>人类的记忆系统能够储存新知识，并在需要时回顾和使用已存储的信息。类似地，在大语言模型智能体中，记忆组件主要用于存储智能体与环境的历史交互记录，并能够随时检索使用。</p>
+
+<table>
+  <thead>
+    <tr><th>记忆类型</th><th>对应实现</th><th>容量</th><th>持久性</th><th>访问方式</th><th>特点</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>短期记忆</strong><br>（工作记忆）</td>
+      <td>模型内部上下文窗口</td>
+      <td>受限（4K~128K tokens）</td>
+      <td>会话内，通常只使用一次</td>
+      <td>直接读取</td>
+      <td>存储当前时间、最近观察等即时状态</td>
+    </tr>
+    <tr>
+      <td><strong>长期记忆</strong><br>（外部存储）</td>
+      <td>文本文件、结构化数据库、向量数据库</td>
+      <td>无限</td>
+      <td>跨会话，稳定保留</td>
+      <td>检索机制（语义搜索）</td>
+      <td>存储角色定义、事实知识、过往经验、重要技能</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="tech-card green">
+  <h4>RecAgent 记忆组件应用示例（PDF原文例11.1）</h4>
+  <pre><code class="language-text">调用记忆组件：
+
+【长期记忆】
+Name: Bob (gender:male; age: 25; traits: compassionate, caring, ambitious, optimistic;
+career: photographer; interest: sci-fi movies, comedy movies; feature: watcher, critic, poster).
+Bob recently heard ['The Matrix', 'Back to the Future.', 'Anchorman', 'Superbad'] on social media.
+Alice recently watched nothing on recommender system.
+
+【短期记忆】
+It is September 12, 2023, 08:00 AM.
+Most recent observations: Bob and Alice had a conversation about their shared interest in movies,
+discussing their favorite genres such as...
+
+【加入新记忆时对记忆重要性打分】
+Observation: Alice want to post for all acquaintances.
+Rating：6</code></pre>
+</div>
+
+<p>长期记忆通过<strong>检索机制</strong>读取，通过<strong>反思机制</strong>进行写入与更新。当存储记忆的介质接近容量上限或出现重复记忆时，系统会启动清理机制，确保记忆的高效存储和利用。</p>
+
+<h4>Generative Agents 的记忆重要性评分公式</h4>
+
+<p>斯坦福"西部世界"实验（Park et al., 2023）中，每条记忆的检索权重由以下公式计算：</p>
+
+<div class="formula-box">
+  $$\text{score}(m) = \alpha_1 \cdot \text{recency}(m) + \alpha_2 \cdot \text{importance}(m) + \alpha_3 \cdot \text{relevance}(m, q)$$
+  <ul style="margin-top:10px">
+    <li><strong>recency（近期性）</strong>：指数衰减，最近的记忆权重更高</li>
+    <li><strong>importance（重要性）</strong>：LLM 对记忆的重要程度打分（1-10分），关键事件权重更高</li>
+    <li><strong>relevance（相关性）</strong>：与当前查询的语义相似度（余弦相似度）</li>
+  </ul>
+</div>
+
+<h3 id="s2-4">2.4 规划组件</h3>
+
+<p>规划组件为智能体引入了类似于人类解决任务的思考方式，将复杂任务分解为一系列简单的子任务，进而逐一进行解决。对大语言模型智能体而言，可以采用多种规划形式，例如<strong>文本指令</strong>或<strong>代码程序</strong>。</p>
+
+<div class="tech-card yellow">
+  <h4>规划组件的核心能力</h4>
+  <ul>
+    <li><strong>同时生成多个候选方案</strong>，从中选择最佳方案用于执行</li>
+    <li><strong>根据环境实时反馈进行迭代优化改进</strong>，更高效地解决复杂推理问题</li>
+    <li>在任务开始时根据长短期记忆和环境制定初步规划方案，并在每一步行动前根据新信息对规划进行细致调整</li>
+  </ul>
+</div>
+
+<h3 id="s2-5">2.5 执行组件</h3>
+
+<p>执行组件的主要职责是执行由规划组件制定的任务解决方案，产生具体的动作行为，与环境进行交互并获得实际的执行效果反馈。执行组件的运作通常需要记忆组件和规划组件协同。</p>
+
+<p>在技术实现上，执行组件可以：</p>
+<ul>
+  <li>通过<strong>语言模型自身</strong>来完成预定规划</li>
+  <li>通过<strong>集成外部工具</strong>来增强其执行能力（如搜索引擎、代码解释器等）</li>
+</ul>
+
+<h3 id="s2-6">2.6 智能体工作流程</h3>
+
+<pre class="mermaid">
+flowchart TD
+    S["接收用户请求"] --> P1["理解和分析当前状态<br>（检索记忆组件中的历史信息）"]
+    P1 --> P2["规划组件生成行动策略<br>（综合长短期记忆，评估多个方案）"]
+    P2 --> P3["执行组件执行实际行动<br>（可借助外部工具/资源）"]
+    P3 --> P4["从环境接收反馈信息<br>（存入短期记忆）"]
+    P4 --> P5{"任务完成？"}
+    P5 -->|否| P6["处理新信息<br>（舍弃无关观察，更新记忆）"]
+    P6 --> P1
+    P5 -->|是| P7["返回结果"]
+
+    style S fill:#1a3a5c,stroke:#89b4fa,color:#cdd6f4
+    style P7 fill:#1a3a2a,stroke:#a6e3a1,color:#cdd6f4
+</pre>
+
+<hr>
+
+<!-- ==================== SECTION 3 ==================== -->
+<h2 id="s3">3. 工具使用（Tool Use）</h2>
+
+<p>由于大语言模型的能力主要通过大规模文本数据的语义学习所建立，在非自然语言形式的任务（如数值计算）中能力较为受限，且无法有效推断超过预训练数据时间范围的信息。工具学习成为扩展大语言模型能力的关键技术，通过让大语言模型学会使用各种工具的调用方式，进而利用合适的工具去实现特定的功能需求。</p>
+
+<h3 id="s3-1">3.1 工具类型</h3>
+
+<pre class="mermaid">
+graph LR
+    A["Agent 工具集"] --> B["信息获取"]
+    A --> C["计算执行"]
+    A --> D["数据操作"]
+    A --> E["系统交互"]
+
+    B --> B1["Web Search<br>搜索引擎API"]
+    B --> B2["Wikipedia<br>百科查询"]
+    B --> B3["ArXiv<br>论文检索"]
+
+    C --> C1["Python Interpreter<br>代码执行"]
+    C --> C2["Calculator<br>数学计算"]
+    C --> C3["Wolfram Alpha<br>符号计算"]
+
+    D --> D1["SQL Database<br>结构化查询"]
+    D --> D2["File System<br>文件读写"]
+    D --> D3["Vector DB<br>语义检索"]
+
+    E --> E1["Email/Calendar API"]
+    E --> E2["Browser Control"]
+    E --> E3["Terminal Shell"]
+
+    style A fill:#1a3a5c,stroke:#89b4fa,color:#cdd6f4
+</pre>
+
+<h3 id="s3-2">3.2 OpenAI Function Calling 格式</h3>
+
+<p>OpenAI 在ChatGPT中引入了插件支持机制，使得大语言模型能够获得广泛的功能扩展。Function Calling 是当前最主流的工具调用接口规范：</p>
+
+<h4>工具定义（发送给模型的格式）</h4>
+
+<pre><code class="language-json">{
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "description": "Get current weather for a city",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "city": {
+              "type": "string",
+              "description": "City name, e.g. Beijing"
+            },
+            "unit": {
+              "type": "string",
+              "enum": ["celsius", "fahrenheit"],
+              "description": "Temperature unit"
+            }
+          },
+          "required": ["city"]
+        }
+      }
+    }
+  ]
+}</code></pre>
+
+<h4>模型输出（工具调用请求）</h4>
+
+<pre><code class="language-json">{
+  "tool_calls": [
+    {
+      "id": "call_abc123",
+      "type": "function",
+      "function": {
+        "name": "get_weather",
+        "arguments": "{\"city\": \"Beijing\", \"unit\": \"celsius\"}"
+      }
+    }
+  ]
+}</code></pre>
+
+<h4>工具返回结果（回传给模型）</h4>
+
+<pre><code class="language-json">{
+  "role": "tool",
+  "tool_call_id": "call_abc123",
+  "content": "{\"temperature\": 25, \"condition\": \"Sunny\", \"humidity\": 45}"
+}</code></pre>
+
+<h3 id="s3-3">3.3 Toolformer：自监督工具学习</h3>
+
+<p>Toolformer（Schick et al., 2023）通过<strong>自监督学习</strong>让模型学会在何时、如何调用工具，无需人工标注工具调用数据。</p>
+
+<div class="tech-card blue">
+  <h4>Toolformer 三步训练流程</h4>
+  <ol>
+    <li><strong>数据增强</strong>：对大量文本，用 LLM 推测哪些位置可以插入 API 调用，生成候选的工具调用注释</li>
+    <li><strong>过滤</strong>：只保留 API 调用能<strong>降低后续文本困惑度</strong>的样本——即工具调用结果对后续生成有实质帮助的样本</li>
+    <li><strong>微调</strong>：在过滤后的数据上微调模型，使其学会自主判断何时调用工具</li>
+  </ol>
+  <p style="margin-top:8px"><strong>关键思想：</strong>工具调用的价值由"是否减少了不确定性"来衡量。若 API 返回结果后，后续文本的困惑度降低，则该工具调用是有价值的。</p>
+</div>
+
+<table>
+  <thead>
+    <tr><th>工具学习方式</th><th>方法</th><th>优点</th><th>缺点</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>上下文示例</strong></td>
+      <td>在提示中添加工具使用示例</td>
+      <td>无需训练，灵活</td>
+      <td>消耗上下文窗口，泛化能力有限</td>
+    </tr>
+    <tr>
+      <td><strong>微调（Toolformer）</strong></td>
+      <td>合成工具使用数据进行微调</td>
+      <td>模型内化工具使用能力</td>
+      <td>需要训练成本</td>
+    </tr>
+    <tr>
+      <td><strong>检索相关工具</strong></td>
+      <td>按需检索工具文档</td>
+      <td>支持大规模工具集</td>
+      <td>检索质量影响效果</td>
+    </tr>
+    <tr>
+      <td><strong>工具名词元化</strong></td>
+      <td>将工具名作为词元加入词表</td>
+      <td>调用时无需详细说明</td>
+      <td>需要专门训练</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ==================== SECTION 4 ==================== -->
+<h2 id="s4">4. 多智能体系统</h2>
+
+<p>与单智能体系统的独立工作模式不同，多智能体系统着重强调智能体间的协同合作，以发挥集体智慧的优势。在多智能体系统中，可以从相同或不同类型的大语言模型中实例化出多个智能体，每个智能体扮演特定角色并承担着对应功能。</p>
+
+<h3 id="s4-1">4.1 多智能体通讯协同机制</h3>
+
+<table>
+  <thead>
+    <tr><th>机制类型</th><th>要素</th><th>说明</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="3"><strong>通讯机制</strong></td>
+      <td>通讯协议</td>
+      <td>规定智能体之间如何进行信息交换和共享，包括通讯的方式、频率、时序等</td>
+    </tr>
+    <tr>
+      <td>通讯拓扑</td>
+      <td>定义智能体之间的连接关系，哪些可直接通讯，哪些需通过其他智能体间接通讯</td>
+    </tr>
+    <tr>
+      <td>通讯内容</td>
+      <td>实际传输的信息，包括状态信息、控制指令、任务目标等，形式可以是自然语言、结构化数据或代码</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><strong>协同机制</strong></td>
+      <td>协作</td>
+      <td>通过共享资源、信息和任务分配来实现共同目标</td>
+    </tr>
+    <tr>
+      <td>竞争</td>
+      <td>资源有限环境中，通过博弈论和竞价机制使整体系统在竞争中寻求最优解</td>
+    </tr>
+    <tr>
+      <td>协商</td>
+      <td>通过交换信息和让步来解决目标或资源的冲突</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ==================== SECTION 5 ==================== -->
+<h2 id="s5">5. 典型 Agent 系统案例</h2>
+
+<h3 id="s5-1">5.1 WebGPT（OpenAI, 2021）</h3>
+
+<p>WebGPT 是由OpenAI开发的具有信息检索能力的大语言模型，基于GPT-3微调得到，可看作大语言模型智能体的早期雏形。部署在基于文本的网页浏览环境，能够理解用户的自然语言查询，自动在互联网上搜索相关网页，点击、浏览、收藏相关网页信息，最终以自然语言形式提供准确全面的回答并附带参考文献。</p>
+
+<h3 id="s5-2">5.2 MetaGPT（Hong et al., 2023）</h3>
+
+<p>MetaGPT 是一个基于多智能体系统的协作框架，旨在模仿人类组织的运作方式，模拟软件开发过程中的不同角色和协作。相关角色包括产品经理、架构师、项目经理、软件工程师及测试工程师等，遵循标准化的软件工程运作流程，覆盖需求分析、需求文档撰写、系统设计、工作分配、代码实现、系统测试等软件开发全生命周期。</p>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant PM as 产品经理
+    participant Arch as 架构师
+    participant ProjM as 项目经理
+    participant Eng as 软件工程师
+    participant QA as 测试工程师
+
+    PM->>Arch: 需求文档（PRD）
+    Arch->>ProjM: 系统设计文档
+    ProjM->>Eng: 开发任务分配
+    Eng->>Eng: 编写代码
+    Eng->>QA: 代码提交
+    QA->>Eng: Bug 报告
+    Eng->>QA: 修复后代码
+    QA->>PM: 测试通过报告
+</pre>
+
+<div class="tech-card yellow">
+  <h4>MetaGPT 框架结构</h4>
+  <ul>
+    <li><strong>基础组件层</strong>：构建支撑该多智能体系统的核心组件，包括环境、记忆、角色、行动和工具</li>
+    <li><strong>协作层</strong>：在基础组件层之上，定义具体的通信协作机制，包括<strong>知识共享</strong>和<strong>封装工作流程</strong>等</li>
+  </ul>
+  <p style="margin-top:8px">与人类项目团队相比，MetaGPT 具有较高的开发效率与较低的投入成本，但最终产出的代码并不都能保证成功运行，产出代码的执行成功率仍有待进一步提升。</p>
+</div>
+
+<h3 id="s5-3">5.3 Generative Agents：《西部世界》沙盒模拟（Park et al., 2023）</h3>
+
+<p>为探索大语言模型智能体在社会模拟中的应用，研究人员于2023年提出"生成式智能体"（Generative Agent）概念，构建了类似《西部世界》的沙盒模拟环境。多个智能体根据各自独特的人物背景（以自然语言形式描述的配置文件）在小镇中生活，能与其他人物进行自主交流，与环境进行丰富多样的交互（如在图书馆看书、在酒吧喝酒），所有行为都通过自然语言形式被详细记录。</p>
+
+<div class="tech-card purple">
+  <h4>Generative Agents 的三层记忆架构</h4>
+  <ul>
+    <li><strong>记忆流（Memory Stream）</strong>：记录所有观察到的事件，按时间顺序存储</li>
+    <li><strong>反思（Reflection）</strong>：周期性地对记忆流中的事件进行高层次总结，形成更抽象的认知</li>
+    <li><strong>规划（Planning）</strong>：基于记忆和反思生成当天的行动计划，并在执行中动态调整</li>
+  </ul>
+  <p style="margin-top:8px">记忆检索权重：$\text{score} = \alpha_1 \cdot \text{recency} + \alpha_2 \cdot \text{importance} + \alpha_3 \cdot \text{relevance}$</p>
+</div>
+
+<h3 id="s5-4">5.4 RecAgent（人大 AI Box）</h3>
+
+<p>RecAgent 是本书详细介绍的推荐系统Agent框架，以推荐系统智能体为例，展示了大语言模型智能体各个组件的具体实现。在RecAgent中，智能体仿真虚拟用户在推荐系统中的交互行为：</p>
+
+<ol>
+  <li>调用长短期记忆（朋友近期观影行为、自身当前状态）</li>
+  <li>制定与电影相关的动作规划</li>
+  <li>执行系列行动（进入推荐系统获取推荐、观影、与朋友交流）</li>
+</ol>
+
+<h3 id="s5-5">5.5 典型Agent系统对比</h3>
+
+<table>
+  <thead>
+    <tr><th>Agent 系统</th><th>类型</th><th>核心能力</th><th>工具集</th><th>记忆机制</th><th>规划方式</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>WebGPT</strong></td>
+      <td>单Agent</td>
+      <td>网络搜索问答</td>
+      <td>搜索引擎、网页浏览</td>
+      <td>无持久记忆</td>
+      <td>简单顺序</td>
+    </tr>
+    <tr>
+      <td><strong>MetaGPT</strong></td>
+      <td>多Agent</td>
+      <td>软件开发全流程</td>
+      <td>代码执行、文档系统</td>
+      <td>项目文档</td>
+      <td>多角色分工（SOP）</td>
+    </tr>
+    <tr>
+      <td><strong>Generative Agents</strong></td>
+      <td>多Agent</td>
+      <td>社会行为模拟</td>
+      <td>虚拟环境交互</td>
+      <td>三层记忆（流/反思/规划）</td>
+      <td>反思规划</td>
+    </tr>
+    <tr>
+      <td><strong>RecAgent</strong></td>
+      <td>多Agent</td>
+      <td>推荐系统仿真</td>
+      <td>推荐API、社交平台</td>
+      <td>用户历史+重要性打分</td>
+      <td>ReAct + 反思</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ==================== SECTION 6 ==================== -->
+<h2 id="s6">6. 待解决的关键技术挑战</h2>
+
+<p>尽管大语言模型智能体已取得重要进展，但在实际应用中仍面临一系列技术挑战。</p>
+
+<h3 id="s6-1">6.1 长期规划退化</h3>
+
+<p>随着规划步骤增加，错误会累积放大，这是Agent系统在长任务上失败的根本原因：</p>
+
+<div class="formula-box">
+  $$P(\text{成功}) \approx p^n$$
+  <p>其中 $p$ 为每步的成功概率，$n$ 为步骤数。</p>
+  <p><strong>示例：</strong>若 $p = 0.9$，$n = 10$，则整体成功率 $\approx 0.9^{10} \approx 35\%$；若 $n = 20$，则仅约 $12\%$。</p>
+</div>
+
+<div id="chart-degradation" style="height:300px;margin:1em 0;border-radius:6px;overflow:hidden;"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-degradation');
+  if(!dom) return;
+  var chart = echarts.init(dom);
+  var steps = [];
+  var p90 = [], p95 = [], p80 = [];
+  for(var n=1; n<=30; n++){
+    steps.push(n);
+    p90.push(+(Math.pow(0.9,n)*100).toFixed(2));
+    p95.push(+(Math.pow(0.95,n)*100).toFixed(2));
+    p80.push(+(Math.pow(0.8,n)*100).toFixed(2));
+  }
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'长期规划成功率退化曲线（p^n）',textStyle:{color:'#89b4fa',fontSize:13},left:'center',top:8},
+    legend:{data:['p=0.95','p=0.90','p=0.80'],textStyle:{color:'#cdd6f4'},bottom:4},
+    xAxis:{type:'category',data:steps,name:'步骤数 n',nameTextStyle:{color:'#6c7086'},axisLine:{lineStyle:{color:'#45475a'}},axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',name:'成功率 (%)',nameTextStyle:{color:'#6c7086'},axisLine:{lineStyle:{color:'#45475a'}},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#313244'}}},
+    tooltip:{trigger:'axis',formatter:function(p){return 'n='+p[0].axisValue+'步<br>'+p.map(function(i){return i.seriesName+': '+i.value+'%'}).join('<br>')}},
+    series:[
+      {name:'p=0.95',type:'line',data:p95,smooth:true,lineStyle:{color:'#a6e3a1'},itemStyle:{color:'#a6e3a1'}},
+      {name:'p=0.90',type:'line',data:p90,smooth:true,lineStyle:{color:'#89b4fa'},itemStyle:{color:'#89b4fa'}},
+      {name:'p=0.80',type:'line',data:p80,smooth:true,lineStyle:{color:'#fab387'},itemStyle:{color:'#fab387'}}
+    ],
+    grid:{left:60,right:20,top:50,bottom:50}
+  });
+})();
+</script>
+
+<h3 id="s6-2">6.2 五大技术挑战汇总</h3>
+
+<table>
+  <thead>
+    <tr><th>挑战</th><th>具体问题</th><th>当前影响</th><th>潜在解决方向</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>计算资源消耗</strong></td>
+      <td>每次动作行为都需要调用大语言模型；多智能体系统资源消耗更严重</td>
+      <td>制约多智能体系统规模扩展</td>
+      <td>模型蒸馏、缓存机制、轻量级专用模型</td>
+    </tr>
+    <tr>
+      <td><strong>复杂工具使用</strong></td>
+      <td>工具与LLM智能体之间适配不足；新工具可扩展性差</td>
+      <td>复杂环境中工具调用不稳定</td>
+      <td>标准化工具接口、工具检索机制</td>
+    </tr>
+    <tr>
+      <td><strong>多智能体交互</strong></td>
+      <td>智能体数量增加时协调和交互变得复杂</td>
+      <td>大规模多智能体系统难以构建</td>
+      <td>高效通信协议、层级化组织架构</td>
+    </tr>
+    <tr>
+      <td><strong>模型适配方法</strong></td>
+      <td>理解复杂指令、处理长期记忆信息能力不足；智能体身份一致性差</td>
+      <td>真实模拟目标角色存在挑战</td>
+      <td>针对性的指令微调、角色一致性训练</td>
+    </tr>
+    <tr>
+      <td><strong>真实世界模拟</strong></td>
+      <td>硬件精度问题；真实世界信息量远超虚拟环境；错误容忍性低</td>
+      <td>物理世界部署风险高</td>
+      <td>硬件-软件协同优化、安全约束机制</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="s6-3">6.3 幻觉工具调用问题</h3>
+
+<p>LLM 可能虚构不存在的 API 或以错误的参数格式调用工具：</p>
+
+<pre><code class="language-python"># 模型可能生成的错误调用示例
+result = database.query_user_age(user_id=12345)  # 该函数不存在
+result = search.find(query="天气", format="json", lang="zh")  # 参数格式错误</code></pre>
+
+<div class="warn-box">
+  <strong>缓解策略：</strong>
+  <ul>
+    <li>将工具文档注入上下文，提供完整的函数签名和参数说明</li>
+    <li>执行前进行函数签名验证和参数格式检查</li>
+    <li>使用结构化输出（Structured Output）约束模型输出格式</li>
+    <li>设置工具调用沙箱，隔离执行环境</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- ==================== SECTION 7 ==================== -->
+<h2 id="s7">7. Agent 系统设计原则</h2>
+
+<p>基于现有研究，设计高质量LLM Agent系统的核心原则：</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1em 0;">
+  <div class="tech-card green">
+    <h4>最小化上下文负担</h4>
+    <p>只将必要信息放入上下文，避免信息过载。短期记忆中的内容应经过筛选，舍弃与未来规划无关的观察。</p>
+  </div>
+  <div class="tech-card blue">
+    <h4>结构化工具接口</h4>
+    <p>提供清晰的工具文档和参数验证机制，确保工具调用的准确性和可靠性。</p>
+  </div>
+  <div class="tech-card yellow">
+    <h4>失败快速恢复</h4>
+    <p>每步执行后检查结果，及时发现并修正错误。结合Reflexion机制，从失败中学习改进。</p>
+  </div>
+  <div class="tech-card purple">
+    <h4>记忆分层管理</h4>
+    <p>短期-长期记忆分离，按需检索。通过重要性评分机制优先保留关键记忆。</p>
+  </div>
+  <div class="tech-card green">
+    <h4>透明度与可解释性</h4>
+    <p>记录每步的思考过程（如ReAct的Thought步骤），便于调试和审计Agent行为。</p>
+  </div>
+  <div class="tech-card blue">
+    <h4>资源预算控制</h4>
+    <p>设置最大步骤数、最大token消耗等硬性限制，防止无限循环和资源耗尽。</p>
+  </div>
+</div>
+
+<hr>
+
+<!-- ==================== SECTION 8 ==================== -->
+<h2 id="s8">8. 本章小结</h2>
+
+<p>本章系统介绍了基于大语言模型的规划与智能体技术体系：</p>
+
+<table>
+  <thead>
+    <tr><th>知识点</th><th>核心内容</th><th>代表工作</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>规划框架</strong></td>
+      <td>任务规划器 + 规划执行器 + 环境三组件；一次性/迭代式方案生成</td>
+      <td>图11.1框架</td>
+    </tr>
+    <tr>
+      <td><strong>方案表达</strong></td>
+      <td>语言表达（直观灵活）vs 代码表达（严谨可验证）</td>
+      <td>图11.2对比</td>
+    </tr>
+    <tr>
+      <td><strong>ReAct</strong></td>
+      <td>思考-行动-观察循环；轨迹 $\tau=(o_t,a_t,r_t)$</td>
+      <td>Yao et al., 2022</td>
+    </tr>
+    <tr>
+      <td><strong>Reflexion</strong></td>
+      <td>失败后生成自然语言反思，携带反思重新规划</td>
+      <td>Shinn et al., 2023</td>
+    </tr>
+    <tr>
+      <td><strong>记忆系统</strong></td>
+      <td>短期（上下文窗口）+ 长期（外部存储）；重要性评分 $\alpha_1 \cdot \text{recency} + \alpha_2 \cdot \text{importance} + \alpha_3 \cdot \text{relevance}$</td>
+      <td>Generative Agents</td>
+    </tr>
+    <tr>
+      <td><strong>工具使用</strong></td>
+      <td>Function Calling格式；Toolformer自监督学习</td>
+      <td>OpenAI, Schick et al.</td>
+    </tr>
+    <tr>
+      <td><strong>多智能体</strong></td>
+      <td>角色分工 + 通讯协同机制（协议/拓扑/内容）</td>
+      <td>MetaGPT</td>
+    </tr>
+    <tr>
+      <td><strong>核心挑战</strong></td>
+      <td>长期规划退化 $p^n$；计算资源消耗；工具适配；模型一致性</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>LLM Agent 代表了从"语言理解"到"自主行动"的重要跨越。ReAct 和 Reflexion 分别从"动态交互"和"错误反思"两个维度提升了 Agent 的规划能力；记忆系统的设计决定了 Agent 的长期行为一致性；工具调用机制则是 Agent 连接真实世界的关键桥梁。当前 Agent 系统的主要瓶颈在于<strong>长期规划的可靠性</strong>（$p^n$ 退化）和<strong>错误累积问题</strong>，这也是未来研究的核心方向。</p>
+
+<hr>
+
+<h2 id="s9">参考文献</h2>
+<ul style="font-size:.9em;color:#6c7086;">
+  <li>[298] 复杂任务基准（几何数学、游戏、代码编程等）</li>
+  <li>[289] 思维树（Tree of Thoughts），Yao et al., 2023</li>
+  <li>[299] 一次性方案生成，上下文学习提示方法</li>
+  <li>[300] <strong>ReAct</strong>: Synergizing Reasoning and Acting in Language Models, Yao et al., 2022</li>
+  <li>[301] <strong>Reflexion</strong>: Language Agents with Verbal Reinforcement Learning, Shinn et al., 2023</li>
+  <li>[302] Agent 形式化定义，Russell &amp; Norvig</li>
+  <li>[303] 传统智能体局限性分析</li>
+  <li>[304] 基于大语言模型的智能体综述</li>
+  <li>[305] 基于规则的早期智能体</li>
+  <li>[306] 强化学习智能体</li>
+  <li>[307] 语言模型自身完成预定规划</li>
+  <li>[308] <strong>MetaGPT</strong>: Meta Programming for Multi-Agent Collaborative Framework, Hong et al., 2023</li>
+  <li>[309] <strong>Generative Agents</strong>: Interactive Simulacra of Human Behavior, Park et al., 2023</li>
+  <li>[31] <strong>WebGPT</strong>: Browser-assisted question-answering with human feedback, Nakano et al., 2021</li>
+  <li>[30] <strong>Toolformer</strong>: Language Models Can Teach Themselves to Use Tools, Schick et al., 2023</li>
+  <li>[114] <strong>RecAgent</strong>: A Novel Simulation Paradigm for Recommender Systems, Wang et al., 2023</li>
+  <li>[312] <strong>AgentScope</strong>: A Flexible yet Robust Multi-Agent Platform</li>
+</ul>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');
+  a.href='#'+h.id;
+  a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');
+  toc.appendChild(a);
+});
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  });
+},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

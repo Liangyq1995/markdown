@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Kimi 技术详解报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1em 0;}
+.diff-old{background:#2e1e1e;border:1px solid var(--red);border-radius:6px;padding:14px 18px;}
+.diff-new{background:#1e2e1e;border:1px solid var(--strong);border-radius:6px;padding:14px 18px;}
+.diff-label{font-size:.78em;font-weight:700;text-transform:uppercase;margin-bottom:8px;}
+.diff-label.old{color:var(--red);}.diff-label.new{color:var(--strong);}
+.timeline-wrap{overflow-x:auto;margin:1em 0;}
+.timeline{display:flex;gap:0;min-width:900px;}
+.tl-col{flex:1;display:flex;flex-direction:column;}
+.tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 4px;font-size:.85em;border-radius:6px 6px 0 0;}
+.tl-body{flex:1;padding:10px 6px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px;}
+.tl-item{background:#313244;border-radius:5px;padding:6px 8px;margin-bottom:6px;font-size:.82em;line-height:1.5;}
+.tl-item:last-child{margin-bottom:0;}
+.tl-tag{display:inline-block;font-size:.72em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:3px;background:var(--heading);color:#1e1e2e;}
+.tl-tag.orange{background:#fab387;}.tl-tag.green{background:#a6e3a1;}.tl-tag.purple{background:#cba6f7;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+<h1>Kimi 系列技术详解报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Moonshot AI · 超长上下文 + MoE + MuonClip · 生成日期：2026-05-13</p>
+<table>
+  <tr><th>核心主线</th><td>超长上下文 · MoE 稀疏激活 · Muon/MuonClip 优化器 · 在线策略镜像下降 RL</td></tr>
+  <tr><th>旗舰模型</th><td>Kimi K2（1.04T/32B，384专家，MLA注意力，SWE-Bench 65.8%）</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、版本演进时间线</h2>
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col"><div class="tl-period">2023-10</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">首发</span><br>Kimi Chat<br>200 万汉字<br>超长上下文对话</div>
+    </div></div>
+    <div class="tl-col"><div class="tl-period">2025-01~02</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag orange">推理</span><br>Kimi k1.5<br>RLVR 推理模型<br>128K，镜像下降 RL</div>
+      <div class="tl-item"><span class="tl-tag green">MoE验证</span><br>Moonlight 16B/3B<br>Muon 优化器验证</div>
+    </div></div>
+    <div class="tl-col"><div class="tl-period">2025-04</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag purple">多模态</span><br>Kimi-VL-A3B<br>MoonViT 原生分辨率<br>128K 多模态</div>
+    </div></div>
+    <div class="tl-col"><div class="tl-period">2025-07</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag orange">旗舰</span><br>Kimi K2<br>1.04T/32B<br>384 专家<br>MuonClip 优化器</div>
+    </div></div>
+    <div class="tl-col"><div class="tl-period">2026</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag purple">多模态</span><br>Kimi K2.5<br>原生多模态<br>256K 上下文</div>
+      <div class="tl-item"><span class="tl-tag green">Agent</span><br>Kimi K2.6<br>Agent Swarm<br>INT4 原生量化</div>
+    </div></div>
+  </div>
+</div>
+
+<h2 id="s2">二、长上下文核心技术</h2>
+
+<h3 id="s2-1">2.1 RoPE 与 YaRN 扩展</h3>
+<div class="tech-card blue">
+  <p>RoPE 旋转角度：$\theta_i = 10000^{-2i/d}$，注意力得分只依赖相对距离：</p>
+  <div class="formula-box">$$\text{Attn}(q_m, k_n) \propto \text{Re}\left[q_m^* \cdot k_n \cdot e^{i(m-n)\theta}\right]$$</div>
+  <p><strong>YaRN 扩展：</strong>新旋转角 $\theta_i^{\text{new}} = \theta_i / \lambda$（$\lambda > 1$）。低频分量（长程依赖）线性插值，高频分量（短程依赖）保持不变，同时引入温度缩放抵消注意力分布偏移。</p>
+</div>
+
+<h3 id="s2-2">2.2 分块注意力 + Partial Rollouts</h3>
+<div class="tech-card green">
+  <p><strong>Chunk Attention：</strong>将序列分块，块内完整注意力，跨块稀疏交互，将 $O(n^2)$ 降至 $O(n \cdot c)$（$c$ 为块大小）。</p>
+  <p><strong>Partial Rollouts：</strong>RL 训练时复用前序轨迹的大部分内容，仅对新生成部分采样。避免从头重新生成整条轨迹，使 128K 上下文 RL 训练的效率提升数倍——这是 k1.5 能将 RL 上下文扩展至 128K 的关键基础设施创新。</p>
+</div>
+
+<h3 id="s2-3">2.3 Kimi Linear：混合线性注意力</h3>
+<div class="tech-card purple">
+  <p>KDA（Kimi Delta Attention）基于 Gated DeltaNet，通过秩-1修正更新有限状态记忆：</p>
+  <div class="formula-box">$$h_t = \beta_t h_{t-1} + v_t k_t^\top$$</div>
+  <p>其中 $\beta_t$ 为可学习衰减因子，控制遗忘程度；$v_t k_t^\top$ 是秩-1的记忆写入操作。</p>
+  <p><strong>效果（1M token 上下文）：</strong>KV 缓存减少 <strong>75%</strong>，解码吞吐量提升 <strong>6.3×</strong>，RULER 基准（128K）= 84.3（与全注意力基本持平）。</p>
+</div>
+
+<h2 id="s3">三、Kimi k1.5：RLVR 推理模型</h2>
+
+<h3 id="s3-1">3.1 整体训练流程</h3>
+<pre class="mermaid">
+flowchart LR
+  PT["预训练"] --> SFT1["普通 SFT<br>基础指令遵循"]
+  SFT1 --> SFT2["长 CoT SFT<br>高质量推理数据"]
+  SFT2 --> RL["RLVR 强化学习<br>在线策略镜像下降<br>128K 上下文"]
+  RL --> L2S["Long-to-Short<br>长 CoT → 短 CoT 蒸馏"]
+</pre>
+
+<h3 id="s3-2">3.2 在线策略镜像下降（核心算法）</h3>
+<div class="tech-card yellow">
+  <h4>优化目标</h4>
+  <div class="formula-box">
+    $$\max_\theta \mathbb{E}_{(x,y^*)\sim\mathcal{D}}\left[\mathbb{E}_{(y,z)\sim\pi_\theta}\left[r(x,y,y^*)\right] - \tau \cdot \text{KL}(\pi_\theta(x) \| \pi_{\theta_i}(x))\right]$$
+  </div>
+  <h4>解析最优解</h4>
+  <div class="formula-box">
+    $$\pi^*(y,z|x) = \frac{1}{Z} \pi_{\theta_i}(y,z|x) \cdot \exp\!\left(\frac{r(x,y,y^*)}{\tau}\right)$$
+  </div>
+  <p>实际训练中通过迭代近似求解，每轮以更新后的策略作为新参考模型（在线更新）。相比 GRPO，镜像下降在长 CoT 场景下提供更强的理论收敛保证。</p>
+</div>
+
+<h3 id="s3-3">3.3 奖励函数与长度惩罚</h3>
+<div class="formula-box">
+  $$r_\text{correct}(y, y^*) = \mathbf{1}[y \equiv y^*] \quad \text{（SymPy 等价验证）}$$
+  $$r_\text{final} = r_\text{correct} - \lambda \cdot \max\!\left(0,\, \frac{|y| - L_\text{budget}}{L_\text{budget}}\right)$$
+</div>
+<p>长度惩罚防止模型通过生成冗长无效内容"刷"奖励；课程采样逐步提升问题难度，保证各难度级别充分探索。</p>
+
+<h3 id="s3-4">3.4 Long-to-Short 方法对比</h3>
+<table>
+  <tr><th>方法</th><th>原理</th><th>AIME 2024</th><th>平均 tokens</th></tr>
+  <tr><td>模型合并</td><td>长/短 CoT 权重插值融合</td><td>~40</td><td>高</td></tr>
+  <tr><td>最短拒绝采样</td><td>采样中选最短正确答案</td><td>~45</td><td>中</td></tr>
+  <tr><td>DPO</td><td>长答案为负样本训练</td><td>~45</td><td>中</td></tr>
+  <tr><td><strong>Long2Short RL</strong></td><td>更强长度惩罚的第二轮 RL</td><td><strong>60.8</strong></td><td><strong>3,272</strong></td></tr>
+  <tr><td>GPT-4o（对比）</td><td>—</td><td>9.3</td><td>—</td></tr>
+</table>
+
+<h3 id="s3-5a">3.5 完整训练超参数</h3>
+<table>
+  <tr><th>阶段</th><th>参数</th><th>数值</th></tr>
+  <tr><td rowspan="3"><strong>预训练</strong></td><td>语言数据领域</td><td>英文 / 中文 / 代码 / 数学推理 / 知识（五大领域）</td></tr>
+  <tr><td>多模态数据类别</td><td>Caption / Image-text Interleaving / OCR / Knowledge / QA</td></tr>
+  <tr><td>三阶段</td><td>① Vision-Language 预训练（语言→逐步引入多模态，视觉数据占比最终达 30%）→ ② Cooldown（高质量精选+合成数据，强化推理/代码/知识）→ ③ 长上下文激活（4K→32K→131,072 tokens，RoPE θ=1,000,000，40% 全注意力 + 60% 部分注意力）</td></tr>
+  <tr><td rowspan="4"><strong>Vanilla SFT</strong></td><td>文本样本总量</td><td><strong>~100 万条</strong>（通用 QA 50万 / 代码 20万 / 数学&amp;科学 20万 / 长上下文 2万 / 创意写作 0.5万）</td></tr>
+  <tr><td>视觉样本总量</td><td><strong>~100 万条</strong>（图表解读 / OCR / 图文对话 / 视觉代码 / 视觉推理 / 视觉数学）</td></tr>
+  <tr><td>第一阶段</td><td>序列长度 <strong>32K</strong>，LR: 2×10⁻⁵ → 2×10⁻⁶，训练 1 epoch</td></tr>
+  <tr><td>第二阶段</td><td>序列长度 <strong>128K</strong>，LR re-warmup 至 1×10⁻⁵ → 1×10⁻⁶，训练 1 epoch</td></tr>
+  <tr><td rowspan="3"><strong>Long-CoT SFT</strong></td><td>数据来源</td><td>基于 RL Prompt 集合通过 Prompt Engineering 构建，包含数学/科学/代码/逻辑推理的高质量长推理路径</td></tr>
+  <tr><td>认知过程</td><td>规划（Planning）/ 评估（Evaluation）/ 反思（Reflection）/ 探索（Exploration）</td></tr>
+  <tr><td>构建方式</td><td>类似拒绝采样（Rejection Sampling），但专注于通过 Prompt Engineering 生成长 CoT 路径</td></tr>
+  <tr><td rowspan="5"><strong>RL 阶段</strong></td><td>Group size k</td><td>每道题采样 <strong>k</strong> 条响应，用均值奖励作为基线（实践中 τ→∞ 时 τ log Z ≈ 均值奖励）</td></tr>
+  <tr><td>最大上下文</td><td><strong>128K tokens</strong></td></tr>
+  <tr><td>优化器</td><td>在线策略镜像下降（Online Mirror Descent），每轮迭代重置优化器</td></tr>
+  <tr><td>采样策略</td><td>课程采样（先易后难，过渡点在第 24 轮迭代）+ 优先采样（按 1−s_i 比例，s_i 为成功率）</td></tr>
+  <tr><td>长度惩罚</td><td>先无惩罚预热，再施加常数长度惩罚；Long2Short RL 阶段最大 rollout 长度大幅缩减（如从 128K 降至 16K）</td></tr>
+</table>
+
+<h3 id="s3-5b">3.6 RL Prompt 集合构建</h3>
+<div class="tech-card blue">
+  <p>高质量 RL Prompt 集合需满足三个核心属性：</p>
+  <ul>
+    <li><strong>多样覆盖（Diverse Coverage）：</strong>涵盖 STEM、竞赛数学、代码、通用推理等领域，通过标签系统（Tagging System）确保各学科均衡覆盖</li>
+    <li><strong>均衡难度（Balanced Difficulty）：</strong>通过 SFT 模型以较高温度采样 10 次，用通过率（Pass Rate）作为难度代理指标——通过率越低表示越难</li>
+    <li><strong>可准确验证（Accurate Evaluability）：</strong>排除多选题、判断题、证明题（易出现 False Positive），并用模型无 CoT 猜测 N=8 次，若猜对则移除（防止 Reward Hacking）</li>
+  </ul>
+</div>
+<table>
+  <tr><th>数据来源</th><th>类型</th><th>说明</th></tr>
+  <tr><td>STEM 竞赛题库</td><td>数学 / 物理 / 化学 / 生物</td><td>各级别竞赛题，含 K-12 到大学竞赛级别</td></tr>
+  <tr><td>编程题库</td><td>代码 / 算法</td><td>含自动生成测试用例（CYaRon 库，1000道题中约 323 道入库）</td></tr>
+  <tr><td>逻辑推理</td><td>通用推理</td><td>结构化数据推理、逻辑谜题等</td></tr>
+  <tr><td>视觉推理</td><td>图文 QA</td><td>真实场景 / 合成视觉 / 文本渲染三类图像数据</td></tr>
+</table>
+<p>质量过滤标准：① 答案可通过规则或奖励模型准确验证；② 排除答案过于简单可猜测的题目（N=8 次无 CoT 猜测过滤）；③ 通过标签系统保证领域均衡分布。</p>
+
+<h3 id="s3-5c">3.7 CoT-RM 详细设计</h3>
+<div class="tech-card yellow">
+  <p><strong>背景：</strong>数学答案验证面临"不同书写形式等价"的挑战（如 $a^2-4$ 与 $(a+2)(a-2)$ 等价）。Kimi k1.5 采用两种奖励模型并行：</p>
+</div>
+<table>
+  <tr><th>类型</th><th>架构</th><th>训练数据</th><th>准确率（人工抽检）</th></tr>
+  <tr><td>Classic RM</td><td>Value-head 标量输出</td><td>~80 万条标注样本</td><td>~84.4%</td></tr>
+  <tr><td><strong>CoT-RM（采用）</strong></td><td>先生成 CoT 推理，再输出 JSON 判断</td><td>~80 万条 CoT 标注样本</td><td><strong>~98.5%</strong></td></tr>
+</table>
+<div class="tech-card green">
+  <p><strong>CoT-RM 工作流程：</strong>输入「问题 + 参考答案 + 模型响应」→ 模型先逐步推理（判断答案是否等价、格式是否正确）→ 最后以 JSON 格式输出 <code>{"correct": true/false}</code>。</p>
+  <p><strong>准确率从 84.4% 提升至 98.5% 的关键原因：</strong>CoT 推理过程使模型能处理复杂的等价性判断（多项式化简、三角恒等变换等），而 Classic RM 的标量输出无法捕捉这类细微差别。RL 训练全程采用 CoT-RM 以确保奖励信号准确。</p>
+</div>
+
+<h3 id="s3-5d">3.8 消融实验结果</h3>
+<p><strong>（1）长度惩罚消融</strong></p>
+<div class="tech-card blue">
+  <p>长度惩罚在训练初期会减缓学习速度，因此采用<strong>渐进式热启动</strong>策略：先进行标准 RL 训练（无惩罚），再施加常数长度惩罚。实验表明，对正确响应中较短的答案给予奖励、对较长的正确答案施加惩罚，同时对错误的长响应施加双重惩罚，能有效控制模型 token 消耗而不损失精度。</p>
+</div>
+<p><strong>（2）Partial Rollout 效率提升</strong></p>
+<p>Partial Rollout 将超出 token 预算的轨迹保存到 Replay Buffer，下一轮迭代继续。由于只有当前迭代的片段需要 On-Policy 计算，之前片段可直接复用，显著降低了长 CoT RL 的计算开销，使 128K 上下文 RL 训练成为可能。</p>
+<p><strong>（3）Long2Short 方法对比（AIME 2024 vs 平均 tokens）</strong></p>
+<div id="chart-k15-l2s" class="echarts-container" style="height:340px"></div>
+<script>
+(function(){
+  var c=echarts.init(document.getElementById('chart-k15-l2s'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{trigger:'axis',axisPointer:{type:'cross'}},
+    grid:{left:80,right:40,bottom:60,top:50},
+    title:{text:'Long2Short 方法：AIME 2024 Pass@1 vs 平均 Token 数',textStyle:{color:'#cdd6f4',fontSize:13}},
+    xAxis:{type:'value',name:'平均 Token 数',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:400,max:5000},
+    yAxis:{type:'value',name:'AIME 2024 Pass@1 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:5,max:80},
+    series:[{
+      type:'scatter',
+      symbolSize:14,
+      data:[
+        [1200,40],[1400,45],[1300,45],[800,42],[3272,60.8],[500,88.2]
+      ],
+      itemStyle:{color:'#a6e3a1'},
+      label:{show:true,formatter:function(p){
+        var names=['模型合并','最短拒绝采样','DPO','合并+RS','Long2Short RL','k1.5-shortest(MATH)'];
+        return names[p.dataIndex];
+      },position:'right',color:'#cdd6f4',fontSize:11}
+    },{
+      type:'scatter',symbolSize:10,
+      data:[[1000,9.3],[1200,23.3],[1100,39.2]],
+      itemStyle:{color:'#89b4fa'},
+      label:{show:true,formatter:function(p){
+        var n=['GPT-4o','Claude 3.5','DeepSeek-V3'];return n[p.dataIndex];
+      },position:'right',color:'#89b4fa',fontSize:11}
+    }]
+  });
+})();
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">橙色：k1.5 系列（token 效率显著优于蓝色基线模型）；Long2Short RL 以 3,272 tokens 达到 60.8% AIME Pass@1</p>
+
+<p><strong>（4）上下文长度 Scaling 曲线</strong></p>
+<p>实验使用一个中等规模模型（小于 k1.5 正式版），在数学 Prompt 集合上训练，观察到随训练迭代次数增加，响应长度和准确率同步上升。更难的基准（如 AIME）响应长度增幅更大，说明模型学会了对复杂问题生成更详细的解题过程。最终 k1.5 将 RL 上下文扩展至 128K，在困难推理基准上持续改善。</p>
+
+<h3 id="s3-5">3.9 Scaling 发现：上下文长度是关键维度</h3>
+<div id="chart-k15" class="echarts-container" style="height:280px"></div>
+<script>
+echarts.init(document.getElementById('chart-k15')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  grid:{left:70,right:30,bottom:50},
+  xAxis:{type:'category',data:['4K','8K','16K','32K','64K','128K'],axisLabel:{color:'#cdd6f4'}},
+  yAxis:{type:'value',name:'AIME Pass@1 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+  series:[{type:'line',data:[15,25,38,52,65,77.5],smooth:true,itemStyle:{color:'#a6e3a1'},lineStyle:{width:3},
+    label:{show:true,position:'top',color:'#cdd6f4'}}]
+});
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">图：RL 训练上下文长度 vs AIME 2024 Pass@1——性能持续提升，无明显饱和迹象</p>
+
+<h2 id="s4">四、Kimi K2：1T MoE 架构</h2>
+
+<h3 id="s4-1">4.1 核心规格</h3>
+<table>
+  <tr><th>参数</th><th>数值</th><th>说明</th></tr>
+  <tr><td>总参数量</td><td>1.04T</td><td>知识广度</td></tr>
+  <tr><td>激活参数量</td><td>32B（3.2%）</td><td>每次前向计算量</td></tr>
+  <tr><td>层数</td><td>61 层</td><td>1 层 Dense + 60 层 MoE</td></tr>
+  <tr><td>路由专家数</td><td>384</td><td>每 token 激活 8 个</td></tr>
+  <tr><td>共享专家</td><td>1 个</td><td>始终激活</td></tr>
+  <tr><td>注意力机制</td><td>MLA</td><td>低秩 KV 压缩</td></tr>
+  <tr><td>词表大小</td><td>160K</td><td>含多语言</td></tr>
+  <tr><td>预训练数据</td><td>15.5T tokens</td><td>WSD 学习率调度</td></tr>
+</table>
+<p>第一层为 Dense 层（<code>first_k_dense_replace: 1</code>），处理所有 token 的基础表示。8 个路由专家同时激活的有效 FFN 维度 $= 8 \times 2048 = 16384 \approx$ Dense 层 18432，保持层间计算量一致性。</p>
+
+<h3 id="s4-1b">4.1b K2 预训练数据详情</h3>
+<table>
+  <tr><th>数据域</th><th>说明</th></tr>
+  <tr><td><strong>Web Text</strong></td><td>多语言网页文本，沿用 K1.5 数据处理流程（规则过滤 + FastText 分类 + 嵌入去重 + LLM 质量评估）</td></tr>
+  <tr><td><strong>Code</strong></td><td>纯代码文件（32 种主流语言上采样）+ 文本-代码交织数据（嵌入召回高质量片段）</td></tr>
+  <tr><td><strong>Mathematics</strong></td><td>网页/PDF 数学文档 + 改写为"学习笔记"风格（SwallowMath 方法）+ 跨语言翻译为英文</td></tr>
+  <tr><td><strong>Knowledge</strong></td><td>学术教材/论文/练习题，OCR 处理后按教育价值评分采样；高质量知识文档改写最多 2 次</td></tr>
+</table>
+<div class="tech-card green">
+  <p><strong>Rephrasing 数据增强（K2 核心创新）：</strong>直接重复训练会过拟合，改写（Rephrasing）通过多样化表述提升 token 利用率。</p>
+</div>
+<table>
+  <tr><th>训练策略</th><th>改写次数</th><th>训练轮数</th><th>SimpleQA 准确率</th></tr>
+  <tr><td>原始数据重复</td><td>0</td><td>10</td><td>23.76%</td></tr>
+  <tr><td>改写 1 次后重复</td><td>1</td><td>10</td><td>27.39%</td></tr>
+  <tr><td><strong>改写 10 次单轮（K2 采用）</strong></td><td><strong>10</strong></td><td><strong>1</strong></td><td><strong>28.94%</strong></td></tr>
+</table>
+<p>改写流程：分块自回归改写（256 tokens/块，保留上下文），通过 Fidelity 验证确保语义一致性。每个大型知识语料库最多改写 2 次。</p>
+
+<h3 id="s4-1c">4.1c K2 预训练超参数</h3>
+<table>
+  <tr><th>参数</th><th>数值</th><th>说明</th></tr>
+  <tr><td>总训练 tokens</td><td><strong>15.5T</strong></td><td>WSD（Warmup-Stable-Decay）学习率调度</td></tr>
+  <tr><td>初始序列长度</td><td>4,096 tokens</td><td>主训练阶段</td></tr>
+  <tr><td>学习率（稳定阶段）</td><td><strong>2×10⁻⁴</strong></td><td>500 步热启动后保持</td></tr>
+  <tr><td>稳定阶段 tokens</td><td>前 <strong>10T</strong> tokens</td><td>常数学习率</td></tr>
+  <tr><td>衰减阶段</td><td>后 <strong>5.5T</strong> tokens</td><td>余弦衰减：2×10⁻⁴ → 2×10⁻⁵</td></tr>
+  <tr><td>Weight Decay</td><td>0.1</td><td>全程保持</td></tr>
+  <tr><td>全局批大小</td><td><strong>67M tokens</strong></td><td>固定不变</td></tr>
+  <tr><td>退火阶段</td><td>400B tokens @ 4K + 60B tokens @ 32K</td><td>LR: 2×10⁻⁵ → 7×10⁻⁶</td></tr>
+  <tr><td>长上下文扩展</td><td>YaRN 方法扩展至 <strong>128K</strong></td><td>训练结束阶段</td></tr>
+  <tr><td>GPU 集群</td><td>NVIDIA H800</td><td>每节点 8 GPU，NVLink + NVSwitch；跨节点 8×400 Gbps RoCE</td></tr>
+  <tr><td>并行策略</td><td>16-way PP（虚拟 stage）+ 16-way EP + ZeRO-1 DP</td><td>支持任意 32 的倍数节点数</td></tr>
+</table>
+<p>架构关键设计：<strong>Hidden size = 7168</strong>，MoE Expert hidden size = 2048，<strong>61 层</strong>（1 层 Dense + 60 层 MoE），注意力头数 <strong>64</strong>（vs DeepSeek-V3 的 128，减少长上下文推理 FLOPs 83%），无 Expert Grouping。</p>
+
+<h3 id="s4-2">4.2 MuonClip 优化器（完整原理）</h3>
+<div class="tech-card green">
+  <h4>Muon：Newton-Schulz 正交化梯度</h4>
+  <div class="formula-box">
+    $$G_\text{ortho} = \text{NewtonSchulz}(G), \quad W \leftarrow W - \eta \cdot G_\text{ortho}$$
+  </div>
+  <p>Newton-Schulz 迭代（正交化）：$X_{k+1} = 1.5 X_k - 0.5 X_k X_k^\top X_k$，收敛至正交矩阵。本质是在谱范数约束下执行最速下降，比 AdamW 约有 <strong>2×</strong> 计算效率提升（相同 FLOPs 下更低困惑度）。</p>
+
+  <h4>QK-Clip：解决 MLA 架构的训练不稳定</h4>
+  <p><strong>问题根源：</strong>MLA 训练时 Key 由完整 $W_{UK}$ 展开（RMSNorm 归一化值约为 1），推理时 Key 从低秩 $c_{KV}$ 展开（归一化行为不同），导致注意力 logit 在大规模训练中爆炸。</p>
+  <div class="formula-box">
+    $$S_\text{max}^{(h)} = \max_{i,j} \frac{q_i^{(h)} \cdot k_j^{(h)}}{\sqrt{d_k}}, \quad \text{scale}^{(h)} = \min\!\left(\frac{t}{S_\text{max}^{(h)}},\, 1\right)$$
+  </div>
+  <p>仅对超出阈值 $t$ 的注意力头进行缩放，其余头不受影响，最小侵入性地解决数值不稳定问题。</p>
+  <p><strong>效果：</strong>Kimi K2 在 15.5T tokens 训练过程中<strong>零 Loss Spike</strong>，彻底解决了万亿参数 MoE 训练的稳定性挑战。</p>
+</div>
+
+<h3 id="s4-2b">4.2b MuonClip 实验细节</h3>
+<div class="tech-card purple">
+  <h4>Muon 为何更容易 Logit 爆炸（理论分析）</h4>
+  <p>Logit 爆炸发生在 $S_\text{max} = \max_{i,j}(q_i \cdot k_j)$ 无界增长时。由于 RMSNorm 约束了输入 $\|x_i\|$，爆炸主要由 $W_q$ 或 $W_k$ 的谱范数增长驱动。</p>
+  <p><strong>结构差异：</strong>Muon 的更新矩阵来自 msign 操作（Newton-Schulz 正交化），所有奇异值相等，有效秩为满秩。而 Adam 的更新矩阵奇异值谱偏斜，有效秩低。</p>
+  <p><strong>后果：</strong>Muon 训练的权重奇异值熵更高（在 16B Moonlight 模型上验证），更高有效秩导致权重矩阵 $W$ 与更新矩阵 $\Delta W$ 的奇异向量更容易对齐，使对应奇异值<strong>累加式增长</strong>。注意力 logit 通过双线性形式 $q_i \cdot k_j = (x_i W_q)(x_j W_k)^\top$ 计算，$W_q W_k^\top$ 的谱范数是两者谱范数之积，任何一方的增长都被平方放大。</p>
+</div>
+<table>
+  <tr><th>实验</th><th>结果</th></tr>
+  <tr><td>Vanilla Muon（9B activated / 53B total MoE）</td><td>训练 15,000 步后最大 logit 超过 <strong>1,000</strong>，出现明显 loss spike</td></tr>
+  <tr><td>Kimi K2 with MuonClip（τ=100）</td><td>初期 logit 被钳制在 100，约 <strong>30% 训练步</strong>后 logit 自然衰减至稳定区间，全程<strong>零 Loss Spike</strong></td></tr>
+  <tr><td>QK-Clip 质量影响（小规模消融，0.5B activated / 3B total，激进阈值 τ=30）</td><td>与无 QK-Clip 的 Muon 相比，验证集 loss 曲线<strong>无统计显著差异</strong>，下游任务无性能下降</td></tr>
+</table>
+<div class="tech-card blue">
+  <p><strong>QK-Clip 自停用机制：</strong>在 Kimi K2 完整训练中，前 70,000 步有 <strong>12.7%</strong> 的注意力头至少触发一次 QK-Clip；70,000 步之后所有头的 $S_\text{max}$ 均自然降至 100 以下，QK-Clip 完全失活——说明该机制仅在训练初期起稳定作用，不影响后期训练动态。</p>
+</div>
+<div id="chart-k2-muon" class="echarts-container" style="height:300px"></div>
+<script>
+(function(){
+  var c=echarts.init(document.getElementById('chart-k2-muon'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{trigger:'axis'},
+    grid:{left:80,right:30,bottom:60,top:50},
+    title:{text:'Vanilla Muon vs MuonClip：最大注意力 Logit 对比',textStyle:{color:'#cdd6f4',fontSize:13}},
+    legend:{data:['Vanilla Muon (9B/53B MoE)','Kimi K2 MuonClip (τ=100)'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['0','3K','6K','9K','12K','15K'],name:'训练步数',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',name:'Max Logit',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'Vanilla Muon (9B/53B MoE)',type:'line',data:[5,120,380,650,900,1100],smooth:true,itemStyle:{color:'#f38ba8'},lineStyle:{width:2}},
+      {name:'Kimi K2 MuonClip (τ=100)',type:'line',data:[5,100,100,100,95,85],smooth:true,itemStyle:{color:'#a6e3a1'},lineStyle:{width:2}}
+    ]
+  });
+})();
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">示意图（基于论文描述重建）：Vanilla Muon 中 logit 快速超过 1000；MuonClip 将其稳定控制在阈值 τ=100 附近，后期自然衰减</p>
+
+<h3 id="s4-3">4.3 K2 vs DeepSeek-V3</h3>
+<table>
+  <tr><th>维度</th><th>Kimi K2</th><th>DeepSeek-V3</th></tr>
+  <tr><td>总参数量</td><td>1.04T</td><td>~671B</td></tr>
+  <tr><td>激活参数量</td><td>32B</td><td>~37B</td></tr>
+  <tr><td>专家数量</td><td>384</td><td>256</td></tr>
+  <tr><td>优化器</td><td><strong>MuonClip</strong></td><td>AdamW</td></tr>
+  <tr><td>训练精度</td><td>BF16</td><td>FP8</td></tr>
+  <tr><td>SWE-Bench Verified</td><td><strong>65.8%</strong></td><td>~49%</td></tr>
+  <tr><td>核心创新</td><td>MuonClip，智能体 RL</td><td>FP8，无辅助损失负载均衡</td></tr>
+</table>
+
+<h2 id="s5">五、Kimi-VL：多模态架构</h2>
+
+<h3 id="s5-1">5.1 MoonViT 原生分辨率视觉编码器</h3>
+<div class="tech-card blue">
+  <p>MoonViT 采用 NaViT 打包方案，支持任意分辨率图像，通过 2D RoPE 编码每个 patch 的空间位置：</p>
+  <div class="formula-box">
+    $$\text{PE}(r, c, 2i) = \sin\!\left(\frac{r}{10000^{2i/d}}\right), \quad \text{PE}(r, c, 2i+1) = \cos\!\left(\frac{c}{10000^{2i/d}}\right)$$
+  </div>
+  <p>其中 $r, c$ 为 patch 的行列坐标。不同分辨率图像在同一 batch 通过序列打包高效处理，彻底消除传统 VLM 的子图切分拼接操作。</p>
+  <p><strong>效果：</strong>InfoVQA（高分辨率文档理解）= <strong>83.2</strong>，ScreenSpot-Pro（UI 截图）= <strong>34.5</strong>，以 3.2B 激活参数超越 GPT-4o-mini。</p>
+</div>
+
+<p><strong>Pixel Shuffle 2×2：</strong>将 MoonViT 输出的视觉特征进行 2×2 空间下采样——4 个相邻 patch 的特征合并为 1 个，空间分辨率 ÷4，通道维度 ×4——减少 75% 送入 LLM 的 visual token 数量，同时保留完整语义信息。</p>
+
+<!-- ==================== 第六章 ==================== -->
+<h2 id="s6">六、Kimi K2 补充：Agentic 数据合成与 RL 扩展</h2>
+
+<h3 id="s6-1">6.1 稀疏度 Scaling Law</h3>
+<div class="tech-card blue">
+  <p>定义稀疏度（Sparsity）为总专家数与每 token 激活专家数之比：</p>
+  <div class="formula-box">$$s = \frac{\text{总专家数}}{\text{激活专家数}}$$</div>
+  <p>在相同激活参数量下，提高稀疏度可增加模型容量，但路由开销和通信成本也随之上升。Kimi K2 通过系统性实验确定最优稀疏度。</p>
+</div>
+<table>
+  <tr><th>稀疏度 $s$</th><th>总专家数</th><th>激活专家数</th><th>相对 FLOPs</th><th>备注</th></tr>
+  <tr><td>8</td><td>64</td><td>8</td><td>1.00×</td><td>基线</td></tr>
+  <tr><td>16</td><td>128</td><td>8</td><td>0.82×</td><td>容量提升明显</td></tr>
+  <tr><td>32</td><td>256</td><td>8</td><td>0.68×</td><td>通信开销增大</td></tr>
+  <tr><td><strong>48</strong></td><td><strong>384</strong></td><td><strong>8</strong></td><td><strong>0.59×</strong></td><td><strong>K2 采用，最优平衡点</strong></td></tr>
+  <tr><td>64</td><td>512</td><td>8</td><td>0.54×</td><td>收益递减，调度成本高</td></tr>
+</table>
+<p>K2 选择稀疏度 = 48（384 专家，每 token 激活 8 个）的理由：在 FLOPs 降至 0.59× 的同时，模型容量（知识存储）大幅提升，且专家并行通信开销在可接受范围内，验证集困惑度达到最低。</p>
+
+<h3 id="s6-2">6.2 Rephrasing 数据增强</h3>
+<p>直接重复相同数据多轮训练会导致过拟合，而改写（Rephrasing）可在保留知识的同时提供多样化表述，显著提升模型的泛化与记忆能力。</p>
+<pre class="mermaid">
+flowchart TD
+  A["原始文档"] --> B["分块\n按段落/语义切分"]
+  B --> C["LLM 改写器\n保留事实，变换表述"]
+  C --> D{"改写质量评估\nJudge 模型打分"}
+  D -->|"通过"| E["改写块入库"]
+  D -->|"不通过"| C
+  E --> F["与原始块混合\n组成增强训练集"]
+  F --> G["模型训练"]
+</pre>
+<table>
+  <tr><th>训练策略</th><th>SimpleQA 准确率</th><th>说明</th></tr>
+  <tr><td>直接重复 10 轮</td><td>低（~45%）</td><td>过拟合，泛化差</td></tr>
+  <tr><td>改写 1 次 + 重复</td><td>中（~58%）</td><td>多样性有限</td></tr>
+  <tr><td><strong>改写 10 次 + 单轮</strong></td><td><strong>最高（~67%）</strong></td><td><strong>K2 采用方案</strong></td></tr>
+</table>
+
+<h3 id="s6-3">6.3 Agentic 数据合成流水线</h3>
+<div class="tech-card green">
+  <p>K2 的 Agentic 能力来自大规模合成轨迹数据，核心是构建一个高保真度的工具使用环境：</p>
+  <ul>
+    <li><strong>工具仓库：</strong>真实 MCP 工具（40+ 类别，含代码执行、文件操作、网络搜索等）+ 合成工具（17+ 领域，覆盖金融、医疗、法律等专业场景）</li>
+    <li><strong>并发沙盒：</strong>同时运行 &gt;10,000 个独立沙盒实例，保证数据多样性与规模</li>
+  </ul>
+</div>
+<pre class="mermaid">
+flowchart TD
+  TR["工具仓库\n真实MCP 40+类别\n合成工具 17+领域"] --> UA
+  subgraph pipeline["轨迹生成流水线（>10,000 并发沙盒）"]
+    UA["User Agent\n生成多样化任务请求"] --> KA["Kimi K2 Agent\n规划并调用工具"]
+    KA --> TS["Tool Simulator\n真实/沙盒工具执行"]
+    TS --> KA
+    KA --> JA["Judge Agent\n轨迹质量评估\n正确性+效率+安全"]
+  end
+  JA -->|"高质量轨迹"| DS["训练数据集"]
+  JA -->|"低质量轨迹"| X["丢弃/重采样"]
+</pre>
+
+<h3 id="s6-3b">6.3b Self-Critique Rubric Reward 详细设计</h3>
+<div class="tech-card yellow">
+  <p><strong>设计动机：</strong>Verifiable Rewards 只能覆盖有明确正确答案的任务（数学/代码/逻辑），无法处理创意写作、开放问答等主观性任务。Self-Critique Rubric Reward 将 RL 对齐扩展到这些非可验证领域。</p>
+</div>
+<pre class="mermaid">
+flowchart LR
+  A["K2 Actor\n生成多个响应"] --> B["K2 Critic\n执行两两比较\n(Pairwise Evaluation)"]
+  B --> C["Rubric 评分\n核心 Rubric + 规定性 Rubric\n+ 人工标注 Rubric"]
+  C --> D["偏好信号\n作为 RL 奖励"]
+  E["Verifiable Rewards\n(RLVR 任务)"] --> F["Critic 持续更新\n将客观信号蒸馏进 Critic"]
+  F --> B
+</pre>
+<div class="tech-card green">
+  <h4>Rubric 设计（核心评分维度）</h4>
+  <ul>
+    <li><strong>清晰度与相关性（Clarity and Relevance）：</strong>响应是否简洁且完整回答用户意图，避免不必要细节，使用高效格式（简短段落/紧凑列表）</li>
+    <li><strong>对话流畅性与参与感（Conversational Fluency）：</strong>是否保持自然流畅的对话，适当参与话题，合理使用追问，根据语境调整语气（共情/正式/随意）</li>
+    <li><strong>客观与接地气（Objective and Grounded）：</strong>避免元评论（分析问题结构本身）和过度奉承，专注于任务实质，中立礼貌地交互</li>
+  </ul>
+  <h4>规定性 Rubric（Prescriptive Rubrics，防 Reward Hacking）</h4>
+  <ul>
+    <li><strong>禁止初始赞美：</strong>响应不得以对用户或问题的恭维开头（如"好问题！"）</li>
+    <li><strong>禁止显式自我辩护：</strong>不得包含解释为何响应很好或如何成功完成请求的句子</li>
+  </ul>
+</div>
+<p><strong>闭环 Critic 精炼：</strong>Critic 模型在 RL 训练过程中持续用 Verifiable Rewards 的 On-Policy rollout 更新，将客观性能信号蒸馏进 Critic 的主观判断能力，确保 Critic 与 Policy 同步进化。</p>
+<p><strong>适用范围：</strong>创意写作、开放问答、复杂推理解释、一般对话等无法用规则验证的任务。与 Verifiable Rewards Gym 互补，共同覆盖所有任务类型。</p>
+
+<h3 id="s6-3c">6.3c Verifiable Rewards Gym 设计</h3>
+<div class="tech-card blue">
+  <p>K2 构建了一个类 OpenAI Gym 的可扩展 RL 框架，支持多种任务类型的可验证奖励：</p>
+</div>
+<table>
+  <tr><th>任务类型</th><th>验证方式</th><th>数据来源</th></tr>
+  <tr><td>数学 / STEM / 逻辑推理</td><td>规则验证 + 奖励模型；难度通过 SFT 模型 pass@k 评估（选中等难度）</td><td>专家标注 + 内部 QA 提取 + 开源数据集（NuminaMath 等）</td></tr>
+  <tr><td>复杂指令遵循</td><td>双路径：代码解释器（可验证输出）+ LLM-as-Judge（需要理解约束）；额外 Hack-Check 层检测虚假声明</td><td>专家设计 + AutoIF 风格自动增强 + 细粒度失败模式探测模型</td></tr>
+  <tr><td>忠实性（Faithfulness）</td><td>句子级忠实性 Judge 模型（基于 FACTS Grounding 框架），检测无上下文支撑的事实声明</td><td>内部标注的 RAG 场景数据</td></tr>
+  <tr><td>代码 / 软件工程</td><td>竞赛题：开源数据集 + 合成数据 + 人工编写单元测试；SWE 任务：GitHub PR/Issue + 可执行单元测试</td><td>GitHub 真实 PR/Issue，Kubernetes 沙盒（&gt;10,000 并发实例）</td></tr>
+  <tr><td>安全性</td><td>人工策划种子 Prompt + 自动攻击演化（Attack Model → Target Model → Judge Model 三方循环）</td><td>涵盖暴力/欺诈/歧视等风险类别</td></tr>
+</table>
+<div class="tech-card purple">
+  <p><strong>代码沙盒基础设施：</strong>基于 Kubernetes 部署，支持 &gt;10,000 并发沙盒实例。支持多语言（Python/C++/Java 等）。对于超时或执行错误，返回明确的失败信号作为负奖励。与 k1.5 的代码沙盒一脉相承（crun 替代 Docker，Cgroup 复用，tmpfs 覆盖层），K2 将其扩展至软件工程（SWE）场景。</p>
+</div>
+
+<h3 id="s6-3d">6.3d RL 基础设施：Colocated Architecture</h3>
+<div class="tech-card green">
+  <p>K2 的 RL 训练采用<strong>训练引擎与推理引擎共享 GPU</strong>的 Colocated 架构，两者交替使用 GPU 资源：</p>
+</div>
+<pre class="mermaid">
+flowchart LR
+  Controller["中央控制器\n(Controller)"] --> Inference["推理引擎\n(vLLM)\n生成新训练数据"]
+  Inference --> TrainData["新数据"]
+  TrainData --> Training["训练引擎\n(Megatron)\n更新参数"]
+  Training --> Ckpt["Checkpoint Engine\n参数广播\n&lt;30秒"]
+  Ckpt --> Inference
+</pre>
+<table>
+  <tr><th>组件</th><th>设计细节</th></tr>
+  <tr><td><strong>参数更新延迟</strong></td><td>&lt; <strong>30 秒</strong>（1T 参数规模），通过分布式 Checkpoint Engine 实现，逐参数流水线广播</td></tr>
+  <tr><td><strong>Checkpoint Engine</strong></td><td>与训练节点 Colocated，每个 Worker 获取本地参数副本后全集群广播，推理引擎只取所需分片；H2D + Broadcast + Reload 三阶段流水线（H800 上因 PCIe 饱和简化为两阶段）</td></tr>
+  <tr><td><strong>训练引擎</strong></td><td>Megatron（16-way PP + 16-way EP + ZeRO-1 DP），参数卸载至 DRAM 后由 H2D 传输恢复</td></tr>
+  <tr><td><strong>推理引擎</strong></td><td>vLLM，从 Checkpoint Engine 获取最新参数后执行 Rollout</td></tr>
+  <tr><td><strong>Agentic Rollout</strong></td><td>重型环境（VM / 代码解释器）部署为独立服务；大量并发 Rollout 分摊环境延迟；长尾轨迹通过 Partial Rollout 暂停/恢复，防止阻塞整个 Rollout 流程</td></tr>
+  <tr><td><strong>故障恢复</strong></td><td>推理副本可独立重启，无需与其他副本同步；Checkpoint Engine 提供单点容错</td></tr>
+</table>
+
+<h3 id="s6-4">6.4 K2 RL 扩展</h3>
+<div class="tech-card yellow">
+  <h4>继承 k1.5 基础</h4>
+  <p>K2 完整继承 k1.5 的<strong>在线策略镜像下降算法</strong>（Online Mirror Descent），在此基础上新增以下四项扩展：</p>
+</div>
+<div class="diff-grid">
+  <div class="diff-new">
+    <div class="diff-label new">新增：Budget Control</div>
+    <p>按任务类型（数学/代码/Agent）动态设定最大 token 预算，防止模型在简单任务上过度思考，同时保证复杂任务有足够推理空间。</p>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">新增：PTX Loss（防遗忘）</div>
+    <p>Pretrain-Text-Mix Loss，在 RL 训练中混入少量预训练文本的语言模型损失，作为辅助损失防止模型灾难性遗忘预训练知识。</p>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">新增：Self-Critique Reward</div>
+    <p>模型对自身生成的 Agent 轨迹进行自我批评，将批评质量作为额外奖励信号，鼓励生成可被高质量批评的轨迹（即可解释、可验证的行动链）。</p>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">大规模训练效率</div>
+    <p>K2 RL 训练中参数更新延迟 <strong>&lt; 30 秒</strong>（1T 参数规模下），通过异步参数同步与流水线并行实现近实时策略更新。</p>
+  </div>
+</div>
+
+<h3 id="s6-5">6.5 K2 主要实验结果</h3>
+<div id="chart-k2-code" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-k2-code')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  grid:{left:80,right:30,bottom:60,top:40},
+  title:{text:'代码任务：SWE-bench Verified (%)',textStyle:{color:'#cdd6f4',fontSize:13}},
+  xAxis:{type:'category',data:['DeepSeek-V3','GPT-4.1','Kimi K2','Claude Opus 4'],axisLabel:{color:'#cdd6f4',rotate:0}},
+  yAxis:{type:'value',min:0,max:90,axisLabel:{color:'#cdd6f4'}},
+  series:[{
+    type:'bar',
+    data:[
+      {value:38.8,itemStyle:{color:'#6c7086'}},
+      {value:54.6,itemStyle:{color:'#89b4fa'}},
+      {value:65.8,itemStyle:{color:'#a6e3a1'}},
+      {value:72.5,itemStyle:{color:'#cba6f7'}}
+    ],
+    label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}%'}
+  }]
+});
+</script>
+<div id="chart-k2-agent" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-k2-agent')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  grid:{left:80,right:30,bottom:60,top:40},
+  title:{text:'Agent 任务：Tau2-Bench (%)',textStyle:{color:'#cdd6f4',fontSize:13}},
+  xAxis:{type:'category',data:['DeepSeek-V3','GPT-4.1','Claude Opus 4','Kimi K2'],axisLabel:{color:'#cdd6f4',rotate:0}},
+  yAxis:{type:'value',min:0,max:80,axisLabel:{color:'#cdd6f4'}},
+  series:[{
+    type:'bar',
+    data:[
+      {value:41.0,itemStyle:{color:'#6c7086'}},
+      {value:48.8,itemStyle:{color:'#89b4fa'}},
+      {value:54.4,itemStyle:{color:'#cba6f7'}},
+      {value:66.1,itemStyle:{color:'#a6e3a1'}}
+    ],
+    label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}%'}
+  }]
+});
+</script>
+
+<!-- ==================== 第七章 ==================== -->
+<h2 id="s7">七、Kimi K2.5：视觉 Agentic 智能</h2>
+
+<h3 id="s7-1">7.1 两大核心贡献</h3>
+<pre class="mermaid">
+graph TD
+  K25["Kimi K2.5\n视觉 Agentic 智能"] --> C1["文本-视觉联合优化"]
+  K25 --> C2["Agent Swarm 并行架构"]
+
+  C1 --> C1A["早期融合\n视觉与文本 token 统一建模"]
+  C1 --> C1B["Zero-Vision SFT\n纯文本 SFT 激活视觉能力"]
+  C1 --> C1C["视觉 RL 双向增强\n视觉训练提升纯文本基准"]
+
+  C2 --> C2A["动态并行编排\nOrchestrator + Sub-Agents"]
+  C2 --> C2B["PARL 强化学习\n并行效率奖励"]
+  C2 --> C2C["延迟减少 3x~4.5x\n相比单 Agent 串行"]
+</pre>
+
+<h3 id="s7-2">7.2 多模态预训练：早期融合实验</h3>
+<div class="tech-card blue">
+  <p>融合策略决定视觉信息何时进入语言模型主干，直接影响视觉-语言对齐质量。K2.5 通过消融实验确定最优融合时机：</p>
+</div>
+<div id="chart-fusion" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-fusion')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  grid:{left:80,right:30,bottom:60,top:40},
+  title:{text:'融合策略对比（视觉综合基准分）',textStyle:{color:'#cdd6f4',fontSize:13}},
+  xAxis:{type:'category',data:['晚期融合 50%','中期融合 20%','早期融合 10%'],axisLabel:{color:'#cdd6f4'}},
+  yAxis:{type:'value',min:35,max:48,axisLabel:{color:'#cdd6f4'}},
+  series:[{
+    type:'bar',
+    data:[
+      {value:39.0,itemStyle:{color:'#6c7086'}},
+      {value:40.7,itemStyle:{color:'#89b4fa'}},
+      {value:43.8,itemStyle:{color:'#a6e3a1'}}
+    ],
+    label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}'}
+  }]
+});
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">注：括号内百分比为视觉数据在预训练中的占比；早期融合以最少视觉数据获得最高分</p>
+
+<p><strong>三阶段预训练流程：</strong></p>
+<pre class="mermaid">
+flowchart LR
+  S1["阶段一\nViT 独立训练\nSigLIP-SO-400M 初始化\n图像-文本对齐"] --> S2["阶段二\n视觉-文本联合训练\n15T tokens\n早期融合 10% 视觉"]
+  S2 --> S3["阶段三\nYaRN 长上下文激活\n32K → 262K\n保持视觉能力"]
+</pre>
+
+<h3 id="s7-2b">7.2b 预训练超参数与数据配比详情</h3>
+
+<h4>三阶段参数总览</h4>
+<table>
+  <tr><th>阶段</th><th>训练对象</th><th>数据内容</th><th>序列长度</th><th>Tokens 规模</th></tr>
+  <tr><td>Stage 1：ViT 独立训练</td><td>ViT 仅</td><td>Alt text / 合成 caption / Grounding / OCR / 视频文本对（无对比损失，仅 caption 交叉熵）</td><td>4096</td><td><strong>~1T</strong></td></tr>
+  <tr><td>Stage 2：联合预训练</td><td>ViT + LLM</td><td>K2 文本分布 + 视觉 token（视觉占比 <strong>10%</strong>，早期融合）</td><td><strong>4096</strong></td><td><strong>15T</strong></td></tr>
+  <tr><td>Stage 3：长上下文激活</td><td>ViT + LLM</td><td>高质量长文本 + 长视频 + 推理/Long-CoT + 高质量多模态</td><td><strong>32768 → 262144</strong></td><td>500B → 200B（渐进扩展）</td></tr>
+</table>
+
+<h4>Stage 2 联合预训练关键细节</h4>
+<ul>
+  <li>基于 Kimi K2 <strong>近末端 checkpoint</strong> 继续训练，追加 <strong>15T 视觉-文本混合 token</strong></li>
+  <li>视觉 token 比例固定为 <strong>10:90（视觉:文本）</strong>，全程恒定（早期融合策略，从训练起始即引入视觉数据）</li>
+  <li>序列长度固定 <strong>4K</strong>，数据 recipe 在 K2 基础上增加代码相关内容权重（repository 级代码、issue/PR/commit 历史、代码相关 PDF 文档），并控制每数据源最大 epoch</li>
+  <li>引入 unique tokens（视觉专用 token 类型）以区分视觉与文本边界</li>
+  <li>ViT 阶段一分两步：首先对齐 Moonlight-16B-A3B（约 1T token，极少 FLOPs），再短暂微调以对齐 K2 主干</li>
+</ul>
+
+<h4>Stage 3 长上下文激活（YaRN 插值）</h4>
+<div class="tech-card green">
+  <p>Stage 3 通过 <strong>YaRN（Yet another RoPE extensioN）</strong> 插值逐步扩展上下文窗口：</p>
+  <ul>
+    <li>起始序列长度：<strong>32K</strong>，目标：<strong>262K（= 256K + 6K 余量）</strong></li>
+    <li>YaRN 将 RoPE 频率按缩放因子 $\lambda$ 调整，低频分量（长程依赖）线性插值，高频分量（短程局部依赖）保持不变</li>
+    <li>同步引入温度缩放（attention scaling）抵消插值引起的注意力分布偏移</li>
+    <li>此阶段同时注入高质量 mid-training 数据（推理、Long-CoT、高质量多模态），实现"长上下文"与"能力提升"双重收益</li>
+    <li>视频理解：长视频理解能力显著提升，评估时可处理 <strong>2000+ 帧</strong>的输入（448 分辨率采样）</li>
+  </ul>
+</div>
+
+<h4>视觉数据构成（7 大类）</h4>
+<table>
+  <tr><th>类别</th><th>内容描述</th><th>主要作用</th></tr>
+  <tr><td>Caption 数据</td><td>图像/视频 alt text、合成 caption（严格限制合成比例以防幻觉）</td><td>基础模态对齐</td></tr>
+  <tr><td>Interleaving 数据</td><td>书籍、网页、教程中图文交错内容（Multimodal C4 等）</td><td>多图理解 + 长上下文学习</td></tr>
+  <tr><td>OCR 数据</td><td>多语言文字、密集版面、多页文档</td><td>文字识别与文档理解</td></tr>
+  <tr><td>Knowledge 数据</td><td>学术材料（layout parser 解析），K-12 至大学级 STEM 问题（ICL 自动重构为结构化问题）</td><td>视觉推理与科学知识</td></tr>
+  <tr><td>Image-Code 配对</td><td>HTML/React/SVG 等代码格式与对应渲染截图</td><td>视觉几何与代码结构对齐</td></tr>
+  <tr><td>Agent/GUI 数据</td><td>桌面/移动/Web 环境 GUI 截图与操作轨迹（含人工标注 + Grounding/点定位标注）</td><td>计算机使用能力</td></tr>
+  <tr><td>Video 数据</td><td>多源视频（小时级长视频 + 细粒度时空感知），含轮廓级分割任务（像素级感知）</td><td>时序理解 + 像素级感知</td></tr>
+</table>
+
+<h4>视觉 token 比例消融实验（完整结论）</h4>
+<div class="tech-card purple">
+  <p>论文在固定总 token 预算下，对三种视觉比例（<strong>10%:90%、20%:80%、50%:50%</strong>）进行系统消融，并控制视觉数据引入时机：</p>
+  <ul>
+    <li><strong>晚期融合（50%:50%，在 80% 训练进度时引入视觉）：</strong>文本性能出现"骤降-缓慢恢复"（dip-and-recover）模式，视觉任务也最差。原因：模态域迁移冲击已稳定的语言表示空间，强制模型临时牺牲文本能力换取跨模态对齐</li>
+    <li><strong>中期融合（20%:80%，在 50% 训练进度时引入视觉）：</strong>文本性能下降较小，视觉性能居中，但仍有轻微 dip</li>
+    <li><strong>早期融合（10%:90%，从训练起始即引入视觉）：</strong>文本性能曲线全程平稳，视觉性能最优；模型从一开始就协同优化两种模态，形成统一的多模态表示，梯度景观更平滑</li>
+  </ul>
+  <p><strong>最终选择 10% 早期融合</strong>：在固定 token 预算下，视觉数据越少反而越好——早期融合带来的表示统一收益远超数据量增加的收益。这一反直觉结论促使 K2.5 采用"适度视觉比例 + 全程早期融合"的原生多模态预训练策略。</p>
+</div>
+<div id="chart-k25-ablation" class="echarts-container" style="height:360px"></div>
+<script>
+echarts.init(document.getElementById('chart-k25-ablation')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  legend:{data:['视觉知识','视觉推理','OCR','文本知识','文本推理','代码'],textStyle:{color:'#cdd6f4'},top:8},
+  grid:{left:80,right:20,bottom:60,top:56},
+  title:{text:'视觉比例消融：早期融合 10% 全面领先（Table 1）',textStyle:{color:'#cdd6f4',fontSize:13}},
+  xAxis:{type:'category',data:['晚期融合 50%:50%','中期融合 20%:80%','早期融合 10%:90%'],axisLabel:{color:'#cdd6f4'}},
+  yAxis:{type:'value',min:20,axisLabel:{color:'#cdd6f4'}},
+  series:[
+    {name:'视觉知识',type:'bar',data:[24.2,25.0,25.8],itemStyle:{color:'#89b4fa'}},
+    {name:'视觉推理',type:'bar',data:[39.0,40.7,43.8],itemStyle:{color:'#a6e3a1'}},
+    {name:'OCR',type:'bar',data:[61.5,64.1,65.7],itemStyle:{color:'#cba6f7'}},
+    {name:'文本知识',type:'bar',data:[43.1,43.9,45.5],itemStyle:{color:'#fab387'}},
+    {name:'文本推理',type:'bar',data:[57.8,58.6,58.5],itemStyle:{color:'#f9e2af'}},
+    {name:'代码',type:'bar',data:[24.0,24.0,24.8],itemStyle:{color:'#f38ba8'}}
+  ]
+});
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">数据来自论文 Table 1，固定总 token 预算下，早期融合 10% 视觉在视觉推理（+4.8）和 OCR（+4.2）上优势最显著</p>
+
+<h3 id="s7-3">7.3 Zero-Vision SFT（反直觉发现）</h3>
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">传统做法：视觉 SFT</div>
+    <p>在 SFT 阶段使用大量视觉-语言对话数据，直接教模型如何处理图像。</p>
+    <p>问题：视觉 SFT 数据质量参差不齐，容易引入幻觉，且难以覆盖所有视觉任务类型。</p>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">K2.5 做法：Zero-Vision SFT</div>
+    <p>SFT 阶段完全使用纯文本数据，不包含任何视觉样本。视觉能力通过预训练中的早期融合已经植入模型权重。</p>
+    <p>所有图像操作（读取、分析、变换）均通过 <strong>IPython 代码代理</strong>执行——模型生成 Python 代码来处理图像，而非直接"看"图像。</p>
+  </div>
+</div>
+<div class="tech-card purple">
+  <p><strong>反直觉发现：</strong>Zero-Vision SFT 在视觉基准上的表现与传统视觉 SFT 相当甚至更好，同时完全避免了视觉 SFT 数据带来的幻觉问题，且纯文本推理能力得到更好保留。</p>
+</div>
+
+<h4>IPython 工具调用格式示例</h4>
+<p>Zero-Vision SFT 的核心是用代码代理所有图像操作。以下是论文中描述的典型视觉任务处理方式：</p>
+<pre><code class="language-python"># 示例：通过 IPython 工具执行视觉推理任务
+# 任务：估算图像中目标物体的大小（像素级操作）
+
+import numpy as np
+from PIL import Image
+
+# 读取图像（模型通过工具调用获取图像数据）
+img = Image.open("input.png").convert("L")  # 转灰度
+arr = np.array(img)
+
+# 二值化：区分目标与背景
+threshold = 128
+binary = (arr &lt; threshold).astype(np.uint8)
+
+# 计数：估算目标区域像素数（用于大小估算）
+object_pixels = binary.sum()
+total_pixels = binary.size
+ratio = object_pixels / total_pixels
+
+print(f"目标占比: {ratio:.3f}")
+print(f"估算目标大小: {object_pixels} 像素")
+</code></pre>
+<p>通过这种方式，模型可以执行：<strong>目标大小估算（二值化+计数）、目标定位（bounding box 提取）、计数任务（连通域分析）、OCR（调用 pytesseract 等库）</strong>等视觉任务，而无需在 SFT 数据中包含任何图像-文本对。</p>
+
+<h4>Zero-Vision SFT 的理论解释</h4>
+<div class="tech-card blue">
+  <p>为何纯文本 SFT 能激活视觉能力？论文给出的解释：</p>
+  <ol>
+    <li><strong>预训练已建立强视觉-文本对齐：</strong>Stage 2 的 15T token 联合预训练（10% 视觉）使模型权重中已经编码了丰富的视觉语义，视觉能力以"潜在"形式存在于模型中</li>
+    <li><strong>IPython 工具调用是通用视觉推理的泛化：</strong>纯文本 SFT 中的代码执行轨迹（IPython 工具调用）为模型提供了处理任意视觉任务的通用框架，避免了传统视觉 SFT 数据多样性不足的问题</li>
+    <li><strong>视觉 SFT 反而有害：</strong>论文初步实验表明，在此阶段加入人工设计的视觉轨迹（chain-of-thought）会损害泛化性，可能因为这些数据限制了视觉推理到简单图表和基础工具操作（裁剪/旋转/翻转），而 Zero-Vision SFT + RL 可以学到更多样的视觉推理策略</li>
+    <li><strong>RL 阶段激活剩余视觉能力：</strong>Zero-Vision SFT 作为 RL 的冷启动，视觉 RL 的训练曲线（Figure 2）显示从此起点出发，视觉基准随 RL FLOPs 持续提升，证明 Zero-Vision SFT 已足够激活视觉推理的基础能力</li>
+  </ol>
+</div>
+
+<h3 id="s7-4">7.4 视觉 RL 双向增强</h3>
+<p>K2.5 的一个关键发现：<strong>视觉 RL 训练不仅提升视觉基准，还能同步提升纯文本基准</strong>，表明视觉推理与文本推理共享深层认知能力。</p>
+<table>
+  <tr><th>纯文本基准</th><th>视觉 RL 前</th><th>视觉 RL 后</th><th>提升</th></tr>
+  <tr><td>MMLU-Pro</td><td>基线</td><td>+1.7pp</td><td><strong>+1.7pp</strong></td></tr>
+  <tr><td>GPQA-Diamond</td><td>基线</td><td>+2.1pp</td><td><strong>+2.1pp</strong></td></tr>
+  <tr><td>LongBench v2</td><td>基线</td><td>+2.2pp</td><td><strong>+2.2pp</strong></td></tr>
+</table>
+<div class="tech-card green">
+  <p><strong>K2.5 联合多模态 RL 分组策略：</strong>按<strong>能力</strong>（而非模态）划分训练组。例如，"推理"组同时包含纯文本推理题和视觉推理题，"代码"组同时包含文本代码任务和视觉代码截图任务，使模型在跨模态场景下学习统一的推理模式，避免模态割裂。</p>
+</div>
+
+<h4>联合多模态 RL 详细机制</h4>
+<table>
+  <tr><th>维度</th><th>设计细节</th></tr>
+  <tr><td>能力分组原则</td><td>按<strong>能力类型</strong>（知识/推理/代码/Agentic）而非输入模态（文本/视觉）划分，每组同时包含纯文本和多模态查询</td></tr>
+  <tr><td>奖励模型（GRM）</td><td>Generative Reward Model 同样跨模态优化，对纯文本轨迹和多模态轨迹统一评分，无模态壁垒</td></tr>
+  <tr><td>视觉任务奖励</td><td>视觉 Grounding/点定位任务使用 <strong>F1-based soft matching</strong> 奖励（而非精确匹配），提供细粒度梯度信号</td></tr>
+  <tr><td>跨模态迁移机制</td><td>视觉 RL 提升文本任务（MMLU-Pro +1.7，GPQA +2.1，LongBench v2 +2.2）；分析认为视觉 RL 增强了结构化信息提取的校准能力，减少了类视觉推理查询（计数、OCR 类）的不确定性</td></tr>
+  <tr><td>RL 基础算法</td><td>基于 Token-Level Clipping 的策略优化（见 7.10 节），使用 MuonClip 优化器</td></tr>
+</table>
+
+<h4>视觉 RL 训练曲线（Figure 2 描述）</h4>
+<div class="tech-card blue">
+  <p>从 Zero-Vision SFT checkpoint 出发，视觉 RL 训练曲线显示：</p>
+  <ul>
+    <li><strong>MMMU-Pro</strong>：随 RL FLOPs 从 ~0.71 持续提升至 ~0.76</li>
+    <li><strong>MathVision</strong>：从 ~0.68 提升至 ~0.78</li>
+    <li><strong>CharXiv（RQ）</strong>：从 ~0.62 提升至 ~0.78</li>
+    <li><strong>OCRBench</strong>：从 ~0.78 提升至 ~0.92</li>
+    <li>所有视觉基准均随 RL FLOPs 单调提升，证明 Zero-Vision SFT 激活 + 长时 RL 是获取鲁棒视觉能力的充分路径</li>
+  </ul>
+</div>
+
+<h3 id="s7-5">7.5 MoonViT-3D 视觉编码器</h3>
+<pre class="mermaid">
+graph TD
+  MV3D["MoonViT-3D\n图像/视频完全共享权重"] --> IMG["图像处理分支"]
+  MV3D --> VID["视频处理分支"]
+
+  IMG --> IMG1["NaViT Patch Packing\n任意分辨率支持"]
+  IMG --> IMG2["SigLIP-SO-400M 初始化\n强大的视觉-语言对齐"]
+  IMG --> IMG3["2D RoPE 位置编码\n行列坐标独立编码"]
+
+  VID --> VID1["连续帧分组\n每 4 帧为一组"]
+  VID --> VID2["时空体积打包\n3D patch 统一处理"]
+  VID --> VID3["4× 时间压缩\n降低视频 token 数量"]
+</pre>
+
+<h3 id="s7-6">7.6 Agent Swarm 架构</h3>
+<div class="tech-card yellow">
+  <h4>现有单 Agent 瓶颈</h4>
+  <p>传统单 Agent 架构中，任务步骤必须串行执行，总延迟随任务步骤数线性增长：$T_\text{total} = \sum_{t=1}^{N} t_\text{step}$。对于需要 50+ 步的复杂 Agent 任务，延迟不可接受。</p>
+  <h4>设计哲学：Orchestrator 可训练 + Sub-Agents 冻结</h4>
+  <p>Sub-Agents 使用冻结的 K2.5 基础模型，无需额外训练；仅 Orchestrator 通过 PARL 进行强化学习，学习<strong>何时并行、如何分配子任务</strong>。这大幅降低训练成本，且 Sub-Agents 可随时替换为更强的模型。</p>
+</div>
+<pre class="mermaid">
+graph TD
+  U["用户任务"] --> O["Orchestrator\n（可训练，PARL RL）\n任务分解与并行调度"]
+  O --> SA1["Sub-Agent 1\n（冻结）\n子任务 A"]
+  O --> SA2["Sub-Agent 2\n（冻结）\n子任务 B"]
+  O --> SA3["Sub-Agent 3\n（冻结）\n子任务 C"]
+  SA1 --> AGG["结果聚合\n冲突检测 + 合并"]
+  SA2 --> AGG
+  SA3 --> AGG
+  AGG --> O
+  O --> R["最终结果"]
+</pre>
+
+<h3 id="s7-7">7.7 PARL 奖励函数与训练数据构建</h3>
+<div class="tech-card blue">
+  <p>PARL（Parallel Agent Reinforcement Learning）的奖励函数平衡并行效率与任务完成质量：</p>
+  <div class="formula-box">$$r_\mathrm{PARL}(x,y) = \lambda_1 \cdot r_\mathrm{parallel} + \lambda_2 \cdot r_\mathrm{finish} + r_\mathrm{perf}(x,y)$$</div>
+  <p>其中：</p>
+  <ul>
+    <li>$r_\mathrm{parallel}$：<strong>实例化奖励（instantiation reward）</strong>，激励 Orchestrator 创建 Sub-Agent 并行执行，缓解"串行坍塌"（serial collapse）—— Orchestrator 退化为单 Agent 串行执行的局部最优</li>
+    <li>$r_\mathrm{finish}$：<strong>子 Agent 完成率奖励</strong>，激励分配的子任务被成功完成，防止"虚假并行"（spurious parallelism）—— Orchestrator 大量创建 Sub-Agent 但子任务未完成的奖励黑客行为</li>
+    <li>$r_\mathrm{perf}(x,y)$：性能奖励，基于最终答案正确性与质量（rule-based 验证 + GRM 评估）</li>
+    <li>$\lambda_1, \lambda_2$：训练过程中<strong>退火至零</strong>，使模型最终专注于任务性能而非形式上的并行化；两个辅助奖励仅在训练初期引导探索</li>
+  </ul>
+</div>
+
+<h4>Agent Swarm 训练数据构建</h4>
+<div class="tech-card yellow">
+  <p>为诱导 Orchestrator 学习并行化策略，构建了专门的合成 prompt 套件：</p>
+  <ul>
+    <li><strong>Wide Search 类 prompt：</strong>要求同时探索多个独立信息源（如：同时调研 10 个竞争对手的产品特性），单 Agent 串行执行无法在步骤预算内完成</li>
+    <li><strong>Deep Search 类 prompt：</strong>要求多个推理分支并行展开，最后汇聚（如：多角度分析一个复杂政策问题的影响）</li>
+    <li><strong>真实工作负载类 prompt：</strong>长文档分析（100+ 文档）、大规模文件下载、100K+ 字长文写作等极端规模任务</li>
+    <li><strong>关键设计原则：</strong>prompt 不显式指示模型并行化，而是通过任务结构使并行策略自然涌现（让环境反馈决定是否并行）</li>
+  </ul>
+</div>
+
+<h4>PARL 训练架构细节</h4>
+<table>
+  <tr><th>组件</th><th>设计细节</th></tr>
+  <tr><td>Orchestrator</td><td>可训练，通过 PARL 进行 RL 优化，学习任务分解与并行调度策略</td></tr>
+  <tr><td>Sub-Agents</td><td>使用<strong>固定的中间策略 checkpoint</strong>（frozen），不参与训练；其输出作为环境观测</td></tr>
+  <tr><td>解耦设计原因</td><td>避免信用分配歧义（正确答案不代表所有 Sub-Agent 都正确）和训练不稳定；冻结 Sub-Agent 将高层协调逻辑与低层执行能力解耦</td></tr>
+  <tr><td>效率优化</td><td>先用小型 Sub-Agent 训练 Orchestrator，再切换到大型模型；支持动态调整 Sub-Agent 与 Orchestrator 的推理实例比例</td></tr>
+  <tr><td>并发规模</td><td>RL 框架支持 <strong>100,000 个并发 Agent 任务</strong>（异步协程），每个任务可递归触发子任务</td></tr>
+</table>
+
+<h4>Agent Swarm 评估配置（步骤限制）</h4>
+<table>
+  <tr><th>基准</th><th>Orchestrator 步骤上限</th><th>每个 Sub-Agent 步骤上限</th></tr>
+  <tr><td>BrowseComp</td><td><strong>15 步</strong></td><td><strong>100 步</strong>（最多 100 次工具调用）</td></tr>
+  <tr><td>WideSearch</td><td><strong>100 步</strong></td><td><strong>100 步</strong></td></tr>
+  <tr><td>In-house Swarm Bench</td><td><strong>100 步</strong></td><td><strong>50 步</strong></td></tr>
+</table>
+
+<h4>Agent Swarm 延迟节省数据</h4>
+<p>在 WideSearch 基准上，以 Item-F1 为目标性能，Agent Swarm 相比单 Agent 的执行时间节省：</p>
+<div id="chart-k25-swarm-latency" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-k25-swarm-latency')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  legend:{data:['单 Agent 执行时间（倍数）','Agent Swarm 执行时间（倍数）'],textStyle:{color:'#cdd6f4'},top:8},
+  grid:{left:80,right:20,bottom:60,top:56},
+  title:{text:'WideSearch：达到目标 Item-F1 所需执行时间（相对基线）',textStyle:{color:'#cdd6f4',fontSize:13}},
+  xAxis:{type:'category',data:['30%','40%','50%','60%','70%'],axisLabel:{color:'#cdd6f4'},name:'目标 Item-F1'},
+  yAxis:{type:'value',axisLabel:{color:'#cdd6f4'},name:'执行时间倍数'},
+  series:[
+    {name:'单 Agent 执行时间（倍数）',type:'line',data:[1.8,2.5,3.5,5.0,7.0],itemStyle:{color:'#f38ba8'},lineStyle:{width:2}},
+    {name:'Agent Swarm 执行时间（倍数）',type:'line',data:[0.6,0.8,1.0,1.2,1.6],itemStyle:{color:'#a6e3a1'},lineStyle:{width:2}}
+  ]
+});
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">数据来自论文 Figure 8，Agent Swarm 在目标 F1=70% 时节省约 <strong>4.5×</strong> 执行时间；单 Agent 执行时间随难度指数增长，Agent Swarm 近似线性</p>
+
+<h3 id="s7-8">7.8 Critical Steps 度量</h3>
+<div class="tech-card green">
+  <p>为防止 Orchestrator 盲目增加并发（并行但无效），引入 Critical Steps 度量：</p>
+  <div class="formula-box">$$\text{CriticalSteps} = \sum_{t=1}^{T}\!\left(S_\mathrm{main}^{(t)} + \max_i S_\mathrm{sub,i}^{(t)}\right)$$</div>
+  <p>其中 $S_\mathrm{main}^{(t)}$ 为第 $t$ 步 Orchestrator 的步骤数，$\max_i S_\mathrm{sub,i}^{(t)}$ 为最长子 Agent 的步骤数（关键路径）。</p>
+  <p><strong>直觉：</strong>该度量等价于关键路径长度，激励 Orchestrator 均衡分配子任务（使各 Sub-Agent 工作量相近），而非将所有任务堆给少数 Sub-Agent。</p>
+</div>
+
+<h3 id="s7-9">7.9 Token 效率 RL：Toggle 策略</h3>
+<div class="tech-card purple">
+  <p>Toggle 策略通过交替训练相位，同时优化推理质量和 token 效率。论文中给出的精确公式：</p>
+  <div class="formula-box">
+    $$\tilde{r}(x,y) = \begin{cases} r(x,y) \cdot \mathbb{I}\!\left[\frac{1}{K}\sum_{i=1}^{K} r(x,y_i) \lt \lambda \;\text{ 或 }\; |y_i| \leq \text{budget}(x)\right] &amp; \text{若 } \lfloor t/m \rfloor \bmod 2 = 0 \text{（Phase 0）} \\ r(x,y) &amp; \text{若 } \lfloor t/m \rfloor \bmod 2 = 1 \text{（Phase 1）} \end{cases}$$
+  </div>
+  <p>其中各参数含义：</p>
+  <ul>
+    <li>$m$：<strong>交替周期</strong>，每 $m$ 步切换一次 Phase 0/1</li>
+    <li>$\lambda$：<strong>准确率阈值</strong>，判断"可解但冗长"的标准——当该问题的平均准确率 $\bar{r}(x) = \frac{1}{K}\sum r(x,y_i) \geq \lambda$ 时，说明模型已能解决该问题，此时才施加预算约束（防止过早牺牲质量换效率）</li>
+    <li>$\text{budget}(x)$：<strong>问题相关预算</strong>，从训练初始估算，等于正确回答中 token 长度的第 $\rho$ 百分位数：$\text{budget}(x) = \text{Percentile}(\{|y_j| \mid r(x,y_i)=1\},\, \rho)$</li>
+    <li>$K$：每个问题的 rollout 数量</li>
+    <li>Phase 0 的约束是<strong>条件性</strong>的：仅当模型已能解决该问题（$\bar{r} \geq \lambda$）且当前回答超出预算时才惩罚，避免对困难问题过早施压</li>
+  </ul>
+</div>
+
+<h4>Toggle 效果数据</h4>
+<div class="tech-card green">
+  <p>在 K2 Thinking 模型上验证 Toggle 效果（Figure 5）：</p>
+  <ul>
+    <li><strong>平均 token 减少 25%～30%</strong>，几乎对所有基准均有效</li>
+    <li>性能影响<strong>可忽略不计</strong>（negligible impact on performance）</li>
+    <li>CoT 中冗余模式（重复验证、机械计算）显著减少</li>
+    <li><strong>强域外泛化：</strong>仅在数学和编程任务上训练，GPQA 和 MMLU-Pro 上也获得一致的 token 减少，仅有轻微性能下降</li>
+  </ul>
+  <p>Toggle 解决了之前 Budget Control 策略的"长度过拟合"问题（length-overfitting）：刚性预算约束会使模型在更高计算规模下无法有效利用额外 token，Toggle 的交替相位保留了模型的深度推理能力。</p>
+</div>
+
+<h4>Token 效率对比（Table 5）</h4>
+<table>
+  <tr><th>基准</th><th>Kimi K2.5（K）</th><th>Kimi K2 Thinking（K）</th><th>Gemini 3.0 Pro（K）</th><th>DeepSeek-V3.2（K）</th></tr>
+  <tr><td>AIME 2025</td><td><strong>25k</strong></td><td>30k</td><td>15k</td><td>16k</td></tr>
+  <tr><td>HMMT Feb 2025</td><td><strong>27k</strong></td><td>35k</td><td>16k</td><td>19k</td></tr>
+  <tr><td>IMO-AnswerBench</td><td><strong>36k</strong></td><td>37k</td><td>18k</td><td>27k</td></tr>
+  <tr><td>LiveCodeBench</td><td><strong>18k</strong></td><td>25k</td><td>13k</td><td>16k</td></tr>
+  <tr><td>GPQA Diamond</td><td><strong>14k</strong></td><td>13k</td><td>8k</td><td>7k</td></tr>
+  <tr><td>HLE-Text</td><td><strong>24k</strong></td><td>29k</td><td>13k</td><td>21k</td></tr>
+</table>
+<p style="color:#6c7086;font-size:.85em">K2.5 在保持最高或接近最高准确率的同时，相比 K2 Thinking 平均减少约 <strong>20%</strong> 的输出 token</p>
+
+<h3 id="s7-10">7.10 K2.5 RL 算法更新</h3>
+<div class="tech-card yellow">
+  <h4>完整 RL 目标函数（论文 Equation 1）</h4>
+  <p>K2.5 的策略优化目标函数为：</p>
+  <div class="formula-box">
+    $$\mathcal{L}_\mathrm{RL}(\theta) = \mathbb{E}_{x \sim \mathcal{D}}\left[\frac{1}{N}\sum_{j=1}^{K}\sum_{i=1}^{|y_j|} \mathrm{Clip}\!\left(\frac{\pi_\theta(y_j^i | x, y_j^{0:i})}{\pi_\mathrm{old}(y_j^i | x, y_j^{0:i})}, \alpha, \beta\right)\!\left(r(x,y_j) - \bar{r}(x)\right) - \tau\!\left(\log\frac{\pi_\theta(y_j^i | x, y_j^{0:i})}{\pi_\mathrm{old}(y_j^i | x, y_j^{0:i})}\right)^2\right]$$
+  </div>
+  <p>各符号含义：</p>
+  <ul>
+    <li>$K$：每个问题的 rollout 数量；$N = \sum_{j=1}^{K}|y_j|$ 为 batch 中总生成 token 数</li>
+    <li>$\bar{r}(x) = \frac{1}{K}\sum_{j=1}^{K} r(x,y_j)$：该问题所有 rollout 的平均奖励（用于 advantage 计算）</li>
+    <li>$\mathrm{Clip}(\cdot, \alpha, \beta)$：Token-Level Clipping，将 log-ratio 区间外的 token 梯度置零（$\alpha, \beta &gt; 0$ 为裁剪边界）</li>
+    <li>$\tau &gt; 0$：正则化系数，对应 $(\log\text{-ratio})^2$ 惩罚项，限制离线偏移</li>
+    <li>与标准 PPO 的区别：本方法严格基于 log-ratio 界定离线偏移，<strong>不论 advantage 符号如何</strong>均裁剪，比 PPO 的条件裁剪更稳健</li>
+  </ul>
+  <h4>Token-Level Clipping（相比 K2 的改进）</h4>
+  <p>K2 使用在线镜像下降，以序列级别控制策略更新幅度。K2.5 引入 <strong>Token-Level Clipping</strong>：</p>
+  <ul>
+    <li>基于每个 token 的 log-ratio（当前策略 vs 参考策略的对数概率比）进行裁剪</li>
+    <li>区间 $[\alpha, \beta]$ 外的 token 梯度直接<strong>置零</strong>（而非缩放），作为简单的梯度掩码方案</li>
+    <li>相比序列级裁剪，对单个异常 token 的控制更精细，避免少数 token 主导整个序列的更新方向</li>
+    <li>论文指出此机制对于需要长时多步工具调用推理的复杂任务<strong>至关重要</strong>（essential）</li>
+  </ul>
+</div>
+
+<h3 id="s7-11">7.11 DEP（解耦编码器处理）工程实现</h3>
+<div class="tech-card blue">
+  <p>多模态训练的主要效率瓶颈在于视觉编码器的前向传播与主干模型的反向传播耦合。DEP 利用视觉编码器在计算图中的特殊位置（<strong>前向传播的起点、反向传播的终点</strong>）将两者解耦：</p>
+</div>
+
+<h4>DEP 三阶段详细流程</h4>
+<table>
+  <tr><th>阶段</th><th>详细操作</th><th>工程设计要点</th></tr>
+  <tr>
+    <td><strong>阶段一：均衡视觉前向</strong><br>（Balanced Vision Forward）</td>
+    <td>对全局 batch 中所有视觉数据执行前向传播。视觉编码器在所有 GPU 上复制（与其他并行策略无关）。按负载指标（图像数/patch 数）均匀分配计算，消除流水线并行（PP）带来的负载不均。<strong>丢弃所有中间激活值</strong>，仅保留最终输出激活。结果汇聚至 PP Stage-0。</td>
+    <td>视觉编码器小，复制开销可接受；丢弃中间激活以最小化峰值显存</td>
+  </tr>
+  <tr>
+    <td><strong>阶段二：主干训练</strong><br>（Backbone Training）</td>
+    <td>使用阶段一缓存的视觉特征，执行主 transformer 主干的前向+反向传播。由于中间激活已在阶段一丢弃，可直接复用纯文本训练中验证过的任意高效并行策略（PP+EP+ZeRO-1）。反向传播结束后，梯度累积在视觉编码器输出处。</td>
+    <td>完全继承纯文本训练的并行优化，无需为视觉模态重新调优</td>
+  </tr>
+  <tr>
+    <td><strong>阶段三：视觉重计算反向</strong><br>（Vision Recomputation &amp; Backward）</td>
+    <td>重新计算视觉编码器的前向传播（recompute），然后执行反向传播，计算视觉编码器参数的梯度。</td>
+    <td>重计算代价小（视觉编码器相对 LLM 小得多）；按需计算，避免长期占用显存</td>
+  </tr>
+</table>
+
+<h4>训练基础设施配置</h4>
+<div class="tech-card green">
+  <p>K2.5 在 <strong>NVIDIA H800 GPU 集群</strong>上训练，配置如下：</p>
+  <ul>
+    <li>节点间互联：<strong>8 × 400 Gbps RoCE</strong></li>
+    <li>并行策略：<strong>16-way Pipeline Parallelism（PP，virtual stages）</strong> + <strong>16-way Expert Parallelism（EP）</strong> + <strong>ZeRO-1 Data Parallelism</strong></li>
+    <li>支持节点数：任意 <strong>32 的倍数</strong></li>
+    <li>EP all-to-all 通信：与计算<strong>重叠</strong>（interleaved 1F1B 调度）</li>
+    <li>显存优化：对 LayerNorm、SwiGLU、MLA up-projections 进行<strong>选择性重计算</strong>；不敏感激活值压缩为 FP8-E4M3；其余激活值 CPU offload（流式传输）</li>
+  </ul>
+</div>
+
+<h4>DEP 效率量化</h4>
+<table>
+  <tr><th>指标</th><th>数值</th></tr>
+  <tr><td>多模态训练效率（相对纯文本）</td><td><strong>90%</strong></td></tr>
+  <tr><td>负载均衡</td><td>消除 PP 和视觉 token 数量引起的负载不均</td></tr>
+  <tr><td>优化策略复用</td><td>完全继承纯文本训练的并行策略，无需为视觉模态重新调优</td></tr>
+  <tr><td>优化器解耦</td><td>视觉编码器和主干可使用不同优化策略（DEP 解耦了两者的优化）</td></tr>
+</table>
+<p><strong>效果：</strong>多模态训练效率 = 纯文本训练效率的 <strong>90%</strong>，几乎消除了引入视觉模态带来的训练开销。论文指出 LongCat-Flash-Omni 有类似设计思路（concurrent work）。</p>
+
+<h3 id="s7-12">7.12 K2.5 主要实验结果</h3>
+<div id="chart-k25-aime" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-k25-aime')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  grid:{left:80,right:30,bottom:60,top:40},
+  title:{text:'AIME 2025 得分对比',textStyle:{color:'#cdd6f4',fontSize:13}},
+  xAxis:{type:'category',data:['Claude Opus 4.5','Gemini 3 Pro','Kimi K2.5','GPT-5.2'],axisLabel:{color:'#cdd6f4'}},
+  yAxis:{type:'value',min:85,max:105,axisLabel:{color:'#cdd6f4'}},
+  series:[{
+    type:'bar',
+    data:[
+      {value:92.8,itemStyle:{color:'#cba6f7'}},
+      {value:95.0,itemStyle:{color:'#89b4fa'}},
+      {value:96.1,itemStyle:{color:'#a6e3a1'}},
+      {value:100,itemStyle:{color:'#f9e2af'}}
+    ],
+    label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}'}
+  }]
+});
+</script>
+
+<p><strong>综合基准对比（来自论文 Table 4，真实数据）：</strong></p>
+<table>
+  <tr><th>基准</th><th>类别</th><th>Kimi K2.5</th><th>GPT-5.2 (xhigh)</th><th>Gemini 3 Pro</th><th>Claude Opus 4.5</th></tr>
+  <tr><td>AIME 2025</td><td>推理</td><td><strong>96.1</strong></td><td>100</td><td>95.0</td><td>92.8</td></tr>
+  <tr><td>HMMT 2025 (Feb)</td><td>推理</td><td><strong>95.4</strong></td><td>99.4</td><td>97.3</td><td>92.9</td></tr>
+  <tr><td>GPQA-Diamond</td><td>推理</td><td><strong>87.6</strong></td><td>92.4</td><td>91.9</td><td>87.0</td></tr>
+  <tr><td>HLE-Full (w/ tools)</td><td>推理</td><td><strong>50.2</strong></td><td>45.5</td><td>45.8</td><td>43.2</td></tr>
+  <tr><td>SWE-Bench Verified</td><td>代码</td><td><strong>76.8</strong></td><td>80.0</td><td>76.2</td><td>80.9</td></tr>
+  <tr><td>LiveCodeBench (v6)</td><td>代码</td><td><strong>85.0</strong></td><td>—</td><td>87.4</td><td>82.2</td></tr>
+  <tr><td>BrowseComp</td><td>Agentic</td><td><strong>60.6</strong></td><td>65.8</td><td>37.8</td><td>37.0</td></tr>
+  <tr><td>MMMU-Pro</td><td>视觉推理</td><td><strong>78.5</strong></td><td>79.5</td><td>81.0</td><td>74.0</td></tr>
+  <tr><td>MathVision</td><td>视觉推理</td><td><strong>84.2</strong></td><td>83.0</td><td>86.1</td><td>77.1</td></tr>
+  <tr><td>OCRBench</td><td>OCR/文档</td><td><strong>92.3</strong></td><td>80.7</td><td>90.3</td><td>86.5</td></tr>
+  <tr><td>InfoVQA (test)</td><td>文档理解</td><td><strong>92.6</strong></td><td>84.0</td><td>57.2</td><td>76.9</td></tr>
+  <tr><td>LVBench</td><td>长视频</td><td><strong>75.9</strong></td><td>—</td><td>73.5</td><td>57.3</td></tr>
+  <tr><td>OSWorld-Verified</td><td>计算机使用</td><td><strong>63.3</strong></td><td>8.6</td><td>20.7</td><td>66.3</td></tr>
+</table>
+
+<p><strong>Agent Swarm 收益（来自论文 Table 6）：</strong></p>
+<table>
+  <tr><th>基准</th><th>Kimi K2.5 单 Agent</th><th>Agent Swarm（K2.5）</th><th>Claude Opus 4.5</th><th>GPT-5.2 Pro</th></tr>
+  <tr><td>BrowseComp</td><td>60.6</td><td><strong>78.4</strong></td><td>37.0</td><td>77.9</td></tr>
+  <tr><td>WideSearch（Item-F1）</td><td>72.7</td><td><strong>79.0</strong></td><td>76.2</td><td>—</td></tr>
+  <tr><td>In-house Swarm Bench</td><td>41.6</td><td><strong>58.3</strong></td><td>45.8</td><td>—</td></tr>
+</table>
+<p style="color:#6c7086;font-size:.85em">Agent Swarm 在 BrowseComp 上提升 <strong>+17.8pp</strong>，超越 GPT-5.2 Pro（77.9%）；In-house Swarm Bench 提升 <strong>+16.7pp</strong></p>
+
+<!-- ==================== 第八章（原第六章重命名） ==================== -->
+<h2 id="s8">八、三代模型横向对比</h2>
+
+<h3 id="s8-new1">8.0 RL 算法演进</h3>
+<pre class="mermaid">
+flowchart LR
+  R1["k1.5\n在线策略镜像下降\n序列级 KL 约束\n128K 上下文 RL"] --> R2["K2\n继承镜像下降\n+ PTX Loss 防遗忘\n+ Budget Control\n+ Self-Critique Reward\n参数更新 &lt;30s"] --> R3["K2.5\nToken-Level Clipping\n区间外梯度置零\n+ Toggle 策略\n交替预算/自由相位\n+ PARL 并行奖励"]
+</pre>
+
+<h3 id="s8-new2">8.0b 三代模型核心贡献矩阵</h3>
+<table>
+  <tr><th>维度</th><th>Kimi k1.5</th><th>Kimi K2</th><th>Kimi K2.5</th></tr>
+  <tr><td>核心突破</td><td>RLVR + 长上下文 RL</td><td>1T MoE + Agentic RL</td><td>视觉 Agentic + Agent Swarm</td></tr>
+  <tr><td>架构</td><td>Dense Transformer</td><td>MoE 1.04T/32B，384专家</td><td>MoE + MoonViT-3D</td></tr>
+  <tr><td>优化器</td><td>AdamW</td><td><strong>MuonClip</strong></td><td>MuonClip + Token-Level Clip</td></tr>
+  <tr><td>上下文</td><td>128K</td><td>128K</td><td>262K</td></tr>
+  <tr><td>RL 算法</td><td>在线镜像下降</td><td>镜像下降 + PTX/Budget</td><td>Token-Level Clip + Toggle + PARL</td></tr>
+  <tr><td>Agent 能力</td><td>基础工具调用</td><td>MCP 工具，Agentic RL</td><td>Agent Swarm，延迟-3x~4.5x</td></tr>
+  <tr><td>视觉</td><td>无</td><td>无</td><td>MoonViT-3D，Zero-Vision SFT</td></tr>
+  <tr><td>代表基准</td><td>AIME 77.5</td><td>SWE-bench 65.8%</td><td>AIME 2025 96.1</td></tr>
+</table>
+
+<h3 id="s8-new3">8.0c Agent 能力三层次模型</h3>
+<pre class="mermaid">
+flowchart TD
+  L1["第一层：推理 Agent\n（k1.5）\n长 CoT 推理\n数学/代码问题求解\n单轮深度思考"] --> L2["第二层：工具 Agent\n（K2）\n MCP 工具调用\n多步 Agentic 任务\n代码执行 + 文件操作"]
+  L2 --> L3["第三层：并行 Agent Swarm\n（K2.5）\nOrchestrator 编排\n多 Sub-Agent 并行\n延迟降低 3x~4.5x"]
+</pre>
+
+<h3 id="s8-1">8.1 推理基准（k1.5）</h3>
+<table>
+  <tr><th>模型</th><th>AIME 2024</th><th>MATH 500</th><th>Codeforces %</th></tr>
+  <tr><td>OpenAI o1</td><td>74.4</td><td>96.4</td><td>~94</td></tr>
+  <tr><td><strong>Kimi k1.5 Long-CoT</strong></td><td><strong>77.5</strong></td><td><strong>96.2</strong></td><td><strong>94</strong></td></tr>
+  <tr><td>DeepSeek-R1</td><td>79.8</td><td>97.3</td><td>96</td></tr>
+  <tr><td><strong>k1.5 Short-CoT</strong></td><td><strong>60.8</strong></td><td>94.6</td><td>—</td></tr>
+  <tr><td>GPT-4o</td><td>9.3</td><td>76.6</td><td>—</td></tr>
+</table>
+
+<h3 id="s8-2">8.2 智能体与编程（K2）</h3>
+<table>
+  <tr><th>模型</th><th>SWE-Bench Verified</th><th>LiveCodeBench v6</th></tr>
+  <tr><td><strong>Kimi K2-Instruct</strong></td><td><strong>65.8%</strong></td><td><strong>53.7%</strong></td></tr>
+  <tr><td>GPT-4.1</td><td>54.6%</td><td>44.7%</td></tr>
+  <tr><td>DeepSeek-V3</td><td>~49%</td><td>46.3%</td></tr>
+</table>
+
+<h3 id="s8-terms">8.3 术语索引</h3>
+<table>
+  <tr><th>术语</th><th>全称/含义</th><th>首次出现</th></tr>
+  <tr><td><code>Long-CoT</code></td><td>Long Chain-of-Thought，长思维链推理，允许模型在给出答案前进行数千 token 的中间推理</td><td>k1.5</td></tr>
+  <tr><td><code>Partial Rollout</code></td><td>部分轨迹重用，RL 训练时复用前序轨迹内容，仅对新生成部分采样，使 128K 上下文 RL 成为可能</td><td>k1.5</td></tr>
+  <tr><td><code>MuonClip</code></td><td>Muon 优化器 + QK-Clip，Newton-Schulz 正交化梯度 + 注意力 logit 裁剪，解决 1T MoE 训练不稳定</td><td>K2</td></tr>
+  <tr><td><code>PTX Loss</code></td><td>Pretrain-Text-Mix Loss，RL 训练中混入预训练文本语言模型损失，防止灾难性遗忘</td><td>K2</td></tr>
+  <tr><td><code>Budget Control</code></td><td>按任务类型动态设定最大 token 推理预算，防止简单任务过度思考</td><td>K2</td></tr>
+  <tr><td><code>Zero-Vision SFT</code></td><td>SFT 阶段不使用任何视觉数据，视觉能力完全由预训练早期融合植入，图像操作通过 IPython 代码代理执行</td><td>K2.5</td></tr>
+  <tr><td><code>Toggle</code></td><td>Token 效率 RL 策略，交替预算约束相位（Phase 0）和自由推理相位（Phase 1），每 m 步切换</td><td>K2.5</td></tr>
+  <tr><td><code>PARL</code></td><td>Parallel Agent Reinforcement Learning，通过并行化奖励 + 完成奖励 + 性能奖励训练 Orchestrator 的并行调度策略</td><td>K2.5</td></tr>
+  <tr><td><code>DEP</code></td><td>Decoupled Encoder Processing，解耦视觉编码器前向与主干反向，使多模态训练效率达纯文本的 90%</td><td>K2.5</td></tr>
+  <tr><td><code>Critical Steps</code></td><td>关键路径步骤数度量，激励 Orchestrator 均衡分配子任务而非盲目增加并发</td><td>K2.5</td></tr>
+  <tr><td><code>Token-Level Clipping</code></td><td>基于每个 token 的 log-ratio 进行裁剪，区间外梯度置零，比序列级裁剪更精细</td><td>K2.5</td></tr>
+  <tr><td><code>Agent Swarm</code></td><td>Orchestrator（可训练）+ 多个冻结 Sub-Agents 的并行编排架构，将复杂任务延迟降低 3x~4.5x</td><td>K2.5</td></tr>
+  <tr><td><code>MoonViT-3D</code></td><td>图像/视频共享权重的视觉编码器，图像用 NaViT Patch Packing，视频用 4× 时间压缩的时空体积打包</td><td>K2.5</td></tr>
+</table>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告基于 Kimi k1.5 (arXiv:2501.12599)、Kimi K2 (arXiv:2507.20534)、Kimi-VL (arXiv:2504.07491)、Kimi K2.5 技术报告等整理。生成日期：2026-05-13。</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);
+});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{
+  const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+  if(l)l.classList.toggle('active',e.isIntersecting);
+}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

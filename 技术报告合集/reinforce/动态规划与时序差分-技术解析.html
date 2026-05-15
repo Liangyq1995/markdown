@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>动态规划与时序差分 - 技术解析</title>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --surface: #24243a;
+    --surface2: #2a2a42;
+    --border: #383860;
+    --accent: #89b4fa;
+    --accent2: #cba6f7;
+    --accent3: #a6e3a1;
+    --accent4: #f38ba8;
+    --accent5: #fab387;
+    --accent6: #f9e2af;
+    --text: #cdd6f4;
+    --text-muted: #7f849c;
+    --text-sub: #a6adc8;
+    --sidebar-w: 280px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-size: 15px;
+    line-height: 1.8;
+    display: flex;
+  }
+
+  /* ===== SIDEBAR ===== */
+  #sidebar {
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    height: 100vh;
+    position: fixed;
+    top: 0; left: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    z-index: 100;
+    padding: 0 0 40px 0;
+  }
+
+  #sidebar .logo {
+    padding: 22px 20px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    text-transform: uppercase;
+  }
+
+  #sidebar nav { padding: 12px 0; }
+
+  #sidebar a {
+    display: block;
+    padding: 6px 20px;
+    color: var(--text-sub);
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+  }
+
+  #sidebar a:hover, #sidebar a.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(137,180,250,0.06);
+  }
+
+  #sidebar a.section-title {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 14px 20px 4px;
+    pointer-events: none;
+    border-left: none;
+    background: none;
+  }
+
+  #sidebar a.h2 { padding-left: 20px; font-weight: 600; color: var(--text); }
+  #sidebar a.h3 { padding-left: 32px; font-size: 12.5px; }
+
+  /* ===== MAIN ===== */
+  #main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    padding: 40px 52px 80px;
+    max-width: 960px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h2 {
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: var(--accent2);
+    margin: 48px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    scroll-margin-top: 24px;
+  }
+
+  h2 .chap-num {
+    display: inline-block;
+    background: var(--accent2);
+    color: var(--bg);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 32px 0 14px;
+    scroll-margin-top: 24px;
+  }
+
+  h3::before {
+    content: '§';
+    color: var(--accent2);
+    margin-right: 8px;
+    font-weight: 400;
+  }
+
+  h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--accent5);
+    margin: 22px 0 10px;
+  }
+
+  p { margin-bottom: 14px; }
+
+  ul, ol { margin: 10px 0 14px 24px; }
+  li { margin-bottom: 6px; }
+
+  strong { color: var(--accent6); }
+  em { color: var(--accent3); font-style: normal; font-weight: 600; }
+
+  /* ===== TECH CARD ===== */
+  .tech-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 20px 0;
+    position: relative;
+  }
+
+  .tech-card .card-label {
+    position: absolute;
+    top: -10px;
+    left: 16px;
+    background: var(--accent);
+    color: var(--bg);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .tech-card.warning .card-label { background: var(--accent4); }
+  .tech-card.success .card-label { background: var(--accent3); }
+  .tech-card.purple .card-label { background: var(--accent2); }
+  .tech-card.orange .card-label { background: var(--accent5); }
+  .tech-card.yellow .card-label { background: var(--accent6); }
+
+  /* ===== FORMULA BLOCK ===== */
+  .formula-block {
+    background: #12121f;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+
+  .formula-block.key { border-left-color: var(--accent2); }
+  .formula-block.green { border-left-color: var(--accent3); }
+  .formula-block.red { border-left-color: var(--accent4); }
+
+  /* ===== STEP DERIVATION ===== */
+  .steps {
+    counter-reset: step-counter;
+    margin: 16px 0;
+  }
+
+  .step {
+    counter-increment: step-counter;
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+  }
+
+  .step::before {
+    content: counter(step-counter);
+    min-width: 28px;
+    height: 28px;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .step-body { flex: 1; }
+
+  .step-body .step-title {
+    font-weight: 700;
+    color: var(--accent6);
+    margin-bottom: 4px;
+  }
+
+  /* ===== TABLE ===== */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 13.5px;
+  }
+
+  .data-table th {
+    background: var(--surface2);
+    color: var(--accent);
+    padding: 10px 14px;
+    text-align: left;
+    border: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .data-table td {
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    color: var(--text-sub);
+    vertical-align: top;
+  }
+
+  .data-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+  .data-table tr:hover td { background: rgba(137,180,250,0.05); }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .tag-blue { background: rgba(137,180,250,0.15); color: var(--accent); }
+  .tag-purple { background: rgba(203,166,247,0.15); color: var(--accent2); }
+  .tag-green { background: rgba(166,227,161,0.15); color: var(--accent3); }
+  .tag-red { background: rgba(243,139,168,0.15); color: var(--accent4); }
+  .tag-orange { background: rgba(250,179,135,0.15); color: var(--accent5); }
+
+  /* ===== CODE BLOCK ===== */
+  pre.algo {
+    background: #0d0d1a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 22px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--text-sub);
+    overflow-x: auto;
+    line-height: 1.7;
+    margin: 16px 0;
+  }
+
+  pre.algo .kw { color: var(--accent2); font-weight: 700; }
+  pre.algo .fn { color: var(--accent); }
+  pre.algo .cm { color: var(--text-muted); font-style: italic; }
+  pre.algo .num { color: var(--accent6); }
+  pre.algo .var { color: var(--accent3); }
+  pre.algo .op { color: var(--accent4); }
+
+  /* ===== MERMAID ===== */
+  pre.mermaid {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+  }
+
+  /* ===== DIVIDER ===== */
+  .section-divider {
+    border: none;
+    border-top: 1px dashed var(--border);
+    margin: 36px 0;
+  }
+
+  /* ===== HIGHLIGHT BOX ===== */
+  .highlight-box {
+    background: rgba(137,180,250,0.07);
+    border: 1px solid rgba(137,180,250,0.2);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 14px 0;
+  }
+
+  .highlight-box.purple {
+    background: rgba(203,166,247,0.07);
+    border-color: rgba(203,166,247,0.2);
+  }
+
+  .highlight-box.green {
+    background: rgba(166,227,161,0.07);
+    border-color: rgba(166,227,161,0.2);
+  }
+
+  .highlight-box.red {
+    background: rgba(243,139,168,0.07);
+    border-color: rgba(243,139,168,0.2);
+  }
+
+  /* ===== SCROLLBAR ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+  /* ===== BADGE ===== */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 2px 4px 2px 0;
+  }
+
+  .badge-blue { background: rgba(137,180,250,0.15); color: var(--accent); border: 1px solid rgba(137,180,250,0.3); }
+  .badge-purple { background: rgba(203,166,247,0.15); color: var(--accent2); border: 1px solid rgba(203,166,247,0.3); }
+  .badge-green { background: rgba(166,227,161,0.15); color: var(--accent3); border: 1px solid rgba(166,227,161,0.3); }
+  .badge-red { background: rgba(243,139,168,0.15); color: var(--accent4); border: 1px solid rgba(243,139,168,0.3); }
+  .badge-orange { background: rgba(250,179,135,0.15); color: var(--accent5); border: 1px solid rgba(250,179,135,0.3); }
+
+  /* ===== PROOF BLOCK ===== */
+  .proof-block {
+    background: #12121f;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 16px 0;
+  }
+
+  .proof-block .proof-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent2);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .proof-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 4px;
+  }
+
+  .proof-line .reason {
+    min-width: 160px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-style: italic;
+    padding-top: 3px;
+  }
+
+  @media (max-width: none) {
+    #sidebar { display: none; }
+    #main { margin-left: 0; padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside id="sidebar">
+  <div class="logo">RL 技术解析</div>
+  <nav>
+    <a href="#symbols" class="h2">符号总表</a>
+
+    <a class="section-title">第4章 动态规划</a>
+    <a href="#ch4" class="h2">4 动态规划算法</a>
+    <a href="#s4-1" class="h3">4.1 策略评估</a>
+    <a href="#s4-2" class="h3">4.2 策略提升</a>
+    <a href="#s4-3" class="h3">4.3 策略迭代</a>
+    <a href="#s4-4" class="h3">4.4 价值迭代</a>
+    <a href="#s4-5" class="h3">4.5 DP 的局限</a>
+
+    <a class="section-title">第5章 时序差分</a>
+    <a href="#ch5" class="h2">5 时序差分算法</a>
+    <a href="#s5-1" class="h3">5.1 TD 基本思想</a>
+    <a href="#s5-2" class="h3">5.2 Sarsa</a>
+    <a href="#s5-3" class="h3">5.3 Q-learning</a>
+    <a href="#s5-4" class="h3">5.4 多步 TD</a>
+
+    <a class="section-title">第6章 Dyna-Q</a>
+    <a href="#ch6" class="h2">6 Dyna-Q 算法</a>
+    <a href="#s6-1" class="h3">6.1 模型 vs 无模型</a>
+    <a href="#s6-2" class="h3">6.2 Dyna-Q 框架</a>
+    <a href="#s6-3" class="h3">6.3 收敛速度对比</a>
+
+    <a class="section-title">总结</a>
+    <a href="#summary" class="h2">小结与对比</a>
+  </nav>
+</aside>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main id="main">
+
+<h1>动态规划与时序差分</h1>
+<div class="subtitle">
+  强化学习核心算法技术解析 &nbsp;·&nbsp; 覆盖 DP / TD / Dyna-Q 三章完整推导
+  &nbsp;·&nbsp; <span class="badge badge-blue">MathJax 公式</span>
+  <span class="badge badge-purple">Mermaid 图</span>
+  <span class="badge badge-green">ECharts 可视化</span>
+</div>
+
+<!-- ============================================================ -->
+<!-- SYMBOLS -->
+<!-- ============================================================ -->
+<h2 id="symbols"><span class="chap-num">SYM</span>符号总表</h2>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>符号</th>
+      <th>含义</th>
+      <th>典型取值范围</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>\(s, s'\)</td><td>当前状态、下一状态</td><td>\(\mathcal{S}\)</td></tr>
+    <tr><td>\(a\)</td><td>动作</td><td>\(\mathcal{A}\)</td></tr>
+    <tr><td>\(\pi(a|s)\)</td><td>随机策略，在状态 \(s\) 下选择动作 \(a\) 的概率</td><td>\([0,1]\)，对 \(a\) 求和为 1</td></tr>
+    <tr><td>\(\pi(s)\)</td><td>确定性策略</td><td>\(\mathcal{A}\)</td></tr>
+    <tr><td>\(V^\pi(s)\)</td><td>策略 \(\pi\) 下状态 \(s\) 的状态价值函数</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(V^*(s)\)</td><td>最优状态价值函数</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(Q^\pi(s,a)\)</td><td>策略 \(\pi\) 下的动作价值函数</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(Q^*(s,a)\)</td><td>最优动作价值函数</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(r, r_{t+1}\)</td><td>即时奖励</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(R(s,a)\)</td><td>期望奖励函数 \(\mathbb{E}[r|s,a]\)</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(P(s'|s,a)\)</td><td>状态转移概率</td><td>\([0,1]\)</td></tr>
+    <tr><td>\(\gamma\)</td><td>折扣因子</td><td>\([0,1)\)</td></tr>
+    <tr><td>\(\alpha\)</td><td>学习率（步长）</td><td>\((0,1]\)</td></tr>
+    <tr><td>\(\varepsilon\)</td><td>\(\varepsilon\)-贪婪策略中的探索概率</td><td>\((0,1)\)</td></tr>
+    <tr><td>\(\delta_t\)</td><td>TD 误差（Temporal Difference Error）</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(G_t\)</td><td>从时刻 \(t\) 开始的累积回报</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(G_t^{(n)}\)</td><td>\(n\) 步回报</td><td>\(\mathbb{R}\)</td></tr>
+    <tr><td>\(n_\text{planning}\)</td><td>Dyna-Q 每步规划次数</td><td>\(\mathbb{Z}^+\)</td></tr>
+    <tr><td>\(\|\cdot\|_\infty\)</td><td>上确界范数（\(\infty\)-范数）</td><td>—</td></tr>
+    <tr><td>\(T^\pi, T^*\)</td><td>贝尔曼策略算子、贝尔曼最优算子</td><td>—</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<!-- CHAPTER 4 -->
+<!-- ============================================================ -->
+<h2 id="ch4"><span class="chap-num">Ch.4</span>动态规划算法</h2>
+
+<div class="tech-card">
+  <span class="card-label">前提假设</span>
+  <p>动态规划（Dynamic Programming, DP）要求<strong>完整的环境模型</strong>：转移概率 \(P(s'|s,a)\) 和奖励函数 \(R(s,a)\) 已知。DP 利用贝尔曼方程的递推结构，将复杂的全局优化问题分解为局部子问题。</p>
+</div>
+
+<!-- 4.1 -->
+<h3 id="s4-1">4.1 策略评估（Policy Evaluation）</h3>
+
+<p><strong>目标：</strong>给定固定策略 \(\pi\)，计算其对应的状态价值函数 \(V^\pi\)。</p>
+
+<div class="highlight-box">
+  <strong>贝尔曼期望方程（精确形式）</strong>
+  <div class="formula-block key">
+    $$V^\pi(s) = \sum_a \pi(a|s)\left[R(s,a) + \gamma \sum_{s'} P(s'|s,a)\, V^\pi(s')\right], \quad \forall s \in \mathcal{S}$$
+  </div>
+  这是关于 \(V^\pi\) 的线性方程组，理论上可直接求解，但实践中用迭代法。
+</div>
+
+<h4>迭代贝尔曼更新</h4>
+
+<div class="formula-block">
+  $$V_{k+1}(s) = \sum_a \pi(a|s)\left[R(s,a) + \gamma \sum_{s'} P(s'|s,a)\, V_k(s')\right]$$
+</div>
+
+<p>定义<strong>贝尔曼策略算子</strong> \(T^\pi\)：</p>
+
+<div class="formula-block">
+  $$(T^\pi V)(s) \triangleq \sum_a \pi(a|s)\left[R(s,a) + \gamma \sum_{s'} P(s'|s,a)\, V(s')\right]$$
+</div>
+
+<div class="tech-card purple">
+  <span class="card-label">收敛性 — 压缩映射定理</span>
+  <p>在 \(\infty\)-范数下，\(T^\pi\) 是压缩系数为 \(\gamma\) 的压缩映射：</p>
+  <div class="formula-block">
+    $$\|T^\pi V - T^\pi U\|_\infty \leq \gamma \|V - U\|_\infty$$
+  </div>
+  <p>由 Banach 不动点定理，迭代序列 \(V_k = (T^\pi)^k V_0\) 以几何速率收敛到唯一不动点 \(V^\pi\)，收敛误差满足：</p>
+  <div class="formula-block">
+    $$\|V_k - V^\pi\|_\infty \leq \frac{\gamma^k}{1-\gamma}\|V_1 - V_0\|_\infty$$
+  </div>
+</div>
+
+<h4>算法伪代码</h4>
+
+<pre class="algo"><span class="cm">// 策略评估算法（迭代法）</span>
+<span class="kw">Algorithm</span> <span class="fn">PolicyEvaluation</span>(π, P, R, γ, θ):
+  <span class="cm">// 初始化价值函数</span>
+  <span class="kw">for all</span> <span class="var">s</span> ∈ S: <span class="var">V</span>[<span class="var">s</span>] ← <span class="num">0</span>
+
+  <span class="kw">repeat</span>:
+    Δ ← <span class="num">0</span>
+    <span class="kw">for all</span> <span class="var">s</span> ∈ S:
+      <span class="var">v</span> ← <span class="var">V</span>[<span class="var">s</span>]
+      <span class="cm">// 贝尔曼期望更新</span>
+      <span class="var">V</span>[<span class="var">s</span>] ← Σ_a π(<span class="var">a</span>|<span class="var">s</span>) · [R(<span class="var">s</span>,<span class="var">a</span>) + γ · Σ_{s'} P(<span class="var">s'</span>|<span class="var">s</span>,<span class="var">a</span>) · <span class="var">V</span>[<span class="var">s'</span>]]
+      Δ ← max(Δ, |<span class="var">v</span> - <span class="var">V</span>[<span class="var">s</span>]|)
+  <span class="kw">until</span> Δ < θ        <span class="cm">// θ 为收敛阈值（如 1e-6）</span>
+
+  <span class="kw">return</span> <span class="var">V</span></pre>
+
+<!-- 4.2 -->
+<h3 id="s4-2">4.2 策略提升（Policy Improvement）</h3>
+
+<div class="tech-card success">
+  <span class="card-label">策略提升定理</span>
+  <p>设 \(\pi'\) 满足：对所有 \(s \in \mathcal{S}\)，</p>
+  <div class="formula-block green">
+    $$Q^\pi(s, \pi'(s)) \geq V^\pi(s)$$
+  </div>
+  <p>则 \(\pi'\) 是对 \(\pi\) 的一次提升，即 \(V^{\pi'}(s) \geq V^\pi(s)\) 对所有 \(s\) 成立。</p>
+</div>
+
+<h4>贪婪策略提升</h4>
+
+<div class="formula-block key">
+  $$\pi'(s) = \arg\max_a Q^\pi(s,a) = \arg\max_a \left[R(s,a) + \gamma \sum_{s'} P(s'|s,a)\, V^\pi(s')\right]$$
+</div>
+
+<h4>完整证明推导</h4>
+
+<div class="proof-block">
+  <div class="proof-title">定理证明：策略提升定理</div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">起点：利用假设条件</div>
+        <div class="formula-block">
+          $$V^\pi(s) \leq Q^\pi(s, \pi'(s)) = \mathbb{E}_{\pi'}\!\left[r_{t+1} + \gamma V^\pi(s_{t+1}) \,\Big|\, s_t = s\right]$$
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">再次展开 \(V^\pi(s_{t+1})\)</div>
+        <div class="formula-block">
+          $$\leq \mathbb{E}_{\pi'}\!\left[r_{t+1} + \gamma Q^\pi(s_{t+1}, \pi'(s_{t+1})) \,\Big|\, s_t = s\right]$$
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">继续展开 \(Q^\pi(s_{t+1}, \pi'(s_{t+1}))\)</div>
+        <div class="formula-block">
+          $$\leq \mathbb{E}_{\pi'}\!\left[r_{t+1} + \gamma r_{t+2} + \gamma^2 Q^\pi(s_{t+2}, \pi'(s_{t+2})) \,\Big|\, s_t = s\right]$$
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">无限展开取极限（\(\gamma < 1\) 保证收敛）</div>
+        <div class="formula-block">
+          $$\leq \mathbb{E}_{\pi'}\!\left[\sum_{k=0}^{\infty} \gamma^k r_{t+k+1} \,\Big|\, s_t = s\right] = V^{\pi'}(s) \qquad \blacksquare$$
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4.3 -->
+<h3 id="s4-3">4.3 策略迭代（Policy Iteration）</h3>
+
+<p>策略迭代交替执行<em>策略评估</em>和<em>策略提升</em>，直至策略不再改变。</p>
+
+<pre class="mermaid">
+flowchart LR
+    A([初始化\n随机策略 π₀]) --> B
+    B["策略评估\nV^π ← PolicyEval(π)"] --> C
+    C["策略提升\nπ' ← Greedy(V^π)"] --> D{π' = π ?}
+    D -- 否 --> E[π ← π'] --> B
+    D -- 是 --> F(["输出最优策略 π*\n最优价值 V*"])
+
+    style A fill:#24243a,stroke:#89b4fa,color:#cdd6f4
+    style B fill:#24243a,stroke:#cba6f7,color:#cdd6f4
+    style C fill:#24243a,stroke:#a6e3a1,color:#cdd6f4
+    style D fill:#24243a,stroke:#f9e2af,color:#cdd6f4
+    style E fill:#24243a,stroke:#fab387,color:#cdd6f4
+    style F fill:#24243a,stroke:#89b4fa,color:#cdd6f4
+</pre>
+
+<div class="tech-card">
+  <span class="card-label">收敛保证</span>
+  <p>有限 MDP 中，策略数量有限（至多 \(|\mathcal{A}|^{|\mathcal{S}|}\) 个），且每次迭代策略严格改善（或不变），因此策略迭代<strong>必然在有限步内收敛</strong>到最优策略 \(\pi^*\)。</p>
+</div>
+
+<!-- 4.4 -->
+<h3 id="s4-4">4.4 价值迭代（Value Iteration）</h3>
+
+<p>价值迭代将策略提升嵌入价值更新，直接用<strong>贝尔曼最优方程</strong>迭代，无需显式维护策略。</p>
+
+<div class="formula-block key">
+  $$V_{k+1}(s) = \max_a \left[R(s,a) + \gamma \sum_{s'} P(s'|s,a)\, V_k(s')\right] = (T^* V_k)(s)$$
+</div>
+
+<p>其中<strong>贝尔曼最优算子</strong> \(T^*\) 定义为：</p>
+
+<div class="formula-block">
+  $$(T^* V)(s) \triangleq \max_a \left[R(s,a) + \gamma \sum_{s'} P(s'|s,a)\, V(s')\right]$$
+</div>
+
+<div class="tech-card purple">
+  <span class="card-label">收敛性证明 — ∞-范数压缩</span>
+  <div class="steps">
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">证明 \(T^*\) 是 \(\gamma\)-压缩</div>
+        <div class="formula-block">
+          $$|(T^*V)(s) - (T^*U)(s)| = \left|\max_a [\cdots V\cdots] - \max_a [\cdots U\cdots]\right| \leq \gamma \max_{s'} |V(s') - U(s')|$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">取上确界得到范数不等式</div>
+        <div class="formula-block">
+          $$\|T^*V - T^*U\|_\infty \leq \gamma \|V - U\|_\infty$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">Banach 不动点定理给出收敛速率</div>
+        <div class="formula-block">
+          $$\|V_k - V^*\|_\infty \leq \frac{\gamma^k}{1-\gamma}\|V_1 - V_0\|_\infty \xrightarrow{k\to\infty} 0$$
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h4>策略迭代 vs 价值迭代 对比</h4>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>策略迭代（PI）</th>
+      <th>价值迭代（VI）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>每轮操作</td>
+      <td>完整策略评估（多次扫描）+ 一次提升</td>
+      <td>单次贝尔曼最优更新</td>
+    </tr>
+    <tr>
+      <td>内层循环</td>
+      <td>需要内层收敛（策略评估）</td>
+      <td>无内层循环</td>
+    </tr>
+    <tr>
+      <td>迭代轮数</td>
+      <td>较少（策略数有限）</td>
+      <td>较多（但每轮代价低）</td>
+    </tr>
+    <tr>
+      <td>实现复杂度</td>
+      <td>较高</td>
+      <td>较低</td>
+    </tr>
+    <tr>
+      <td>适用场景</td>
+      <td>状态空间较小，精确策略重要</td>
+      <td>大状态空间，近似最优即可</td>
+    </tr>
+    <tr>
+      <td>收敛到</td>
+      <td>\(\pi^*\)（有限步精确）</td>
+      <td>\(V^*\)（渐近收敛）</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- 4.5 -->
+<h3 id="s4-5">4.5 动态规划的局限</h3>
+
+<div class="tech-card warning">
+  <span class="card-label">核心局限</span>
+  <ul>
+    <li><strong>需要完整环境模型：</strong>转移概率 \(P(s'|s,a)\) 和奖励 \(R(s,a)\) 必须已知，现实中往往无法获得。</li>
+    <li><strong>维度灾难（Curse of Dimensionality）：</strong>状态空间 \(|\mathcal{S}|\) 指数增长时，存储 \(V\) 和计算贝尔曼更新的代价爆炸式增长。</li>
+    <li><strong>同步扫描代价高：</strong>标准 DP 每轮需扫描全部状态，对大规模问题不可行。</li>
+    <li><strong>引出无模型方法：</strong>蒙特卡洛（MC）和时序差分（TD）方法无需环境模型，通过与环境交互直接学习。</li>
+  </ul>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<!-- CHAPTER 5 -->
+<!-- ============================================================ -->
+<h2 id="ch5"><span class="chap-num">Ch.5</span>时序差分算法</h2>
+
+<div class="tech-card">
+  <span class="card-label">核心思想</span>
+  <p>时序差分（Temporal Difference, TD）方法结合了蒙特卡洛的<em>无模型采样</em>和动态规划的<em>自举（bootstrapping）</em>，在每一步交互后立即更新价值估计，无需等待整条轨迹结束。</p>
+</div>
+
+<!-- 5.1 -->
+<h3 id="s5-1">5.1 TD 学习基本思想</h3>
+
+<h4>三种方法的回报对比</h4>
+
+<table class="data-table">
+  <thead>
+    <tr><th>方法</th><th>更新目标</th><th>特点</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="tag tag-blue">动态规划</span></td>
+      <td>\(\sum_a \pi(a|s)\left[R + \gamma \sum_{s'} P\cdot V(s')\right]\)</td>
+      <td>需要模型，无采样</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-purple">蒙特卡洛</span></td>
+      <td>\(G_t = r_{t+1} + \gamma r_{t+2} + \gamma^2 r_{t+3} + \cdots\)</td>
+      <td>无模型，需完整轨迹，无偏但高方差</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-green">TD(0)</span></td>
+      <td>\(r_{t+1} + \gamma V(s_{t+1})\)</td>
+      <td>无模型，单步更新，有偏但低方差</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>TD(0) 更新规则</h4>
+
+<div class="formula-block key">
+  $$V(s_t) \leftarrow V(s_t) + \alpha \underbrace{\left[r_{t+1} + \gamma V(s_{t+1}) - V(s_t)\right]}_{\delta_t \text{（TD 误差）}}$$
+</div>
+
+<div class="highlight-box">
+  <strong>TD 误差</strong>（Temporal Difference Error）：
+  <div class="formula-block">
+    $$\delta_t = r_{t+1} + \gamma V(s_{t+1}) - V(s_t)$$
+  </div>
+  <ul>
+    <li>\(\delta_t > 0\)：实际回报优于预期，上调 \(V(s_t)\)</li>
+    <li>\(\delta_t < 0\)：实际回报劣于预期，下调 \(V(s_t)\)</li>
+    <li>\(\delta_t = 0\)：预测准确，无需更新</li>
+  </ul>
+</div>
+
+<h4>TD 误差与蒙特卡洛回报的关系</h4>
+
+<div class="formula-block">
+  $$G_t - V(s_t) = \sum_{k=0}^{T-t-1} \gamma^k \delta_{t+k}$$
+</div>
+
+<p>蒙特卡洛误差可分解为 TD 误差的加权累积和，揭示了两者的内在联系。</p>
+
+<!-- 5.2 -->
+<h3 id="s5-2">5.2 Sarsa（On-Policy TD 控制）</h3>
+
+<div class="highlight-box purple">
+  <strong>命名来源：</strong>Sarsa 由五元组 \((s_t,\, a_t,\, r_{t+1},\, s_{t+1},\, a_{t+1})\) 的首字母组成，完整描述了一次转移所需的全部信息。
+</div>
+
+<h4>完整更新公式</h4>
+
+<div class="formula-block key">
+  $$Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha \Big[\underbrace{r_{t+1} + \gamma\, Q(s_{t+1}, a_{t+1})}_{\text{TD 目标}} - Q(s_t, a_t)\Big]$$
+</div>
+
+<h4>On-Policy 特性</h4>
+
+<div class="tech-card">
+  <span class="card-label">On-Policy 定义</span>
+  <p><strong>行为策略</strong>（用于与环境交互采集数据）= <strong>目标策略</strong>（被优化的策略）</p>
+  <p>Sarsa 使用 \(\varepsilon\)-贪婪策略同时扮演两个角色：</p>
+  <div class="formula-block">
+    $$\pi(a|s) = \begin{cases} 1 - \varepsilon + \varepsilon/|\mathcal{A}| & \text{若 } a = \arg\max_{a'} Q(s,a') \\ \varepsilon/|\mathcal{A}| & \text{其他} \end{cases}$$
+  </div>
+  <p>因此 Sarsa 学到的是<strong>最优 \(\varepsilon\)-贪婪策略</strong>，而非纯贪婪最优策略。</p>
+</div>
+
+<h4>收敛条件</h4>
+
+<ul>
+  <li>学习率满足 Robbins-Monro 条件：\(\sum_t \alpha_t = \infty\)，\(\sum_t \alpha_t^2 < \infty\)</li>
+  <li>所有 \((s,a)\) 对被无限次访问（探索充分）</li>
+  <li>\(\varepsilon \to 0\) 的速率足够慢</li>
+</ul>
+
+<!-- 5.3 -->
+<h3 id="s5-3">5.3 Q-learning（Off-Policy TD 控制）</h3>
+
+<h4>完整更新公式</h4>
+
+<div class="formula-block key">
+  $$Q(s_t, a_t) \leftarrow Q(s_t, a_t) + \alpha \Big[\underbrace{r_{t+1} + \gamma \max_{a'} Q(s_{t+1}, a')}_{\text{TD 目标（贪婪）}} - Q(s_t, a_t)\Big]$$
+</div>
+
+<h4>Off-Policy 特性</h4>
+
+<div class="tech-card">
+  <span class="card-label">Off-Policy 定义</span>
+  <p><strong>行为策略</strong>（\(\varepsilon\)-贪婪，负责探索）≠ <strong>目标策略</strong>（纯贪婪 \(\pi^* = \arg\max Q\)）</p>
+  <p>Q-learning 直接对<strong>贪婪目标策略</strong>进行优化，与行为策略无关，因此可以用任意探索策略收集数据。</p>
+</div>
+
+<div class="tech-card purple">
+  <span class="card-label">收敛性证明思路</span>
+  <div class="steps">
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">将 Q-learning 写成随机近似（Stochastic Approximation）形式</div>
+        <div class="formula-block">
+          $$Q_{t+1}(s,a) = Q_t(s,a) + \alpha_t(s,a)\left[F(Q_t, s, a) + \varepsilon_t\right]$$
+        </div>
+        <p>其中 \(F(Q,s,a) = R(s,a) + \gamma \sum_{s'} P(s'|s,a)\max_{a'}Q(s',a') - Q(s,a)\)，\(\varepsilon_t\) 为零均值噪声。</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">验证贝尔曼最优算子 \(T^*\) 是 \(\gamma\)-压缩</div>
+        <div class="formula-block">
+          $$\|T^*Q - T^*Q'\|_\infty \leq \gamma\|Q - Q'\|_\infty$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-body">
+        <div class="step-title">应用 Watkins-Dayan 定理（随机近似引理）</div>
+        <p>满足 Robbins-Monro 条件 + 所有 \((s,a)\) 无限次访问 + 奖励有界，则 Q-learning 以概率 1 收敛到 \(Q^*\)。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h4>Q-learning vs Sarsa：悬崖漫步实验</h4>
+
+<div class="tech-card warning">
+  <span class="card-label">经典对比实验</span>
+  <p><strong>悬崖漫步（Cliff Walking）：</strong>网格世界，靠近悬崖边缘奖励为 -100，到达目标奖励为 0，其余步 -1。</p>
+  <table class="data-table" style="margin-top:12px">
+    <thead>
+      <tr><th>算法</th><th>学到的路径</th><th>原因</th><th>在线表现</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="tag tag-green">Sarsa</span></td>
+        <td>保守路径（远离悬崖）</td>
+        <td>On-policy，考虑 \(\varepsilon\)-探索时偶尔会跌落悬崖，因此绕远路</td>
+        <td>在线累积奖励较高</td>
+      </tr>
+      <tr>
+        <td><span class="tag tag-blue">Q-learning</span></td>
+        <td>激进路径（紧贴悬崖）</td>
+        <td>Off-policy，优化贪婪策略（最短路），不考虑探索时的意外</td>
+        <td>在线累积奖励较低</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 5.4 -->
+<h3 id="s5-4">5.4 多步 TD（n-step TD）</h3>
+
+<h4>n 步回报定义</h4>
+
+<div class="formula-block key">
+  $$G_t^{(n)} = r_{t+1} + \gamma r_{t+2} + \gamma^2 r_{t+3} + \cdots + \gamma^{n-1} r_{t+n} + \gamma^n V(s_{t+n})$$
+</div>
+
+<p>对应的 n 步 TD 更新：</p>
+
+<div class="formula-block">
+  $$V(s_t) \leftarrow V(s_t) + \alpha\left[G_t^{(n)} - V(s_t)\right]$$
+</div>
+
+<h4>特殊情形</h4>
+
+<table class="data-table">
+  <thead>
+    <tr><th>n 值</th><th>退化为</th><th>更新目标</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>\(n = 1\)</td>
+      <td>TD(0)</td>
+      <td>\(r_{t+1} + \gamma V(s_{t+1})\)</td>
+    </tr>
+    <tr>
+      <td>\(n = 2\)</td>
+      <td>2-step TD</td>
+      <td>\(r_{t+1} + \gamma r_{t+2} + \gamma^2 V(s_{t+2})\)</td>
+    </tr>
+    <tr>
+      <td>\(n \to \infty\)</td>
+      <td>蒙特卡洛</td>
+      <td>\(G_t = \sum_{k=0}^{\infty} \gamma^k r_{t+k+1}\)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="highlight-box green">
+  <strong>方差-偏差权衡（Bias-Variance Tradeoff）：</strong>
+  <ul>
+    <li><strong>小 n（TD）：</strong>自举强，<em>偏差高</em>（依赖不准确的 \(V\) 估计），<em>方差低</em>（仅用少量随机步骤）</li>
+    <li><strong>大 n（MC）：</strong>自举弱，<em>偏差低</em>（使用真实回报），<em>方差高</em>（累积多步随机奖励）</li>
+    <li><strong>最优 n：</strong>通常在中间值，具体取决于任务特性</li>
+  </ul>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<!-- CHAPTER 6 -->
+<!-- ============================================================ -->
+<h2 id="ch6"><span class="chap-num">Ch.6</span>Dyna-Q 算法</h2>
+
+<div class="tech-card">
+  <span class="card-label">核心动机</span>
+  <p>Dyna-Q 将<strong>无模型学习</strong>与<strong>基于模型的规划</strong>统一在同一框架中：通过真实交互学习环境模型，再用学到的模型生成虚拟经验，从而大幅提升<strong>样本效率</strong>。</p>
+</div>
+
+<!-- 6.1 -->
+<h3 id="s6-1">6.1 基于模型的 RL vs 无模型 RL</h3>
+
+<pre class="mermaid">
+flowchart TB
+    subgraph MB ["基于模型的 RL (Model-Based)"]
+        direction TB
+        E1[与环境交互] --> M1[学习环境模型\nP̂, R̂]
+        M1 --> P1[规划 Planning\n用模型生成虚拟经验]
+        P1 --> Q1[更新策略/价值函数]
+        Q1 --> E1
+    end
+
+    subgraph MF ["无模型 RL (Model-Free)"]
+        direction TB
+        E2[与环境交互] --> Q2[直接更新策略/价值函数\nQ-learning / Sarsa]
+        Q2 --> E2
+    end
+
+    subgraph DQ ["Dyna-Q（两者结合）"]
+        direction TB
+        E3[真实交互] --> U3[Q-learning 直接更新]
+        E3 --> ML3[更新模型]
+        ML3 --> PL3["规划 n_planning 次\n虚拟经验 Q-learning 更新"]
+        U3 --> E3
+        PL3 --> E3
+    end
+
+    style MB fill:#1e1e2e,stroke:#89b4fa,color:#cdd6f4
+    style MF fill:#1e1e2e,stroke:#a6e3a1,color:#cdd6f4
+    style DQ fill:#1e1e2e,stroke:#cba6f7,color:#cdd6f4
+</pre>
+
+<table class="data-table">
+  <thead>
+    <tr><th>维度</th><th>无模型 RL</th><th>基于模型的 RL</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>环境模型</td><td>不需要</td><td>需要（学习或已知）</td></tr>
+    <tr><td>样本效率</td><td>低</td><td>高</td></tr>
+    <tr><td>计算代价</td><td>低</td><td>高（规划步骤）</td></tr>
+    <tr><td>模型误差影响</td><td>无</td><td>有（模型偏差传播）</td></tr>
+    <tr><td>代表算法</td><td>Q-learning, Sarsa</td><td>Dyna-Q, MBPO, World Models</td></tr>
+  </tbody>
+</table>
+
+<!-- 6.2 -->
+<h3 id="s6-2">6.2 Dyna-Q 框架</h3>
+
+<h4>核心组件</h4>
+
+<div class="tech-card">
+  <span class="card-label">模型学习</span>
+  <p>Dyna-Q 使用一个<strong>确定性查找表模型</strong>，存储每个 \((s,a)\) 对最近一次观测到的结果：</p>
+  <div class="formula-block">
+    $$\text{Model}(s, a) \leftarrow (r, s') \quad \text{（每次真实交互后更新）}$$
+  </div>
+  <p>对于随机环境，可扩展为存储 \((r, s')\) 的经验分布。</p>
+</div>
+
+<div class="tech-card success">
+  <span class="card-label">Q-Planning（虚拟经验更新）</span>
+  <p>从已访问过的 \((s,a)\) 中随机采样，用模型生成虚拟转移，执行 Q-learning 更新：</p>
+  <div class="formula-block green">
+    $$\text{采样 }(s, a) \sim \text{已访问集合}$$
+    $$(r, s') \leftarrow \text{Model}(s, a)$$
+    $$Q(s, a) \leftarrow Q(s, a) + \alpha\left[r + \gamma \max_{a'} Q(s', a') - Q(s, a)\right]$$
+  </div>
+</div>
+
+<h4>完整算法流程</h4>
+
+<pre class="algo"><span class="cm">// Dyna-Q 算法</span>
+<span class="kw">Algorithm</span> <span class="fn">DynaQ</span>(α, γ, ε, n_planning):
+  <span class="cm">// 初始化</span>
+  <span class="kw">for all</span> <span class="var">s</span>, <span class="var">a</span>: <span class="var">Q</span>[<span class="var">s</span>,<span class="var">a</span>] ← <span class="num">0</span>
+  Model ← empty dict
+
+  <span class="kw">for each</span> episode:
+    <span class="var">s</span> ← env.reset()
+
+    <span class="kw">for each</span> step:
+      <span class="cm">// (1) 选择动作（ε-贪婪）</span>
+      <span class="var">a</span> ← ε-greedy(<span class="var">Q</span>[<span class="var">s</span>, ·])
+
+      <span class="cm">// (2) 真实交互，获取 (r, s')</span>
+      <span class="var">r</span>, <span class="var">s'</span> ← env.step(<span class="var">a</span>)
+
+      <span class="cm">// (3) 直接 Q-learning 更新（真实数据）</span>
+      <span class="var">Q</span>[<span class="var">s</span>,<span class="var">a</span>] ← <span class="var">Q</span>[<span class="var">s</span>,<span class="var">a</span>] + α · [<span class="var">r</span> + γ · max_a' <span class="var">Q</span>[<span class="var">s'</span>,<span class="var">a'</span>] - <span class="var">Q</span>[<span class="var">s</span>,<span class="var">a</span>]]
+
+      <span class="cm">// (4) 更新环境模型</span>
+      Model[<span class="var">s</span>, <span class="var">a</span>] ← (<span class="var">r</span>, <span class="var">s'</span>)
+
+      <span class="cm">// (5) 规划：用模型生成虚拟经验，重复 n_planning 次</span>
+      <span class="kw">repeat</span> n_planning <span class="kw">times</span>:
+        <span class="var">s_sim</span>, <span class="var">a_sim</span> ← random sample from Model.keys()
+        <span class="var">r_sim</span>, <span class="var">s'_sim</span> ← Model[<span class="var">s_sim</span>, <span class="var">a_sim</span>]
+        <span class="var">Q</span>[<span class="var">s_sim</span>,<span class="var">a_sim</span>] ← <span class="var">Q</span>[<span class="var">s_sim</span>,<span class="var">a_sim</span>] + α · [<span class="var">r_sim</span> + γ · max_a' <span class="var">Q</span>[<span class="var">s'_sim</span>,<span class="var">a'</span>] - <span class="var">Q</span>[<span class="var">s_sim</span>,<span class="var">a_sim</span>]]
+
+      <span class="var">s</span> ← <span class="var">s'</span>
+      <span class="kw">if</span> <span class="var">s</span> is terminal: <span class="kw">break</span></pre>
+
+<div class="tech-card orange">
+  <span class="card-label">n_planning 参数分析</span>
+  <table class="data-table" style="margin-top:10px">
+    <thead>
+      <tr><th>\(n_\text{planning}\)</th><th>每步真实交互后的更新次数</th><th>样本效率</th><th>每步计算量</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>0</td><td>1（退化为纯 Q-learning）</td><td>最低</td><td>最小</td></tr>
+      <tr><td>5</td><td>6（1 真实 + 5 虚拟）</td><td>中等</td><td>中等</td></tr>
+      <tr><td>50</td><td>51</td><td>很高</td><td>较大</td></tr>
+      <tr><td>→ ∞</td><td>趋近于纯规划（DP）</td><td>最高（理论）</td><td>最大</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 6.3 -->
+<h3 id="s6-3">6.3 Dyna-Q vs 纯 Q-learning：收敛速度对比</h3>
+
+<div id="dynaq-chart" style="height:320px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; margin:20px 0;"></div>
+
+<div class="highlight-box">
+  <strong>图表解读：</strong>横轴为真实环境交互步数，纵轴为每幕（episode）的累积奖励（越高越好）。
+  <ul>
+    <li><strong>n_planning=0（纯 Q-learning）：</strong>需要大量真实样本才能收敛</li>
+    <li><strong>n_planning=5：</strong>收敛速度约提升 3-5 倍</li>
+    <li><strong>n_planning=50：</strong>收敛速度大幅提升，接近最优策略所需真实样本极少</li>
+    <li>当模型准确时，\(n_\text{planning}\) 越大越好；当环境非平稳时，过大的 \(n_\text{planning}\) 可能因模型过时而引入偏差</li>
+  </ul>
+</div>
+
+<hr class="section-divider">
+
+<!-- ============================================================ -->
+<!-- SUMMARY -->
+<!-- ============================================================ -->
+<h2 id="summary"><span class="chap-num">总结</span>三章算法综合对比</h2>
+
+<table class="data-table">
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th><span class="tag tag-blue">动态规划 DP</span></th>
+      <th><span class="tag tag-purple">蒙特卡洛 MC</span></th>
+      <th><span class="tag tag-green">时序差分 TD</span></th>
+      <th><span class="tag tag-orange">Dyna-Q</span></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>环境模型需求</strong></td>
+      <td>必须已知 \(P, R\)</td>
+      <td>不需要</td>
+      <td>不需要</td>
+      <td>边学边用</td>
+    </tr>
+    <tr>
+      <td><strong>更新时机</strong></td>
+      <td>全局同步扫描</td>
+      <td>幕结束后</td>
+      <td>每步立即更新</td>
+      <td>每步 + 规划步</td>
+    </tr>
+    <tr>
+      <td><strong>自举（Bootstrap）</strong></td>
+      <td>是（用 \(V\) 估计）</td>
+      <td>否（用真实 \(G_t\)）</td>
+      <td>是（用 \(V\) 估计）</td>
+      <td>是</td>
+    </tr>
+    <tr>
+      <td><strong>偏差</strong></td>
+      <td>无（精确计算）</td>
+      <td>无偏</td>
+      <td>有偏（初期）</td>
+      <td>有偏（模型误差）</td>
+    </tr>
+    <tr>
+      <td><strong>方差</strong></td>
+      <td>无（确定性）</td>
+      <td>高</td>
+      <td>低</td>
+      <td>低</td>
+    </tr>
+    <tr>
+      <td><strong>样本效率</strong></td>
+      <td>N/A（无采样）</td>
+      <td>低</td>
+      <td>中</td>
+      <td>高</td>
+    </tr>
+    <tr>
+      <td><strong>连续任务支持</strong></td>
+      <td>支持</td>
+      <td>不支持（需幕结束）</td>
+      <td>支持</td>
+      <td>支持</td>
+    </tr>
+    <tr>
+      <td><strong>代表更新公式</strong></td>
+      <td>\(V \leftarrow T^\pi V\)</td>
+      <td>\(V(s) \leftarrow V(s) + \alpha[G_t - V(s)]\)</td>
+      <td>\(V(s) \leftarrow V(s) + \alpha\delta_t\)</td>
+      <td>Q-learning + 规划</td>
+    </tr>
+    <tr>
+      <td><strong>收敛目标</strong></td>
+      <td>\(V^\pi\) 或 \(V^*\)（精确）</td>
+      <td>\(V^\pi\)（以概率1）</td>
+      <td>\(V^\pi\) 或 \(Q^*\)（以概率1）</td>
+      <td>\(Q^*\)（模型准确时）</td>
+    </tr>
+    <tr>
+      <td><strong>适用场景</strong></td>
+      <td>小规模，模型已知</td>
+      <td>回合制，需精确回报</td>
+      <td>在线学习，连续任务</td>
+      <td>样本稀缺，模型可学</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="tech-card success">
+  <span class="card-label">核心洞见</span>
+  <ul>
+    <li><strong>DP → MC：</strong>放弃模型假设，转向纯采样，代价是需要完整轨迹和高方差</li>
+    <li><strong>MC → TD：</strong>引入自举，用估计值替代真实回报，换取低方差和在线更新能力</li>
+    <li><strong>TD → Dyna-Q：</strong>引入模型学习和规划，用计算换取样本效率，在数据稀缺场景优势显著</li>
+    <li><strong>统一视角：</strong>多步 TD 在 MC 和 TD(0) 之间插值，\(\lambda\)-回报（TD(\(\lambda\))）则通过资格迹提供更灵活的权衡</li>
+  </ul>
+</div>
+
+</main>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+// Mermaid init
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#24243a',
+    primaryTextColor: '#cdd6f4',
+    primaryBorderColor: '#89b4fa',
+    lineColor: '#7f849c',
+    secondaryColor: '#2a2a42',
+    tertiaryColor: '#1e1e2e',
+    background: '#1e1e2e',
+    mainBkg: '#24243a',
+    nodeBorder: '#89b4fa',
+    clusterBkg: '#1e1e2e',
+    titleColor: '#cdd6f4',
+    edgeLabelBackground: '#24243a',
+    fontFamily: 'Segoe UI, PingFang SC, Microsoft YaHei, sans-serif'
+  }
+});
+
+// ECharts: Dyna-Q convergence comparison
+window.addEventListener('load', function() {
+  var dom = document.getElementById('dynaq-chart');
+  if (!dom) return;
+  var chart = echarts.init(dom, null, { renderer: 'canvas' });
+
+  // Simulate convergence curves
+  function genCurve(nPlan, steps) {
+    var data = [];
+    var val = -200;
+    var target = -15;
+    var speed = 0.008 + nPlan * 0.012;
+    for (var i = 0; i < steps; i++) {
+      val = val + (target - val) * speed + (Math.random() - 0.5) * 18 * Math.exp(-i * speed * 0.5);
+      data.push(Math.round(Math.max(val, -220) * 10) / 10);
+    }
+    return data;
+  }
+
+  var steps = 300;
+  var xData = Array.from({length: steps}, function(_, i) { return i + 1; });
+
+  var option = {
+    backgroundColor: 'transparent',
+    title: {
+      text: 'Dyna-Q 收敛速度对比（不同 n_planning）',
+      left: 'center',
+      top: 12,
+      textStyle: { color: '#cdd6f4', fontSize: 14, fontWeight: 700 }
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#24243a',
+      borderColor: '#383860',
+      textStyle: { color: '#cdd6f4', fontSize: 12 },
+      formatter: function(params) {
+        var s = '步骤 ' + params[0].axisValue + '<br>';
+        params.forEach(function(p) {
+          s += '<span style="color:' + p.color + '">●</span> ' + p.seriesName + ': ' + p.value + '<br>';
+        });
+        return s;
+      }
+    },
+    legend: {
+      top: 42,
+      textStyle: { color: '#a6adc8', fontSize: 12 },
+      itemWidth: 20,
+      data: ['n_planning=0 (纯Q-learning)', 'n_planning=5', 'n_planning=20', 'n_planning=50']
+    },
+    grid: { top: 90, bottom: 50, left: 60, right: 30 },
+    xAxis: {
+      type: 'value',
+      name: '真实交互步数',
+      nameLocation: 'middle',
+      nameGap: 30,
+      nameTextStyle: { color: '#7f849c', fontSize: 12 },
+      min: 1,
+      max: steps,
+      axisLine: { lineStyle: { color: '#383860' } },
+      axisLabel: { color: '#7f849c' },
+      splitLine: { lineStyle: { color: '#2a2a42' } }
+    },
+    yAxis: {
+      type: 'value',
+      name: '每幕累积奖励',
+      nameLocation: 'middle',
+      nameGap: 46,
+      nameTextStyle: { color: '#7f849c', fontSize: 12 },
+      axisLine: { lineStyle: { color: '#383860' } },
+      axisLabel: { color: '#7f849c' },
+      splitLine: { lineStyle: { color: '#2a2a42' } }
+    },
+    series: [
+      {
+        name: 'n_planning=0 (纯Q-learning)',
+        type: 'line',
+        data: xData.map(function(x, i) { return [x, genCurve(0, steps)[i]]; }),
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { color: '#f38ba8', width: 2 },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{offset: 0, color: 'rgba(243,139,168,0.12)'}, {offset: 1, color: 'rgba(243,139,168,0)'}] } }
+      },
+      {
+        name: 'n_planning=5',
+        type: 'line',
+        data: xData.map(function(x, i) { return [x, genCurve(5, steps)[i]]; }),
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { color: '#fab387', width: 2 },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{offset: 0, color: 'rgba(250,179,135,0.12)'}, {offset: 1, color: 'rgba(250,179,135,0)'}] } }
+      },
+      {
+        name: 'n_planning=20',
+        type: 'line',
+        data: xData.map(function(x, i) { return [x, genCurve(20, steps)[i]]; }),
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { color: '#89b4fa', width: 2 },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{offset: 0, color: 'rgba(137,180,250,0.12)'}, {offset: 1, color: 'rgba(137,180,250,0)'}] } }
+      },
+      {
+        name: 'n_planning=50',
+        type: 'line',
+        data: xData.map(function(x, i) { return [x, genCurve(50, steps)[i]]; }),
+        smooth: true,
+        symbol: 'none',
+        lineStyle: { color: '#a6e3a1', width: 2.5 },
+        areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [{offset: 0, color: 'rgba(166,227,161,0.14)'}, {offset: 1, color: 'rgba(166,227,161,0)'}] } }
+      }
+    ]
+  };
+
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+});
+
+// Sidebar active link highlight on scroll
+window.addEventListener('scroll', function() {
+  var sections = document.querySelectorAll('h2[id], h3[id]');
+  var links = document.querySelectorAll('#sidebar a[href^="#"]');
+  var scrollY = window.scrollY + 80;
+
+  var current = '';
+  sections.forEach(function(s) {
+    if (s.offsetTop <= scrollY) current = s.id;
+  });
+
+  links.forEach(function(l) {
+    l.classList.remove('active');
+    if (l.getAttribute('href') === '#' + current) l.classList.add('active');
+  });
+}, { passive: true });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meta学习与迁移 — Lilian Weng 博客精选</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--yellow:#f9e2af;--purple:#cba6f7;--red:#f38ba8;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #toc a:hover{background:var(--border);}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+    #toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+    main{margin-left:240px;max-width:none;padding:40px 64px;}
+    h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+    h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+    h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+    p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+    ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+    th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+    td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+    code{font-family:'JetBrains Mono','Fira Code',monospace;}
+    p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+    .echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+    .tag{display:inline-block;background:#313244;color:var(--purple);border:1px solid var(--border);border-radius:12px;padding:2px 10px;font-size:.8em;margin:0 4px 4px 0;}
+    .info-box{background:#2a2a3e;border:1px solid var(--border);border-left:4px solid var(--heading);border-radius:6px;padding:14px 18px;margin:1em 0;}
+    .warn-box{background:#2a2a3e;border:1px solid var(--border);border-left:4px solid var(--yellow);border-radius:6px;padding:14px 18px;margin:1em 0;}
+    .meta-header{background:#2a2a3e;border-radius:8px;padding:16px 20px;margin-bottom:2em;border:1px solid var(--border);}
+    .meta-header .date{color:var(--yellow);font-size:.85em;}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Meta学习与迁移</h1>
+<p style="color:var(--purple);font-size:.95em;margin-bottom:1.6em;">Lilian Weng 博客精选 · 四篇核心文章深度解读</p>
+
+<div class="meta-header">
+  <div class="date">涵盖文章</div>
+  <ul style="margin:.6em 0 0 1.4em;">
+    <li><a href="https://lilianweng.github.io/posts/2018-11-30-meta-learning/" target="_blank">Meta-Learning: Learning to Learn Fast</a> <span style="color:var(--yellow);font-size:.85em;">2018-11-30</span></li>
+    <li><a href="https://lilianweng.github.io/posts/2019-06-23-meta-rl/" target="_blank">Meta Reinforcement Learning</a> <span style="color:var(--yellow);font-size:.85em;">2019-06-23</span></li>
+    <li><a href="https://lilianweng.github.io/posts/2019-05-05-domain-randomization/" target="_blank">Domain Randomization for Sim2Real Transfer</a> <span style="color:var(--yellow);font-size:.85em;">2019-05-05</span></li>
+    <li><a href="https://lilianweng.github.io/posts/2019-09-05-evolution-strategies/" target="_blank">Evolution Strategies</a> <span style="color:var(--yellow);font-size:.85em;">2019-09-05</span></li>
+  </ul>
+  <div style="margin-top:10px;font-size:.95em;">本报告系统梳理 Meta 学习、元强化学习、Sim-to-Real 迁移与进化策略四大主题，涵盖核心算法原理、关键公式推导、流程图解析及横向对比。</div>
+</div>
+
+<div style="margin-bottom:2em;">
+  <span class="tag">Few-shot Learning</span><span class="tag">MAML</span><span class="tag">Reptile</span>
+  <span class="tag">RL²</span><span class="tag">Domain Randomization</span><span class="tag">Sim2Real</span>
+  <span class="tag">CMA-ES</span><span class="tag">OpenAI ES</span>
+</div>
+
+<!-- ===== PART 1: META LEARNING ===== -->
+<h2>一、Meta-Learning：学会快速学习</h2>
+
+<p>传统机器学习需要大量标注数据才能训练新任务模型；<strong>Meta-Learning（元学习）</strong>的目标是让模型"学会如何学习"——经过在大量任务上训练后，面对只有少量样本的新任务，能够快速适应。</p>
+
+<blockquote><strong>核心直觉：</strong>人类看到三张猫的照片就能识别猫，是因为积累了"学习策略"。Meta-Learning 试图让模型也具备这种能力。</blockquote>
+
+<h3>1.1 问题设定：N-way K-shot</h3>
+
+<p>Meta-Learning 的标准评测范式称为 <strong>N-way K-shot 分类</strong>：</p>
+<ul>
+  <li><strong>Support Set</strong>：每类 $K$ 个样本，共 $N$ 类，用于快速适应</li>
+  <li><strong>Query Set</strong>：待预测样本，用于评估适应效果</li>
+  <li><strong>Episode</strong>：每次训练从任务分布 $p(\mathcal{T})$ 采样一个任务，构成一个 episode</li>
+</ul>
+
+<p>形式化目标：</p>
+$$\theta^* = \arg\max_\theta \mathbb{E}_{\mathcal{T} \sim p(\mathcal{T})} \left[ \mathbb{E}_{(x,y) \sim \mathcal{T}} \left[ \log P_\theta(y \mid x, \mathcal{D}^\text{support}_\mathcal{T}) \right] \right]$$
+
+<div class="mermaid">
+flowchart LR
+    A["任务分布 p(T)"] -->|"采样任务 T_i"| B["Support Set\nN×K 个样本"]
+    B -->|"快速适应"| C["适应后参数 θ'_i"]
+    A -->|"同一任务"| D["Query Set\n评估样本"]
+    C -->|"预测"| E["Loss"]
+    E -->|"外层优化"| F["更新元参数 θ"]
+    F --> A
+</div>
+
+<h3>1.2 三大范式总览</h3>
+
+<table>
+  <thead><tr><th>范式</th><th>核心思想</th><th>代表算法</th><th>优点</th><th>缺点</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Model-based</strong></td><td>用有记忆的模型（LSTM）直接将 support set 编码为内部状态</td><td>MANN、RL²、SNAIL</td><td>灵活，无需显式优化步骤</td><td>泛化依赖模型容量</td></tr>
+    <tr><td><strong>Metric-based</strong></td><td>学习嵌入空间，用相似度度量进行 kNN 分类</td><td>Siamese Net、Prototypical Net、Matching Net</td><td>直觉简洁，推理快速</td><td>依赖嵌入质量</td></tr>
+    <tr><td><strong>Optimization-based</strong></td><td>学习好的参数初始化，少量梯度步即可适应新任务</td><td>MAML、Reptile、Meta-SGD</td><td>通用性强</td><td>二阶梯度开销大</td></tr>
+  </tbody>
+</table>
+
+<h3>1.3 Metric-based：度量学习</h3>
+
+<h4>Siamese Network</h4>
+<p>使用两个共享权重的子网络分别编码两个输入，通过对比损失学习距离度量：</p>
+$$\mathcal{L} = y \cdot d(f(x_1), f(x_2))^2 + (1-y) \cdot \max(0,\, m - d(f(x_1), f(x_2)))^2$$
+<p>其中 $y=1$ 表示同类，$m$ 是间隔超参数，$d$ 通常为欧氏距离。</p>
+
+<h4>Prototypical Networks</h4>
+<p>每类的"原型"是该类所有 support 样本嵌入的均值：</p>
+$$\mathbf{c}_k = \frac{1}{|S_k|} \sum_{(x_i, y_i) \in S_k} f_\phi(x_i)$$
+<p>分类概率通过 softmax over 欧氏距离得到：</p>
+$$P(y=k \mid x) = \frac{\exp\left(-d(f_\phi(x), \mathbf{c}_k)\right)}{\sum_{k'} \exp\left(-d(f_\phi(x), \mathbf{c}_{k'})\right)}$$
+
+<h4>Matching Networks</h4>
+<p>引入注意力机制，用 support set 对 query 进行加权投票：</p>
+$$\hat{y} = \sum_{i=1}^{k} a(x, x_i) \cdot y_i, \quad a(x, x_i) = \frac{\exp(\cos(f(x), g(x_i)))}{\sum_j \exp(\cos(f(x), g(x_j)))}$$
+<p>$f$ 和 $g$ 分别是 query 和 support 的编码器，可用 LSTM 引入 support set 的上下文信息（full context embedding）。</p>
+
+<div class="mermaid">
+flowchart TD
+    subgraph Support["Support Set (N×K)"]
+        S1["类1样本"]
+        S2["类2样本"]
+        SN["类N样本"]
+    end
+    subgraph Encoder["共享编码器 f_φ"]
+        E1["嵌入向量"]
+    end
+    subgraph Proto["Prototypical Net"]
+        P1["原型 c_1"]
+        P2["原型 c_2"]
+        PN["原型 c_N"]
+    end
+    Q["Query x"] -->|"f_φ"| QE["查询嵌入"]
+    Support --> Encoder
+    Encoder --> Proto
+    QE -->|"欧氏距离"| Proto
+    Proto -->|"softmax"| Pred["预测类别"]
+</div>
+
+<table>
+  <thead><tr><th>算法</th><th>相似度函数</th><th>原型表示</th><th>特点</th></tr></thead>
+  <tbody>
+    <tr><td>Siamese Net</td><td>L1/L2距离</td><td>无（成对比较）</td><td>最早的度量学习方法</td></tr>
+    <tr><td>Prototypical Net</td><td>欧氏距离</td><td>类均值</td><td>简单高效，效果好</td></tr>
+    <tr><td>Matching Net</td><td>余弦相似度+注意力</td><td>加权 support</td><td>引入上下文编码</td></tr>
+    <tr><td>Relation Net</td><td>学习的关系模块</td><td>类均值</td><td>相似度函数也被学习</td></tr>
+  </tbody>
+</table>
+
+<h3>1.4 MAML：模型无关元学习</h3>
+
+<p><strong>MAML（Model-Agnostic Meta-Learning）</strong> 由 Finn et al. 2017 提出，核心思想是：找到一组初始化参数 $\theta$，使得对任意新任务 $\mathcal{T}_i$，只需少量梯度步就能达到很好的性能。</p>
+
+<div class="info-box">
+  <strong>为什么 MAML 有效？</strong><br>
+  MAML 并不是找一个"平均好"的参数，而是找一个"容易被快速优化"的参数。这个初始化点位于所有任务最优参数的几何中心附近，每个任务只需沿各自的梯度方向走几步就能到达。
+</div>
+
+<h4>内层循环（Task-level adaptation）</h4>
+<p>对任务 $\mathcal{T}_i$，从 support set 计算损失并更新参数（可执行 $k$ 步）：</p>
+$$\theta'_i = \theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(f_\theta)$$
+
+<h4>外层循环（Meta-level optimization）</h4>
+<p>用适应后的参数在 query set 上评估，并对原始参数 $\theta$ 进行更新：</p>
+$$\theta \leftarrow \theta - \beta \nabla_\theta \sum_{\mathcal{T}_i \sim p(\mathcal{T})} \mathcal{L}_{\mathcal{T}_i}(f_{\theta'_i})$$
+
+<p>展开后可见需要<strong>二阶导数</strong>（Hessian-vector product）：</p>
+$$\nabla_\theta \mathcal{L}_{\mathcal{T}_i}(f_{\theta'_i}) = \nabla_{\theta'_i} \mathcal{L}_{\mathcal{T}_i}(f_{\theta'_i}) \cdot \left(I - \alpha \nabla^2_\theta \mathcal{L}_{\mathcal{T}_i}(f_\theta)\right)$$
+
+<div class="mermaid">
+flowchart TD
+    Init["初始化元参数 θ"] --> Sample["从 p(T) 采样一批任务"]
+    Sample --> Inner["内层循环（每个任务）\nSupport Set 计算梯度\nθ'_i = θ - α∇L_Ti(θ)"]
+    Inner --> Eval["Query Set 计算 L_Ti(θ'_i)"]
+    Eval --> Outer["外层循环\n∑ L_Ti(θ'_i)"]
+    Outer -->|"β·∇_θ∑L_Ti(θ'_i)\n需二阶导数"| Update["更新元参数 θ"]
+    Update --> Sample
+</div>
+
+<h4>MAML 变体对比</h4>
+<table>
+  <thead><tr><th>变体</th><th>改进点</th><th>核心变化</th></tr></thead>
+  <tbody>
+    <tr><td>FOMAML</td><td>忽略二阶导数</td><td>$\theta \leftarrow \theta - \beta \sum_i \nabla_{\theta'_i} \mathcal{L}_{\mathcal{T}_i}$</td></tr>
+    <tr><td>Meta-SGD</td><td>学习率也作为元参数</td><td>$\theta'_i = \theta - \alpha \odot \nabla_\theta \mathcal{L}$（逐参数学习率）</td></tr>
+    <tr><td>MAML++</td><td>多项工程改进</td><td>per-layer 学习率、BN 统计分离、多步 loss</td></tr>
+    <tr><td>CAVIA</td><td>只更新上下文参数</td><td>$\phi'_i = \phi - \alpha \nabla_\phi \mathcal{L}$，主参数 $\theta$ 固定</td></tr>
+  </tbody>
+</table>
+
+<h3>1.5 Reptile：简化版 MAML</h3>
+
+<p><strong>Reptile</strong>（Nichol et al., 2018，OpenAI）是 MAML 的一阶近似，无需二阶导数，实现更简单，计算更高效。</p>
+
+<h4>核心更新规则</h4>
+<p>对每个任务，用 SGD 执行 $k$ 步更新，得到任务最优参数 $W^*_i$，然后将元参数向所有任务最优参数的平均方向移动：</p>
+$$\theta \leftarrow \theta + \epsilon \cdot \frac{1}{n} \sum_{i=1}^{n} (W^*_i - \theta)$$
+
+<h4>理论分析</h4>
+<p>Reptile 的更新方向可以分解为两项：</p>
+$$\text{Reptile 更新} \approx \underbrace{\mathbb{E}_\mathcal{T}[\nabla \mathcal{L}_\mathcal{T}]}_{\text{联合训练项（迁移学习）}} + \underbrace{\text{任务间梯度内积最大化}}_{\text{MAML 核心项}}$$
+
+<p>第二项即 MAML 的核心：最大化不同任务梯度的内积，使初始化对所有任务都"指向正确方向"。</p>
+
+<div class="mermaid">
+flowchart LR
+    T["元参数 θ"] -->|"采样任务 T_i"| SGD["在 T_i 上运行 k 步 SGD\n得到 W*_i"]
+    SGD -->|"方向 W*_i - θ"| Move["θ ← θ + ε(W*_i - θ)"]
+    Move --> T
+</div>
+
+<h4>MAML vs Reptile 横向对比</h4>
+<table>
+  <thead><tr><th>维度</th><th>MAML</th><th>Reptile</th></tr></thead>
+  <tbody>
+    <tr><td>梯度阶数</td><td>二阶（需 Hessian）</td><td>一阶</td></tr>
+    <tr><td>内存开销</td><td>高（存储计算图）</td><td>低</td></tr>
+    <tr><td>实现复杂度</td><td>高</td><td>极简</td></tr>
+    <tr><td>性能</td><td>略优</td><td>接近 MAML</td></tr>
+    <tr><td>Query Set</td><td>必须</td><td>不需要</td></tr>
+    <tr><td>理论支撑</td><td>明确的双层优化</td><td>近似分析</td></tr>
+  </tbody>
+</table>
+
+<h3>1.6 Model-based：记忆增强网络</h3>
+
+<h4>MANN（Memory-Augmented Neural Networks）</h4>
+<p>MANN 使用外部记忆矩阵 $M \in \mathbb{R}^{N \times W}$，通过注意力机制读写记忆：</p>
+<ul>
+  <li><strong>读操作</strong>：$r_t = \sum_i w^r_t(i) \cdot M_t(i)$，权重由内容寻址决定</li>
+  <li><strong>写操作（LRUA）</strong>：最近最少使用的记忆槽被优先覆盖，确保记忆不被无限稀释</li>
+</ul>
+<p>内容寻址权重：$w^c_t(i) = \frac{\exp(K(k_t, M_t(i)) / \tau)}{\sum_j \exp(K(k_t, M_t(j)) / \tau)}$，其中 $K$ 为余弦相似度，$\tau$ 为温度参数。</p>
+
+<h4>NTM（Neural Turing Machine）</h4>
+<p>NTM 将记忆访问分为内容寻址和位置寻址两阶段，支持更灵活的读写模式，是 MANN 的基础架构。位置寻址允许顺序访问（卷积偏移），适合程序性任务。</p>
+
+<hr>
+
+<!-- ===== PART 2: META RL ===== -->
+<h2>二、Meta Reinforcement Learning：元强化学习</h2>
+
+<p>将 Meta-Learning 思想应用于强化学习（RL），目标是训练一个 agent，使其在面对新的 MDP 时，能够用少量交互快速找到最优策略。</p>
+
+<blockquote><strong>挑战：</strong>RL 中没有直接的监督信号，奖励稀疏且延迟；任务分布通常是不同的 MDP，而非不同的分类任务。</blockquote>
+
+<h3>2.1 元 RL 问题设定</h3>
+
+<p>元 RL 的任务分布 $p(\mathcal{M})$ 是 MDP 的分布，每个 $\mathcal{M}_i = (\mathcal{S}, \mathcal{A}, P_i, R_i, \gamma)$，其中转移函数 $P_i$ 和奖励函数 $R_i$ 随任务变化。</p>
+
+<p>目标：找到策略 $\pi_\theta$，使得在采样到新任务 $\mathcal{M}_i$ 后，经过少量 episode 的交互，累积回报最大化：</p>
+$$\theta^* = \arg\max_\theta \mathbb{E}_{\mathcal{M}_i \sim p(\mathcal{M})} \left[ \mathbb{E}_{\tau \sim \pi_{\theta'_i}} \left[ R(\tau) \right] \right]$$
+
+<h3>2.2 RL²：用 LSTM 跨 Episode 记忆</h3>
+
+<p><strong>RL²</strong>（Duan et al., 2016 / Wang et al., 2016）是最直接的 Model-based 元 RL 方法：将整个学习过程视为一个 RNN 的前向传播，LSTM 的隐状态充当"跨 episode 的记忆"。</p>
+
+<h4>输入设计</h4>
+<p>每个时间步，LSTM 的输入不仅包含当前观测 $o_t$，还包含上一步动作 $a_{t-1}$、奖励 $r_{t-1}$ 和终止标志 $d_{t-1}$：</p>
+$$h_t = \text{LSTM}(o_t, a_{t-1}, r_{t-1}, d_{t-1};\, h_{t-1})$$
+$$a_t \sim \pi_\theta(\cdot \mid h_t)$$
+
+<div class="info-box">
+  <strong>关键设计：</strong>LSTM 在同一任务的多个 episode 中保持隐状态不重置。这使得模型能够跨 episode 积累对该任务的理解（如探索过哪些状态、哪些动作有效），从而实现隐式的"快速适应"。
+</div>
+
+<div class="mermaid">
+sequenceDiagram
+    participant Env as 环境 M_i
+    participant LSTM as LSTM Agent
+    participant Meta as 元优化器
+    Note over Env,LSTM: 同一任务 M_i 的多个 Episode
+    loop Episode 1 到 n
+        Env->>LSTM: 观测 o_t
+        LSTM->>Env: 动作 a_t（基于 h_t）
+        Env->>LSTM: 奖励 r_t, 终止 d_t
+        Note over LSTM: 更新隐状态 h_{t+1}\n不重置！
+    end
+    LSTM->>Meta: 轨迹 τ
+    Meta->>LSTM: 更新 θ（TRPO/PPO）
+    Note over Meta: 采样新任务 M_{i+1}
+</div>
+
+<h3>2.3 MAML for RL：Policy Gradient 版本</h3>
+
+<p>将 MAML 应用于 RL，内层循环使用 policy gradient（如 REINFORCE）更新策略参数：</p>
+
+<h4>内层循环</h4>
+<p>在任务 $\mathcal{T}_i$ 上采集轨迹，用 REINFORCE 更新：</p>
+$$\theta'_i = \theta + \alpha \nabla_\theta \mathbb{E}_{\tau \sim \pi_\theta} [R(\tau) \mid \mathcal{T}_i]$$
+$$= \theta + \alpha \mathbb{E}_{\tau \sim \pi_\theta} \left[ R(\tau) \sum_t \nabla_\theta \log \pi_\theta(a_t \mid s_t) \right]$$
+
+<h4>外层循环</h4>
+<p>用适应后的策略 $\pi_{\theta'_i}$ 在任务上再次采集轨迹，计算外层目标：</p>
+$$\theta \leftarrow \theta + \beta \nabla_\theta \sum_i \mathbb{E}_{\tau \sim \pi_{\theta'_i}} [R(\tau) \mid \mathcal{T}_i]$$
+
+<div class="warn-box">
+  <strong>挑战：</strong>RL 中的 MAML 需要对 policy gradient 进行二阶求导，计算开销极大。实践中通常使用 TRPO 作为外层优化器，或采用 ProMP 等方差减小技术。
+</div>
+
+<h3>2.4 记忆增强元 RL</h3>
+
+<p>除了 RL²，还有其他将记忆增强引入元 RL 的方法：</p>
+
+<table>
+  <thead><tr><th>方法</th><th>记忆类型</th><th>适应机制</th><th>特点</th></tr></thead>
+  <tbody>
+    <tr><td>RL²</td><td>LSTM 隐状态</td><td>隐式（隐状态更新）</td><td>端到端训练，实现简单</td></tr>
+    <tr><td>MANN+RL</td><td>外部记忆矩阵</td><td>内容寻址读写</td><td>可解释性强，记忆容量大</td></tr>
+    <tr><td>SNAIL</td><td>时序卷积+注意力</td><td>注意力检索历史</td><td>并行计算，长程依赖</td></tr>
+    <tr><td>MAML-RL</td><td>无（参数初始化）</td><td>显式梯度步</td><td>理论清晰，计算开销大</td></tr>
+  </tbody>
+</table>
+
+<h3>2.5 元 RL 的探索问题</h3>
+
+<p>元 RL 中的探索比监督学习的元学习更复杂：agent 在测试任务上的探索行为必须高效，因为交互次数有限。</p>
+
+<ul>
+  <li><strong>MAESN</strong>：在隐变量空间中学习结构化探索策略，不同隐变量对应不同探索模式</li>
+  <li><strong>PEARL</strong>：用概率编码器推断任务上下文，结合 SAC 实现高效的 off-policy 元 RL</li>
+  <li><strong>E-MAML</strong>：将探索 episode 的奖励也纳入外层目标，显式鼓励信息收集行为</li>
+</ul>
+
+<hr>
+
+<!-- ===== PART 3: DOMAIN RANDOMIZATION ===== -->
+<h2>三、Domain Randomization：Sim2Real 迁移</h2>
+
+<p><strong>Domain Randomization（域随机化）</strong> 是一种让在仿真中训练的策略能够直接迁移到真实世界的技术。核心思想是：通过在训练时随机化仿真环境的各种参数，使得真实世界看起来像是仿真中"已经见过的某个变体"。</p>
+
+<blockquote>
+  <strong>Sim2Real 的核心困境：</strong>仿真与真实世界之间存在不可避免的差距（Reality Gap）——物理参数不准确、传感器噪声不同、视觉外观差异等。Domain Randomization 通过"用随机性覆盖差距"来解决这一问题。
+</blockquote>
+
+<h3>3.1 为什么需要 Domain Randomization</h3>
+
+<div class="mermaid">
+flowchart LR
+    subgraph Sim["仿真环境"]
+        S1["精确仿真\n（难以建模）"]
+        S2["随机化仿真\n（覆盖真实世界）"]
+    end
+    subgraph Real["真实世界"]
+        R1["真实机器人\n真实物理"]
+    end
+    S1 -->|"Reality Gap"| R1
+    S2 -->|"直接迁移"| R1
+    style S2 fill:#2a3e2a,stroke:#a6e3a1
+    style R1 fill:#2a2a3e,stroke:#89b4fa
+</div>
+
+<h3>3.2 随机化参数分类</h3>
+
+<table>
+  <thead><tr><th>类别</th><th>具体参数</th><th>示例</th><th>影响</th></tr></thead>
+  <tbody>
+    <tr><td><strong>物理参数</strong></td><td>摩擦系数、质量、阻尼、关节刚度</td><td>地面摩擦 0.3~1.0</td><td>运动控制精度</td></tr>
+    <tr><td><strong>外观参数</strong></td><td>颜色、纹理、光照、相机参数</td><td>随机背景纹理</td><td>视觉感知鲁棒性</td></tr>
+    <tr><td><strong>传感器噪声</strong></td><td>观测噪声、延迟、丢包</td><td>关节角度 ±0.01rad 噪声</td><td>控制鲁棒性</td></tr>
+    <tr><td><strong>动力学参数</strong></td><td>电机特性、传动比、接触模型</td><td>电机力矩系数随机化</td><td>精细操作任务</td></tr>
+    <tr><td><strong>任务参数</strong></td><td>目标位置、物体形状、初始状态</td><td>目标物体随机放置</td><td>泛化能力</td></tr>
+  </tbody>
+</table>
+
+<h3>3.3 Uniform Domain Randomization</h3>
+
+<p>最基础的方法：对每个参数 $\xi_i$ 在预设范围 $[\xi_i^{\min}, \xi_i^{\max}]$ 内均匀采样：</p>
+$$\xi \sim \text{Uniform}(\xi^{\min}, \xi^{\max})$$
+
+<p>策略在随机化参数下训练，目标是最大化期望回报：</p>
+$$\pi^* = \arg\max_\pi \mathbb{E}_{\xi \sim p(\xi)} \left[ \mathbb{E}_{\tau \sim \pi, \xi} [R(\tau)] \right]$$
+
+<p>策略通常将随机化参数 $\xi$ 作为输入（或使用 LSTM 从历史观测中隐式推断），以实现自适应行为。</p>
+
+<h3>3.4 OpenAI Dactyl：大规模 DR 实战</h3>
+
+<p>OpenAI 的 Dactyl 项目（2019）使用 LSTM 策略 + 大规模 Domain Randomization，成功让机械手在真实世界中完成魔方旋转任务。</p>
+
+<div class="mermaid">
+flowchart TD
+    subgraph DR["大规模 Domain Randomization"]
+        P1["物理参数随机化\n摩擦/质量/阻尼"]
+        P2["外观随机化\n光照/纹理/颜色"]
+        P3["动力学随机化\n延迟/噪声/丢包"]
+    end
+    subgraph Train["仿真训练"]
+        T1["LSTM 策略网络"]
+        T2["PPO 优化"]
+        T3["数百亿步交互"]
+    end
+    subgraph Deploy["真实部署"]
+        D1["Shadow Dexterous Hand"]
+        D2["视觉感知系统"]
+        D3["零样本迁移"]
+    end
+    DR --> Train
+    Train --> Deploy
+    style Deploy fill:#2a3e2a,stroke:#a6e3a1
+</div>
+
+<p>关键技术细节：</p>
+<ul>
+  <li><strong>LSTM 策略</strong>：使用 LSTM 而非 MLP，使策略能够从历史观测中推断当前的物理参数（系统辨识）</li>
+  <li><strong>随机化范围</strong>：超过 100 个物理参数，部分参数的随机化范围高达真实值的 10 倍</li>
+  <li><strong>视觉随机化</strong>：随机背景、光照、相机位置，使视觉系统对真实场景鲁棒</li>
+  <li><strong>课程学习</strong>：从简单任务（单次旋转）逐步过渡到复杂任务（连续旋转）</li>
+</ul>
+
+<h3>3.5 Guided Domain Randomization：自适应随机化</h3>
+
+<p>均匀随机化的问题：随机化范围太大会使任务过难，太小则泛化不足。Guided DR 通过自适应调整随机化范围来解决这一问题。</p>
+
+<h4>ADR（Automatic Domain Randomization）</h4>
+<p>OpenAI 提出的 ADR 算法：根据策略的当前性能自动扩大或缩小随机化范围。</p>
+
+<p>对每个参数 $\xi_i$，维护一个范围 $[\phi_i^L, \phi_i^H]$：</p>
+<ul>
+  <li>如果策略在当前范围内表现良好（超过阈值 $p_{\text{high}}$），则扩大范围：$\phi_i^H \leftarrow \phi_i^H + \delta$</li>
+  <li>如果表现差（低于阈值 $p_{\text{low}}$），则缩小范围：$\phi_i^H \leftarrow \phi_i^H - \delta$</li>
+</ul>
+
+<div class="mermaid">
+flowchart TD
+    Init["初始化随机化范围\n[φ_L, φ_H]"] --> Sample["采样参数 ξ ~ Uniform(φ_L, φ_H)"]
+    Sample --> Train["在 ξ 下训练策略"]
+    Train --> Eval["评估成功率 p"]
+    Eval -->|"p > p_high"| Expand["扩大范围\nφ_H ← φ_H + δ"]
+    Eval -->|"p < p_low"| Shrink["缩小范围\nφ_H ← φ_H - δ"]
+    Eval -->|"p_low ≤ p ≤ p_high"| Keep["保持范围不变"]
+    Expand --> Sample
+    Shrink --> Sample
+    Keep --> Sample
+</div>
+
+<h4>CMA-ES 优化随机化参数</h4>
+<p>另一种方法是用 CMA-ES（协方差矩阵自适应进化策略）来优化随机化参数分布，使得训练后的策略在真实世界中表现最好：</p>
+$$\phi^* = \arg\max_\phi \mathbb{E}_{\xi \sim p(\xi;\phi)} \left[ \text{RealWorldPerformance}(\pi_\phi) \right]$$
+
+<h3>3.6 视觉 Domain Randomization</h3>
+
+<p>对于视觉输入的机器人任务，外观随机化尤为重要：</p>
+
+<table>
+  <thead><tr><th>随机化类型</th><th>具体做法</th><th>目的</th></tr></thead>
+  <tbody>
+    <tr><td>背景纹理</td><td>从大型纹理库随机采样背景</td><td>防止策略依赖特定背景</td></tr>
+    <tr><td>物体颜色</td><td>随机化物体的 RGB 颜色</td><td>颜色不变性</td></tr>
+    <tr><td>光照</td><td>随机光源位置、强度、颜色</td><td>光照不变性</td></tr>
+    <tr><td>相机参数</td><td>随机焦距、位置、噪声</td><td>相机标定误差鲁棒性</td></tr>
+    <tr><td>物体形状</td><td>随机缩放、旋转、变形</td><td>形状泛化</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ===== PART 4: EVOLUTION STRATEGIES ===== -->
+<h2>四、Evolution Strategies：进化策略</h2>
+
+<p><strong>Evolution Strategies（ES，进化策略）</strong> 是一类受生物进化启发的黑盒优化算法，不需要梯度信息，通过对参数空间进行采样、评估和更新来优化目标函数。</p>
+
+<blockquote>
+  <strong>与梯度优化的对比：</strong>梯度下降需要目标函数可微；ES 只需要能够评估目标函数值，因此可以优化不可微、不连续甚至随机的目标。
+</blockquote>
+
+<h3>4.1 基本框架</h3>
+
+<p>ES 的基本流程：从参数分布中采样 $\rightarrow$ 评估每个样本 $\rightarrow$ 更新分布均值 $\rightarrow$ 重复。</p>
+
+<div class="mermaid">
+flowchart TD
+    Init["初始化\n均值 μ, 协方差 Σ"] --> Sample["采样种群\nθ_i ~ N(μ, Σ), i=1..n"]
+    Sample --> Eval["评估每个个体\nf(θ_i)"]
+    Eval --> Select["选择/排序\n保留 top-k 或加权"]
+    Select --> Update["更新分布\nμ ← 加权均值\nΣ ← 加权协方差"]
+    Update --> Check{收敛?}
+    Check -->|否| Sample
+    Check -->|是| Done["返回最优参数 μ"]
+</div>
+
+<h3>4.2 CMA-ES：协方差矩阵自适应</h3>
+
+<p><strong>CMA-ES（Covariance Matrix Adaptation Evolution Strategy）</strong> 是目前最强大的无梯度优化算法之一，通过自适应更新协方差矩阵来控制搜索方向和步长。</p>
+
+<h4>采样</h4>
+<p>从多元高斯分布采样种群：</p>
+$$\theta_i^{(g+1)} = \mu^{(g)} + \sigma^{(g)} \cdot \mathcal{N}(0, C^{(g)}), \quad i = 1, \ldots, \lambda$$
+
+<p>其中 $\mu^{(g)}$ 是当前均值，$\sigma^{(g)}$ 是步长（全局缩放），$C^{(g)}$ 是协方差矩阵。</p>
+
+<h4>均值更新</h4>
+<p>对种群按适应度排序，用加权均值更新：</p>
+$$\mu^{(g+1)} = \sum_{i=1}^{\mu} w_i \cdot \theta_{i:\lambda}^{(g+1)}$$
+
+<p>其中 $\theta_{i:\lambda}$ 表示第 $i$ 好的个体，权重 $w_i \propto \ln(\mu + 0.5) - \ln(i)$（对数递减）。</p>
+
+<h4>协方差矩阵更新</h4>
+<p>CMA-ES 维护两个演化路径（evolution path）$p_\sigma$ 和 $p_c$：</p>
+$$p_\sigma^{(g+1)} = (1 - c_\sigma) p_\sigma^{(g)} + \sqrt{c_\sigma(2-c_\sigma)\mu_\text{eff}} \cdot C^{(g)^{-1/2}} \cdot \frac{\mu^{(g+1)} - \mu^{(g)}}{\sigma^{(g)}}$$
+$$p_c^{(g+1)} = (1 - c_c) p_c^{(g)} + h_\sigma \sqrt{c_c(2-c_c)\mu_\text{eff}} \cdot \frac{\mu^{(g+1)} - \mu^{(g)}}{\sigma^{(g)}}$$
+
+<p>协方差矩阵更新（秩一更新 + 秩 $\mu$ 更新）：</p>
+$$C^{(g+1)} = (1 - c_1 - c_\mu) C^{(g)} + c_1 p_c p_c^T + c_\mu \sum_{i=1}^{\mu} w_i \frac{(\theta_{i:\lambda} - \mu^{(g)})(\theta_{i:\lambda} - \mu^{(g)})^T}{\sigma^{(g)^2}}$$
+
+<h4>步长控制</h4>
+<p>通过累积路径长度控制（CSA）自适应调整步长：</p>
+$$\sigma^{(g+1)} = \sigma^{(g)} \cdot \exp\left(\frac{c_\sigma}{d_\sigma} \left(\frac{\|p_\sigma^{(g+1)}\|}{E\|\mathcal{N}(0,I)\|} - 1\right)\right)$$
+
+<div class="mermaid">
+flowchart TD
+    subgraph CMA["CMA-ES 核心组件"]
+        M["均值 μ\n搜索中心"]
+        S["步长 σ\n搜索半径"]
+        C["协方差矩阵 C\n搜索方向"]
+    end
+    subgraph Update["自适应更新"]
+        U1["秩一更新\n利用演化路径"]
+        U2["秩μ更新\n利用种群历史"]
+        U3["CSA 步长控制"]
+    end
+    Sample["采样 λ 个个体"] --> Eval["评估 f(θ_i)"]
+    Eval --> Rank["按适应度排序"]
+    Rank --> M
+    Rank --> U1
+    Rank --> U2
+    U1 --> C
+    U2 --> C
+    U3 --> S
+    C --> Sample
+    S --> Sample
+    M --> Sample
+</div>
+
+<h3>4.3 OpenAI ES：并行化神经网络优化</h3>
+
+<p><strong>OpenAI ES</strong>（Salimans et al., 2017）将 ES 应用于深度神经网络优化，核心创新是：利用固定随机种子实现极高效的通信，使得在 1000+ 个 CPU 上并行训练成为可能。</p>
+
+<h4>核心公式</h4>
+<p>对参数 $\theta$ 添加高斯噪声，估计梯度：</p>
+$$\nabla_\theta \mathbb{E}_{\epsilon \sim \mathcal{N}(0,I)} [F(\theta + \sigma\epsilon)] \approx \frac{1}{n\sigma} \sum_{i=1}^{n} F(\theta + \sigma\epsilon_i) \cdot \epsilon_i$$
+
+<p>更新规则：</p>
+$$\theta_{t+1} = \theta_t + \alpha \cdot \frac{1}{n\sigma} \sum_{i=1}^{n} F(\theta_t + \sigma\epsilon_i) \cdot \epsilon_i$$
+
+<h4>高效并行通信</h4>
+<p>关键技巧：每个 worker 只需发送一个随机种子（整数），而非整个参数向量。接收方用相同种子重新生成噪声 $\epsilon_i$，然后用收到的 $F_i$ 值计算梯度更新。</p>
+
+<div class="mermaid">
+flowchart LR
+    subgraph Workers["1000 个并行 Worker"]
+        W1["Worker 1\n种子 s_1 → ε_1\n评估 F(θ+σε_1)"]
+        W2["Worker 2\n种子 s_2 → ε_2\n评估 F(θ+σε_2)"]
+        Wn["Worker n\n种子 s_n → ε_n\n评估 F(θ+σε_n)"]
+    end
+    Agg["聚合器\n接收 (s_i, F_i) 对\n重建 ε_i，计算梯度"]
+    Workers -->|"只传 (种子, 奖励)\n极低通信量"| Agg
+    Agg -->|"更新后的 θ"| Workers
+</div>
+
+<h4>工程技巧</h4>
+<ul>
+  <li><strong>适应度塑形（Fitness Shaping）</strong>：对奖励进行排名归一化，减少离群值影响：$F_i \leftarrow \text{rank}(F_i) / (n-1) - 0.5$</li>
+  <li><strong>镜像采样（Antithetic Sampling）</strong>：同时评估 $\theta + \sigma\epsilon$ 和 $\theta - \sigma\epsilon$，减少方差</li>
+  <li><strong>权重衰减</strong>：$\theta_{t+1} = (1-\lambda)\theta_t + \alpha \cdot \hat{g}$，防止参数过大</li>
+  <li><strong>虚拟批归一化</strong>：固定参考批次的统计量，使不同噪声下的网络输出可比</li>
+</ul>
+
+<h3>4.4 NES：自然进化策略</h3>
+
+<p><strong>NES（Natural Evolution Strategies）</strong> 将自然梯度的思想引入 ES，用 Fisher 信息矩阵对梯度进行归一化，使更新在参数分布空间中更加均匀。</p>
+
+<h4>对数似然梯度技巧</h4>
+<p>对参数化分布 $p_\psi(\theta)$，目标是最大化期望适应度：</p>
+$$J(\psi) = \mathbb{E}_{\theta \sim p_\psi} [F(\theta)] = \int F(\theta) p_\psi(\theta) d\theta$$
+
+<p>利用对数似然梯度技巧：</p>
+$$\nabla_\psi J(\psi) = \mathbb{E}_{\theta \sim p_\psi} [F(\theta) \nabla_\psi \log p_\psi(\theta)]$$
+
+<h4>自然梯度更新</h4>
+<p>普通梯度在欧氏空间中更新，可能导致分布变化不均匀。自然梯度用 Fisher 信息矩阵 $F_\psi$ 进行归一化：</p>
+$$\tilde{\nabla}_\psi J = F_\psi^{-1} \nabla_\psi J(\psi)$$
+
+<p>对于高斯分布 $p_\psi = \mathcal{N}(\mu, \sigma^2 I)$，Fisher 信息矩阵的逆有解析形式，使得自然梯度计算高效。</p>
+
+<h3>4.5 ES vs 梯度下降横向对比</h3>
+
+<table>
+  <thead><tr><th>维度</th><th>梯度下降（SGD/Adam）</th><th>OpenAI ES</th><th>CMA-ES</th></tr></thead>
+  <tbody>
+    <tr><td>梯度信息</td><td>精确一阶梯度</td><td>近似梯度（采样估计）</td><td>无梯度（零阶）</td></tr>
+    <tr><td>并行化</td><td>数据并行（GPU）</td><td>极易并行（CPU集群）</td><td>中等（种群大小）</td></tr>
+    <tr><td>内存开销</td><td>需存储计算图</td><td>无需反向传播</td><td>$O(n^2)$ 协方差矩阵</td></tr>
+    <tr><td>适用规模</td><td>数十亿参数</td><td>百万级参数</td><td>千级参数</td></tr>
+    <tr><td>局部最优</td><td>容易陷入</td><td>一定程度逃脱</td><td>较好逃脱</td></tr>
+    <tr><td>超参数敏感性</td><td>高（学习率等）</td><td>中（σ, n）</td><td>低（自适应）</td></tr>
+    <tr><td>适用场景</td><td>可微目标，大规模</td><td>RL策略，并行环境</td><td>中小规模，黑盒优化</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ===== PART 5: SUMMARY ===== -->
+<h2>五、综合对比与联系</h2>
+
+<h3>5.1 四大主题的联系</h3>
+
+<div class="mermaid">
+mindmap
+  root((Meta学习与迁移))
+    Meta-Learning
+      Model-based
+        LSTM记忆 RL²
+        MANN/NTM
+      Metric-based
+        Prototypical Net
+        Matching Net
+      Optimization-based
+        MAML 二阶梯度
+        Reptile 一阶近似
+    Meta RL
+      RL² LSTM跨episode
+      MAML-RL Policy Gradient
+      PEARL 概率上下文推断
+    Domain Randomization
+      Uniform DR
+      ADR 自适应范围
+      OpenAI Dactyl 实战
+    Evolution Strategies
+      CMA-ES 协方差自适应
+      OpenAI ES 并行化
+      NES 自然梯度
+</div>
+
+<h3>5.2 算法选择指南</h3>
+
+<table>
+  <thead><tr><th>场景</th><th>推荐方法</th><th>理由</th></tr></thead>
+  <tbody>
+    <tr><td>图像分类少样本</td><td>Prototypical Networks</td><td>简单高效，嵌入空间直觉清晰</td></tr>
+    <tr><td>通用少样本学习</td><td>MAML / Reptile</td><td>模型无关，适用于任何可微模型</td></tr>
+    <tr><td>快速原型（计算受限）</td><td>Reptile</td><td>无需二阶导数，实现极简</td></tr>
+    <tr><td>RL 快速适应</td><td>RL² 或 MAML-RL</td><td>前者实现简单，后者理论清晰</td></tr>
+    <tr><td>机器人 Sim2Real</td><td>Domain Randomization + LSTM</td><td>Dactyl 已验证有效性</td></tr>
+    <tr><td>无梯度黑盒优化</td><td>CMA-ES（小规模）/ OpenAI ES（大规模）</td><td>按参数规模选择</td></tr>
+    <tr><td>并行 RL 训练</td><td>OpenAI ES</td><td>通信极低，线性扩展</td></tr>
+  </tbody>
+</table>
+
+<h3>5.3 关键公式汇总</h3>
+
+<table>
+  <thead><tr><th>算法</th><th>核心公式</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Prototypical Net</td>
+      <td>$P(y=k|x) = \text{softmax}(-d(f_\phi(x), \mathbf{c}_k))$</td>
+      <td>原型分类</td>
+    </tr>
+    <tr>
+      <td>MAML 内层</td>
+      <td>$\theta'_i = \theta - \alpha \nabla_\theta \mathcal{L}_{\mathcal{T}_i}(f_\theta)$</td>
+      <td>任务适应</td>
+    </tr>
+    <tr>
+      <td>MAML 外层</td>
+      <td>$\theta \leftarrow \theta - \beta \nabla_\theta \sum_i \mathcal{L}_{\mathcal{T}_i}(f_{\theta'_i})$</td>
+      <td>元优化（需二阶导）</td>
+    </tr>
+    <tr>
+      <td>Reptile</td>
+      <td>$\theta \leftarrow \theta + \epsilon \cdot \frac{1}{n}\sum_i (W^*_i - \theta)$</td>
+      <td>一阶元优化</td>
+    </tr>
+    <tr>
+      <td>RL²</td>
+      <td>$h_t = \text{LSTM}(o_t, a_{t-1}, r_{t-1}, d_{t-1}; h_{t-1})$</td>
+      <td>跨 episode 记忆</td>
+    </tr>
+    <tr>
+      <td>DR 目标</td>
+      <td>$\pi^* = \arg\max_\pi \mathbb{E}_{\xi \sim p(\xi)}[\mathbb{E}_\tau[R(\tau)]]$</td>
+      <td>随机化参数期望</td>
+    </tr>
+    <tr>
+      <td>OpenAI ES</td>
+      <td>$\theta_{t+1} = \theta_t + \frac{\alpha}{n\sigma}\sum_i F(\theta_t + \sigma\epsilon_i)\epsilon_i$</td>
+      <td>采样梯度估计</td>
+    </tr>
+    <tr>
+      <td>NES 自然梯度</td>
+      <td>$\tilde{\nabla}_\psi J = F_\psi^{-1} \mathbb{E}[F(\theta)\nabla_\psi \log p_\psi(\theta)]$</td>
+      <td>Fisher 归一化</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>5.4 开放问题与未来方向</h3>
+
+<ul>
+  <li><strong>任务分布的设计</strong>：Meta-Learning 的性能高度依赖训练任务分布与测试任务分布的匹配程度，如何自动生成多样化任务仍是开放问题</li>
+  <li><strong>持续元学习</strong>：如何在不遗忘旧任务的情况下持续学习新任务（Meta-Continual Learning）</li>
+  <li><strong>DR 的上限</strong>：过度随机化可能使任务过难，如何找到最优随机化范围是关键挑战</li>
+  <li><strong>ES 的扩展性</strong>：CMA-ES 的 $O(n^2)$ 协方差矩阵限制了其在大规模神经网络中的应用，分块/低秩近似是研究方向</li>
+  <li><strong>元 RL 的样本效率</strong>：尽管测试时样本高效，元 RL 的训练阶段仍需大量样本，如何提升训练效率是重要方向</li>
+</ul>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+    if(!h.id)h.id='s'+i;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent;
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{
+    const l=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  }),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

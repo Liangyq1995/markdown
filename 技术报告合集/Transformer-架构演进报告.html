@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transformer 架构演进技术报告 2017–2025</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+      --red: #f38ba8; --yellow: #f9e2af; --purple: #cba6f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 12.5px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 11.5px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2.2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    h4 { color: var(--yellow); font-size: 1em; margin: 1.2em 0 0.3em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.87em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 6px; border-radius: 3px; font-size: 0.86em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+
+    /* 技术详解卡片 */
+    .tech-card { background: #24243e; border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 1.2em 0; }
+    .tech-card.green { border-left: 4px solid var(--strong); }
+    .tech-card.blue  { border-left: 4px solid var(--heading); }
+    .tech-card.yellow{ border-left: 4px solid var(--yellow); }
+    .tech-card.purple{ border-left: 4px solid var(--purple); }
+    .tech-card.red   { border-left: 4px solid var(--red); }
+    .tech-title { font-weight: 700; color: var(--heading); font-size: 1em; margin-bottom: 8px; }
+    .formula-box { background: #2a2a3e; border-radius: 6px; padding: 16px 20px; margin: 0.8em 0; overflow-x: auto; }
+
+    /* diff 对比 */
+    .diff-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1em 0; }
+    .diff-old { background: #2e1e1e; border: 1px solid var(--red); border-radius: 6px; padding: 14px 18px; }
+    .diff-new { background: #1e2e1e; border: 1px solid var(--strong); border-radius: 6px; padding: 14px 18px; }
+    .diff-label { font-size: 0.78em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+    .diff-label.old { color: var(--red); }
+    .diff-label.new { color: var(--strong); }
+
+    /* 时间线 */
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 1100px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 4px; font-size: 0.9em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 6px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 6px 8px; margin-bottom: 6px; font-size: 0.83em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 3px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+    .tl-tag.red    { background: #f38ba8; }
+
+    /* 步骤编号 */
+    .step-row { display: flex; align-items: flex-start; margin: 0.7em 0; gap: 10px; }
+    .step-num { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; border-radius: 50%; background: var(--heading); color: #1e1e2e; font-weight: 700; font-size: 0.82em; flex-shrink: 0; margin-top: 3px; }
+
+    /* 对比徽章 */
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 0.78em; font-weight: 700; margin: 0 3px 3px 0; vertical-align: middle; }
+    .badge.new  { background: #1e3a28; color: var(--strong); border: 1px solid var(--strong); }
+    .badge.old  { background: #3a1e1e; color: var(--red); border: 1px solid var(--red); }
+    .badge.note { background: #2a2a1e; color: var(--yellow); border: 1px solid var(--yellow); }
+
+    /* highlight */
+    .hl-green  { color: var(--strong); font-weight: 700; }
+    .hl-red    { color: var(--red); font-weight: 700; }
+    .hl-yellow { color: var(--yellow); font-weight: 700; }
+    .hl-blue   { color: var(--heading); font-weight: 700; }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Transformer 架构演进技术报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">从 Attention Is All You Need 到现代 LLM 架构 · 2017–2025 · 生成日期：2026-05-13</p>
+
+<table>
+  <tr><th>覆盖范围</th><td>归一化 · 位置编码 · 注意力机制 · FFN 激活函数 · MoE · 稀疏注意力 · SSM</td></tr>
+  <tr><th>分析模型数</th><td>53+ 个代表性 LLM</td></tr>
+  <tr><th>时间跨度</th><td>2017–2025（8 年架构演进）</td></tr>
+  <tr><th>核心结论</th><td>Pre-RMSNorm + RoPE + SwiGLU + GQA 成为现代 LLM 共识配方</td></tr>
+</table>
+
+<hr>
+
+<!-- ===================== 一、时间线 ===================== -->
+<h2 id="s1">一、Transformer 架构演进时间线</h2>
+
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">2017</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">基础架构</span><br>Attention Is All You Need<br>Encoder-Decoder Transformer</div>
+        <div class="tl-item"><span class="tl-tag">注意力</span><br>Scaled Dot-Product<br>Multi-Head Attention</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2018–2019</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag green">范式</span><br>BERT（Encoder-only）<br>GPT-1/2（Decoder-only）</div>
+        <div class="tl-item"><span class="tl-tag orange">注意力</span><br>MQA（Multi-Query Attention）</div>
+        <div class="tl-item"><span class="tl-tag">位置编码</span><br>XLNet 相对位置编码</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2020–2021</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag green">规模</span><br>GPT-3（1750亿参数）<br>Pre-Norm 成为主流</div>
+        <div class="tl-item"><span class="tl-tag purple">MoE</span><br>Switch Transformer<br>1.6T 参数稀疏 MoE</div>
+        <div class="tl-item"><span class="tl-tag orange">位置编码</span><br>RoPE 旋转位置编码<br>ALiBi 线性偏置</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2022</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag green">激活函数</span><br>PaLM 采用 SwiGLU<br>GLU 门控家族兴起</div>
+        <div class="tl-item"><span class="tl-tag orange">IO 优化</span><br>FlashAttention v1<br>IO 感知分块计算</div>
+        <div class="tl-item"><span class="tl-tag">Scaling</span><br>Chinchilla Scaling Laws</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2023</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag green">开源基准</span><br>LLaMA 1 / LLaMA 2<br>RMSNorm + GQA 验证</div>
+        <div class="tl-item"><span class="tl-tag orange">注意力</span><br>GQA（Grouped-Query Attention）<br>平衡质量与效率</div>
+        <div class="tl-item"><span class="tl-tag purple">替代架构</span><br>Mamba（选择性 SSM）<br>Mixtral 8x7B（开源 MoE）</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag green">注意力</span><br>MLA 低秩 KV 压缩<br>DeepSeek V2/V3</div>
+        <div class="tl-item"><span class="tl-tag purple">MoE</span><br>DeepSeekMoE 细粒度专家<br>671B 总参数 / 37B 激活</div>
+        <div class="tl-item"><span class="tl-tag orange">IO 优化</span><br>FlashAttention v3<br>H100 Tensor Core 优化</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag green">位置编码</span><br>iRoPE（Llama 4）<br>1000万 token 上下文</div>
+        <div class="tl-item"><span class="tl-tag purple">混合架构</span><br>Mamba-2 / Nemotron-H<br>SSM+Transformer 融合</div>
+        <div class="tl-item"><span class="tl-tag orange">共识</span><br>Pre-RMSNorm+RoPE+<br>SwiGLU+GQA 全面确立</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 id="s1-2">1.2 架构演进核心驱动力</h3>
+<pre class="mermaid">
+graph TD
+  A["计算效率需求"] --> B["注意力机制优化<br>MQA / GQA / MLA"]
+  A --> C["FlashAttention<br>IO感知算法"]
+  D["训练稳定性需求"] --> E["Pre-Norm 替代 Post-Norm"]
+  D --> F["RMSNorm 替代 LayerNorm"]
+  G["长上下文需求"] --> H["位置编码演进<br>RoPE / ALiBi / iRoPE"]
+  G --> I["稀疏注意力<br>滑动窗口 / 局部-全局"]
+  J["参数规模需求"] --> K["MoE 稀疏激活架构"]
+  J --> L["SwiGLU 参数效率提升"]
+  M["推理效率需求"] --> B
+  M --> K
+</pre>
+
+<!-- ===================== 二、原始 Transformer ===================== -->
+<h2 id="s2">二、原始 Transformer 架构（2017）</h2>
+
+<h3 id="s2-1">2.1 Encoder-Decoder 总体结构</h3>
+
+<pre class="mermaid">
+graph LR
+  subgraph Encoder
+    E1["输入嵌入 + 位置编码"] --> E2["多头自注意力"]
+    E2 --> E3["Add & Post-Norm"]
+    E3 --> E4["前馈网络 FFN"]
+    E4 --> E5["Add & Post-Norm"]
+  end
+  subgraph Decoder
+    D1["输出嵌入 + 位置编码"] --> D2["掩码多头自注意力"]
+    D2 --> D3["Add & Post-Norm"]
+    D3 --> D4["交叉注意力"]
+    D4 --> D5["Add & Post-Norm"]
+    D5 --> D6["FFN"]
+    D6 --> D7["Add & Post-Norm"]
+  end
+  E5 -->|"K, V"| D4
+  D7 --> Out["Linear + Softmax"]
+</pre>
+
+<h3 id="s2-2">2.2 Scaled Dot-Product Attention 详解</h3>
+
+<div class="tech-card blue">
+  <div class="tech-title">核心公式</div>
+  <div class="formula-box">
+    $$\text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+  </div>
+  <p>其中 $Q \in \mathbb{R}^{n \times d_k}$，$K \in \mathbb{R}^{m \times d_k}$，$V \in \mathbb{R}^{m \times d_v}$。</p>
+
+  <h4>为什么要除以 $\sqrt{d_k}$？</h4>
+  <p>假设 $Q, K$ 的每个分量独立服从 $\mathcal{N}(0,1)$，则点积 $q \cdot k = \sum_{i=1}^{d_k} q_i k_i$ 的方差为 $d_k$，标准差为 $\sqrt{d_k}$。不缩放时：</p>
+  <ul>
+    <li>$d_k=64$ 时点积绝对值典型量级约 8，softmax 梯度正常</li>
+    <li>$d_k=512$ 时点积绝对值约 22，softmax 进入饱和区，梯度 $\approx 0$</li>
+  </ul>
+  <p>除以 $\sqrt{d_k}$ 后，点积方差归一为 1，softmax 始终工作在梯度丰富的区域。</p>
+
+  <h4>计算复杂度</h4>
+  <table>
+    <tr><th>操作</th><th>复杂度</th><th>瓶颈</th></tr>
+    <tr><td>$QK^T$ 矩阵乘法</td><td>$O(n^2 d_k)$</td><td>随序列长度二次方增长</td></tr>
+    <tr><td>Softmax</td><td>$O(n^2)$</td><td>需要完整 $n \times n$ 矩阵</td></tr>
+    <tr><td>加权求和 $(\cdot)V$</td><td>$O(n^2 d_v)$</td><td>同上</td></tr>
+  </table>
+</div>
+
+<h3 id="s2-3">2.3 Multi-Head Attention 详解</h3>
+
+<div class="tech-card blue">
+  <div class="tech-title">为什么需要多头？</div>
+  <p>单头注意力将所有依赖关系压缩到同一子空间。多头注意力并行地在 $h$ 个不同子空间中学习注意力模式，每个头可以捕捉不同类型的依赖（句法关系、指代关系、语义相似性等）。</p>
+
+  <div class="formula-box">
+    $$\text{MultiHead}(Q,K,V) = \text{Concat}(\text{head}_1,\ldots,\text{head}_h)\,W^O$$
+    $$\text{head}_i = \text{Attention}(QW_i^Q,\, KW_i^K,\, VW_i^V)$$
+  </div>
+
+  <h4>参数量分析</h4>
+  <p>设 $d_{model}=512$，$h=8$，则 $d_k = d_v = 512/8 = 64$。</p>
+  <table>
+    <tr><th>矩阵</th><th>维度</th><th>每头参数量</th><th>总参数量</th></tr>
+    <tr><td>$W_i^Q$</td><td>$512 \times 64$</td><td>32,768</td><td>$8 \times 32,768 = 262,144$</td></tr>
+    <tr><td>$W_i^K$</td><td>$512 \times 64$</td><td>32,768</td><td>262,144</td></tr>
+    <tr><td>$W_i^V$</td><td>$512 \times 64$</td><td>32,768</td><td>262,144</td></tr>
+    <tr><td>$W^O$</td><td>$512 \times 512$</td><td>—</td><td>262,144</td></tr>
+  </table>
+  <p>注意力模块总参数 ≈ 1,048,576（100万），占原始 Transformer 单层参数量的约 1/3。</p>
+</div>
+
+<h3 id="s2-4">2.4 前馈网络（FFN）</h3>
+
+<div class="tech-card blue">
+  <div class="formula-box">
+    $$\text{FFN}(x) = \max(0,\, xW_1 + b_1)\,W_2 + b_2$$
+  </div>
+  <p>原始设计：$d_{model}=512$，$d_{ff}=2048$（4 倍扩展）。FFN 参数量 = $2 \times 512 \times 2048 = 2,097,152$，约为注意力模块的 2 倍。FFN 层充当"记忆存储"，实验表明大量事实知识存储于 FFN 权重中（Geva et al. 2021）。</p>
+</div>
+
+<!-- ===================== 三、架构范式 ===================== -->
+<h2 id="s3">三、三大架构范式</h2>
+
+<pre class="mermaid">
+graph TD
+  T["Transformer 三大范式"] --> E["Encoder-only<br>BERT / RoBERTa / DeBERTa"]
+  T --> D["Decoder-only<br>GPT / LLaMA / DeepSeek / Mistral"]
+  T --> ED["Encoder-Decoder<br>T5 / BART / mT5"]
+  E --> E1["双向注意力<br>MLM 训练<br>文本分类 / NER / 嵌入"]
+  D --> D1["因果掩码注意力<br>CLM 训练<br>文本生成 / 对话 / 推理"]
+  ED --> ED1["编码双向 + 解码因果<br>去噪训练<br>翻译 / 摘要 / 问答"]
+</pre>
+
+<div class="tech-card green">
+  <div class="tech-title">Decoder-only 成为主流 LLM 的四大原因</div>
+  <ol>
+    <li><strong>训练目标统一：</strong>Next-token prediction 是天然的自监督目标，无需设计特殊 mask 策略，整个互联网文本均可作为训练数据。</li>
+    <li><strong>KV Cache 高效推理：</strong>自回归生成时，已计算的 K/V 可复用，每步只需增量计算新 token 的注意力，推理成本与 Encoder-only 相当。</li>
+    <li><strong>Scaling Laws 友好：</strong>Hoffmann et al.（2022）的 Chinchilla 定律在 Decoder-only 架构上得到充分验证，参数量与 token 数量的最优比例约为 1:20。</li>
+    <li><strong>统一框架：</strong>同一模型可同时处理理解（few-shot prompting）和生成任务，无需针对任务微调额外的分类头。</li>
+  </ol>
+</div>
+
+<!-- ===================== 四、归一化 ===================== -->
+<h2 id="s4">四、归一化方案演进</h2>
+
+<h3 id="s4-1">4.1 演进路径</h3>
+<pre class="mermaid">
+graph LR
+  A["Post-Norm<br>原始 Transformer 2017"] -->|"梯度消失<br>训练不稳定"| B["Pre-Norm<br>GPT-2 2019+"]
+  B -->|"均值计算冗余"| C["Pre-RMSNorm<br>LLaMA / Mistral 2023+"]
+  C -->|"超大模型稳定性"| D["Pre+Post RMSNorm<br>Gemma 2/3 2024+"]
+</pre>
+
+<h3 id="s4-2">4.2 Post-Norm vs Pre-Norm：梯度流分析</h3>
+
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">Post-Norm（原始）</div>
+    <div class="formula-box">$$y = \text{LayerNorm}(x + F(x))$$</div>
+    <p><strong>梯度问题：</strong>反向传播时梯度需穿过 LayerNorm 的压缩效果。对 $L$ 层网络，底层梯度近似为：</p>
+    <div class="formula-box">$$\frac{\partial \mathcal{L}}{\partial x_0} \approx \prod_{l=1}^{L} \frac{\partial \text{LN}}{\partial x_l} \cdot \frac{\partial F_l}{\partial x_l}$$</div>
+    <p>每层 LayerNorm 的 Jacobian 特征值 $< 1$，$L$ 层后梯度指数级衰减 → <span class="hl-red">梯度消失</span>，需要精心设计学习率预热（通常 10,000+ warmup steps）。</p>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">Pre-Norm（现代）</div>
+    <div class="formula-box">$$y = x + F(\text{Norm}(x))$$</div>
+    <p><strong>梯度优势：</strong>残差路径提供直接梯度通道：</p>
+    <div class="formula-box">$$\frac{\partial y}{\partial x} = I + \frac{\partial F(\text{Norm}(x))}{\partial x}$$</div>
+    <p>单位矩阵 $I$ 确保梯度至少以恒定幅度传播，彻底避免梯度消失。可以使用 cosine decay 学习率调度，无需大量预热步骤。</p>
+    <p><strong>代价：</strong>理论上 Pre-Norm 是对 Post-Norm 的一阶近似，在极浅网络上 Post-Norm 有时效果更好；但 $L > 12$ 层时 Pre-Norm 全面占优。</p>
+  </div>
+</div>
+
+<h3 id="s4-3">4.3 LayerNorm vs RMSNorm 深度对比</h3>
+
+<div class="tech-card yellow">
+  <div class="tech-title">LayerNorm — 去中心化 + 缩放</div>
+  <div class="formula-box">
+    $$\text{LN}(x) = \gamma \cdot \frac{x - \mu(x)}{\sqrt{\text{Var}(x) + \epsilon}} + \beta$$
+    $$\mu(x) = \frac{1}{d}\sum_{i=1}^d x_i, \quad \text{Var}(x) = \frac{1}{d}\sum_{i=1}^d (x_i - \mu)^2$$
+  </div>
+  <p>参数：$\gamma, \beta \in \mathbb{R}^d$（两组），计算步骤：均值 → 方差 → 标准化 → 缩放 + 偏移。</p>
+</div>
+
+<div class="tech-card green">
+  <div class="tech-title">RMSNorm — 仅缩放（Zhang & Sennrich 2019）</div>
+  <div class="formula-box">
+    $$\text{RMSNorm}(x) = \gamma \cdot \frac{x}{\text{RMS}(x) + \epsilon}, \quad \text{RMS}(x) = \sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2}$$
+  </div>
+  <p>参数：仅 $\gamma \in \mathbb{R}^d$（一组），无偏移 $\beta$。</p>
+
+  <h4>为什么去掉均值中心化是合理的？</h4>
+  <p>假设 $x$ 已经经过残差连接（$y = x + F(\text{Norm}(x))$），输入 Norm 的激活值通常围绕零均值分布（由随机初始化保证）。因此均值中心化在实践中几乎不改变分布形状，属于冗余操作。</p>
+
+  <h4>性能收益对比</h4>
+  <table>
+    <tr><th>指标</th><th>LayerNorm</th><th>RMSNorm</th><th>提升</th></tr>
+    <tr><td>FLOP（归一化层）</td><td>基准</td><td>减少 ~15%</td><td>无需计算均值</td></tr>
+    <tr><td>参数量（归一化层）</td><td>$2d$</td><td>$d$</td><td>减少 50%</td></tr>
+    <tr><td>平移不变性</td><td>否（有 $\beta$）</td><td>是</td><td>量化更友好</td></tr>
+    <tr><td>建模能力</td><td>略强（理论）</td><td>实践等效</td><td>对大模型无显著差异</td></tr>
+  </table>
+</div>
+
+<div class="tech-card purple">
+  <div class="tech-title">Pre+Post 双重 RMSNorm（Gemma 2/3）</div>
+  <div class="formula-box">
+    $$y = x + \text{Post-Norm}(F(\text{Pre-Norm}(x)))$$
+  </div>
+  <p>在每个子层的输入和输出各施加一次 RMSNorm。<strong>动机：</strong>超大模型（27B+）中注意力输出的幅度可能异常大（logit 增长问题），Post-Norm 额外抑制异常激活，提升长时间训练的稳定性。代价是每层多一次 RMSNorm 计算（约 2% 额外开销）。</p>
+</div>
+
+<!-- ===================== 五、位置编码 ===================== -->
+<h2 id="s5">五、位置编码演进</h2>
+
+<h3 id="s5-1">5.1 演进路径</h3>
+<pre class="mermaid">
+graph TD
+  A["绝对位置编码<br>Sinusoidal / Learned APE<br>2017–2018"] -->|"无法外推"| B["相对位置编码<br>Shaw et al. / T5 Bias<br>2018–2019"]
+  B --> C["RoPE 旋转位置编码<br>Su et al. 2021"]
+  B --> D["ALiBi 线性偏置<br>Press et al. 2021"]
+  C --> E["YaRN / LongRoPE<br>长上下文扩展 2023–2024"]
+  C --> F["iRoPE 交错编码<br>Llama 4 · 2025"]
+  D --> G["NoPE 混合<br>Command A · 2025"]
+</pre>
+
+<h3 id="s5-2">5.2 正弦余弦绝对位置编码</h3>
+
+<div class="tech-card blue">
+  <div class="formula-box">
+    $$\text{PE}_{(pos, 2i)} = \sin\!\left(\frac{pos}{10000^{2i/d_\text{model}}}\right), \quad \text{PE}_{(pos, 2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d_\text{model}}}\right)$$
+  </div>
+  <p>频率从高维（$i=0$，频率为 1）到低维（$i=d/2$，频率为 $10000^{-1}$）指数递减，形成多尺度位置表示。相对位置信息蕴含于三角恒等式中：$\sin(A+B) = \sin A \cos B + \cos A \sin B$，理论上可编码相对距离，但实践中模型无法充分学习到这种表示。</p>
+  <p><span class="hl-red">致命局限：</span>训练长度为 $L_{train}$ 时，位置 $> L_{train}$ 的编码从未出现过，推理时直接外推导致性能崩溃。</p>
+</div>
+
+<h3 id="s5-3">5.3 RoPE 旋转位置编码（Su et al. 2021）</h3>
+
+<div class="tech-card green">
+  <div class="tech-title">核心设计思路：在注意力计算中编码相对位置</div>
+
+  <h4>步骤一：将 $d$ 维向量分为 $d/2$ 对</h4>
+  <p>对位置 $m$ 的向量 $x = [x_1, x_2, \ldots, x_d]$，将其视为 $d/2$ 个二维向量 $[x_{2i-1}, x_{2i}]$，对第 $i$ 对施加旋转角 $m\theta_i$：</p>
+  <div class="formula-box">
+    $$\theta_i = 10000^{-2(i-1)/d}, \quad i = 1, 2, \ldots, \frac{d}{2}$$
+    $$R(m\theta_i) = \begin{pmatrix}\cos(m\theta_i) & -\sin(m\theta_i) \\ \sin(m\theta_i) & \cos(m\theta_i)\end{pmatrix}$$
+  </div>
+
+  <h4>步骤二：关键数学性质——点积只依赖相对位置</h4>
+  <div class="formula-box">
+    $$\langle R_m q,\, R_n k \rangle = q^T R_m^T R_n k = q^T R_{n-m} k$$
+  </div>
+  <p>旋转矩阵的正交性（$R_m^T = R_{-m}$）保证了点积只与相对距离 $n-m$ 有关，而非绝对位置 $m$ 或 $n$。</p>
+
+  <h4>步骤三：长程衰减（内置归纳偏置）</h4>
+  <p>高频维度（小 $i$）对应的旋转角 $\theta_i$ 较大，随距离增大快速振荡；低频维度旋转慢，保持稳定。综合效果是：随相对距离增大，注意力分数的期望值自然衰减——与语言中远距离词语关联性较弱的直觉吻合。</p>
+
+  <h4>RoPE 的高效实现（复数乘法）</h4>
+  <p>将二维旋转等价为复数乘法：对 $q = q_r + iq_i$，位置 $m$ 处的旋转为 $q' = q \cdot e^{im\theta}$，可用逐元素乘法高效实现，无需显式构造旋转矩阵。</p>
+
+  <h4>长上下文扩展：YaRN 与 LongRoPE</h4>
+  <p>RoPE 在超过训练长度时性能下降，原因是高频分量的旋转角周期已超出分布。扩展方案：</p>
+  <ul>
+    <li><strong>位置插值（PI）：</strong>将位置 $m$ 缩放为 $m \cdot L_{train}/L_{target}$，强制插值到训练分布内。代价：丢失近距离精度。</li>
+    <li><strong>YaRN：</strong>对不同频率维度使用不同缩放因子（高频不缩放、低频缩放），同时调整注意力温度，无需微调即可 8× 扩展。</li>
+    <li><strong>LongRoPE：</strong>通过演化搜索为每对维度找到最优缩放因子，支持 2048K 上下文（LLaMA 3.1）。</li>
+  </ul>
+</div>
+
+<h3 id="s5-4">5.4 ALiBi 线性偏置位置编码（Press et al. 2021）</h3>
+
+<div class="tech-card yellow">
+  <div class="tech-title">极简设计：直接在注意力矩阵上加线性惩罚</div>
+  <div class="formula-box">
+    $$\text{Attn}_{ij} = \text{softmax}\!\left(\frac{q_i k_j^T}{\sqrt{d_k}} + m_h \cdot (j - i)\right), \quad j \leq i$$
+  </div>
+  <p>其中 $m_h$ 是第 $h$ 个头的固定斜率，按几何级数分配：$m_h \in \{-\frac{1}{2}, -\frac{1}{4}, -\frac{1}{8}, \ldots, -\frac{1}{2^H}\}$。</p>
+
+  <h4>外推优势的本质</h4>
+  <p>RoPE 外推失败是因为高频分量在未见位置处旋转角"越界"，分布外推。ALiBi 的线性偏置是无参数的确定性函数，不存在分布外问题——位置 10000 的偏置就是 $m_h \times (-10000)$，简单外延。</p>
+  <p><strong>实测：</strong>ALiBi 在 2048 token 训练后，4096 token 推理时 perplexity 几乎不降；RoPE 需要额外的 YaRN/插值才能达到相同效果。</p>
+
+  <h4>ALiBi 的局限</h4>
+  <p>不同头共享相同的线性惩罚形式，无法学习非单调的位置关系。RoPE 允许模型学习不同频率的旋转，表达能力更丰富，因此主流 LLM 最终以 RoPE 为主。</p>
+</div>
+
+<h3 id="s5-5">5.5 iRoPE：Llama 4 的交错设计（2025）</h3>
+
+<div class="tech-card purple">
+  <div class="tech-title">RoPE 层与 NoPE 层交错排列</div>
+  <p>Llama 4 将 Transformer 层分为两类：</p>
+  <ul>
+    <li><strong>RoPE 层（多数）：</strong>正常的旋转位置编码，精确捕捉局部上下文中的位置关系</li>
+    <li><strong>NoPE 层（少数，交错）：</strong>完全不添加位置编码，注意力仅基于内容（语义）相似度，无位置偏置</li>
+  </ul>
+  <p><strong>NoPE 层的作用：</strong>对于极长上下文（百万级 token），强制位置感知反而会因高频旋转分量的混乱产生干扰。无位置编码的注意力层可以跨越极长距离做基于内容的全局检索，而无需担心位置外推问题。</p>
+  <p><strong>推理时温度缩放：</strong>对注意力 logit 乘以缩放因子 $\sqrt{d_k / d_k^{base}}$（基于训练长度调整），进一步稳定超长上下文下的注意力分布。</p>
+  <p>Llama 4 Scout 因此实现了 <strong>1000万 token</strong> 的上下文窗口（10M tokens）。</p>
+</div>
+
+<h3 id="s5-6">5.6 位置编码方案对比</h3>
+
+<div id="chart-pe" class="echarts-container" style="height:320px"></div>
+<script>
+echarts.init(document.getElementById('chart-pe')).setOption({
+  backgroundColor: '#2a2a3e',
+  tooltip: { trigger: 'axis' },
+  legend: { textStyle: { color: '#cdd6f4' }, top: 8 },
+  grid: { left: 70, right: 30, bottom: 50 },
+  xAxis: { type: 'category', data: ['Sinusoidal','Learned APE','T5 Relative','ALiBi','RoPE','YaRN/LongRoPE','iRoPE'], axisLabel: { color: '#cdd6f4', rotate: 15 } },
+  yAxis: { type: 'log', name: '可外推倍数（对数轴）', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' } },
+  series: [{ name: '外推倍数', type: 'bar', data: [1,1,3,10,4,30,800], itemStyle: { color: '#89b4fa' }, barMaxWidth: 52,
+    label: { show: true, position: 'top', color: '#cdd6f4', formatter: p => p.value + 'x' } }]
+});
+</script>
+
+<!-- ===================== 六、注意力效率优化 ===================== -->
+<h2 id="s6">六、注意力机制效率优化</h2>
+
+<h3 id="s6-1">6.1 MHA → MQA → GQA → MLA 演进</h3>
+
+<pre class="mermaid">
+graph LR
+  A["MHA<br>每头独立 KV<br>2017"] -->|"KV Cache 过大<br>推理内存受限"| B["MQA<br>所有头共享单一 KV<br>2019"]
+  B -->|"质量明显下降"| C["GQA<br>分组共享 KV<br>2023"]
+  A -->|"激进压缩<br>低秩分解"| D["MLA<br>低秩潜在 KV<br>2024"]
+</pre>
+
+<h3 id="s6-2">6.2 KV Cache 内存分析</h3>
+
+<div class="tech-card blue">
+  <p>自回归推理中，已生成的每个 token 的 $K, V$ 向量必须缓存（否则每步都要重算所有历史 token）。对 $L$ 层、$H_Q$ 个头、头维度 $d_h$、当前序列长度 $N$：</p>
+  <div class="formula-box">
+    $$\text{KV Cache}_{\text{MHA}} = 2 \times L \times H_Q \times N \times d_h \times \text{bytes per element}$$
+  </div>
+  <p><strong>示例（LLaMA 2 70B，fp16）：</strong> $L=80$，$H_Q=64$，$d_h=128$，$N=4096$：</p>
+  <div class="formula-box">
+    $$\text{KV Cache} = 2 \times 80 \times 64 \times 4096 \times 128 \times 2\,\text{B} \approx 10.7\,\text{GB}$$
+  </div>
+  <p>占用约 10.7 GB，接近推理时可用显存的一半——这是必须优化的核心瓶颈。</p>
+</div>
+
+<h3 id="s6-3">6.3 GQA：分组查询注意力详解</h3>
+
+<div class="tech-card green">
+  <div class="tech-title">核心思想：查询头分组，每组共享一对 K/V</div>
+
+  <pre class="mermaid">
+graph LR
+  subgraph GQA
+    Q1["Q头1"] --> KV1["KV组1"]
+    Q2["Q头2"] --> KV1
+    Q3["Q头3"] --> KV2["KV组2"]
+    Q4["Q头4"] --> KV2
+    Q5["Q头5"] --> KV3["KV组3"]
+    Q6["Q头6"] --> KV3
+    Q7["Q头7"] --> KV4["KV组4"]
+    Q8["Q头8"] --> KV4
+  end
+  </pre>
+
+  <h4>参数与内存分析</h4>
+  <p>设 $H_Q$ 个查询头，分为 $G$ 个 KV 组（$G < H_Q$），每组 $H_Q/G$ 个查询头共享一对 K/V：</p>
+  <div class="formula-box">
+    $$\text{KV Cache}_{\text{GQA}} = \frac{G}{H_Q} \times \text{KV Cache}_{\text{MHA}}$$
+    $$\text{压缩比} = \frac{H_Q}{G}$$
+  </div>
+  <p>以 LLaMA 2 70B 为例：$H_Q=64$，$G=8$，压缩比 $=8$，KV Cache 从 10.7 GB 降至 <strong>1.34 GB</strong>。</p>
+
+  <h4>质量损失为何极小？</h4>
+  <p>GQA 论文（Ainslie et al. 2023）发现，从 MHA checkpoint 通过 uptrain（用原 MHA 权重的均值初始化 GQA KV 头，再微调 5% 步数）可以在 $G \geq H_Q/8$ 时恢复超过 99% 的 MHA 质量。直觉上：同一组内的查询头本就倾向于关注相似的 K/V 模式，共享 KV 是有效压缩。</p>
+
+  <h4>MHA / MQA / GQA 三者统一视角</h4>
+  <table>
+    <tr><th>变体</th><th>KV 组数 $G$</th><th>KV 头数</th><th>KV Cache 压缩比</th><th>典型应用</th></tr>
+    <tr><td>MHA</td><td>$H_Q$</td><td>$H_Q$</td><td>1×</td><td>GPT-3 / LLaMA 1</td></tr>
+    <tr><td>MQA</td><td>1</td><td>1</td><td>$H_Q$×</td><td>PaLM / Falcon</td></tr>
+    <tr><td>GQA</td><td>$G$（$1 < G < H_Q$）</td><td>$G$</td><td>$H_Q/G$×</td><td>LLaMA 2/3 / Mistral</td></tr>
+  </table>
+</div>
+
+<h3 id="s6-4">6.4 MLA：Multi-Head Latent Attention（DeepSeek V2/V3）</h3>
+
+<div class="tech-card purple">
+  <div class="tech-title">低秩联合压缩：缓存低维潜在向量而非完整 K/V</div>
+
+  <h4>训练时：低秩分解</h4>
+  <div class="formula-box">
+    $$c_{KV} = x W_{DKV} \in \mathbb{R}^{d_c}, \quad d_c \ll H \cdot d_h$$
+    $$K = c_{KV} W_{UK} + x W_{KR}, \quad V = c_{KV} W_{UV}$$
+  </div>
+  <p>$W_{KR}$ 对应 RoPE 编码的 decoupled key（位置信息），$c_{KV}$ 对应内容信息。</p>
+
+  <h4>推理时：只缓存 $c_{KV}$</h4>
+  <div class="formula-box">
+    $$\text{KV Cache}_{\text{MLA}} = L \times N \times d_c \times \text{bytes}$$
+  </div>
+  <p>以 DeepSeek V3 配置为例：$d_c=512$，$H=128$，$d_h=128$，则 $H \cdot d_h = 16384$，压缩比 $= 16384/512 = \mathbf{32}$。</p>
+
+  <h4>矩阵吸收技巧（推理时零额外计算）</h4>
+  <p>注意力计算中 $Q \cdot K^T = Q \cdot (c_{KV} W_{UK})^T = (Q W_{UK}^T) \cdot c_{KV}^T$，可以将 $W_{UK}$ 预先吸收到 $Q$ 的投影矩阵中，使得推理时无需显式展开 $K$，计算开销与缓存 $c_{KV}$ 直接计算等价。</p>
+
+  <h4>MLA vs GQA 对比</h4>
+  <table>
+    <tr><th>维度</th><th>GQA（$G=8$）</th><th>MLA</th></tr>
+    <tr><td>KV Cache 压缩比</td><td>8×</td><td>32×</td></tr>
+    <tr><td>模型质量</td><td>轻微损失</td><td>接近 MHA</td></tr>
+    <tr><td>实现复杂度</td><td>低</td><td>高（需矩阵吸收）</td></tr>
+    <tr><td>量化友好性</td><td>高</td><td>中</td></tr>
+  </table>
+</div>
+
+<h3 id="s6-5">6.5 FlashAttention：IO 感知精确注意力</h3>
+
+<div class="tech-card yellow">
+  <div class="tech-title">核心洞察：瓶颈不在 FLOP，在 HBM 内存访问（IO）</div>
+
+  <h4>标准注意力的 IO 瓶颈</h4>
+  <p>A100 GPU 算力：312 TFLOPS（bf16），HBM 带宽：2 TB/s，算术强度阈值 $\approx 312/2 = 156$ FLOP/Byte。</p>
+  <p>标准注意力需要将 $N \times N$ 矩阵（序列长度 $N=4096$ 时约 64 MB）反复读写 HBM，是典型的 <span class="hl-red">memory-bound</span> 操作。</p>
+
+  <h4>FlashAttention 的分块（Tiling）策略</h4>
+  <p>将 $Q, K, V$ 分块加载到 SRAM（片上高速缓存，~20MB），通过在线 Softmax 算法在 SRAM 内完成完整计算，避免将 $N \times N$ 矩阵写入 HBM：</p>
+  <div class="formula-box">
+    $$\text{标准注意力 HBM IO} = O(N^2) \qquad \text{FlashAttention HBM IO} = O\!\left(\frac{N^2 d}{M}\right)$$
+  </div>
+  <p>其中 $M$ 是 SRAM 大小，$d$ 是头维度。典型参数下 IO 减少 $\approx \frac{M}{d} \approx \frac{20\text{MB}}{128 \times 2\text{B}} \approx 80\text{k}$ 倍（分块效果）。实测速度提升 3–7×。</p>
+
+  <h4>在线 Softmax（Online Softmax）算法</h4>
+  <p>标准 Softmax 需要先看到所有分数才能归一化，FlashAttention 维护行最大值 $m$ 和归一化因子 $l$，支持增量合并：</p>
+  <div class="formula-box">
+    $$m_\text{new} = \max(m_1, m_2)$$
+    $$l_\text{new} = e^{m_1 - m_\text{new}} l_1 + e^{m_2 - m_\text{new}} l_2$$
+    $$O_\text{new} = \frac{e^{m_1 - m_\text{new}} l_1 O_1 + e^{m_2 - m_\text{new}} l_2 O_2}{l_\text{new}}$$
+  </div>
+  <p>这一递推保证了增量处理与一次性处理在数值上完全等价（精确注意力，非近似）。</p>
+
+  <h4>版本演进</h4>
+  <table>
+    <tr><th>版本</th><th>年份</th><th>核心改进</th><th>速度提升</th></tr>
+    <tr><td>v1</td><td>2022</td><td>分块计算 + 在线 Softmax</td><td>3–7×（vs 标准注意力）</td></tr>
+    <tr><td>v2</td><td>2023</td><td>改进并行化（序列并行）+ 减少非矩阵乘法操作</td><td>2× vs v1</td></tr>
+    <tr><td>v3</td><td>2024</td><td>H100 异步流水线（warp 特化）+ FP8 支持</td><td>1.5–2× vs v2</td></tr>
+  </table>
+</div>
+
+<!-- ===================== 七、FFN 激活函数 ===================== -->
+<h2 id="s7">七、FFN 激活函数演进</h2>
+
+<h3 id="s7-1">7.1 演进路径</h3>
+<pre class="mermaid">
+graph LR
+  A["ReLU<br>原始 Transformer 2017"] -->|"死神经元"| B["GELU<br>BERT / GPT-2 2018"]
+  B -->|"门控机制"| C["SwiGLU<br>PaLM / LLaMA 2022+"]
+  B -->|"GELU 门控"| D["GeGLU<br>Gemma / Phi-4"]
+</pre>
+
+<h3 id="s7-2">7.2 激活函数详解</h3>
+
+<div class="tech-card blue">
+  <div class="tech-title">ReLU → GELU → SiLU 演进</div>
+  <div class="formula-box">
+    $$\text{ReLU}(x) = \max(0, x)$$
+    $$\text{GELU}(x) = x \cdot \Phi(x) \approx x \cdot \sigma(1.702x), \quad \Phi = \text{标准正态 CDF}$$
+    $$\text{SiLU}(x) = x \cdot \sigma(x) = \frac{x}{1+e^{-x}}$$
+  </div>
+  <p><strong>ReLU 的死神经元问题：</strong>当输入 $x < 0$ 时梯度严格为 0，该神经元永久"死亡"（不再更新），在深层网络中大量神经元失活。</p>
+  <p><strong>GELU/SiLU 的平滑特性：</strong>对负值仍有微小非零梯度（$x \approx -1$ 时 SiLU 约为 -0.1），彻底消除死神经元，梯度流更丰富。</p>
+</div>
+
+<h3 id="s7-3">7.3 SwiGLU 门控机制深度解析</h3>
+
+<div class="tech-card green">
+  <div class="tech-title">SwiGLU = SiLU + 门控线性单元（Shazeer 2020）</div>
+  <div class="formula-box">
+    $$\text{SwiGLU}(x) = \big(\text{SiLU}(xW_1) \odot xV\big)\, W_2$$
+    $$= \left(\frac{xW_1}{1+e^{-xW_1}} \odot xV\right) W_2$$
+  </div>
+
+  <h4>门控机制的作用</h4>
+  <p>$\text{SiLU}(xW_1)$ 是动态门控信号，$xV$ 是待传递的值信息。门控的语义：<strong>根据当前输入动态决定每个特征维度通过多少信息</strong>。相比 ReLU/GELU 的固定激活形式，门控允许网络在特征维度上进行精细的条件调制。</p>
+
+  <h4>参数量平衡：为什么隐藏维度要乘以 2/3？</h4>
+  <p>标准 FFN 使用两个矩阵（$W_1, W_2$），SwiGLU FFN 使用三个矩阵（$W_1, V, W_2$）。为保持总参数量不变：</p>
+  <div class="formula-box">
+    $$2 \times d_\text{model} \times d_{ff} = 3 \times d_\text{model} \times d_{ff}' \implies d_{ff}' = \frac{2}{3}d_{ff}$$
+  </div>
+  <p>若 $d_{ff} = 4 d_\text{model}$，则 $d_{ff}' = \frac{8}{3} d_\text{model} \approx 2.67 d_\text{model}$。</p>
+  <p>实践中通常对齐到 256 的倍数：LLaMA 2 7B 用 $d_\text{model}=4096$，$d_{ff}'=11008 = 2.69 d_\text{model}$。</p>
+
+  <h4>为什么 SwiGLU 比 GELU 更好？</h4>
+  <p>Noam Shazeer 在原论文中给出了一个直觉：GLU 族激活函数允许网络"选择性地遗忘"不需要的特征，比无门控的激活函数提供了更丰富的归纳偏置。PaLM（540B）的消融实验显示 SwiGLU 比 GELU 在相同参数量下提升约 0.3-0.5 perplexity 点。</p>
+</div>
+
+<h3 id="s7-4">7.4 激活函数对比</h3>
+<table>
+  <tr><th>激活函数</th><th>公式</th><th>门控</th><th>死神经元</th><th>参数矩阵数</th><th>代表模型</th></tr>
+  <tr><td>ReLU</td><td>$\max(0,x)$</td><td>否</td><td>有</td><td>2</td><td>原始 Transformer</td></tr>
+  <tr><td>GELU</td><td>$x\Phi(x)$</td><td>否</td><td>无</td><td>2</td><td>BERT / GPT-2</td></tr>
+  <tr><td>SiLU</td><td>$x\sigma(x)$</td><td>否</td><td>无</td><td>2</td><td>部分早期模型</td></tr>
+  <tr><td><strong>SwiGLU</strong></td><td>$\text{SiLU}(xW_1)\odot xV$</td><td>是</td><td>无</td><td>3</td><td><strong>LLaMA / PaLM / DeepSeek</strong></td></tr>
+  <tr><td>GeGLU</td><td>$\text{GELU}(xW_1)\odot xV$</td><td>是</td><td>无</td><td>3</td><td>Gemma / Phi-4</td></tr>
+</table>
+
+<!-- ===================== 八、稀疏注意力 ===================== -->
+<h2 id="s8">八、稀疏注意力与长上下文</h2>
+
+<h3 id="s8-1">8.1 稀疏注意力的动机</h3>
+
+<div class="tech-card blue">
+  <p>标准全注意力：计算 $O(N^2 d)$，内存 $O(N^2)$。$N=100\text{K}$ 时，仅注意力矩阵 fp16 存储 = $100\text{K}^2 \times 2\text{B} = 20\text{GB}$，完全不可行。</p>
+  <p>稀疏注意力的核心假设：<strong>多数 token 对当前 token 的贡献接近于零</strong>，可以安全跳过。实验表明注意力矩阵中 ~90% 的权重集中在少数 token 上（头部 token + 邻近 token + 少量关键 token）。</p>
+</div>
+
+<h3 id="s8-2">8.2 滑动窗口注意力（SWA）深度解析</h3>
+
+<div class="tech-card green">
+  <div class="tech-title">Mistral 7B 的核心组件</div>
+  <div class="formula-box">
+    $$\text{Attn}_{ij} = \begin{cases} \text{标准注意力} & \text{if } |i-j| \leq w/2 \\ 0 & \text{otherwise} \end{cases}$$
+  </div>
+
+  <h4>感受野扩展：堆叠带来全局信息</h4>
+  <div class="formula-box">
+    $$\text{第} l \text{层感受野} = l \times \frac{w}{2}$$
+  </div>
+  <p>Mistral 7B：$w=4096$，32 层后理论感受野 = $32 \times 2048 = 65536$ tokens，超过 16× 训练长度。</p>
+  <p><strong>与 CNN 的类比：</strong>SWA 类似于 CNN 的感受野逐层扩大，通过浅层捕捉局部细节、深层整合全局信息的层次化结构理解长距离依赖。</p>
+
+  <h4>KV Cache 的固定开销</h4>
+  <p>推理时每一步只需保留最近 $w$ 个 token 的 KV Cache，使 Cache 大小从 $O(N)$ 降为 $O(w)$（常数！），彻底解决超长序列的 Cache 爆炸问题。</p>
+</div>
+
+<h3 id="s8-3">8.3 局部-全局混合注意力（Gemma 2/3）</h3>
+
+<div class="tech-card yellow">
+  <p>每 6 层中：5 层使用 SWA（窗口 4096），1 层使用全局注意力。</p>
+  <p><strong>设计直觉：</strong>语言中大多数依赖是局部的（句法、短程语义），少数任务需要全局视野（指代消解、长程逻辑）。5:1 比例在实验中取得最优效率-质量平衡。</p>
+  <p><strong>计算节省估算：</strong>若全局注意力代价为 $N^2$，SWA 代价为 $Nw$，混合方案代价约为 $\frac{5Nw + N^2}{6}$。当 $N=100\text{K}$，$w=4096$ 时，节省约 <span class="hl-green">72%</span> 的注意力计算量。</p>
+</div>
+
+<!-- ===================== 九、MoE ===================== -->
+<h2 id="s9">九、MoE：从密集到稀疏</h2>
+
+<h3 id="s9-1">9.1 MoE 发展历程</h3>
+
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">1991</div>
+      <div class="tl-body"><div class="tl-item"><span class="tl-tag">理论</span><br>Jacobs et al.<br>混合专家概念提出</div></div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2017</div>
+      <div class="tl-body"><div class="tl-item"><span class="tl-tag green">NLP</span><br>Shazeer et al.<br>稀疏门控 MoE<br>应用于 LSTM</div></div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2021</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag purple">规模</span><br>Switch Transformer<br>1.6T 参数<br>Top-1 路由</div>
+        <div class="tl-item"><span class="tl-tag purple">规模</span><br>GShard 600B<br>Top-2 路由</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2023</div>
+      <div class="tl-body"><div class="tl-item"><span class="tl-tag green">开源</span><br>Mixtral 8x7B<br>8 专家选 2<br>实用化 MoE</div></div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag orange">创新</span><br>DeepSeekMoE<br>细粒度专家<br>共享专家机制</div>
+        <div class="tl-item"><span class="tl-tag orange">规模</span><br>DeepSeek V3<br>671B 总 / 37B 激活</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025</div>
+      <div class="tl-body"><div class="tl-item"><span class="tl-tag green">融合</span><br>Llama 4 Maverick<br>128 专家 MoE<br>iRoPE 融合</div></div>
+    </div>
+  </div>
+</div>
+
+<h3 id="s9-2">9.2 MoE 核心原理详解</h3>
+
+<div class="tech-card blue">
+  <div class="tech-title">将 FFN 层替换为 N 个专家网络，每 token 只激活 K 个</div>
+
+  <h4>门控机制（Top-K 路由）</h4>
+  <div class="formula-box">
+    $$G(x) = \text{Softmax}(\text{TopK}(xW_g + \epsilon))$$
+    $$G_i(x) = \begin{cases} \dfrac{e^{(xW_g)_i}}{\sum_{j \in \mathcal{T}} e^{(xW_g)_j}} & i \in \mathcal{T} \\ 0 & \text{otherwise} \end{cases}$$
+  </div>
+  <p>其中 $\mathcal{T}$ 是 logit 最大的 $K$ 个专家下标，$\epsilon$ 是训练时添加的噪声（防止专家崩溃）。</p>
+
+  <h4>最终输出</h4>
+  <div class="formula-box">
+    $$\text{MoE}(x) = \sum_{i \in \mathcal{T}} G_i(x) \cdot E_i(x)$$
+  </div>
+
+  <h4>计算效率分析</h4>
+  <p>总参数量 $\propto N \times d_{ff}$，但每次前向传播只激活 $K$ 个专家，FLOP $\propto K \times d_{ff}$。参数利用率 = $K/N$（DeepSeek V3 约 5.5%），实现了<strong>参数量与计算量的解耦</strong>。</p>
+</div>
+
+<h3 id="s9-3">9.3 负载均衡损失</h3>
+
+<div class="tech-card yellow">
+  <div class="tech-title">防止专家崩溃（Expert Collapse）</div>
+  <p>若不加约束，门控网络会将所有 token 路由到少数几个专家（马太效应），导致其他专家从未被训练（等同于参数浪费）。</p>
+
+  <div class="formula-box">
+    $$\mathcal{L}_\text{balance} = \alpha \cdot N \cdot \sum_{i=1}^{N} f_i \cdot P_i$$
+    $$f_i = \frac{\text{路由到专家 }i\text{ 的 token 数}}{\text{总 token 数}}, \quad P_i = \frac{1}{T}\sum_{t=1}^T G_i(x_t)$$
+  </div>
+  <p>$f_i$ 和 $P_i$ 的内积鼓励均匀分布：$\sum_i f_i P_i$ 在均匀分布时取最小值。$\alpha$ 通常设为 $10^{-2}$ 量级（过大会损害主任务质量）。</p>
+
+  <h4>DeepSeek V3 的无辅助损失方案</h4>
+  <p>为每个专家引入可学习偏置 $b_i$，路由 logit 变为 $xW_g + b$。监控历史负载，对过载专家减小 $b_i$，欠载专家增大 $b_i$，动态调节而无需显式辅助损失，避免了辅助损失与主损失的权衡困境。</p>
+</div>
+
+<h3 id="s9-4">9.4 DeepSeekMoE：细粒度专家设计</h3>
+
+<div class="tech-card purple">
+  <div class="tech-title">两大核心创新：专家细粒度化 + 共享专家</div>
+
+  <h4>1. 细粒度专家分割</h4>
+  <p>将每个标准专家分割为 $m$ 个细粒度专家（每个容量为原来的 $1/m$），同时将 $K$ 提高到 $mK$（激活数量不变但来源更分散）。</p>
+  <p><strong>优势：</strong>更细的粒度使专家特化更精准（从"处理名词性短语"细化到"处理英文人名"），每个 token 组合更多样的专家视角，提升知识覆盖。</p>
+
+  <h4>2. 共享专家（Shared Experts）</h4>
+  <div class="formula-box">
+    $$\text{DeepSeekMoE}(x) = E_\text{shared}(x) + \sum_{i \in \mathcal{T}} G_i(x) \cdot E_i^\text{routed}(x)$$
+  </div>
+  <p>1 个共享专家始终激活，处理所有 token 都需要的通用知识（如基础句法、常见词汇）；路由专家处理特化知识。</p>
+
+  <h4>DeepSeek V3 具体配置</h4>
+  <table>
+    <tr><th>参数</th><th>数值</th></tr>
+    <tr><td>总参数量</td><td>671B</td></tr>
+    <tr><td>每次前向激活参数量</td><td>37B（5.5%）</td></tr>
+    <tr><td>路由专家数</td><td>256</td></tr>
+    <tr><td>共享专家数</td><td>1</td></tr>
+    <tr><td>每 token 激活路由专家数</td><td>8</td></tr>
+    <tr><td>FP8 混合精度训练</td><td>是</td></tr>
+  </table>
+</div>
+
+<!-- ===================== 十、替代架构 ===================== -->
+<h2 id="s10">十、Transformer 替代架构：SSM 与 Mamba</h2>
+
+<h3 id="s10-1">10.1 状态空间模型（SSM）基础</h3>
+
+<div class="tech-card blue">
+  <div class="tech-title">连续时间线性动力系统</div>
+  <div class="formula-box">
+    $$h'(t) = A h(t) + B x(t), \quad y(t) = C h(t) + D x(t)$$
+  </div>
+  <p>$h(t) \in \mathbb{R}^N$ 是状态向量，$A \in \mathbb{R}^{N \times N}$ 是状态矩阵（决定状态演化），$B, C$ 是输入/输出投影，$D$ 是跳跃连接。</p>
+
+  <h4>离散化（ZOH 方法）</h4>
+  <div class="formula-box">
+    $$\bar{A} = e^{\Delta A}, \quad \bar{B} = (e^{\Delta A} - I)A^{-1}B \approx \Delta B$$
+    $$h_t = \bar{A} h_{t-1} + \bar{B} x_t, \quad y_t = C h_t$$
+  </div>
+  <p>$\Delta$ 是步长参数。递推形式等价于 RNN，可并行展开为卷积（训练高效）：$y = \bar{K} * x$，其中 $\bar{K} = (C\bar{B}, C\bar{A}\bar{B}, C\bar{A}^2\bar{B}, \ldots)$。</p>
+</div>
+
+<h3 id="s10-2">10.2 Mamba：选择性 SSM（Gu & Dao 2023）</h3>
+
+<div class="tech-card green">
+  <div class="tech-title">核心创新：让 SSM 参数依赖于输入（选择性机制）</div>
+
+  <h4>传统 SSM 的局限</h4>
+  <p>$A, B, C$ 是时间不变的（与输入 $x_t$ 无关），等价于一个固定的线性滤波器。对语言任务，同一组参数需要处理"句号后面接新句子"和"名词后面接形容词"——完全不同的语言现象——能力受限。</p>
+
+  <h4>选择性 SSM（S6）</h4>
+  <div class="formula-box">
+    $$B_t = \text{Linear}(x_t), \quad C_t = \text{Linear}(x_t), \quad \Delta_t = \text{Softplus}(\text{Linear}(x_t))$$
+  </div>
+  <p>$B_t, C_t, \Delta_t$ 都是当前 token $x_t$ 的函数，模型可以根据内容动态决定：</p>
+  <ul>
+    <li>$\Delta_t$ 大：大步长，更新状态（"这个 token 很重要，记住它"）</li>
+    <li>$\Delta_t$ 小：小步长，状态几乎不变（"这个 token 无关紧要"）</li>
+  </ul>
+
+  <h4>硬件感知实现</h4>
+  <p>选择性使得 SSM 不再是时不变卷积，无法直接用 FFT 加速。Mamba 采用并行扫描算法（parallel scan）在 SRAM 内完成递推，避免 HBM 读写，实现类似 FlashAttention 的 IO 优化。</p>
+
+  <h4>复杂度对比</h4>
+  <table>
+    <tr><th>架构</th><th>训练复杂度</th><th>推理内存</th><th>推理步骤复杂度</th></tr>
+    <tr><td>Transformer</td><td>$O(N^2 d)$</td><td>$O(N)$ KV Cache</td><td>$O(N d)$</td></tr>
+    <tr><td>Mamba / SSM</td><td>$O(N d^2)$（并行扫描）</td><td>$O(d^2)$ 固定状态</td><td>$O(d^2)$（常数！）</td></tr>
+  </table>
+  <p>Mamba 的推理内存是<strong>与序列长度无关的常数</strong>，对超长序列推理具有革命性意义。</p>
+</div>
+
+<h3 id="s10-3">10.3 混合架构（Hybrid）</h3>
+
+<div class="tech-card purple">
+  <pre class="mermaid">
+graph LR
+  H1["Mamba 层<br>线性复杂度<br>长距离压缩"] --> H2["注意力层<br>精确内容召回<br>局部精确性"] --> H3["Mamba 层"] --> H4["注意力层"] --> H5["..."]
+  </pre>
+  <p><strong>互补设计：</strong>Mamba 擅长长序列压缩（O(1) 状态）但精确召回能力弱；Transformer 注意力精确但 $O(N^2)$。混合架构用少量注意力层（约 8%）弥补 Mamba 的精确召回短板，同时保持整体接近线性复杂度。</p>
+  <p><strong>NVIDIA Nemotron-H：</strong>92% Mamba2 层 + 8% 注意力层，推理吞吐量提升 3× vs 纯 Transformer，同时在多数基准上达到同等质量。</p>
+</div>
+
+<!-- ===================== 十一、共识配方 ===================== -->
+<h2 id="s11">十一、现代 LLM 架构共识配方</h2>
+
+<h3 id="s11-1">11.1 五大组件的收敛</h3>
+
+<pre class="mermaid">
+graph TD
+  Recipe["现代 LLM 共识配方"] --> N["Pre-RMSNorm<br>训练稳定 + 计算高效"]
+  Recipe --> P["RoPE<br>相对位置 + 长距离衰减"]
+  Recipe --> A["GQA / MLA<br>KV Cache 大幅压缩"]
+  Recipe --> F["SwiGLU<br>门控 + 参数效率"]
+  Recipe --> B["无偏置项<br>量化友好 + 简化实现"]
+  N --> N1["vs LayerNorm：-15% FLOP<br>vs Post-Norm：梯度稳定"]
+  P --> P1["vs APE：天然外推<br>vs ALiBi：更丰富表达"]
+  A --> A1["GQA 8:1：KV -87.5%<br>MLA 32:1：质量接近 MHA"]
+  F --> F1["vs ReLU：无死神经元<br>vs GELU：门控调制能力"]
+</pre>
+
+<h3 id="s11-2">11.2 组件协同效应深度分析</h3>
+
+<div class="tech-card green">
+  <h4>Pre-RMSNorm + 无偏置 → 训练稳定性的协同</h4>
+  <p>Pre-Norm 保证梯度直接路径，RMSNorm 的平移不变性（无 $\beta$）与无偏置设计相互配合：若使用偏置，偏置在 RMSNorm 归一化后会被吸收掉（因为 RMSNorm 后接 $\gamma$ 缩放），等效于零偏置，但浪费参数。无偏置设计明确这一点，减少参数量同时不损失表达能力。</p>
+
+  <h4>RoPE + GQA → 推理效率协同</h4>
+  <p>RoPE 直接作用于每个 Q/K 向量（不修改嵌入），与 GQA 的 KV 共享完全正交兼容。更重要的是：RoPE 的旋转操作可以在 KV Cache 存储后懒加载（推理时只存未旋转的 K，每步读取时乘以 RoPE 旋转矩阵），节省存储同时保持精度。</p>
+
+  <h4>SwiGLU + Pre-RMSNorm → 梯度质量协同</h4>
+  <p>Pre-RMSNorm 归一化后进入 FFN 的激活值尺度一致（约 $\text{RMS}=1$），SwiGLU 的门控机制在此基础上工作最佳——若输入尺度不一致，$\text{SiLU}(xW_1)$ 的门控信号会不稳定（sigmoid 容易饱和）。两者协同保证了梯度在 FFN 内的稳定流动。</p>
+</div>
+
+<h3 id="s11-3">11.3 2024–2025 代表模型架构汇总</h3>
+<table>
+  <tr><th>模型</th><th>归一化</th><th>位置编码</th><th>激活函数</th><th>注意力</th><th>MoE</th><th>上下文</th></tr>
+  <tr><td>LLaMA 3.1</td><td>Pre-RMSNorm</td><td>RoPE</td><td>SwiGLU</td><td>GQA</td><td>否</td><td>128K</td></tr>
+  <tr><td>Mistral Large 2</td><td>Pre-RMSNorm</td><td>RoPE</td><td>SwiGLU</td><td>GQA</td><td>否</td><td>32K</td></tr>
+  <tr><td>Gemma 2/3</td><td>Pre+Post RMSNorm</td><td>RoPE</td><td>GeGLU</td><td>GQA（局部+全局）</td><td>否</td><td>262K</td></tr>
+  <tr><td>Qwen 2.5</td><td>Pre-RMSNorm</td><td>RoPE</td><td>SwiGLU</td><td>GQA</td><td>否</td><td>152K</td></tr>
+  <tr><td>DeepSeek V3</td><td>Pre-RMSNorm</td><td>RoPE</td><td>SwiGLU</td><td>MLA</td><td>是（256E+1）</td><td>128K</td></tr>
+  <tr><td>Llama 4 Scout</td><td>Pre-RMSNorm</td><td>iRoPE</td><td>SwiGLU</td><td>GQA</td><td>是（16E+1）</td><td><strong>10M</strong></td></tr>
+  <tr><td>Llama 4 Maverick</td><td>Pre-RMSNorm</td><td>iRoPE</td><td>SwiGLU</td><td>GQA</td><td>是（128E+1）</td><td>202K</td></tr>
+</table>
+
+<!-- ===================== 十二、未来趋势 ===================== -->
+<h2 id="s12">十二、未来趋势</h2>
+
+<h3 id="s12-1">12.1 Test-Time Compute 扩展</h3>
+
+<pre class="mermaid">
+graph LR
+  A["传统：训练时扩展<br>更多参数 / 数据"] --> B["新范式：推理时扩展<br>更多思考步骤"]
+  B --> C["链式思维 CoT"]
+  B --> D["树形搜索 ToT / MCTS"]
+  B --> E["推理模型<br>DeepSeek R1 / o3"]
+  E --> F["架构需求：<br>超长上下文支持<br>高效 KV Cache 管理<br>MoE 激活优化"]
+</pre>
+
+<h3 id="s12-2">12.2 多模态统一架构</h3>
+
+<div class="tech-card blue">
+  <p>Llama 4 的"早期融合"（Early Fusion）：视觉 token 与文本 token 在第一层统一处理，无独立视觉编码器。</p>
+  <ul>
+    <li><strong>架构挑战：</strong>视觉 token（图像块）是 2D 空间结构，文本 token 是 1D 时序结构，需要 RoPE 能同时处理两种几何关系</li>
+    <li><strong>MoE 专家自然分工：</strong>不同专家倾向于特化处理不同模态，MoE 架构天然适合多模态</li>
+  </ul>
+</div>
+
+<h3 id="s12-3">12.3 超长上下文：上下文窗口演进</h3>
+
+<div id="chart-ctx" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-ctx')).setOption({
+  backgroundColor: '#2a2a3e',
+  tooltip: { trigger: 'axis' },
+  grid: { left: 70, right: 30, bottom: 50 },
+  xAxis: { type: 'category', data: ['GPT-3\n2020','GPT-4\n2023','Claude 2\n2023','Gemini 1.5\n2024','Llama 4 Scout\n2025'], axisLabel: { color: '#cdd6f4' } },
+  yAxis: { type: 'log', name: '上下文长度（K tokens，对数轴）', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4', formatter: v => v + 'K' } },
+  series: [{ type: 'line', data: [4,128,200,1000,10000], smooth: true, itemStyle: { color: '#a6e3a1' }, lineStyle: { width: 3 },
+    label: { show: true, color: '#cdd6f4', formatter: p => p.value + 'K' } }]
+});
+</script>
+
+<h3 id="s12-4">12.4 架构与硬件协同设计</h3>
+
+<table>
+  <tr><th>技术</th><th>代表模型</th><th>收益</th></tr>
+  <tr><td>FP8 混合精度训练</td><td>DeepSeek V3 / Llama 4</td><td>显存 -50%，训练速度 +30%</td></tr>
+  <tr><td>FlashAttention 内核融合</td><td>几乎所有主流模型</td><td>注意力 IO 减少 8×</td></tr>
+  <tr><td>MoE 分组 GEMM</td><td>DeepSeek V3 / Mixtral</td><td>专家路由计算效率 2-3×</td></tr>
+  <tr><td>KV Cache INT8/INT4 量化</td><td>vLLM / TensorRT-LLM</td><td>KV Cache 内存 -50-75%</td></tr>
+  <tr><td>Ring Attention</td><td>长上下文训练</td><td>跨多 GPU 分布式长序列注意力</td></tr>
+</table>
+
+<hr>
+
+<!-- ===================== 附录 ===================== -->
+<h2 id="s13">附录：术语索引</h2>
+<table>
+  <tr><th>术语</th><th>全称</th><th>含义</th></tr>
+  <tr><td>MHA</td><td>Multi-Head Attention</td><td>多头注意力，每头独立 K/V</td></tr>
+  <tr><td>MQA</td><td>Multi-Query Attention</td><td>所有查询头共享单一 K/V</td></tr>
+  <tr><td>GQA</td><td>Grouped-Query Attention</td><td>查询头分组共享 K/V</td></tr>
+  <tr><td>MLA</td><td>Multi-Head Latent Attention</td><td>低秩压缩联合 K/V</td></tr>
+  <tr><td>RMSNorm</td><td>Root Mean Square Normalization</td><td>仅缩放的归一化，去掉均值中心化</td></tr>
+  <tr><td>RoPE</td><td>Rotary Position Embedding</td><td>旋转位置编码，在注意力中编码相对位置</td></tr>
+  <tr><td>ALiBi</td><td>Attention with Linear Biases</td><td>注意力分数上加线性距离惩罚</td></tr>
+  <tr><td>iRoPE</td><td>Interleaved RoPE</td><td>RoPE 层与 NoPE 层交错（Llama 4）</td></tr>
+  <tr><td>SwiGLU</td><td>Swish-Gated Linear Unit</td><td>SiLU 门控的三矩阵 FFN</td></tr>
+  <tr><td>SWA</td><td>Sliding Window Attention</td><td>每 token 只关注窗口内邻居</td></tr>
+  <tr><td>MoE</td><td>Mixture of Experts</td><td>多专家混合，每 token 激活少数专家</td></tr>
+  <tr><td>SSM</td><td>State Space Model</td><td>状态空间模型，线性复杂度序列建模</td></tr>
+  <tr><td>FIM</td><td>Fisher Information Matrix</td><td>Fisher 信息矩阵，自然梯度的度量</td></tr>
+  <tr><td>HBM</td><td>High Bandwidth Memory</td><td>GPU 显存，带宽约 2 TB/s</td></tr>
+  <tr><td>SRAM</td><td>Static RAM</td><td>GPU 片上缓存，约 20 MB，延迟极低</td></tr>
+</table>
+
+<hr>
+<p style="color:#6c7086; font-size:0.82em; text-align:center">
+  本报告基于 Transformer_架构演进技术报告.md，结合原始论文（Vaswani 2017 · Su 2021 · Ainslie 2023 · Shazeer 2020 · Dao 2022 · Gu 2023 等）重新生成，所有技术细节均经过公式推导与原文核对。覆盖 53+ 模型 · 时间跨度 2017–2025 · 生成日期：2026-05-13。
+</p>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'sec-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const lk = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (lk) lk.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>自监督学习与数据 — Lilian Weng 博客精选</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--yellow:#f9e2af;--purple:#cba6f7;--red:#f38ba8;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #toc a:hover{background:var(--border);}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+    #toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+    main{margin-left:240px;max-width:none;padding:40px 64px;}
+    h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+    h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+    h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+    p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+    ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+    th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+    td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+    code{font-family:'JetBrains Mono','Fira Code',monospace;}
+    p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+    .echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+    .tag{display:inline-block;background:#2a2a3e;border:1px solid var(--border);border-radius:12px;padding:2px 10px;font-size:.8em;margin:2px 3px;color:var(--purple);}
+    .info-box{background:#2a2a3e;border:1px solid var(--heading);border-radius:8px;padding:16px 20px;margin:1em 0;}
+    .info-box .title{color:var(--heading);font-weight:600;margin-bottom:6px;}
+    .warn-box{background:#2a2a3e;border:1px solid var(--yellow);border-radius:8px;padding:16px 20px;margin:1em 0;}
+    .warn-box .title{color:var(--yellow);font-weight:600;margin-bottom:6px;}
+    .formula-block{background:var(--bg-code);border-radius:6px;padding:14px 20px;margin:1em 0;font-size:.95em;border-left:3px solid var(--purple);}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>自监督学习与数据</h1>
+<p style="color:var(--purple);margin-bottom:4px;">Lilian Weng 博客精选 · 7篇文章综合报告</p>
+<p style="font-size:.88em;color:#6c7086;">
+  涵盖：Self-Supervised Representation Learning (2019) &nbsp;·&nbsp;
+  Contrastive Representation Learning (2021) &nbsp;·&nbsp;
+  Learning with not Enough Data Part 1-3 (2021-2022) &nbsp;·&nbsp;
+  Thinking about High-Quality Human Data (2024) &nbsp;·&nbsp;
+  Extrinsic Hallucinations in LLMs (2024)
+</p>
+
+<hr>
+
+<!-- ==================== 概览 ==================== -->
+<h2>1. 主题概览与知识图谱</h2>
+
+<p>
+  本报告整合 Lilian Weng 关于<strong>自监督学习</strong>与<strong>数据工程</strong>的七篇核心博文。
+  这些文章共同构成了一个完整的知识体系：从如何在<strong>无标注数据</strong>上学习表示，到如何在<strong>标注数据不足</strong>时借助半监督、主动学习和数据生成扩充训练集，再到如何保证<strong>人类标注质量</strong>，以及如何应对大语言模型的<strong>幻觉问题</strong>。
+</p>
+
+<div class="mermaid">
+mindmap
+  root((自监督学习与数据))
+    自监督表示学习
+      Pretext Tasks
+      图像对比学习
+      视频时序预测
+      NLP语言模型
+    对比学习
+      NCE / InfoNCE
+      SimCLR
+      MoCo
+      BYOL
+      SimCSE
+    数据不足三部曲
+      半监督学习
+        伪标签
+        一致性正则化
+        FixMatch
+      主动学习
+        不确定性采样
+        多样性采样
+        BADGE
+      数据生成
+        MixUp/CutMix
+        回译
+        扩散模型
+    高质量人类数据
+      标注流程设计
+      众包质量控制
+      标注者分歧建模
+      RLHF数据挑战
+    LLM幻觉
+      外在幻觉来源
+      检测方法
+      缓解策略
+</div>
+
+<h3>文章时间线与主题关系</h3>
+
+<div id="timeline-chart" class="echarts-container" style="height:220px;"></div>
+<script>
+(function(){
+  var dom = document.getElementById('timeline-chart');
+  var chart = echarts.init(dom, 'dark');
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{trigger:'item',formatter:function(p){return p.data.label;}},
+    xAxis:{type:'time',axisLabel:{color:'#cdd6f4',fontSize:11},axisLine:{lineStyle:{color:'#45475a'}},splitLine:{show:false}},
+    yAxis:{show:false,min:0,max:4},
+    series:[{
+      type:'scatter',
+      symbolSize:14,
+      data:[
+        {value:['2019-11-10',2],label:'自监督表示学习\n2019-11-10',itemStyle:{color:'#89b4fa'}},
+        {value:['2021-05-31',2],label:'对比表示学习\n2021-05-31',itemStyle:{color:'#cba6f7'}},
+        {value:['2021-12-05',1],label:'数据不足 Part1: 半监督\n2021-12-05',itemStyle:{color:'#a6e3a1'}},
+        {value:['2022-02-20',1],label:'数据不足 Part2: 主动学习\n2022-02-20',itemStyle:{color:'#a6e3a1'}},
+        {value:['2022-04-15',1],label:'数据不足 Part3: 数据生成\n2022-04-15',itemStyle:{color:'#a6e3a1'}},
+        {value:['2024-02-05',3],label:'高质量人类数据\n2024-02-05',itemStyle:{color:'#fab387'}},
+        {value:['2024-07-07',3],label:'LLM外在幻觉\n2024-07-07',itemStyle:{color:'#f38ba8'}}
+      ],
+      label:{show:true,formatter:function(p){return p.data.label.split('\n')[0];},position:'top',color:'#cdd6f4',fontSize:10}
+    }]
+  });
+})();
+</script>
+
+<hr>
+
+<!-- ==================== 自监督表示学习 ==================== -->
+<h2>2. 自监督表示学习（2019-11-10）</h2>
+
+<p>
+  自监督学习（Self-Supervised Learning, SSL）是一种特殊的无监督学习范式：它从数据本身自动构造<strong>监督信号</strong>，无需人工标注。核心思想是设计一个<strong>代理任务（Pretext Task）</strong>，让模型在完成该任务的过程中学习到有用的通用表示，再将该表示迁移到下游任务。
+</p>
+
+<div class="info-box">
+  <div class="title">核心动机</div>
+  人工标注成本极高，而互联网上存在海量无标注数据。自监督学习将无标注数据转化为"自带标签"的训练样本，从而充分利用这些数据学习强大的特征表示。
+</div>
+
+<h3>2.1 代理任务（Pretext Tasks）</h3>
+
+<p>代理任务是人为构造的辅助任务，其标签直接从数据本身派生，不需要人工标注。</p>
+
+<h4>图像领域代理任务</h4>
+
+<table>
+  <thead><tr><th>代理任务</th><th>输入</th><th>预测目标</th><th>学习到的能力</th></tr></thead>
+  <tbody>
+    <tr><td><strong>旋转预测</strong> (RotNet)</td><td>旋转0/90/180/270°的图像</td><td>旋转角度（4分类）</td><td>物体方向感知、全局语义</td></tr>
+    <tr><td><strong>拼图复原</strong> (Jigsaw)</td><td>打乱的 3×3 图像块</td><td>块的排列顺序（排列数分类）</td><td>空间关系、局部纹理</td></tr>
+    <tr><td><strong>图像着色</strong></td><td>灰度图</td><td>每像素 ab 颜色通道</td><td>语义内容与颜色的关联</td></tr>
+    <tr><td><strong>图像修复</strong> (Inpainting)</td><td>遮掩部分的图像</td><td>被遮掩区域的内容</td><td>上下文推理、纹理生成</td></tr>
+    <tr><td><strong>超分辨率</strong></td><td>低分辨率图像</td><td>高分辨率图像</td><td>细节纹理特征</td></tr>
+    <tr><td><strong>相对位置预测</strong></td><td>两个图像块</td><td>相对位置关系（8方向）</td><td>空间布局理解</td></tr>
+  </tbody>
+</table>
+
+<div class="mermaid">
+flowchart LR
+    A[原始图像] --> B[代理任务变换]
+    B --> C1[旋转]
+    B --> C2[打乱拼图]
+    B --> C3[灰度化]
+    B --> C4[遮掩]
+    C1 & C2 & C3 & C4 --> D[编码器 f]
+    D --> E[表示 z]
+    E --> F[预测头]
+    F --> G[代理任务损失]
+    G -->|反向传播| D
+    E -.->|迁移| H[下游任务]
+    style D fill:#313244,stroke:#89b4fa
+    style E fill:#313244,stroke:#cba6f7
+</div>
+
+<h4>视频领域代理任务</h4>
+
+<p>视频数据天然包含时序信息，为自监督学习提供了更丰富的监督信号：</p>
+
+<ul>
+  <li><strong>时序顺序预测（Temporal Order Verification）</strong>：给定若干视频帧，判断其顺序是否正确。模型需理解运动语义才能正确判断。</li>
+  <li><strong>箭头时间（Arrow of Time）</strong>：区分正向播放与逆向播放的视频片段。物理运动具有时间方向性，逆播往往违反物理规律。</li>
+  <li><strong>速度预测（Video Speed Prediction）</strong>：预测视频片段的播放速度（正常/2×/4×）。需要理解运动的自然节奏。</li>
+  <li><strong>跨帧目标追踪（Cross-Frame Tracking）</strong>：在时序帧间追踪特定区域，利用视频的时间连续性作为监督。</li>
+  <li><strong>视听对应（Audio-Visual Correspondence）</strong>：判断视频帧与音频片段是否来自同一时刻，学习跨模态对齐。</li>
+</ul>
+
+<h4>NLP领域代理任务</h4>
+
+<ul>
+  <li><strong>语言模型（LM）</strong>：预测下一个词，即自回归建模。GPT系列的核心预训练目标。</li>
+  <li><strong>掩码语言模型（MLM）</strong>：随机遮掩15%的词，预测被遮掩词。BERT的核心预训练目标，能学习双向上下文。</li>
+  <li><strong>下句预测（NSP）</strong>：判断两个句子是否相邻，BERT的辅助任务，学习句子间关系。</li>
+  <li><strong>句子顺序预测（SOP）</strong>：判断两个连续句子的顺序，ALBERT对NSP的改进，更难、更有效。</li>
+  <li><strong>词语替换检测（RTD）</strong>：ELECTRA的目标，判断每个词是否被生成器替换，训练效率更高。</li>
+</ul>
+
+<h3>2.2 图像自监督学习框架</h3>
+
+<div class="mermaid">
+flowchart TD
+    subgraph 预训练阶段
+      A[大量无标注图像] --> B[代理任务构造]
+      B --> C[编码器 CNN/ViT]
+      C --> D[学习通用特征表示]
+    end
+    subgraph 微调阶段
+      D --> E[冻结/微调编码器]
+      E --> F[少量标注数据]
+      F --> G[下游任务头]
+      G --> H[分类/检测/分割]
+    end
+    style C fill:#313244,stroke:#89b4fa
+    style D fill:#313244,stroke:#a6e3a1
+</div>
+
+<p>
+  预训练阶段使用大量无标注数据训练编码器，微调阶段只需少量标注数据训练任务头。
+  这种范式大幅降低了对标注数据的需求，是现代深度学习的核心技术路线。
+</p>
+
+<h3>2.3 评估方式</h3>
+
+<ul>
+  <li><strong>线性评估（Linear Evaluation）</strong>：冻结预训练编码器，只训练一个线性分类头。衡量特征的线性可分性。</li>
+  <li><strong>半监督微调</strong>：使用1%或10%的标注数据微调整个网络。衡量少样本迁移能力。</li>
+  <li><strong>迁移学习</strong>：在其他数据集（如VOC、COCO）上进行检测/分割任务，衡量特征的通用性。</li>
+</ul>
+
+<hr>
+
+<!-- ==================== 对比学习 ==================== -->
+<h2>3. 对比表示学习（2021-05-31）</h2>
+
+<p>
+  对比学习（Contrastive Learning）是自监督学习中最成功的范式之一。
+  其核心思想是：<strong>让相似的样本对在嵌入空间中靠近，让不相似的样本对远离</strong>。
+  通过这种方式，无需标注即可学习到区分性强的表示。
+</p>
+
+<div class="info-box">
+  <div class="title">核心直觉</div>
+  同一张图片的两种不同增强视图（不同裁剪、颜色抖动等）应该有相似的表示（正样本对），
+  而不同图片的视图应该有不同的表示（负样本对）。
+  模型通过区分这些对来学习图像的语义特征。
+</div>
+
+<h3>3.1 损失函数的演化</h3>
+
+<h4>噪声对比估计（NCE Loss）</h4>
+
+<p>NCE 将密度估计问题转化为二分类问题：区分真实数据样本（正样本）与噪声分布中采样的样本（负样本）。</p>
+
+<div class="formula-block">
+$$\mathcal{L}_{\text{NCE}} = -\mathbb{E}_{x \sim p_{\text{data}}} \left[ \log \frac{p_{\text{data}}(x)}{p_{\text{data}}(x) + k \cdot p_{\text{noise}}(x)} \right] - k \cdot \mathbb{E}_{x \sim p_{\text{noise}}} \left[ \log \frac{k \cdot p_{\text{noise}}(x)}{p_{\text{data}}(x) + k \cdot p_{\text{noise}}(x)} \right]$$
+</div>
+
+<p>其中 $k$ 是每个正样本对应的噪声样本数量。</p>
+
+<h4>InfoNCE 损失（对比预测编码）</h4>
+
+<p>InfoNCE 是对比学习中最常用的损失函数，也称为 NT-Xent（Normalized Temperature-scaled Cross Entropy）：</p>
+
+<div class="formula-block">
+$$\mathcal{L}_{\text{InfoNCE}} = -\log \frac{\exp(\text{sim}(z_i, z_j) / \tau)}{\sum_{k=1}^{2N} \mathbf{1}_{[k \neq i]} \exp(\text{sim}(z_i, z_k) / \tau)}$$
+</div>
+
+<p>其中：</p>
+<ul>
+  <li>$z_i, z_j$ 是同一样本的两个增强视图的表示（正样本对）</li>
+  <li>$\text{sim}(u, v) = u^\top v / (\|u\| \cdot \|v\|)$ 是余弦相似度</li>
+  <li>$\tau$ 是温度超参数，控制分布的尖锐程度（越小越关注困难负样本）</li>
+  <li>分母对批次内所有其他样本求和（包括其增强对），形成 $2N-1$ 个负样本</li>
+</ul>
+
+<div class="warn-box">
+  <div class="title">温度参数 τ 的作用</div>
+  温度越低，损失对困难负样本（与正样本相似的负样本）的惩罚越大，迫使模型学习更精细的区分；
+  但温度过低会导致训练不稳定。SimCLR 中 τ=0.07 效果最好。
+</div>
+
+<h3>3.2 主要对比学习框架</h3>
+
+<div class="mermaid">
+flowchart LR
+    subgraph SimCLR["SimCLR (Chen et al. 2020)"]
+      direction TB
+      s1[图像 x] --> s2[增强 t₁] & s3[增强 t₂]
+      s2 --> s4[编码器 f]
+      s3 --> s5[编码器 f]
+      s4 --> s6[投影头 g]
+      s5 --> s7[投影头 g]
+      s6 & s7 --> s8[NT-Xent Loss]
+    end
+    subgraph MoCo["MoCo (He et al. 2020)"]
+      direction TB
+      m1[查询图像] --> m2[查询编码器]
+      m3[键图像] --> m4[动量编码器]
+      m2 --> m5[对比损失]
+      m4 --> m6[队列 Queue]
+      m6 --> m5
+    end
+    subgraph BYOL["BYOL (Grill et al. 2020)"]
+      direction TB
+      b1[图像] --> b2[在线网络] & b3[目标网络 EMA]
+      b2 --> b4[预测头]
+      b4 --> b5[MSE Loss]
+      b3 --> b5
+    end
+</div>
+
+<h4>SimCLR（简单对比学习框架）</h4>
+
+<p>SimCLR 是对比学习的里程碑工作，以极简的设计取得了当时最优的性能：</p>
+
+<ol>
+  <li><strong>数据增强</strong>：对同一图像随机应用两种增强（随机裁剪+颜色抖动+灰度化+高斯模糊），生成正样本对 $(x_i, x_j)$</li>
+  <li><strong>编码器</strong>：ResNet 提取表示 $h = f(x)$</li>
+  <li><strong>投影头</strong>：MLP 将表示映射到对比损失空间 $z = g(h)$（下游任务使用 $h$ 而非 $z$）</li>
+  <li><strong>对比损失</strong>：在大批量（4096-8192）上计算 NT-Xent 损失</li>
+</ol>
+
+<p><strong>关键发现</strong>：</p>
+<ul>
+  <li>随机裁剪是最重要的增强，颜色抖动次之</li>
+  <li>投影头的存在显著提升下游任务性能（约10%）</li>
+  <li>批量大小越大性能越好，但需要大量计算资源</li>
+  <li>更长的训练时间持续带来性能提升</li>
+</ul>
+
+<h4>MoCo（动量对比）</h4>
+
+<p>SimCLR 需要极大批量才能有足够的负样本，MoCo 通过<strong>动量编码器</strong>和<strong>队列</strong>解耦了负样本数量与批量大小：</p>
+
+<ul>
+  <li><strong>查询编码器</strong>：正常梯度更新</li>
+  <li><strong>键编码器（动量编码器）</strong>：通过指数移动平均（EMA）更新，$\theta_k \leftarrow m \cdot \theta_k + (1-m) \cdot \theta_q$，$m=0.999$</li>
+  <li><strong>队列</strong>：维护最近 $K$（如65536）个键的表示，每次出队最旧的批次，入队新批次。提供大量负样本而无需大批量。</li>
+</ul>
+
+<div class="formula-block">
+$$\mathcal{L}_{\text{MoCo}} = -\log \frac{\exp(q \cdot k_+ / \tau)}{\exp(q \cdot k_+ / \tau) + \sum_{i=0}^{K-1} \exp(q \cdot k_i / \tau)}$$
+</div>
+
+<p>MoCo v2 引入了 SimCLR 的投影头和更强的数据增强，进一步提升性能。MoCo v3 将主干替换为 ViT。</p>
+
+<h4>BYOL（无负样本对比学习）</h4>
+
+<p>BYOL（Bootstrap Your Own Latent）的革命性贡献在于<strong>完全不使用负样本</strong>，却不发生表示崩塌（所有样本映射到同一点）：</p>
+
+<ul>
+  <li><strong>在线网络</strong>：编码器 $f_\theta$ + 投影头 $g_\theta$ + 预测头 $q_\theta$</li>
+  <li><strong>目标网络</strong>：编码器 $f_\xi$ + 投影头 $g_\xi$，通过 EMA 更新 $\xi$，无预测头</li>
+  <li><strong>损失</strong>：在线网络的预测与目标网络的输出之间的 MSE（余弦相似度形式）</li>
+</ul>
+
+<div class="formula-block">
+$$\mathcal{L}_{\text{BYOL}} = 2 - 2 \cdot \frac{\langle q_\theta(z_\theta), z'_\xi \rangle}{\|q_\theta(z_\theta)\|_2 \cdot \|z'_\xi\|_2}$$
+</div>
+
+<p><strong>为何不崩塌？</strong> 目标网络的 EMA 更新引入了隐式的正则化，使得在线网络无法通过让所有输出相同来最小化损失——因为目标网络也在缓慢跟随，形成了一种稳定的动态均衡。</p>
+
+<h4>SimCSE（句子嵌入对比学习）</h4>
+
+<p>SimCSE 将对比学习思想应用于 NLP 的句子嵌入：</p>
+
+<ul>
+  <li><strong>无监督 SimCSE</strong>：同一句子喂入编码器两次，由于 Dropout 的随机性产生两个不同的表示，作为正样本对。极其简单但有效。</li>
+  <li><strong>有监督 SimCSE</strong>：使用 NLI 数据集，蕴含对（entailment）作正样本，矛盾对（contradiction）作硬负样本。</li>
+</ul>
+
+<h3>3.3 对比学习方法对比</h3>
+
+<table>
+  <thead>
+    <tr><th>方法</th><th>负样本</th><th>批量需求</th><th>关键创新</th><th>ImageNet Top-1</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>SimCLR v1</td><td>批内其他样本</td><td>极大（4096+）</td><td>投影头 + 强增强</td><td>69.3%</td></tr>
+    <tr><td>SimCLR v2</td><td>批内其他样本</td><td>极大</td><td>更大模型 + 半监督</td><td>74.2%</td></tr>
+    <tr><td>MoCo v1</td><td>队列（65536）</td><td>小（256）</td><td>动量编码器 + 队列</td><td>60.6%</td></tr>
+    <tr><td>MoCo v2</td><td>队列</td><td>小</td><td>+ 投影头 + 强增强</td><td>71.1%</td></tr>
+    <tr><td>BYOL</td><td>无</td><td>中等</td><td>EMA目标网络，无负样本</td><td>74.3%</td></tr>
+    <tr><td>SwAV</td><td>在线聚类原型</td><td>中等</td><td>聚类 + 多裁剪</td><td>75.3%</td></tr>
+    <tr><td>Barlow Twins</td><td>无</td><td>中等</td><td>冗余减少，特征去相关</td><td>73.2%</td></tr>
+  </tbody>
+</table>
+
+<div id="ssl-perf-chart" class="echarts-container" style="height:300px;"></div>
+<script>
+(function(){
+  var dom = document.getElementById('ssl-perf-chart');
+  var chart = echarts.init(dom, 'dark');
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'主要对比学习方法 ImageNet 线性评估 Top-1 准确率',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis'},
+    xAxis:{type:'category',data:['SimCLR v1','MoCo v1','MoCo v2','SimCLR v2','BYOL','Barlow Twins','SwAV'],axisLabel:{color:'#cdd6f4',rotate:15}},
+    yAxis:{type:'value',min:55,max:80,axisLabel:{color:'#cdd6f4',formatter:'{value}%'},splitLine:{lineStyle:{color:'#45475a'}}},
+    series:[{
+      type:'bar',
+      data:[
+        {value:69.3,itemStyle:{color:'#89b4fa'}},
+        {value:60.6,itemStyle:{color:'#cba6f7'}},
+        {value:71.1,itemStyle:{color:'#cba6f7'}},
+        {value:74.2,itemStyle:{color:'#89b4fa'}},
+        {value:74.3,itemStyle:{color:'#a6e3a1'}},
+        {value:73.2,itemStyle:{color:'#fab387'}},
+        {value:75.3,itemStyle:{color:'#f38ba8'}}
+      ],
+      label:{show:true,position:'top',formatter:'{c}%',color:'#cdd6f4',fontSize:11}
+    }]
+  });
+})();
+</script>
+
+<hr>
+
+<!-- ==================== 半监督学习 ==================== -->
+<h2>4. 数据不足 Part 1：半监督学习（2021-12-05）</h2>
+
+<p>
+  半监督学习（Semi-Supervised Learning, SSL）利用<strong>少量有标注数据</strong>和<strong>大量无标注数据</strong>共同训练模型。
+  核心假设：无标注数据的分布信息可以帮助改善决策边界。
+</p>
+
+<div class="mermaid">
+flowchart LR
+    A["少量标注数据\n(labeled, 1%-10%)"] --> C[半监督模型]
+    B["大量无标注数据\n(unlabeled, 90%-99%)"] --> C
+    C --> D[比纯监督学习更好的性能]
+    style A fill:#313244,stroke:#a6e3a1
+    style B fill:#313244,stroke:#89b4fa
+</div>
+
+<h3>4.1 核心假设</h3>
+
+<ul>
+  <li><strong>平滑性假设</strong>：特征空间中相近的点应有相同标签</li>
+  <li><strong>聚类假设</strong>：同一聚类内的点应有相同标签，决策边界应穿过低密度区域</li>
+  <li><strong>流形假设</strong>：高维数据分布在低维流形上，同一流形上的点应有相同标签</li>
+</ul>
+
+<h3>4.2 伪标签（Pseudo-Labeling）</h3>
+
+<p>伪标签是最直接的半监督方法：</p>
+
+<ol>
+  <li>用有标注数据训练初始模型</li>
+  <li>对无标注数据进行预测，取<strong>高置信度</strong>预测作为伪标签（如概率 > 0.95）</li>
+  <li>将带伪标签的数据加入训练集，重新训练</li>
+  <li>迭代重复上述过程</li>
+</ol>
+
+<div class="formula-block">
+$$\mathcal{L} = \mathcal{L}_{\text{supervised}} + \lambda \cdot \mathcal{L}_{\text{pseudo}}$$
+$$\mathcal{L}_{\text{pseudo}} = -\frac{1}{|\mathcal{U}_{\text{conf}}|} \sum_{x \in \mathcal{U}_{\text{conf}}} \hat{y}(x) \log p_\theta(y|x)$$
+</div>
+
+<p>其中 $\mathcal{U}_{\text{conf}}$ 是置信度超过阈值的无标注样本集合，$\hat{y}(x) = \arg\max_c p_\theta(c|x)$ 是伪标签。</p>
+
+<p><strong>风险</strong>：错误的伪标签会被模型强化，产生<em>确认偏差（Confirmation Bias）</em>。</p>
+
+<h3>4.3 标签传播（Label Propagation）</h3>
+
+<p>将数据点视为图中的节点，相似样本之间连边，通过图上的消息传递将标签从已标注节点传播到未标注节点：</p>
+
+<div class="formula-block">
+$$F = (I - \alpha S)^{-1} Y$$
+</div>
+
+<p>其中 $S$ 是归一化的相似度矩阵，$\alpha$ 控制标签传播强度，$Y$ 是初始标签矩阵（无标注样本行为0）。</p>
+
+<h3>4.4 一致性正则化</h3>
+
+<p>
+  <strong>核心思想</strong>：同一样本的不同扰动/增强版本应产生相同的预测。
+  这是一种利用无标注数据的强大正则化手段。
+</p>
+
+<div class="mermaid">
+flowchart LR
+    A[无标注样本 x] --> B[弱增强 x̃₁]
+    A --> C[强增强 x̃₂]
+    B --> D[模型 f]
+    C --> E[模型 f]
+    D --> F[预测 p₁]
+    E --> G[预测 p₂]
+    F & G --> H[一致性损失 KL(p₁ ∥ p₂)]
+    style H fill:#313244,stroke:#fab387
+</div>
+
+<h4>UDA（无监督数据增强）</h4>
+
+<p>UDA 使用强数据增强（图像：RandAugment；文本：回译）产生扰动版本，然后最小化原始预测与扰动预测之间的 KL 散度：</p>
+
+<div class="formula-block">
+$$\mathcal{L}_{\text{UDA}} = \mathbb{E}_{x \in \mathcal{U}} \text{KL}\left( p_\theta(y | \hat{x}) \| p_\theta(y | \alpha(x)) \right)$$
+</div>
+
+<p>其中 $\hat{x}$ 是弱增强版本（锐化后的预测），$\alpha(x)$ 是强增强版本。</p>
+
+<h4>MixMatch</h4>
+
+<p>MixMatch 统一了伪标签和一致性正则化，并引入了 MixUp 增强：</p>
+
+<ol>
+  <li>对每个无标注样本生成 $K$ 个增强版本，平均预测作为伪标签</li>
+  <li>对伪标签进行<strong>温度锐化</strong>（降低温度使预测更尖锐）</li>
+  <li>将有标注和无标注数据混合，应用 MixUp</li>
+  <li>对混合后的数据计算监督损失和一致性损失</li>
+</ol>
+
+<h4>FixMatch</h4>
+
+<p>FixMatch 是一种简洁高效的半监督方法，结合了伪标签和一致性正则化：</p>
+
+<div class="mermaid">
+flowchart TD
+    A[无标注样本 u] --> B[弱增强 α(u)]
+    A --> C[强增强 A(u)]
+    B --> D[模型预测 p̂]
+    D --> E{置信度 > τ?}
+    E -->|是| F[生成伪标签 q̂]
+    E -->|否| G[丢弃此样本]
+    F --> H[计算与强增强预测的交叉熵]
+    C --> I[模型预测]
+    I --> H
+    style F fill:#313244,stroke:#a6e3a1
+    style G fill:#313244,stroke:#f38ba8
+</div>
+
+<div class="formula-block">
+$$\mathcal{L}_u = \frac{1}{\mu B} \sum_{b=1}^{\mu B} \mathbf{1}(\max(q_b) \geq \tau) \cdot H(\hat{q}_b, p_m(y | \mathcal{A}(u_b)))$$
+</div>
+
+<p>FixMatch 的优势：简单、高效，在 CIFAR-10 上仅用 40 个标注样本就能达到 94.93% 的准确率。</p>
+
+<h3>4.5 知识蒸馏与 Noisy Student</h3>
+
+<p>Noisy Student 是一种迭代式的半监督训练方法：</p>
+
+<ol>
+  <li>在有标注数据上训练<strong>教师模型</strong>（EfficientNet-B7）</li>
+  <li>用教师模型为大量无标注图像（JFT-300M）生成伪标签</li>
+  <li>训练<strong>更大的学生模型</strong>（EfficientNet-L2），使用伪标签数据，并加入噪声（Dropout、随机深度、RandAugment）</li>
+  <li>将学生模型作为新的教师，重复上述过程</li>
+</ol>
+
+<p>关键：学生比教师<strong>更大</strong>，且训练时加入<strong>噪声</strong>，迫使学生学得更鲁棒。在 ImageNet 上达到 88.4% Top-1 准确率。</p>
+
+<hr>
+
+<!-- ==================== 主动学习 ==================== -->
+<h2>5. 数据不足 Part 2：主动学习（2022-02-20）</h2>
+
+<p>
+  主动学习（Active Learning）通过<strong>智能选择最有价值的样本</strong>进行标注，
+  以最小的标注代价获得最大的性能提升。
+  核心问题：在预算约束下，应该让人类标注哪些样本？
+</p>
+
+<div class="mermaid">
+flowchart LR
+    A[未标注数据池] --> B[查询策略]
+    B --> C[选择最有价值的 k 个样本]
+    C --> D[人类标注专家]
+    D --> E[加入标注集]
+    E --> F[重新训练模型]
+    F --> B
+    style B fill:#313244,stroke:#89b4fa
+    style D fill:#313244,stroke:#fab387
+</div>
+
+<h3>5.1 不确定性采样（Uncertainty Sampling）</h3>
+
+<p>选择模型最不确定的样本——这些样本包含最多的信息量：</p>
+
+<table>
+  <thead><tr><th>策略</th><th>公式</th><th>含义</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>最小置信度</strong></td>
+      <td>$x^* = \arg\min_x \max_y P(y|x)$</td>
+      <td>选择最高预测概率最小的样本</td>
+    </tr>
+    <tr>
+      <td><strong>边界采样</strong></td>
+      <td>$x^* = \arg\min_x (P(\hat{y}_1|x) - P(\hat{y}_2|x))$</td>
+      <td>选择最高与次高预测概率差距最小的</td>
+    </tr>
+    <tr>
+      <td><strong>最大熵</strong></td>
+      <td>$x^* = \arg\max_x -\sum_y P(y|x)\log P(y|x)$</td>
+      <td>选择预测分布最均匀（熵最大）的样本</td>
+    </tr>
+    <tr>
+      <td><strong>MC Dropout</strong></td>
+      <td>多次前向传播取方差</td>
+      <td>贝叶斯近似，捕捉模型不确定性</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="warn-box">
+  <div class="title">不确定性采样的局限</div>
+  不确定性采样倾向于选择分布边界附近的样本，可能导致选出的样本<strong>高度相似</strong>（聚集在同一边界区域），
+  忽略了数据空间中其他区域的信息。这就是需要多样性采样的原因。
+</div>
+
+<h3>5.2 多样性采样（Diversity Sampling）</h3>
+
+<p>确保选出的样本能覆盖整个数据分布，避免冗余：</p>
+
+<h4>Core-set 方法</h4>
+
+<p>Core-set 将主动学习转化为一个<strong>几何覆盖问题</strong>：找到最小的样本子集，使得数据集中所有点都在选出样本的 $\epsilon$-邻域内。</p>
+
+<div class="formula-block">
+$$\min_S \max_{x \in \mathcal{X}} \min_{s \in S} d(x, s) \quad \text{s.t.} \quad |S| \leq k$$
+</div>
+
+<p>等价于<strong>最小最大覆盖问题</strong>（k-center 问题），可用贪心算法近似求解：每次选择距离当前已选集合最远的点。</p>
+
+<h4>基于聚类的方法</h4>
+
+<ul>
+  <li>对未标注数据进行 K-Means 聚类</li>
+  <li>从每个聚类中选择距中心最近的样本（代表性最强）</li>
+  <li>或选择距中心最远的样本（最具挑战性）</li>
+</ul>
+
+<h3>5.3 混合策略（Hybrid Methods）</h3>
+
+<h4>BADGE（批量主动学习通过梯度嵌入）</h4>
+
+<p>BADGE 同时考虑不确定性和多样性：</p>
+
+<ol>
+  <li><strong>计算梯度嵌入</strong>：对每个未标注样本，计算最后一层参数关于假设标签的梯度（取最高概率类作为假设标签）。梯度的大小反映不确定性，方向反映语义信息。</li>
+  <li><strong>K-Means++ 采样</strong>：对梯度嵌入空间进行 K-Means++ 初始化，选出 $k$ 个多样且不确定的样本。</li>
+</ol>
+
+<div class="formula-block">
+$$g_x = \nabla_{\theta_L} \mathcal{L}(f_\theta(x), \hat{y}_x)$$
+</div>
+
+<p>其中 $\hat{y}_x = \arg\max_y p_\theta(y|x)$ 是假设标签，$\theta_L$ 是最后一层参数。</p>
+
+<h4>预期模型变化（Expected Model Change）</h4>
+
+<p>选择对模型影响最大的样本，使用 Influence Function 估计：</p>
+
+<div class="formula-block">
+$$\mathcal{I}(x, z_{\text{test}}) = -\nabla_\theta \mathcal{L}(z_{\text{test}}, \theta)^\top H_\theta^{-1} \nabla_\theta \mathcal{L}(x, \theta)$$
+</div>
+
+<p>其中 $H_\theta$ 是 Hessian 矩阵，$\mathcal{I}(x, z_{\text{test}})$ 衡量训练样本 $x$ 对测试样本 $z_{\text{test}}$ 预测的影响。</p>
+
+<h3>5.4 主动学习策略比较</h3>
+
+<div id="al-radar-chart" class="echarts-container" style="height:320px;"></div>
+<script>
+(function(){
+  var dom = document.getElementById('al-radar-chart');
+  var chart = echarts.init(dom, 'dark');
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'主动学习策略多维对比',textStyle:{color:'#89b4fa',fontSize:13}},
+    legend:{data:['不确定性采样','Core-set','BADGE'],textStyle:{color:'#cdd6f4'},bottom:0},
+    radar:{
+      indicator:[
+        {name:'信息量',max:10},{name:'多样性',max:10},
+        {name:'计算效率',max:10},{name:'批量查询',max:10},{name:'理论保证',max:10}
+      ],
+      axisName:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#45475a'}},
+      splitArea:{areaStyle:{color:['rgba(255,255,255,0.02)','rgba(255,255,255,0.05)']}}
+    },
+    series:[{
+      type:'radar',
+      data:[
+        {value:[8,3,9,5,4],name:'不确定性采样',lineStyle:{color:'#89b4fa'},areaStyle:{opacity:.1,color:'#89b4fa'}},
+        {value:[4,9,6,7,8],name:'Core-set',lineStyle:{color:'#a6e3a1'},areaStyle:{opacity:.1,color:'#a6e3a1'}},
+        {value:[7,8,5,9,6],name:'BADGE',lineStyle:{color:'#fab387'},areaStyle:{opacity:.1,color:'#fab387'}}
+      ]
+    }]
+  });
+})();
+</script>
+
+<hr>
+
+<!-- ==================== 数据生成 ==================== -->
+<h2>6. 数据不足 Part 3：数据生成（2022-04-15）</h2>
+
+<p>
+  当标注数据不足时，除了利用无标注数据，还可以通过<strong>数据增强</strong>和<strong>数据生成</strong>来扩充训练集。
+  现代方法已从简单的几何变换发展到使用生成模型合成全新样本。
+</p>
+
+<h3>6.1 图像数据增强</h3>
+
+<h4>基础增强</h4>
+
+<table>
+  <thead><tr><th>增强方式</th><th>描述</th><th>保留标签？</th></tr></thead>
+  <tbody>
+    <tr><td>随机水平翻转</td><td>50% 概率水平镜像</td><td>是</td></tr>
+    <tr><td>随机裁剪</td><td>随机裁剪并缩放到原尺寸</td><td>是</td></tr>
+    <tr><td>颜色抖动</td><td>随机改变亮度/对比度/饱和度/色调</td><td>是</td></tr>
+    <tr><td>灰度化</td><td>以一定概率转为灰度图</td><td>是</td></tr>
+    <tr><td>高斯模糊</td><td>随机核大小的高斯模糊</td><td>是</td></tr>
+    <tr><td>随机擦除（Cutout）</td><td>随机遮掩矩形区域</td><td>是</td></tr>
+  </tbody>
+</table>
+
+<h4>混合增强（Mixing Augmentations）</h4>
+
+<div class="mermaid">
+flowchart LR
+    subgraph MixUp
+      A1[图像 x₁, 标签 y₁] --> C1["x̃ = λx₁ + (1-λ)x₂\nỹ = λy₁ + (1-λ)y₂"]
+      A2[图像 x₂, 标签 y₂] --> C1
+    end
+    subgraph CutMix
+      B1[图像 x₁, 标签 y₁] --> D1["剪切 x₂ 的区域贴入 x₁\n标签按面积比混合"]
+      B2[图像 x₂, 标签 y₂] --> D1
+    end
+</div>
+
+<p><strong>MixUp</strong>：$\tilde{x} = \lambda x_i + (1-\lambda) x_j$，$\tilde{y} = \lambda y_i + (1-\lambda) y_j$，其中 $\lambda \sim \text{Beta}(\alpha, \alpha)$。通过线性插值产生新样本，迫使模型学习线性行为，减少过拟合。</p>
+
+<p><strong>CutMix</strong>：将一张图像的矩形区域剪切贴入另一张图像，标签按剪切区域面积比例混合。比 Cutout 更有效，因为贴入的区域包含有意义的内容。</p>
+
+<h4>自动增强（AutoAugment）</h4>
+
+<p>使用强化学习搜索最优的增强策略组合（如 ShearX、TranslateY、Rotate、AutoContrast 等操作的组合和幅度），在目标数据集上自动发现最有效的增强方案。</p>
+
+<h3>6.2 文本数据增强</h3>
+
+<h4>简单数据增强（EDA）</h4>
+
+<ul>
+  <li><strong>同义词替换</strong>：随机替换 $n$ 个非停用词为其同义词</li>
+  <li><strong>随机插入</strong>：随机在句中插入同义词</li>
+  <li><strong>随机交换</strong>：随机交换两个词的位置</li>
+  <li><strong>随机删除</strong>：以概率 $p$ 随机删除每个词</li>
+</ul>
+
+<h4>回译（Back-Translation）</h4>
+
+<p>将句子翻译到另一种语言再翻译回来，利用翻译的多样性产生语义相同但表达不同的句子。例如：英语 → 德语 → 英语。</p>
+
+<h4>基于语言模型的增强</h4>
+
+<ul>
+  <li><strong>GPT-3 标注与合成</strong>：使用 GPT-3 生成符合特定标签的训练样本，或对无标注文本进行零样本/少样本标注</li>
+  <li><strong>LAMBADA 条件生成</strong>：给定类别标签，用语言模型条件生成对应类别的文本样本</li>
+  <li><strong>数据增强对话（AugGPT）</strong>：使用 ChatGPT 改写现有训练样本，保持语义但改变表达方式</li>
+</ul>
+
+<h3>6.3 生成模型作为数据来源</h3>
+
+<h4>GAN 生成训练数据</h4>
+
+<p>使用条件 GAN（cGAN、BigGAN）生成带标签的合成图像加入训练集。挑战：GAN 生成的图像分布与真实分布存在差距（Distribution Shift），可能引入噪声。</p>
+
+<h4>扩散模型生成训练数据</h4>
+
+<p>扩散模型（Stable Diffusion、DALL-E）生成的图像质量更高、多样性更好：</p>
+
+<ul>
+  <li><strong>文本条件生成</strong>：给定类别描述生成训练图像（如"一只猫坐在椅子上"）</li>
+  <li><strong>真实图像增强</strong>：对现有图像进行 img2img 变换，保持语义但改变风格/细节</li>
+  <li><strong>Inpainting 数据增强</strong>：用扩散模型填充被遮掩区域，生成多样化变体</li>
+</ul>
+
+<div class="info-box">
+  <div class="title">生成数据的关键挑战</div>
+  <ul>
+    <li><strong>分布偏移</strong>：生成数据的分布可能与真实数据不完全一致</li>
+    <li><strong>标签噪声</strong>：自动标注的生成数据可能包含错误标签</li>
+    <li><strong>模型崩塌</strong>：用生成数据训练的模型再次生成数据，可能导致质量下降（"模型坍塌"）</li>
+    <li><strong>版权与隐私</strong>：生成模型可能复现训练数据中的受保护内容</li>
+  </ul>
+</div>
+
+<h3>6.4 数据增强策略总结</h3>
+
+<div id="augment-chart" class="echarts-container" style="height:280px;"></div>
+<script>
+(function(){
+  var dom = document.getElementById('augment-chart');
+  var chart = echarts.init(dom, 'dark');
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'数据增强方法分类与效果',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'item'},
+    series:[{
+      type:'sunburst',
+      data:[
+        {name:'图像增强',children:[
+          {name:'几何变换',value:3,itemStyle:{color:'#89b4fa'}},
+          {name:'颜色变换',value:3,itemStyle:{color:'#74c7ec'}},
+          {name:'混合增强',value:4,itemStyle:{color:'#89dceb'}},
+          {name:'自动搜索',value:5,itemStyle:{color:'cba6f7'}}
+        ]},
+        {name:'文本增强',children:[
+          {name:'词级操作',value:2,itemStyle:{color:'#a6e3a1'}},
+          {name:'回译',value:4,itemStyle:{color:'#94e2d5'}},
+          {name:'LM生成',value:6,itemStyle:{color:'#a6e3a1'}}
+        ]},
+        {name:'生成模型',children:[
+          {name:'GAN',value:4,itemStyle:{color:'#fab387'}},
+          {name:'扩散模型',value:7,itemStyle:{color:'#f9e2af'}},
+          {name:'VAE',value:3,itemStyle:{color:'#eba0ac'}}
+        ]}
+      ],
+      radius:[0,'80%'],
+      label:{color:'#cdd6f4',fontSize:11}
+    }]
+  });
+})();
+</script>
+
+<hr>
+
+<!-- ==================== 高质量人类数据 ==================== -->
+<h2>7. 高质量人类数据（2024-02-05）</h2>
+
+<p>
+  随着大语言模型（LLM）的发展，高质量的人类标注数据变得愈发重要，尤其是在 RLHF（人类反馈强化学习）中。
+  Lilian Weng 在这篇文章中系统总结了如何设计和维护高质量的数据标注流程。
+</p>
+
+<h3>7.1 标注流程设计</h3>
+
+<div class="mermaid">
+flowchart TD
+    A[任务定义\n明确标注目标和标准] --> B[标注指南制定\n详细规范 + 示例]
+    B --> C[标注者招募与培训\n资质筛选 + 上岗测试]
+    C --> D[试标注\n小批量验证流程]
+    D --> E{质量达标?}
+    E -->|否| B
+    E -->|是| F[大规模标注]
+    F --> G[质量控制\n黄金标注 + 一致性检查]
+    G --> H[标注聚合\n多数投票/加权聚合]
+    H --> I[数据审核与清洗]
+    I --> J[最终数据集]
+    style A fill:#313244,stroke:#89b4fa
+    style J fill:#313244,stroke:#a6e3a1
+</div>
+
+<h3>7.2 标注指南设计原则</h3>
+
+<ul>
+  <li><strong>明确性</strong>：每条指南应有唯一解释，避免歧义</li>
+  <li><strong>完备性</strong>：覆盖所有可能的边界情况（Edge Cases）</li>
+  <li><strong>一致性</strong>：不同标注者对相同样本应得到相同结论</li>
+  <li><strong>可操作性</strong>：标注者能在合理时间内完成每个样本的标注</li>
+  <li><strong>示例驱动</strong>：提供正例和反例，比文字描述更直观</li>
+</ul>
+
+<h3>7.3 众包质量控制</h3>
+
+<h4>黄金标注（Gold Labels）</h4>
+
+<p>在标注任务中混入已知正确答案的<strong>黄金样本</strong>，用于实时监控标注者的准确率：</p>
+
+<ul>
+  <li>黄金样本占比通常为 5-15%</li>
+  <li>准确率低于阈值的标注者会收到警告或被移除</li>
+  <li>需要定期更新黄金样本，防止标注者记忆</li>
+</ul>
+
+<h4>标注一致性度量</h4>
+
+<p><strong>Cohen's Kappa</strong> 是衡量标注者间一致性的标准指标，排除了随机一致的影响：</p>
+
+<div class="formula-block">
+$$\kappa = \frac{P_o - P_e}{1 - P_e}$$
+</div>
+
+<p>其中 $P_o$ 是观测一致率，$P_e$ 是随机期望一致率。</p>
+
+<table>
+  <thead><tr><th>Kappa 值</th><th>一致性程度</th><th>实践建议</th></tr></thead>
+  <tbody>
+    <tr><td>< 0.20</td><td>微弱</td><td>重新设计标注指南</td></tr>
+    <tr><td>0.21 – 0.40</td><td>一般</td><td>需要大量标注者校准</td></tr>
+    <tr><td>0.41 – 0.60</td><td>中等</td><td>可接受，持续改进</td></tr>
+    <tr><td>0.61 – 0.80</td><td>较强</td><td>良好，适合大规模标注</td></tr>
+    <tr><td>> 0.80</td><td>极强</td><td>优秀，可信赖</td></tr>
+  </tbody>
+</table>
+
+<h4>多数投票与加权聚合</h4>
+
+<ul>
+  <li><strong>多数投票（Majority Vote）</strong>：取多个标注者中最多人选择的标签</li>
+  <li><strong>Dawid-Skene 模型</strong>：EM 算法估计每个标注者的混淆矩阵和真实标签的后验概率</li>
+  <li><strong>MACE（Multi-Annotator Competence Estimation）</strong>：贝叶斯方法估计标注者能力和真实标签</li>
+</ul>
+
+<h3>7.4 标注者分歧建模</h3>
+
+<p>
+  传统方法将标注者分歧视为噪声需要消除，但 Weng 指出：<strong>分歧本身可能包含有价值的信息</strong>，
+  尤其是在主观性强的任务（如情感分析、毒性检测）中。
+</p>
+
+<h4>多标注者学习方法</h4>
+
+<ul>
+  <li><strong>软标签（Soft Labels）</strong>：使用标注分布而非硬标签训练模型，保留不确定性信息</li>
+  <li><strong>Multi-task 学习</strong>：为每个标注者训练独立的输出头，模型同时学习预测每个标注者的偏好</li>
+  <li><strong>Per-annotator 嵌入</strong>：为每个标注者学习一个嵌入向量，与样本特征拼接后预测</li>
+</ul>
+
+<div class="formula-block">
+$$p(y | x, a) = \text{softmax}(W_a \cdot f_\theta(x) + b_a)$$
+</div>
+
+<p>其中 $a$ 是标注者索引，$W_a, b_a$ 是该标注者特定的参数。</p>
+
+<h3>7.5 RLHF 数据收集的特殊挑战</h3>
+
+<p>RLHF（Reinforcement Learning from Human Feedback）对标注质量提出了更高要求：</p>
+
+<ul>
+  <li><strong>偏好标注的主观性</strong>：判断哪个回答"更好"高度依赖标注者的价值观和背景</li>
+  <li><strong>位置偏差</strong>：标注者倾向于选择第一个或最后一个选项</li>
+  <li><strong>长度偏差</strong>：更长的回答往往被认为更好，即使内容质量相同</li>
+  <li><strong>权威偏差</strong>：自信、正式的语气容易获得更高评分</li>
+  <li><strong>标注者疲劳</strong>：长时间标注后质量下降</li>
+  <li><strong>对抗性样本</strong>：某些样本可能被设计为欺骗标注者</li>
+</ul>
+
+<div class="info-box">
+  <div class="title">RLHF 数据质量的关键建议</div>
+  <ul>
+    <li>为标注者提供详细的评估维度（有用性、无害性、诚实性）</li>
+    <li>使用比较式标注（A vs B）而非绝对评分，降低标准不一致问题</li>
+    <li>定期进行标注者校准会议，统一理解</li>
+    <li>建立分歧解决机制，对争议样本进行专家仲裁</li>
+    <li>追踪标注者层面的统计数据，及时发现质量问题</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- ==================== LLM 幻觉 ==================== -->
+<h2>8. LLM 外在幻觉（2024-07-07）</h2>
+
+<p>
+  幻觉（Hallucination）是 LLM 的核心可靠性问题。
+  Weng 区分了两种幻觉类型：
+  <strong>内在幻觉（Intrinsic Hallucination）</strong>——模型输出与给定上下文/源文档相矛盾；
+  <strong>外在幻觉（Extrinsic Hallucination）</strong>——模型输出与外部世界事实不符。
+  本文聚焦于外在幻觉。
+</p>
+
+<div class="mermaid">
+flowchart LR
+    subgraph 幻觉类型
+      A[LLM 输出] --> B{与上下文矛盾?}
+      B -->|是| C[内在幻觉\nIntrinsic Hallucination]
+      B -->|否| D{与世界事实矛盾?}
+      D -->|是| E[外在幻觉\nExtrinsic Hallucination]
+      D -->|否| F[正确输出]
+    end
+    style C fill:#313244,stroke:#f38ba8
+    style E fill:#313244,stroke:#fab387
+    style F fill:#313244,stroke:#a6e3a1
+</div>
+
+<h3>8.1 幻觉的来源</h3>
+
+<h4>训练数据层面</h4>
+
+<ul>
+  <li><strong>数据错误</strong>：互联网数据包含大量错误信息、过时信息和偏见内容</li>
+  <li><strong>知识截止</strong>：训练数据有截止日期，模型对新事件一无所知但可能仍然"猜测"</li>
+  <li><strong>长尾知识稀疏</strong>：对于训练数据中出现频率低的知识，模型学习不充分，容易产生幻觉</li>
+  <li><strong>虚假相关</strong>：模型学习了表面统计规律而非真实因果关系</li>
+</ul>
+
+<h4>模型架构与训练层面</h4>
+
+<ul>
+  <li><strong>过度自信</strong>：模型对不确定的预测也倾向于给出确定性的回答</li>
+  <li><strong>曝光偏差</strong>：训练时用真实词预测下一词，推理时用自身预测作为输入，分布不匹配</li>
+  <li><strong>知识遗忘</strong>：微调阶段可能覆盖预训练阶段学到的事实知识</li>
+  <li><strong>表面统计过拟合</strong>：模型学习了文本的表面模式（如"巴黎是法国的..."）而非深层语义</li>
+</ul>
+
+<h4>推理层面</h4>
+
+<ul>
+  <li><strong>采样随机性</strong>：高温度采样增加多样性的同时也增加了错误率</li>
+  <li><strong>注意力机制限制</strong>：长文本中早期信息可能被"遗忘"</li>
+  <li><strong>雪球效应</strong>：一旦生成了错误内容，后续生成会受其影响，错误不断积累</li>
+</ul>
+
+<h3>8.2 幻觉检测方法</h3>
+
+<div class="mermaid">
+flowchart TD
+    A[LLM 生成文本] --> B{检测方法}
+    B --> C[NLI 方法]
+    B --> D[SelfCheckGPT]
+    B --> E[FactScore]
+    B --> F[外部知识验证]
+    C --> C1[用 NLI 模型判断\n输出是否与源文档蕴含]
+    D --> D1[多次采样，\n一致性高→事实性强]
+    E --> E1[分解为原子事实\n逐一检索验证]
+    F --> F1[搜索引擎/知识库\n交叉验证]
+</div>
+
+<h4>NLI（自然语言推理）方法</h4>
+
+<p>将生成文本与参考文档/知识库条目进行 NLI 判断：</p>
+<ul>
+  <li><strong>蕴含（Entailment）</strong>：生成文本被参考文档支持</li>
+  <li><strong>矛盾（Contradiction）</strong>：生成文本与参考文档矛盾，可能是幻觉</li>
+  <li><strong>中性（Neutral）</strong>：无法判断，可能是幻觉也可能是额外信息</li>
+</ul>
+
+<h4>SelfCheckGPT</h4>
+
+<p>无需外部知识库，基于<strong>自一致性</strong>检测幻觉：</p>
+
+<ol>
+  <li>对同一问题多次采样，生成 $N$ 个回答</li>
+  <li>对于每个句子，检查其与其他 $N-1$ 个回答的一致性</li>
+  <li>高度一致的句子更可能是事实，低一致性的句子更可能是幻觉</li>
+</ol>
+
+<div class="formula-block">
+$$\text{SelfCheck}(s | R_1, ..., R_N) = \frac{1}{N} \sum_{i=1}^N \text{NLI\_score}(s, R_i)$$
+</div>
+
+<h4>FactScore（事实精度评分）</h4>
+
+<p>将长文本分解为<strong>原子事实</strong>（atomic facts），逐一检索验证：</p>
+
+<ol>
+  <li>使用 LLM 将生成文本分解为独立的原子事实（如"爱因斯坦生于1879年"）</li>
+  <li>对每个原子事实，检索相关知识库条目</li>
+  <li>判断该原子事实是否被检索到的证据支持</li>
+  <li>FactScore = 被支持的原子事实比例</li>
+</ol>
+
+<h3>8.3 幻觉缓解策略</h3>
+
+<h4>检索增强生成（RAG）</h4>
+
+<p>RAG 是目前最主流的幻觉缓解方案：</p>
+
+<div class="mermaid">
+flowchart LR
+    A[用户问题] --> B[检索器]
+    B --> C[知识库/搜索引擎]
+    C --> D[相关文档]
+    D & A --> E[LLM 生成]
+    E --> F[基于检索内容的回答]
+    style B fill:#313244,stroke:#89b4fa
+    style E fill:#313244,stroke:#cba6f7
+</div>
+
+<ul>
+  <li><strong>稀疏检索</strong>：BM25 等基于词频的传统方法</li>
+  <li><strong>密集检索</strong>：DPR、Contriever 等基于嵌入的语义检索</li>
+  <li><strong>混合检索</strong>：结合稀疏和密集检索的优势</li>
+  <li><strong>迭代检索</strong>：IRCoT 等多轮检索方法，根据中间推理结果动态检索</li>
+</ul>
+
+<h4>验证链（Chain of Verification, CoVe）</h4>
+
+<p>让模型自我验证生成内容：</p>
+
+<ol>
+  <li>生成初始回答</li>
+  <li>生成一系列验证问题（如"爱因斯坦的出生年份是什么？"）</li>
+  <li>独立回答每个验证问题（避免受初始回答影响）</li>
+  <li>根据验证结果修正初始回答</li>
+</ol>
+
+<h4>校准训练</h4>
+
+<ul>
+  <li><strong>不确定性表达训练</strong>：训练模型在不确定时使用"我不确定"、"可能"等表达</li>
+  <li><strong>RLHF 奖励塑形</strong>：对幻觉内容给予负奖励，对拒绝回答不确定问题给予正奖励</li>
+  <li><strong>知识感知解码</strong>：在解码时引入外部知识约束，降低低置信度词的生成概率</li>
+</ul>
+
+<h3>8.4 幻觉类型与缓解策略对应关系</h3>
+
+<table>
+  <thead>
+    <tr><th>幻觉类型</th><th>典型示例</th><th>主要缓解方法</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>事实错误</td>
+      <td>错误的历史日期、人名、地名</td>
+      <td>RAG、FactScore 验证、知识库对齐训练</td>
+    </tr>
+    <tr>
+      <td>知识截止幻觉</td>
+      <td>对近期事件的错误描述</td>
+      <td>RAG 实时检索、告知模型知识截止日期</td>
+    </tr>
+    <tr>
+      <td>虚构引用</td>
+      <td>编造不存在的论文/书籍</td>
+      <td>引用验证、拒绝生成无法验证的引用</td>
+    </tr>
+    <tr>
+      <td>数值幻觉</td>
+      <td>错误的统计数字、比例</td>
+      <td>RAG、计算器工具调用</td>
+    </tr>
+    <tr>
+      <td>推理幻觉</td>
+      <td>逻辑错误导致的错误结论</td>
+      <td>CoT、CoVe、程序辅助推理</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ==================== 综合比较 ==================== -->
+<h2>9. 综合视角：数据效率的技术谱系</h2>
+
+<p>
+  从 Lilian Weng 的七篇文章中，我们可以看到一个清晰的技术谱系：
+  面对<strong>标注数据不足</strong>这一核心挑战，研究者从多个维度发展出了互补的解决方案。
+</p>
+
+<div class="mermaid">
+flowchart TD
+    P["核心问题：标注数据不足"] --> A & B & C & D
+    A["利用无标注数据\n(自监督/半监督)"] --> A1[自监督预训练\n学习通用表示] & A2[伪标签/一致性正则化\n利用无标注数据的结构]
+    B["智能选择标注\n(主动学习)"] --> B1[不确定性采样\n选信息量最大的] & B2[多样性采样\n选覆盖最广的]
+    C["扩充训练数据\n(数据增强/生成)"] --> C1[传统增强\n变换不改变语义] & C2[生成模型\n合成新样本]
+    D["保证数据质量\n(标注工程)"] --> D1[质量控制\n黄金标注/Kappa] & D2[分歧建模\n保留有价值的不一致]
+    style P fill:#313244,stroke:#f38ba8,stroke-width:2px
+</div>
+
+<h3>9.1 技术路线选择指南</h3>
+
+<table>
+  <thead>
+    <tr><th>场景</th><th>推荐方法</th><th>关键考量</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>有大量无标注数据，少量标注预算</td>
+      <td>自监督预训练 + 少量微调</td>
+      <td>无标注数据质量、领域相关性</td>
+    </tr>
+    <tr>
+      <td>有一定标注数据，无标注数据充足</td>
+      <td>FixMatch / Noisy Student</td>
+      <td>标注数据的代表性</td>
+    </tr>
+    <tr>
+      <td>标注预算有限，需要最大化利用</td>
+      <td>主动学习（BADGE）</td>
+      <td>查询策略与任务的匹配度</td>
+    </tr>
+    <tr>
+      <td>训练数据稀少，任务明确</td>
+      <td>数据增强 + 生成模型合成</td>
+      <td>增强是否保持标签语义</td>
+    </tr>
+    <tr>
+      <td>需要高质量 RLHF 数据</td>
+      <td>精心设计标注指南 + 多标注者 + 质量控制</td>
+      <td>标注者一致性、偏差控制</td>
+    </tr>
+    <tr>
+      <td>LLM 部署，需要减少幻觉</td>
+      <td>RAG + CoVe + 校准训练</td>
+      <td>检索延迟、知识库覆盖度</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>9.2 数据飞轮：从自监督到 RLHF</h3>
+
+<p>
+  现代 LLM 的训练流程体现了上述所有技术的融合：
+</p>
+
+<div class="mermaid">
+flowchart LR
+    A["海量无标注文本\n(自监督预训练)"] --> B["基础语言模型\n(通用表示)"]
+    B --> C["少量高质量指令数据\n(SFT 监督微调)"]
+    C --> D["初始对话模型"]
+    D --> E["人类偏好标注\n(主动选择 + 质量控制)"]
+    E --> F["奖励模型\n(对比学习思想)"]
+    F --> G["RLHF 训练\n(PPO/DPO)"]
+    G --> H["最终对齐模型"]
+    H -->|"幻觉检测 + RAG"| I["可靠部署"]
+    style A fill:#313244,stroke:#89b4fa
+    style E fill:#313244,stroke:#fab387
+    style H fill:#313244,stroke:#a6e3a1
+</div>
+
+<hr>
+
+<!-- ==================== 关键公式汇总 ==================== -->
+<h2>10. 关键公式与算法汇总</h2>
+
+<h3>10.1 核心损失函数</h3>
+
+<table>
+  <thead><tr><th>方法</th><th>损失函数</th><th>关键参数</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>InfoNCE / NT-Xent</td>
+      <td>$-\log \frac{\exp(\text{sim}(z_i,z_j)/\tau)}{\sum_{k\neq i}\exp(\text{sim}(z_i,z_k)/\tau)}$</td>
+      <td>温度 $\tau$，批量大小 $N$</td>
+    </tr>
+    <tr>
+      <td>BYOL</td>
+      <td>$2 - 2 \cdot \frac{\langle q(z), z' \rangle}{\|q(z)\|_2 \cdot \|z'\|_2}$</td>
+      <td>EMA 动量 $m$</td>
+    </tr>
+    <tr>
+      <td>FixMatch</td>
+      <td>$\frac{1}{\mu B}\sum_b \mathbf{1}(\max q_b \geq \tau) H(\hat{q}_b, p(\mathcal{A}(u_b)))$</td>
+      <td>置信度阈值 $\tau$，增强强度</td>
+    </tr>
+    <tr>
+      <td>MixUp</td>
+      <td>$\tilde{x} = \lambda x_i + (1-\lambda)x_j$，$\lambda \sim \text{Beta}(\alpha,\alpha)$</td>
+      <td>混合强度 $\alpha$</td>
+    </tr>
+    <tr>
+      <td>Cohen's Kappa</td>
+      <td>$\kappa = (P_o - P_e)/(1 - P_e)$</td>
+      <td>观测一致率 $P_o$</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>10.2 主动学习查询策略</h3>
+
+<table>
+  <thead><tr><th>策略</th><th>公式</th></tr></thead>
+  <tbody>
+    <tr><td>最大熵</td><td>$x^* = \arg\max_x H[p(y|x)] = \arg\max_x -\sum_y p(y|x)\log p(y|x)$</td></tr>
+    <tr><td>Core-set</td><td>$x^* = \arg\max_{x \in \mathcal{U}} \min_{s \in \mathcal{S}} d(x, s)$</td></tr>
+    <tr><td>BADGE 梯度嵌入</td><td>$g_x = \nabla_{\theta_L} \mathcal{L}(f_\theta(x), \hat{y}_x)$</td></tr>
+    <tr><td>Influence Function</td><td>$\mathcal{I}(x, z) = -\nabla_\theta \mathcal{L}(z)^\top H_\theta^{-1} \nabla_\theta \mathcal{L}(x)$</td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ==================== 参考文献 ==================== -->
+<h2>11. 参考文献（Lilian Weng 博客原文）</h2>
+
+<ol>
+  <li>
+    Weng, Lilian. <a href="https://lilianweng.github.io/posts/2019-11-10-self-supervised/" target="_blank">
+    "Self-Supervised Representation Learning"</a>. <em>lilianweng.github.io</em>, 2019-11-10.
+  </li>
+  <li>
+    Weng, Lilian. <a href="https://lilianweng.github.io/posts/2021-05-31-contrastive/" target="_blank">
+    "Contrastive Representation Learning"</a>. <em>lilianweng.github.io</em>, 2021-05-31.
+  </li>
+  <li>
+    Weng, Lilian. <a href="https://lilianweng.github.io/posts/2021-12-05-semi-supervised/" target="_blank">
+    "Learning with not Enough Data Part 1: Semi-Supervised Learning"</a>. <em>lilianweng.github.io</em>, 2021-12-05.
+  </li>
+  <li>
+    Weng, Lilian. <a href="https://lilianweng.github.io/posts/2022-02-20-active-learning/" target="_blank">
+    "Learning with not Enough Data Part 2: Active Learning"</a>. <em>lilianweng.github.io</em>, 2022-02-20.
+  </li>
+  <li>
+    Weng, Lilian. <a href="https://lilianweng.github.io/posts/2022-04-15-data-gen/" target="_blank">
+    "Learning with not Enough Data Part 3: Data Generation"</a>. <em>lilianweng.github.io</em>, 2022-04-15.
+  </li>
+  <li>
+    Weng, Lilian. <a href="https://lilianweng.github.io/posts/2024-02-05-human-data-quality/" target="_blank">
+    "Thinking about High-Quality Human Data"</a>. <em>lilianweng.github.io</em>, 2024-02-05.
+  </li>
+  <li>
+    Weng, Lilian. <a href="https://lilianweng.github.io/posts/2024-07-07-hallucination/" target="_blank">
+    "Extrinsic Hallucinations in LLMs"</a>. <em>lilianweng.github.io</em>, 2024-07-07.
+  </li>
+</ol>
+
+<p style="color:#6c7086;font-size:.85em;margin-top:2em;">
+  报告生成日期：2026-05-14 &nbsp;·&nbsp; 基于 Lilian Weng 博客公开文章整理
+</p>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+    if(!h.id)h.id='s'+i;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent;
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{
+    const l=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  }),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

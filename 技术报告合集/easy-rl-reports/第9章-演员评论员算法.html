@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第9章 演员-评论员算法</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; width: calc(100% - 240px); padding: 40px 48px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.5em; }
+    li { margin: 0.3em 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+  <h1>第9章 演员-评论员算法</h1>
+  <blockquote>
+    <strong>来源</strong>：蘑菇书 EasyRL &nbsp;|&nbsp;
+    <strong>定位</strong>：本章是策略梯度（第4-5章）与DQN（第6-8章）的交汇点，融合两种方法的优势
+  </blockquote>
+
+  <h2>概述</h2>
+  <p>演员-评论员（Actor-Critic，AC）算法将策略梯度与价值函数估计有机结合：<strong>演员（Actor）</strong>负责根据策略选择动作，<strong>评论员（Critic）</strong>负责估计价值函数以指导演员改进。AC方法继承了策略梯度处理连续动作的能力，同时借助TD学习降低方差，是现代主流深度强化学习算法（PPO、SAC、DDPG等）的基础架构。本章重点介绍A2C、A3C及路径衍生策略梯度，并揭示AC算法与GAN的深刻联系。</p>
+
+  <h2>演员-评论员架构总览</h2>
+  <pre class="mermaid">graph LR
+    subgraph 演员 Actor
+      A["策略网络 π_θ(a|s)"]
+    end
+    subgraph 评论员 Critic
+      B["价值网络 V_π(s)"]
+    end
+    C["环境 Environment"] -->|"状态 s_t, 奖励 r_t"| A
+    C -->|"状态 s_t, 奖励 r_t"| B
+    A -->|"动作 a_t"| C
+    B -->|"优势函数 A(s,a)"| A
+    A -->|"轨迹数据"| B
+</pre>
+
+  <h2>从策略梯度到Actor-Critic</h2>
+
+  <h3>策略梯度的方差问题与Q、V的关系推导</h3>
+  <p>REINFORCE的策略梯度使用回报 $G_t^n$ 加权，而 $G_t^n$ 的期望正是Q函数：</p>
+  <p>$$\mathbb{E}_{\pi_\theta}[G_t^n] = Q_{\pi_\theta}(s_t^n, a_t^n)$$</p>
+
+  <p><strong>Q与V的精确关系（来自贝尔曼期望方程）</strong>：</p>
+  <p>$$Q_\pi(s,a) = R(s,a) + \gamma\sum_{s'}p(s'|s,a)V_\pi(s')$$</p>
+  <p>在单步采样近似下，以观测到的 $(r_t, s_{t+1})$ 替代期望，得到单步估计：</p>
+  <p>$$Q_\pi(s_t,a_t) \approx r_t + \gamma V_\pi(s_{t+1})$$</p>
+  <p>（注意：严格等号需对 $s_{t+1}$ 求期望；这里的 $\approx$ 是用单次采样近似，引入方差但消去偏差。）</p>
+
+  <p><strong>优势函数推导</strong>：将上述Q近似代入 $A = Q - V$：</p>
+  <p>$$A^\theta(s_t, a_t) = \underbrace{Q_{\pi}(s_t, a_t)}_{\approx\, r_t + \gamma V_\pi(s_{t+1})} - V_\pi(s_t) = r_t + \gamma V_\pi(s_{t+1}) - V_\pi(s_t)$$</p>
+  <p>这正是评论员网络的<strong>TD误差</strong> $\delta_t = r_t + \gamma V_\pi(s_{t+1}) - V_\pi(s_t)$。</p>
+  <p>关键洞察：用 $V_\pi$ 作为基线（第二项），用 $r_t + \gamma V_\pi(s_{t+1})$ 作为Q的单步近似（第一项），只需学习一个 $V_\pi$ 网络（评论员），无需显式学习Q函数，同时将蒙特卡洛估计的高方差换为TD的低方差。</p>
+
+  <h3>A2C：优势演员-评论员算法</h3>
+  <p>A2C（Advantage Actor-Critic）用上述TD误差作为优势估计，完整推导链为：</p>
+  <p>$$\nabla\bar{R}_\theta \overset{\text{PG}}{=} \mathbb{E}\!\left[A^\theta(s_t,a_t)\nabla\log\pi_\theta(a_t|s_t)\right] \overset{\text{TD近似}}{\approx} \mathbb{E}\!\left[\delta_t\,\nabla\log\pi_\theta(a_t|s_t)\right]$$</p>
+  <p>用采样近似期望：</p>
+  <p>$$\nabla \bar{R}_\theta \approx \frac{1}{N}\sum_{n=1}^{N}\sum_{t=1}^{T_n} \underbrace{\left(r_t^n + \gamma V_\pi(s_{t+1}^n) - V_\pi(s_t^n)\right)}_{\text{TD误差 }\delta_t\text{（优势的单步近似）}} \nabla_\theta \log p_\theta(a_t^n | s_t^n)$$</p>
+
+  <h3>A2C的两大工程技巧</h3>
+  <table>
+    <tr><th>技巧</th><th>做法</th><th>为什么</th></tr>
+    <tr><td>网络参数共享</td><td>演员与评论员共享前几层（卷积层），只在最后分叉</td><td>底层特征提取可共用，减少参数量，加速训练</td></tr>
+    <tr><td>熵约束探索</td><td>在损失函数中加入策略熵正则项 $-\beta H(\pi)$</td><td>防止策略过早收敛到确定性策略，鼓励持续探索</td></tr>
+  </table>
+
+  <figure>
+    <img src="https://ai-studio-static-online.cdn.bcebos.com/d02364e1abb64a3db51e2e6cbef2322f4497a4eda56d47a3911a0ba517461800" alt="A2C算法">
+    <figcaption>图：优势演员-评论员算法示意（来源：原文）</figcaption>
+  </figure>
+
+  <h2>A3C：异步优势演员-评论员</h2>
+
+  <h3>为什么需要A3C</h3>
+  <p>A2C单进程顺序收集数据效率低。A3C（Asynchronous Advantage Actor-Critic）用多个并行工作进程（Worker）同时与不同环境副本交互，异步更新全局网络。</p>
+
+  <pre class="mermaid">graph TD
+    G["全局网络<br>Global Network θ_global"]
+    W1["Worker 1<br>本地网络 θ_1"] -->|"梯度推送"| G
+    W2["Worker 2<br>本地网络 θ_2"] -->|"梯度推送"| G
+    W3["Worker 3<br>本地网络 θ_3"] -->|"梯度推送"| G
+    G -->|"参数同步"| W1
+    G -->|"参数同步"| W2
+    G -->|"参数同步"| W3
+    W1 --- E1["环境副本 1"]
+    W2 --- E2["环境副本 2"]
+    W3 --- E3["环境副本 3"]
+</pre>
+
+  <p><strong>效果</strong>：多进程并行产生多样化数据，天然打破数据相关性（类似经验回放），且是<strong>同策略</strong>方法——每个Worker用自己的本地网络采样，无需回放缓冲区。</p>
+  <p><strong>类比</strong>：影分身之术——分身们分头探索世界，汇总经验更新本体。</p>
+
+  <h2>路径衍生策略梯度</h2>
+
+  <h3>从DQN出发重推AC</h3>
+  <p>DQN的 $\arg\max_a Q(s,a)$ 无法处理连续动作，若用策略网络 $\pi_\theta$ 替代 $\arg\max$ 操作，并额外训练 $\pi_\theta$ 以最大化Q值，就得到路径衍生策略梯度：</p>
+  <p>$$\pi'(s) = \arg\max_a Q_\pi(s,a) \implies \pi_\theta \text{ 最大化 } Q_w(s, \pi_\theta(s))$$</p>
+
+  <p>与原始DQN相比，四处关键改变：</p>
+  <ol>
+    <li>用策略网络 $\pi_\theta(s)$ 输出动作，替代 $\arg\max$</li>
+    <li>新增对 $\theta$ 的梯度更新，使演员不断最大化评论员的评分</li>
+    <li>引入目标策略网络 $\hat{\pi}_{\hat\theta}$（类比DQN的目标Q网络）</li>
+    <li>保留经验回放，成为<strong>异策略</strong>算法</li>
+  </ol>
+  <p>这就是DDPG的雏形（详见第12章）。</p>
+
+  <h2>与生成对抗网络（GAN）的联系</h2>
+  <p>演员-评论员与GAN存在惊人的结构对应关系：</p>
+  <table>
+    <tr><th>GAN 组件</th><th>Actor-Critic 对应</th><th>功能</th></tr>
+    <tr><td>生成器 Generator</td><td>演员 Actor</td><td>产生动作/生成数据</td></tr>
+    <tr><td>判别器 Discriminator</td><td>评论员 Critic / Q函数</td><td>评估动作/判断真假</td></tr>
+    <tr><td>判别器损失</td><td>TD误差/奖励信号</td><td>训练信号来源</td></tr>
+    <tr><td>生成器用判别器梯度更新</td><td>演员用评论员Q值梯度更新</td><td>优化方向</td></tr>
+  </table>
+  <blockquote>
+    参考论文：<em>Connecting Generative Adversarial Networks and Actor-Critic Methods</em>（Pfau & Vinyals, 2016）
+  </blockquote>
+
+  <h2>Actor-Critic家族算法对比</h2>
+  <div id="chart-ac" class="echarts-container" style="height:300px"></div>
+  <script>
+    echarts.init(document.getElementById('chart-ac'), 'dark').setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'AC家族算法特性对比', textStyle: { color: '#89b4fa' } },
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['训练稳定性', '采样效率', '并行友好'], textStyle: { color: '#cdd6f4' } },
+      xAxis: { type: 'category', data: ['A2C', 'A3C', '路径衍生PG', 'DDPG(第12章)'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', max: 5, axisLabel: { color: '#cdd6f4' } },
+      series: [
+        { name: '训练稳定性', type: 'bar', data: [3, 3, 3, 4], itemStyle: { color: '#89b4fa' } },
+        { name: '采样效率', type: 'bar', data: [2, 4, 4, 5], itemStyle: { color: '#a6e3a1' } },
+        { name: '并行友好', type: 'bar', data: [2, 5, 2, 2], itemStyle: { color: '#fab387' } }
+      ]
+    });
+  </script>
+
+  <h2>总结与启发</h2>
+  <p>演员-评论员算法是现代深度强化学习的核心架构——演员提供策略灵活性，评论员提供低方差的价值信号。A2C用TD误差替代蒙特卡洛回报，大幅降低梯度方差；A3C通过异步并行进一步提升数据多样性和训练效率。路径衍生策略梯度揭示了DQN和策略梯度的内在联系，为DDPG等连续控制算法奠定基础。AC与GAN的深层对应关系则表明，对抗训练和策略优化在数学上是同构问题。</p>
+
+  <h2>参考文献</h2>
+  <ul>
+    <li>Mnih et al., <em>Asynchronous Methods for Deep Reinforcement Learning</em> (A3C, 2016)</li>
+    <li>Pfau & Vinyals, <em>Connecting Generative Adversarial Networks and Actor-Critic Methods</em> (2016)</li>
+  </ul>
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  hljs.highlightAll();
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

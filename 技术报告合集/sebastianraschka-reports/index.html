@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ahead of AI — Sebastian Raschka 专栏报告集</title>
+  <style>
+    :root { --bg:#1e1e2e; --text:#cdd6f4; --heading:#89b4fa; --link:#89dceb; --border:#45475a; --strong:#a6e3a1; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; line-height:1.8; min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:60px 24px; }
+    h1 { color:var(--heading); font-size:2em; margin-bottom:8px; text-align:center; }
+    .subtitle { color:#6c7086; text-align:center; margin-bottom:48px; font-size:0.95em; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; max-width:1100px; width:100%; }
+    .card { background:#2a2a3e; border-radius:12px; padding:24px 28px; border:1px solid var(--border); transition:border-color 0.2s,transform 0.15s; text-decoration:none; display:block; }
+    .card:hover { border-color:var(--heading); transform:translateY(-2px); }
+    .card-num { font-size:0.8em; color:#6c7086; margin-bottom:4px; }
+    .card-title { color:var(--heading); font-size:1.15em; font-weight:600; margin-bottom:8px; }
+    .card-desc { color:var(--text); font-size:0.9em; line-height:1.6; }
+    .card-tags { margin-top:12px; }
+    .tag { display:inline-block; background:#313244; color:#89dceb; border-radius:4px; padding:1px 7px; font-size:0.78em; margin:2px 3px 2px 0; }
+    .footer { margin-top:48px; color:#6c7086; font-size:0.85em; text-align:center; }
+    .footer a { color:var(--link); }
+    .stats { display:flex; gap:32px; justify-content:center; margin-bottom:40px; }
+    .stat { text-align:center; }
+    .stat-num { font-size:2em; color:var(--heading); font-weight:700; }
+    .stat-label { font-size:0.85em; color:#6c7086; }
+  </style>
+</head>
+<body>
+  <h1>Ahead of AI 专栏报告集</h1>
+  <p class="subtitle">Sebastian Raschka, PhD — 聚合自 <a href="https://magazine.sebastianraschka.com/archive" target="_blank" style="color:var(--link)">magazine.sebastianraschka.com</a> 的技术文章</p>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num">52+</div><div class="stat-label">原始文章</div></div>
+    <div class="stat"><div class="stat-num">5</div><div class="stat-label">主题报告</div></div>
+    <div class="stat"><div class="stat-num">2022–2026</div><div class="stat-label">覆盖时间</div></div>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="01-LLM架构演进.html">
+      <div class="card-num">报告 01</div>
+      <div class="card-title">LLM 架构演进与核心组件</div>
+      <div class="card-desc">从 MHA 到 GQA 到 MLA 的注意力变体全景；GPT-2 到 gpt-oss 的架构演进；KV Cache 从零实现；多模态 LLM；编解码器架构对比；大 LLM 架构横向对比。</div>
+      <div class="card-tags">
+        <span class="tag">注意力机制</span><span class="tag">KV Cache</span><span class="tag">多模态</span><span class="tag">MoE</span><span class="tag">GQA/MLA</span>
+      </div>
+    </a>
+
+    <a class="card" href="02-推理与InferenceScaling.html">
+      <div class="card-num">报告 02</div>
+      <div class="card-title">LLM 推理能力与推断时计算 Scaling</div>
+      <div class="card-desc">推理 LLM 的本质；RLVR 训练范式；GRPO 算法；推断时 Scaling 技术全谱（Wait Token 到 Tree Search）；小模型超越大模型的实验证据；线性注意力与非标准 LLM。</div>
+      <div class="card-tags">
+        <span class="tag">推理模型</span><span class="tag">RLVR</span><span class="tag">GRPO</span><span class="tag">Inference Scaling</span><span class="tag">CoT</span>
+      </div>
+    </a>
+
+    <a class="card" href="03-微调与对齐.html">
+      <div class="card-num">报告 03</div>
+      <div class="card-title">LLM 微调技术与对齐方法</div>
+      <div class="card-desc">从全参数微调到 Adapter、LoRA、DoRA 的参数效率演进；LoRA 实战 10 问；DoRA 矩阵分解原理与 PyTorch 实现；RLHF 完整流程；DPO vs PPO vs RLVR 方案对比。</div>
+      <div class="card-tags">
+        <span class="tag">LoRA</span><span class="tag">DoRA</span><span class="tag">Adapter</span><span class="tag">RLHF</span><span class="tag">DPO</span>
+      </div>
+    </a>
+
+    <a class="card" href="04-评测与年度综述.html">
+      <div class="card-num">报告 04</div>
+      <div class="card-title">LLM 评测方法与年度研究综述</div>
+      <div class="card-desc">4种核心评测方法（MCQ、验证器、人类排行榜、LLM-as-Judge）含完整代码；2025年度回顾（DeepSeek R1、RLVR、推理Scaling）；2024年度10大论文；2023年度盘点。</div>
+      <div class="card-tags">
+        <span class="tag">评测方法</span><span class="tag">LLM-as-Judge</span><span class="tag">2025回顾</span><span class="tag">年度论文</span>
+      </div>
+    </a>
+
+    <a class="card" href="05-前沿架构与工程实践.html">
+      <div class="card-num">报告 05</div>
+      <div class="card-title">前沿 LLM 开源模型架构与工程实践</div>
+      <div class="card-desc">DeepSeek V3→V3.2 技术深度剖析（MLA、MoE、多Token预测、自我验证）；2026早春10大开源架构速览；Coding Agent 核心组件（上下文管理、工具设计、预算管理）；现代预训练后训练范式。</div>
+      <div class="card-tags">
+        <span class="tag">DeepSeek</span><span class="tag">Coding Agent</span><span class="tag">MoE</span><span class="tag">预训练</span><span class="tag">工具调用</span>
+      </div>
+    </a>
+  </div>
+
+  <div class="footer">
+    <p>内容来源：<a href="https://magazine.sebastianraschka.com" target="_blank">Ahead of AI</a> — Sebastian Raschka, PhD | 报告生成时间：2026-05-14</p>
+    <p style="margin-top:6px">付费文章内容未完整收录，相关章节已标注</p>
+  </div>
+</body>
+</html>

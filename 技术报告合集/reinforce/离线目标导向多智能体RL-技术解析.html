@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>离线RL · 目标导向RL · 多智能体RL — 动手学强化学习 第18-21章</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --bg-card: #24243a;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --accent1: #cba6f7;
+      --accent2: #f38ba8;
+      --accent3: #a6e3a1;
+      --accent4: #fab387;
+      --step-bg: #1e2a3a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, 'PingFang SC', sans-serif; line-height: 1.85; }
+
+    /* ── TOC ── */
+    #toc {
+      position: fixed; top: 0; left: 0; width: 230px; height: 100vh;
+      background: var(--bg-nav); overflow-y: auto; padding: 20px 12px;
+      font-size: 12.5px; border-right: 1px solid var(--border); z-index: 100;
+    }
+    #toc .toc-title { color: var(--heading); font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 14px; font-weight: 700; }
+    #toc a {
+      display: block; color: var(--text); text-decoration: none; padding: 3px 8px;
+      border-radius: 4px; margin-bottom: 2px; transition: background 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 18px; font-size: 11.5px; opacity: 0.82; }
+    #toc a.toc-h4 { padding-left: 30px; font-size: 11px; opacity: 0.65; }
+    #toc .toc-sep { border-top: 1px solid var(--border); margin: 8px 0; }
+
+    /* ── Main ── */
+    main { margin-left: 250px; max-width: none; padding: 44px 52px 80px; }
+
+    h1 { color: var(--heading); font-size: 2em; margin-bottom: 10px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.45em; margin: 2.2em 0 0.7em;
+         border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--accent1); font-size: 1.1em; margin: 1.6em 0 0.5em; }
+    h4 { color: var(--accent4); font-size: 0.98em; margin: 1.2em 0 0.3em; }
+    p  { margin: 0.65em 0; }
+    a  { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { padding-left: 1.6em; margin: 0.5em 0; }
+    li { margin: 0.3em 0; }
+
+    blockquote {
+      border-left: 3px solid var(--quote-bar); padding: 10px 18px;
+      margin: 1.2em 0; background: #2a2a3e; border-radius: 0 6px 6px 0;
+    }
+    blockquote p { margin: 0.3em 0; }
+
+    /* ── Tables ── */
+    table { border-collapse: collapse; width: 100%; margin: 1.2em 0; font-size: 0.92em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 9px 13px;
+         text-align: left; border: 1px solid var(--border); }
+    td { padding: 8px 13px; border: 1px solid var(--border); }
+    tr:nth-child(even) td { background: #22223a; }
+    tr:hover td { background: #2a2a3e; }
+
+    /* ── Code ── */
+    pre { background: var(--bg-code); border-radius: 8px; padding: 18px;
+          overflow-x: auto; margin: 1.2em 0; font-size: 0.87em; line-height: 1.6; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
+    p code, li code, td code {
+      background: var(--bg-code); padding: 2px 6px; border-radius: 3px; font-size: 0.87em;
+    }
+
+    /* ── Mermaid ── */
+    pre.mermaid {
+      background: #22223a; border-radius: 8px; padding: 20px;
+      margin: 1.4em 0; text-align: center; border: 1px solid var(--border);
+      font-family: inherit;
+    }
+
+    /* ── ECharts ── */
+    .echarts-container { margin: 1.4em 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+
+    /* ── Tech Card ── */
+    .tech-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px 24px; margin: 1.4em 0;
+    }
+    .tech-card .card-title {
+      color: var(--accent1); font-weight: 700; font-size: 1em;
+      margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+    }
+    .tech-card .card-title::before {
+      content: ''; display: inline-block; width: 4px; height: 18px;
+      background: var(--accent1); border-radius: 2px;
+    }
+
+    /* ── Step Derivation ── */
+    .steps { margin: 1.2em 0; }
+    .step {
+      display: flex; gap: 16px; margin-bottom: 14px; align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+      background: var(--heading); color: #1e1e2e; font-weight: 700;
+      font-size: 0.85em; display: flex; align-items: center; justify-content: center;
+      margin-top: 2px;
+    }
+    .step-body { flex: 1; background: var(--step-bg); border-radius: 6px; padding: 10px 14px; }
+    .step-body .step-label { color: var(--accent4); font-weight: 600; font-size: 0.88em; margin-bottom: 4px; }
+
+    /* ── Symbol Table ── */
+    .symbol-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px; margin: 1.2em 0;
+    }
+    .symbol-item {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+      padding: 10px 14px;
+    }
+    .symbol-item .sym { color: var(--accent2); font-family: monospace; font-size: 0.95em; font-weight: 600; }
+    .symbol-item .sym-desc { color: var(--text); font-size: 0.88em; margin-top: 3px; opacity: 0.85; }
+
+    /* ── Algorithm Box ── */
+    .algo-box {
+      background: #1a2535; border: 1px solid #3a5a8a; border-radius: 8px;
+      padding: 18px 22px; margin: 1.4em 0;
+    }
+    .algo-box .algo-title {
+      color: var(--heading); font-weight: 700; font-size: 0.95em;
+      border-bottom: 1px solid #3a5a8a; padding-bottom: 8px; margin-bottom: 12px;
+    }
+    .algo-box ol { padding-left: 1.4em; }
+    .algo-box li { margin: 0.4em 0; font-size: 0.92em; }
+
+    /* ── Highlight Box ── */
+    .highlight-box {
+      background: #1e2d1e; border: 1px solid var(--accent3); border-radius: 8px;
+      padding: 14px 18px; margin: 1.2em 0;
+    }
+    .highlight-box .hl-title { color: var(--accent3); font-weight: 700; margin-bottom: 6px; }
+
+    .warn-box {
+      background: #2d1e1e; border: 1px solid var(--accent2); border-radius: 8px;
+      padding: 14px 18px; margin: 1.2em 0;
+    }
+    .warn-box .wl-title { color: var(--accent2); font-weight: 700; margin-bottom: 6px; }
+
+    /* ── Tags ── */
+    .tag {
+      display: inline-block; padding: 2px 9px; border-radius: 12px;
+      font-size: 0.78em; font-weight: 600; margin: 0 3px;
+    }
+    .tag-blue { background: #1e3a5a; color: #89b4fa; border: 1px solid #3a6a9a; }
+    .tag-green { background: #1e3a2a; color: #a6e3a1; border: 1px solid #3a8a5a; }
+    .tag-red { background: #3a1e2a; color: #f38ba8; border: 1px solid #8a3a5a; }
+    .tag-purple { background: #2a1e3a; color: #cba6f7; border: 1px solid #6a3a8a; }
+    .tag-orange { background: #3a2a1e; color: #fab387; border: 1px solid #8a6a3a; }
+
+    /* ── Comparison Cards ── */
+    .compare-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.2em 0;
+    }
+    .compare-card {
+      background: var(--bg-card); border-radius: 8px; padding: 16px 18px;
+      border: 1px solid var(--border);
+    }
+    .compare-card .cc-title { font-weight: 700; margin-bottom: 8px; font-size: 0.95em; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.5em 0; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-nav); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ── Formula highlight ── */
+    .formula-block {
+      background: #1a1a2e; border-left: 3px solid var(--accent1);
+      border-radius: 0 6px 6px 0; padding: 12px 18px; margin: 1em 0;
+      overflow-x: auto;
+    }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$']],
+        displayMath: [['$$','$$']],
+        tags: 'ams'
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+
+<nav id="toc">
+  <div class="toc-title">目录导航</div>
+</nav>
+
+<main>
+
+<!-- ════════════════════════════════════════════════════
+     标题 & 摘要
+════════════════════════════════════════════════════ -->
+<h1>离线RL · 目标导向RL · 多智能体RL</h1>
+<blockquote>
+  <p><strong>来源</strong>：动手学强化学习（Hands-on RL）第 18–21 章 &nbsp;|&nbsp;
+     <strong>覆盖算法</strong>：BCQ · CQL · HER · MADDPG · QMIX · MAPPO</p>
+  <p><strong>核心主题</strong>：当智能体无法在线探索时如何学习（离线RL）、如何在稀疏奖励下学习多目标任务（目标导向RL）、多个智能体如何协同决策（多智能体RL）</p>
+</blockquote>
+
+<!-- ════════════════════════════════════════════════════
+     符号总表
+════════════════════════════════════════════════════ -->
+<h2 id="symbols">符号总表</h2>
+<p>本报告所有章节统一使用下列符号约定，阅读前请先熟悉。</p>
+<div class="symbol-grid">
+  <div class="symbol-item">
+    <div class="sym">$\mathcal{D}_\beta$</div>
+    <div class="sym-desc">离线数据集，由行为策略 $\beta$ 收集的静态转移元组集合 $\{(s,a,r,s')\}$</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$\beta(a|s)$</div>
+    <div class="sym-desc">行为策略（Behavior Policy），产生数据集的策略，训练时固定不变</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$g$</div>
+    <div class="sym-desc">目标（Goal），期望到达的状态或状态特征，与当前状态 $s$ 拼接后输入策略</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$\pi(a|s,g)$</div>
+    <div class="sym-desc">目标条件策略（Goal-Conditioned Policy），以目标 $g$ 为条件的策略</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$n$</div>
+    <div class="sym-desc">多智能体系统中的智能体总数量</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$\tau_i$</div>
+    <div class="sym-desc">智能体 $i$ 的局部观测（Local Observation），仅包含其可见信息</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$Q_i(s_{\text{joint}}, a_{\text{joint}})$</div>
+    <div class="sym-desc">智能体 $i$ 的联合 Q 函数，以全局状态和联合动作为输入</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$Q_\text{total}$</div>
+    <div class="sym-desc">QMIX 中的联合 Q 值，由各智能体局部 Q 值单调混合得到</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$\alpha$</div>
+    <div class="sym-desc">CQL 中的保守惩罚系数，控制对数据集外动作 Q 值的压制强度</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$G_\omega(s)$</div>
+    <div class="sym-desc">BCQ 中的条件变分自编码器（CVAE），用于生成数据集内的候选动作</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$d^{\pi}(s,a)$</div>
+    <div class="sym-desc">策略 $\pi$ 的状态-动作访问分布（Visitation Distribution）</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">$m_i$</div>
+    <div class="sym-desc">多智能体通信中智能体 $i$ 发送的消息向量</div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     全景图（Mermaid）
+════════════════════════════════════════════════════ -->
+<h2 id="overview">四章方法全景图</h2>
+<p>下图从"是否在线"与"是否多智能体"两个维度，对本报告涵盖的所有算法进行分类定位。</p>
+
+<pre class="mermaid">
+graph TD
+    ROOT["强化学习方法体系"]
+
+    ROOT --> ONLINE["在线 RL<br/>Online RL"]
+    ROOT --> OFFLINE["离线 RL<br/>Offline RL"]
+
+    ONLINE --> SINGLE_ON["单智能体在线"]
+    ONLINE --> MULTI_ON["多智能体在线"]
+
+    OFFLINE --> SINGLE_OFF["单智能体离线"]
+    OFFLINE --> GOAL["目标导向 RL<br/>Goal-Conditioned"]
+
+    SINGLE_ON --> DQN["DQN / PPO / SAC<br/>(经典算法)"]
+    MULTI_ON --> IRL["独立学习 IPPO"]
+    MULTI_ON --> MADDPG["MADDPG<br/>第20章"]
+    MULTI_ON --> QMIX["QMIX<br/>第21章"]
+    MULTI_ON --> MAPPO["MAPPO<br/>第21章"]
+
+    SINGLE_OFF --> BCQ["BCQ<br/>第18章"]
+    SINGLE_OFF --> CQL["CQL<br/>第18章"]
+
+    GOAL --> GCRL["GCRL<br/>Goal-Conditioned<br/>第19章"]
+    GOAL --> HER["HER 后见之明<br/>经验回放<br/>第19章"]
+
+    style ROOT fill:#313244,color:#89b4fa,stroke:#45475a
+    style OFFLINE fill:#1e2d1e,color:#a6e3a1,stroke:#3a8a5a
+    style ONLINE fill:#1e2a3a,color:#89dceb,stroke:#3a6a9a
+    style GOAL fill:#2a1e3a,color:#cba6f7,stroke:#6a3a8a
+    style BCQ fill:#1a2535,color:#fab387,stroke:#3a5a8a
+    style CQL fill:#1a2535,color:#fab387,stroke:#3a5a8a
+    style HER fill:#2a1e3a,color:#cba6f7,stroke:#6a3a8a
+    style MADDPG fill:#1e2d1e,color:#a6e3a1,stroke:#3a8a5a
+    style QMIX fill:#1e2d1e,color:#a6e3a1,stroke:#3a8a5a
+    style MAPPO fill:#1e2d1e,color:#a6e3a1,stroke:#3a8a5a
+</pre>
+
+<!-- ════════════════════════════════════════════════════
+     第18章：离线强化学习
+════════════════════════════════════════════════════ -->
+<h2 id="ch18">第 18 章 &nbsp;离线强化学习</h2>
+
+<p>离线强化学习（Offline RL）是一类<strong>仅利用预先收集的静态数据集</strong>进行策略学习的方法，智能体在训练过程中不与真实环境产生任何交互。这一设定在医疗、自动驾驶、机器人等高风险场景中极具价值——这些领域的在线探索代价极高甚至不可接受。然而，离线RL面临独特的挑战：如何避免策略被引导到数据集未覆盖的危险区域？本章介绍两个代表性算法 BCQ 和 CQL，它们分别从"约束动作空间"和"保守Q值估计"两个角度解决这一问题。</p>
+
+<h3 id="ch18-1">18.1 问题设定与核心挑战</h3>
+
+<div class="compare-grid">
+  <div class="compare-card">
+    <div class="cc-title" style="color: var(--accent3);">在线 RL（Online RL）</div>
+    <ul>
+      <li>智能体实时与环境交互</li>
+      <li>边探索边学习，数据动态生成</li>
+      <li>可以主动探索未知区域</li>
+      <li>适用于可仿真或低风险环境</li>
+    </ul>
+  </div>
+  <div class="compare-card">
+    <div class="cc-title" style="color: var(--accent2);">离线 RL（Offline RL）</div>
+    <ul>
+      <li>仅使用静态数据集 $\mathcal{D}_\beta$</li>
+      <li>训练全程无环境交互</li>
+      <li>无法主动探索，只能从历史数据学习</li>
+      <li>适用于医疗、自动驾驶等高风险场景</li>
+    </ul>
+  </div>
+</div>
+
+<h4>分布偏移（Distribution Shift）</h4>
+<p>离线RL的核心困难在于：<strong>训练策略 $\pi$ 与数据集行为策略 $\beta$ 的状态-动作访问分布不同</strong>。</p>
+
+<div class="formula-block">
+<p>$$d^{\pi}(s,a) \neq d^{\beta}(s,a)$$</p>
+</div>
+
+<p>即目标策略 $\pi$ 希望访问的 $(s,a)$ 对，在数据集 $\mathcal{D}_\beta$ 中可能根本不存在。当 Q 函数被用于这些"未见"的状态-动作对时，会产生<strong>外推误差（Extrapolation Error）</strong>：</p>
+
+<div class="warn-box">
+  <div class="wl-title">外推误差的恶性循环</div>
+  <p>Q 网络对未见 $(s,a)$ 的估计无约束 → 倾向于过高估计（因为 Bellman 更新的 max 操作） → 策略被引导选择数据集外的动作 → 执行这些动作后环境反馈很差 → 但离线训练时无法感知这一反馈</p>
+</div>
+
+<h3 id="ch18-2">18.2 BCQ：批量约束 Q 学习</h3>
+
+<p>BCQ（Batch-Constrained Q-learning）的核心思路是：<strong>直接限制策略只能从数据集"支持集"内选择动作</strong>，从根源上杜绝外推误差。</p>
+
+<div class="tech-card">
+  <div class="card-title">BCQ 核心设计</div>
+  <p><strong>生成模型</strong> $G_\omega(s)$：用条件变分自编码器（CVAE）从数据集中学习动作的条件分布 $p_\beta(a|s)$，能够采样出"数据集风格"的动作。</p>
+  <p><strong>扰动网络</strong> $\xi_\phi(s, a, \Phi)$：在生成动作的基础上添加有界扰动 $\Phi$，使策略能在数据集支持集内进行细粒度优化，而不仅仅是复制行为策略。</p>
+  <p><strong>约束策略</strong>：</p>
+  <div class="formula-block">
+    <p>$$\pi(s) = \arg\max_{a_i + \xi_\phi(s,\, a_i,\, \Phi)} Q_\phi(s,\, a_i + \xi_\phi(s,\, a_i,\, \Phi))$$</p>
+    <p style="font-size:0.88em; color:#888; margin-top:6px;">其中 $a_i \sim G_\omega(s)$，$i=1,\ldots,N$（通常 $N=10$），扰动范围 $\Phi \leq \Phi_{\max}$</p>
+  </div>
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 18.1 — BCQ 训练流程</div>
+  <ol>
+    <li>从数据集 $\mathcal{D}_\beta$ 中训练 CVAE：$G_\omega(s) \approx p_\beta(a|s)$</li>
+    <li>从 $\mathcal{D}_\beta$ 采样 mini-batch $(s, a, r, s')$</li>
+    <li>对 $s'$ 采样 $N$ 个候选动作：$\{a'_i\}_{i=1}^N \sim G_\omega(s')$</li>
+    <li>加扰动：$\tilde{a}'_i = a'_i + \xi_\phi(s', a'_i, \Phi)$</li>
+    <li>计算 TD 目标：$y = r + \gamma \max_i Q_{\phi'}(s', \tilde{a}'_i)$（使用 double Q 减少过估计）</li>
+    <li>更新 Q 网络：$\min_\phi (Q_\phi(s,a) - y)^2$</li>
+    <li>更新扰动网络：$\max_\phi \mathbb{E}_{a \sim G_\omega(s)}[Q_\phi(s, a + \xi_\phi(s,a,\Phi))]$</li>
+  </ol>
+</div>
+
+<h3 id="ch18-3">18.3 CQL：保守 Q 学习（完整推导）</h3>
+
+<p>CQL（Conservative Q-Learning）采用与 BCQ 不同的策略：<strong>不限制动作空间，而是在 Q 函数的损失函数中加入正则项，主动压低数据集外动作的 Q 值</strong>，使策略自然倾向于选择数据集内的动作。</p>
+
+<h4>18.3.1 直觉理解</h4>
+
+<div class="highlight-box">
+  <div class="hl-title">CQL 的保守性直觉</div>
+  <p>标准 Q 学习只最小化 TD 误差，对数据集外动作的 Q 值没有约束。CQL 额外要求：</p>
+  <ul>
+    <li><strong>压低</strong>：数据集外（策略分布下）动作的 Q 值期望</li>
+    <li><strong>抬高</strong>：数据集内（行为策略分布下）动作的 Q 值期望</li>
+  </ul>
+  <p>这样训练出的 Q 函数是真实 Q 函数的<strong>保守下界</strong>，策略在优化时不会被虚高的 Q 值引导到数据集外。</p>
+</div>
+
+<h4>18.3.2 CQL 目标函数</h4>
+
+<p>CQL 的完整损失函数为：</p>
+
+<div class="formula-block">
+  <p>$$\mathcal{L}_{\text{CQL}}(\phi) = \underbrace{\alpha \left[ \mathbb{E}_{s \sim \mathcal{D}} \log \sum_a \exp(Q_\phi(s,a)) - \mathbb{E}_{(s,a) \sim \mathcal{D}}[Q_\phi(s,a)] \right]}_{\text{保守正则项}} + \underbrace{\mathbb{E}_{(s,a,s') \sim \mathcal{D}} \left[(Q_\phi(s,a) - \mathcal{B}^\pi \hat{Q}(s,a))^2\right]}_{\text{标准 Bellman 误差}}$$</p>
+</div>
+
+<p>其中 $\mathcal{B}^\pi$ 是 Bellman 算子，$\alpha > 0$ 是保守系数。</p>
+
+<h4>18.3.3 保守正则项的推导（变分法）</h4>
+
+<p>CQL 正则项的形式来自以下优化问题：找到使 Q 值期望最大的分布 $\mu$，同时约束其不偏离行为策略 $\beta$ 太远。</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-label">原始优化问题</div>
+      <p>$$\max_{\mu} \; \mathbb{E}_{a \sim \mu(\cdot|s)}[Q(s,a)] - D_{\text{KL}}(\mu(\cdot|s) \,\|\, \beta(\cdot|s))$$</p>
+      <p style="font-size:0.9em; color:#aaa; margin-top:6px;">其中 KL 散度项防止 $\mu$ 偏离数据集分布 $\beta$ 太远，$\alpha$ 控制约束强度（此处已吸收进 $Q/\alpha$）。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-label">展开 KL 散度</div>
+      <p>$$\max_{\mu} \; \mathbb{E}_{a \sim \mu}[Q(s,a)] - \mathbb{E}_{a \sim \mu}\left[\log \frac{\mu(a|s)}{\beta(a|s)}\right]$$</p>
+      <p>$$= \max_{\mu} \; \mathbb{E}_{a \sim \mu}\left[Q(s,a) - \log \mu(a|s) + \log \beta(a|s)\right]$$</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-label">引入归一化约束，写出拉格朗日函数</div>
+      <p>$$\mathcal{L}(\mu, \lambda) = \mathbb{E}_{a \sim \mu}\left[Q(s,a) - \log \mu(a|s) + \log \beta(a|s)\right] + \lambda\left(\sum_a \mu(a|s) - 1\right)$$</p>
+      <p>对 $\mu(a|s)$ 求导并令其为零：</p>
+      <p>$$\frac{\partial \mathcal{L}}{\partial \mu(a|s)} = Q(s,a) - \log \mu(a|s) - 1 + \log \beta(a|s) + \lambda = 0$$</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-label">求解最优分布 $\mu^*$</div>
+      <p>$$\log \mu^*(a|s) = Q(s,a) + \log \beta(a|s) + (\lambda - 1)$$</p>
+      <p>$$\mu^*(a|s) = \frac{\beta(a|s) \cdot \exp(Q(s,a))}{Z(s)}, \quad Z(s) = \sum_a \beta(a|s) \cdot \exp(Q(s,a))$$</p>
+      <p style="color: var(--accent3); margin-top:6px;">即 $\mu^*(a|s) \propto \beta(a|s) \cdot \exp(Q(s,a))$ ——最优分布是行为策略按 Q 值的 softmax 重加权。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <div class="step-label">代入得到 soft maximum（log-sum-exp）</div>
+      <p>将 $\mu^*$ 代回目标函数，得到最优值：</p>
+      <p>$$V^*(s) = \log \sum_a \beta(a|s) \cdot \exp(Q(s,a))$$</p>
+      <p>当 $\beta$ 为均匀分布时退化为标准 log-sum-exp：$\log \sum_a \exp(Q(s,a))$，即 CQL 损失第一项的形式。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <div class="step-label">完整 CQL 正则项的含义</div>
+      <p>$$\underbrace{\log \sum_a \exp(Q_\phi(s,a))}_{\text{soft max Q（所有动作）}} - \underbrace{\mathbb{E}_{a \sim \beta}[Q_\phi(s,a)]}_{\text{数据集动作的 Q 均值}}$$</p>
+      <p>最小化此项 = <strong>压低策略分布下的最大 Q 值</strong>，同时<strong>抬高数据集动作的 Q 值</strong>，使两者差距最小。</p>
+    </div>
+  </div>
+</div>
+
+<h4>18.3.4 CQL 的保守性保证</h4>
+
+<div class="formula-block">
+  <p><strong>定理（Q 值下界）</strong>：在 CQL 训练下，对所有 $(s,a)$，有</p>
+  <p>$$\hat{Q}^\pi_{\text{CQL}}(s,a) \leq Q^\pi(s,a)$$</p>
+  <p>即 CQL 训练的 Q 函数是真实 Q 函数的保守下界。策略在此 Q 函数上的贪心选择，不会被虚高估计引导到危险区域。</p>
+</div>
+
+<h3 id="ch18-4">18.4 BCQ vs CQL 对比</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>BCQ</th>
+      <th>CQL</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>核心机制</td>
+      <td>约束动作空间（只选数据集内动作）</td>
+      <td>惩罚 Q 值（压低数据集外动作 Q 值）</td>
+    </tr>
+    <tr>
+      <td>额外模型</td>
+      <td>需要训练 CVAE 生成模型</td>
+      <td>只修改损失函数，无额外模型</td>
+    </tr>
+    <tr>
+      <td>连续/离散动作</td>
+      <td>主要针对连续动作空间</td>
+      <td>两者均适用</td>
+    </tr>
+    <tr>
+      <td>超参数</td>
+      <td>扰动范围 $\Phi$、候选数 $N$</td>
+      <td>保守系数 $\alpha$（敏感）</td>
+    </tr>
+    <tr>
+      <td>理论保证</td>
+      <td>支持集约束的策略改进</td>
+      <td>Q 函数为真实值的保守下界</td>
+    </tr>
+    <tr>
+      <td>实现复杂度</td>
+      <td>较高（需训练 CVAE）</td>
+      <td>较低（修改损失函数即可）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="ch18-5">18.5 离线 RL 的挑战与应用</h3>
+
+<div class="warn-box">
+  <div class="wl-title">核心挑战</div>
+  <ul>
+    <li><strong>超参数敏感</strong>：CQL 的 $\alpha$ 值难以在无法与环境交互的情况下调整，过大导致策略过于保守（性能低于行为策略），过小则无法有效防止外推误差</li>
+    <li><strong>评估困难</strong>：无法在线评估策略真实性能，只能依赖离线评估指标（如 OPE），但离线评估本身也存在偏差</li>
+    <li><strong>数据集质量依赖</strong>：数据集的覆盖度直接决定离线 RL 的上限，低质量数据集（如仅含随机策略轨迹）严重限制性能</li>
+  </ul>
+</div>
+
+<div class="highlight-box">
+  <div class="hl-title">典型应用场景</div>
+  <ul>
+    <li><strong>医疗决策</strong>：利用历史电子病历学习治疗策略，无法在真实患者上试错</li>
+    <li><strong>自动驾驶</strong>：利用大量驾驶记录数据学习驾驶策略，避免在真实道路上探索危险行为</li>
+    <li><strong>推荐系统</strong>：利用历史用户行为日志优化推荐策略，无需 A/B 测试</li>
+    <li><strong>机器人操控</strong>：利用人类示范数据学习操作技能，减少真实机器人的磨损</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════
+     第19章：目标导向强化学习
+════════════════════════════════════════════════════ -->
+<h2 id="ch19">第 19 章 &nbsp;目标导向的强化学习</h2>
+
+<p>目标导向强化学习（Goal-Conditioned Reinforcement Learning, GCRL）是一类<strong>让智能体学会完成多种不同目标任务</strong>的方法框架。与标准 RL 不同，GCRL 的策略以目标 $g$ 为额外输入，从而用<strong>一个策略</strong>覆盖整个目标空间。其最大挑战是稀疏奖励问题——在大多数轨迹中，智能体都无法到达目标，导致奖励信号极度稀疏，策略无从学习。本章重点介绍 HER（Hindsight Experience Replay），一种优雅解决稀疏奖励的经验回放技术。</p>
+
+<h3 id="ch19-1">19.1 目标导向 RL 的形式化</h3>
+
+<div class="tech-card">
+  <div class="card-title">GCRL 的核心定义</div>
+  <p><strong>目标增广 MDP</strong>：在标准 MDP $(S, A, P, R, \gamma)$ 基础上，引入目标空间 $\mathcal{G}$：</p>
+  <ul>
+    <li>目标条件策略：$\pi(a|s, g)$，$g \in \mathcal{G}$</li>
+    <li>目标条件奖励：$r(s, a, g)$，通常为稀疏奖励</li>
+    <li>目标采样分布：$p(g)$，每个 episode 开始时采样一个目标</li>
+  </ul>
+  <p><strong>稀疏奖励形式</strong>（最常见）：</p>
+  <div class="formula-block">
+    <p>$$r(s, a, g) = \mathbb{1}[\|s'_{\text{xy}} - g_{\text{xy}}\| \leq d] = \begin{cases} 1 & \text{到达目标附近} \\ 0 & \text{否则} \end{cases}$$</p>
+  </div>
+</div>
+
+<h4>稀疏奖励的困境</h4>
+
+<p>考虑一个机械臂推方块任务：目标是将方块推到指定位置。在训练初期，随机策略几乎不可能恰好将方块推到目标位置，导致：</p>
+
+<div class="warn-box">
+  <div class="wl-title">稀疏奖励的学习困境</div>
+  <p>假设目标空间维度为 $d$，成功区域半径为 $\epsilon$，则随机策略成功概率约为 $O(\epsilon^d)$。</p>
+  <p>对于 $d=3, \epsilon=0.05$ 的三维推块任务，成功概率约为 $1.25 \times 10^{-4}$，即每 8000 步才有 1 步正向奖励。</p>
+  <p>策略梯度方法在如此稀疏的信号下无法有效更新，Q 函数也因全零奖励而无法区分好坏动作。</p>
+</div>
+
+<h3 id="ch19-2">19.2 HER：后见之明经验回放</h3>
+
+<p>HER（Hindsight Experience Replay，Andrychowicz et al., 2017）提出了一个简洁而深刻的洞察：<strong>虽然轨迹未到达预设目标 $g$，但它确实到达了某个状态 $s_T$——何不把 $s_T$ 当作"假想目标"？</strong></p>
+
+<div class="highlight-box">
+  <div class="hl-title">HER 的核心洞察</div>
+  <p>对于一条轨迹 $\tau = (s_0, a_0, s_1, a_1, \ldots, s_T)$，即使未到达目标 $g$（全程奖励为 0），该轨迹在"以 $s_T$ 为目标"这一假想设定下是<strong>完全成功</strong>的！</p>
+  <p>通过将 $s_T$（或轨迹中的其他状态）设为虚拟目标 $g'$，原本全零奖励的轨迹变成了包含正向奖励的有效训练样本。</p>
+</div>
+
+<h4>19.2.1 四种目标替换策略</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>策略名</th>
+      <th>替换方式</th>
+      <th>特点</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>final</code></td>
+      <td>用轨迹最终状态 $s_T$ 替换目标</td>
+      <td>简单，但只产生一个虚拟目标</td>
+    </tr>
+    <tr>
+      <td><code>future</code> ★</td>
+      <td>用同轨迹当前时刻之后的随机状态 $s_{t'}$（$t' > t$）替换</td>
+      <td>最常用，每步都可产生多个虚拟目标，信号最丰富</td>
+    </tr>
+    <tr>
+      <td><code>episode</code></td>
+      <td>用同回合内任意随机状态替换</td>
+      <td>覆盖更广，但部分虚拟目标在当前时刻已"错过"</td>
+    </tr>
+    <tr>
+      <td><code>random</code></td>
+      <td>从整个数据集中随机采样状态替换</td>
+      <td>多样性最高，但相关性最低</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4>19.2.2 HER 完整算法流程</h4>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 19.1 — HER（future 策略）</div>
+  <ol>
+    <li>初始化策略 $\pi_\theta$（如 DDPG/SAC）、经验回放缓冲区 $\mathcal{B}$</li>
+    <li>对每个 episode：
+      <ul>
+        <li>采样目标 $g \sim p(g)$，初始状态 $s_0$</li>
+        <li>执行策略，收集轨迹 $\tau = \{(s_t, a_t, r_t, s_{t+1})\}_{t=0}^{T-1}$</li>
+      </ul>
+    </li>
+    <li>存储原始经验：对每步 $t$，存入 $(s_t \| g,\; a_t,\; r_t,\; s_{t+1} \| g)$</li>
+    <li>存储 HER 虚拟经验：对每步 $t$，采样 $k$ 个未来状态 $\{s_{t'}\}_{t'=t+1}^{T}$ 作为虚拟目标 $g'$，计算新奖励 $\tilde{r}_t = r(s_{t+1}, g')$，存入 $(s_t \| g',\; a_t,\; \tilde{r}_t,\; s_{t+1} \| g')$</li>
+    <li>从 $\mathcal{B}$ 采样 mini-batch，按 DDPG/SAC 规则更新 $\pi_\theta$</li>
+  </ol>
+</div>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant E as 环境
+    participant A as 智能体
+    participant B as 经验回放缓冲区
+    participant T as 策略网络
+
+    A->>E: 执行动作 a_t（目标 g）
+    E->>A: 返回 s_{t+1}, r_t=0（未到达 g）
+    A->>B: 存储原始经验 (s_t||g, a_t, 0, s_{t+1}||g)
+    Note over A,B: HER 替换（future 策略）
+    A->>B: 采样未来状态 s_{t'} 作为虚拟目标 g'
+    A->>B: 计算 r̃ = r(s_{t+1}, g')（可能为 1）
+    A->>B: 存储虚拟经验 (s_t||g', a_t, r̃, s_{t+1}||g')
+    B->>T: 采样 mini-batch（含原始+虚拟经验）
+    T->>T: 更新策略参数 θ
+</pre>
+
+<h4>19.2.3 奖励重新计算</h4>
+
+<p>HER 的关键操作是对虚拟目标 $g'$ 重新计算奖励：</p>
+
+<div class="formula-block">
+  <p>$$\tilde{r}(s_{t+1}, g') = \begin{cases} 1 & \text{if } \|s_{t+1}^{\text{xy}} - g'^{\text{xy}}\|_2 \leq d \\ 0 & \text{otherwise} \end{cases}$$</p>
+  <p style="font-size:0.88em; color:#888; margin-top:6px;">其中 $d$ 是成功判定的距离阈值，$s^{\text{xy}}$ 表示状态中的位置分量。</p>
+</div>
+
+<h3 id="ch19-3">19.3 为什么 HER 有效</h3>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-label">稀疏奖励 → 稠密信号</div>
+      <p>原始轨迹中奖励全为 0，HER 替换后，每条轨迹的<strong>最后一步必然获得正奖励</strong>（以终止状态为目标），大幅提升正样本比例。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-label">无需奖励工程（Reward Shaping）</div>
+      <p>传统解决稀疏奖励的方法需要手工设计势函数（Potential Function）等稠密奖励，HER 完全自动，无需领域知识。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-label">信用分配（Credit Assignment）</div>
+      <p>future 策略使轨迹中<strong>每一步</strong>都可以产生有意义的虚拟目标：时刻 $t$ 的动作对到达 $t+1, t+2, \ldots$ 都有贡献，Q 函数能学习到精细的时序信用分配。</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <div class="step-label">泛化到新目标</div>
+      <p>由于策略以目标为条件 $\pi(a|s,g)$，训练时见过大量不同的虚拟目标，策略自然获得了对<strong>任意目标</strong>的泛化能力，而非仅针对训练时的固定目标。</p>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════
+     第20章：多智能体RL入门
+════════════════════════════════════════════════════ -->
+<h2 id="ch20">第 20 章 &nbsp;多智能体强化学习入门</h2>
+
+<p>多智能体强化学习（Multi-Agent Reinforcement Learning, MARL）研究多个智能体在共享环境中<strong>同时学习和决策</strong>的问题。相比单智能体 RL，MARL 面临独特的非平稳性挑战——每个智能体的"环境"包含其他智能体，而其他智能体的策略在不断变化，导致从单个智能体视角看，环境是非平稳的。本章介绍独立学习基线和经典的 MADDPG 算法。</p>
+
+<h3 id="ch20-1">20.1 多智能体系统基础</h3>
+
+<div class="tech-card">
+  <div class="card-title">多智能体 MDP（Dec-POMDP）形式化</div>
+  <p>$n$ 个智能体的部分可观测马尔可夫博弈：$\langle \mathcal{S}, \{\mathcal{A}_i\}_{i=1}^n, \{\mathcal{O}_i\}_{i=1}^n, P, \{R_i\}_{i=1}^n, \gamma \rangle$</p>
+  <ul>
+    <li><strong>联合动作空间</strong>：$\mathcal{A} = \mathcal{A}_1 \times \mathcal{A}_2 \times \cdots \times \mathcal{A}_n$，规模随智能体数量指数增长</li>
+    <li><strong>局部观测</strong>：智能体 $i$ 只能观测到 $\tau_i \in \mathcal{O}_i$，而非全局状态 $s$</li>
+    <li><strong>奖励结构</strong>：合作（共享奖励 $R_i = R$）、竞争（零和 $\sum_i R_i = 0$）、混合</li>
+  </ul>
+</div>
+
+<h4>非平稳性挑战</h4>
+
+<div class="warn-box">
+  <div class="wl-title">非平稳性（Non-Stationarity）</div>
+  <p>对智能体 $i$ 而言，其 Q 函数满足：</p>
+  <p>$$Q_i(s, a_i) = \mathbb{E}\left[r_i + \gamma Q_i(s', a'_i) \,\Big|\, a_{-i} \sim \pi_{-i}\right]$$</p>
+  <p>其中 $a_{-i}$ 是其他智能体的动作，由策略 $\pi_{-i}$ 决定。当 $\pi_{-i}$ 在训练中不断更新时，$Q_i$ 的目标值持续变化，Bellman 方程不再是固定点问题，标准 Q 学习的收敛性保证失效。</p>
+</div>
+
+<h3 id="ch20-2">20.2 独立学习（Independent RL）</h3>
+
+<p>最简单的 MARL 方法：每个智能体独立运行单智能体 RL 算法（如 PPO），将其他智能体视为环境的一部分。</p>
+
+<div class="compare-grid">
+  <div class="compare-card">
+    <div class="cc-title" style="color: var(--accent3);">优点</div>
+    <ul>
+      <li>实现简单，直接复用单智能体算法</li>
+      <li>可扩展性强，智能体数量增加时计算开销线性增长</li>
+      <li>在某些任务上效果出人意料地好（IPPO）</li>
+    </ul>
+  </div>
+  <div class="compare-card">
+    <div class="cc-title" style="color: var(--accent2);">缺点</div>
+    <ul>
+      <li>无法利用智能体间的协作信息</li>
+      <li>非平稳性导致训练不稳定</li>
+      <li>无法处理部分可观测导致的协调失败</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="ch20-3">20.3 MADDPG：中心化训练 + 去中心化执行</h3>
+
+<p>MADDPG（Multi-Agent Deep Deterministic Policy Gradient，Lowe et al., 2017）提出了 MARL 中最重要的范式之一：<strong>CTDE（Centralized Training, Decentralized Execution）</strong>。</p>
+
+<div class="highlight-box">
+  <div class="hl-title">CTDE 范式的核心思想</div>
+  <p><strong>训练时</strong>：Critic 可以访问所有智能体的状态和动作（中心化），从而解决非平稳性问题。</p>
+  <p><strong>执行时</strong>：每个 Actor 只使用自己的局部观测（去中心化），满足实际部署的通信约束。</p>
+</div>
+
+<pre class="mermaid">
+graph LR
+    subgraph TRAIN["训练阶段（中心化）"]
+        S1["状态 s_1"] --> CRITIC_1["Critic Q_1<br/>(全局信息)"]
+        S2["状态 s_2"] --> CRITIC_1
+        SN["状态 s_n"] --> CRITIC_1
+        A1["动作 a_1"] --> CRITIC_1
+        A2["动作 a_2"] --> CRITIC_1
+        AN["动作 a_n"] --> CRITIC_1
+        CRITIC_1 --> GRAD["梯度信号"]
+        GRAD --> ACTOR_1["Actor μ_1"]
+        GRAD --> ACTOR_2["Actor μ_2"]
+        GRAD --> ACTOR_N["Actor μ_n"]
+    end
+
+    subgraph EXEC["执行阶段（去中心化）"]
+        O1["局部观测 o_1"] --> EX_A1["Actor μ_1"]
+        O2["局部观测 o_2"] --> EX_A2["Actor μ_2"]
+        ON["局部观测 o_n"] --> EX_AN["Actor μ_n"]
+        EX_A1 --> EA1["动作 a_1"]
+        EX_A2 --> EA2["动作 a_2"]
+        EX_AN --> EAN["动作 a_n"]
+    end
+
+    style TRAIN fill:#1e2a3a,stroke:#3a6a9a
+    style EXEC fill:#1e2d1e,stroke:#3a8a5a
+</pre>
+
+<h4>20.3.1 MADDPG 的数学形式</h4>
+
+<p>智能体 $i$ 的中心化 Critic：</p>
+
+<div class="formula-block">
+  <p>$$Q_i^{\mu}(s_1, \ldots, s_n, a_1, \ldots, a_n)$$</p>
+  <p style="font-size:0.88em; color:#888;">接收所有智能体的状态和动作，输出智能体 $i$ 的 Q 值。</p>
+</div>
+
+<p>Actor $i$ 的策略梯度更新：</p>
+
+<div class="formula-block">
+  <p>$$\nabla_{\theta_i} J(\theta_i) = \mathbb{E}_{\mathbf{s}, \mathbf{a} \sim \mathcal{D}} \left[ \nabla_{\theta_i} \mu_{\theta_i}(o_i) \cdot \nabla_{a_i} Q_i^{\mu}(\mathbf{s}, \mathbf{a}) \Big|_{a_i = \mu_{\theta_i}(o_i)} \right]$$</p>
+  <p style="font-size:0.88em; color:#888;">其中 $\mathbf{s} = (s_1, \ldots, s_n)$，$\mathbf{a} = (a_1, \ldots, a_n)$，$\mu_{\theta_i}(o_i)$ 是智能体 $i$ 的确定性策略。</p>
+</div>
+
+<p>Critic 的 TD 目标（使用目标网络）：</p>
+
+<div class="formula-block">
+  <p>$$y_i = r_i + \gamma Q_i^{\mu'}(\mathbf{s}', \mu'_1(o'_1), \ldots, \mu'_n(o'_n))$$</p>
+  <p>$$\mathcal{L}(\phi_i) = \mathbb{E}\left[(Q_i^{\mu}(\mathbf{s}, \mathbf{a}) - y_i)^2\right]$$</p>
+</div>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════
+     第21章：多智能体RL进阶
+════════════════════════════════════════════════════ -->
+<h2 id="ch21">第 21 章 &nbsp;多智能体强化学习进阶</h2>
+
+<p>本章在 MADDPG 的基础上，介绍两种在合作任务中表现更优的算法：QMIX 和 MAPPO。QMIX 通过单调混合网络实现高效的值函数分解，MAPPO 通过参数共享和中心化 Critic 将 PPO 扩展到多智能体场景。此外，本章还介绍通信协议设计，使智能体能够显式交换信息以提升协作效率。</p>
+
+<h3 id="ch21-1">21.1 QMIX：单调混合网络</h3>
+
+<p>QMIX（Rashid et al., 2018）的核心思想是：<strong>学习一个联合 Q 函数 $Q_\text{total}$，它由各智能体的局部 Q 函数 $Q_i$ 单调组合而成</strong>。这一单调性约束保证了"局部最优 = 全局最优"，使得去中心化执行时每个智能体独立 argmax 等价于联合 argmax。</p>
+
+<h4>21.1.1 IGM 条件（Individual-Global-Max）</h4>
+
+<div class="formula-block">
+  <p>$$\arg\max_{\mathbf{a}} Q_\text{total}(\mathbf{s}, \mathbf{a}) = \begin{pmatrix} \arg\max_{a_1} Q_1(\tau_1, a_1) \\ \vdots \\ \arg\max_{a_n} Q_n(\tau_n, a_n) \end{pmatrix}$$</p>
+  <p style="font-size:0.88em; color:#888;">IGM 条件：全局最优联合动作 = 各智能体独立取局部最优动作的组合。满足此条件即可去中心化执行。</p>
+</div>
+
+<h4>21.1.2 单调性约束</h4>
+
+<p>QMIX 通过要求混合网络权重非负来保证单调性：</p>
+
+<div class="formula-block">
+  <p>$$\frac{\partial Q_\text{total}}{\partial Q_i} \geq 0, \quad \forall i \in \{1, \ldots, n\}$$</p>
+</div>
+
+<p>这一约束保证了 IGM 条件成立（充分条件），使去中心化贪心执行等价于联合最优。</p>
+
+<h4>21.1.3 QMIX 网络结构</h4>
+
+<pre class="mermaid">
+graph TD
+    subgraph AGENTS["各智能体（去中心化）"]
+        TAU1["局部观测-动作历史 τ_1"] --> Q1["Q_1(τ_1, a_1)<br/>DRQN"]
+        TAU2["局部观测-动作历史 τ_2"] --> Q2["Q_2(τ_2, a_2)<br/>DRQN"]
+        TAUN["局部观测-动作历史 τ_n"] --> QN["Q_n(τ_n, a_n)<br/>DRQN"]
+    end
+
+    subgraph MIXER["混合网络（中心化训练）"]
+        Q1 --> MIX["Mixing Network<br/>f_mix(Q_1,...,Q_n; s)<br/>权重非负（由 Hypernetwork 生成）"]
+        Q2 --> MIX
+        QN --> MIX
+        S["全局状态 s"] --> HN["Hypernetwork<br/>生成混合网络权重"]
+        HN --> MIX
+        MIX --> QTOT["Q_total(s, a)"]
+    end
+
+    QTOT --> LOSS["TD 损失<br/>(Q_total - y)²"]
+
+    style AGENTS fill:#1e2a3a,stroke:#3a6a9a
+    style MIXER fill:#2a1e3a,stroke:#6a3a8a
+</pre>
+
+<h4>21.1.4 QMIX 优化目标</h4>
+
+<div class="formula-block">
+  <p>$$\mathcal{L}(\theta) = \sum_{b=1}^{B} \left[ \left( y^{\text{tot}}_b - Q_\text{total}(\mathbf{s}_b, \mathbf{a}_b; \theta) \right)^2 \right]$$</p>
+  <p>$$y^{\text{tot}} = r + \gamma \max_{\mathbf{a}'} Q_\text{total}(\mathbf{s}', \mathbf{a}'; \theta^-)$$</p>
+  <p style="font-size:0.88em; color:#888;">其中 $\theta^-$ 是目标网络参数，$B$ 是 mini-batch 大小。</p>
+</div>
+
+<h3 id="ch21-2">21.2 MAPPO：多智能体 PPO</h3>
+
+<p>MAPPO（Yu et al., 2021）将 PPO 扩展到多智能体合作场景，通过<strong>参数共享</strong>和<strong>中心化 Critic</strong>两个关键设计，在合作任务上常超过 MADDPG 和 QMIX。</p>
+
+<div class="tech-card">
+  <div class="card-title">MAPPO 的两大核心设计</div>
+  <p><strong>1. 参数共享（Parameter Sharing）</strong>：所有智能体共用同一个策略网络 $\pi_\theta(a_i|\tau_i)$，每个智能体输入自己的局部观测，但共享网络参数。</p>
+  <ul>
+    <li>优点：大幅减少参数量，相当于每个智能体的数据都用于训练同一个网络，样本效率高</li>
+    <li>前提：智能体同质（同类型），动作/观测空间相同</li>
+  </ul>
+  <p><strong>2. 中心化 Critic</strong>：$V_\phi(s)$ 接收全局状态 $s$（或所有智能体观测的拼接），用于计算优势函数。</p>
+  <ul>
+    <li>优点：Critic 有全局视野，优势估计更准确，解决非平稳性</li>
+    <li>执行时不使用 Critic，满足去中心化约束</li>
+  </ul>
+</div>
+
+<h4>21.2.1 MAPPO 的 PPO 目标</h4>
+
+<div class="formula-block">
+  <p>$$\mathcal{L}^{\text{CLIP}}(\theta) = \mathbb{E}_{i,t} \left[ \min\left( r_{i,t}(\theta) \hat{A}_{i,t},\; \text{clip}(r_{i,t}(\theta), 1-\epsilon, 1+\epsilon) \hat{A}_{i,t} \right) \right]$$</p>
+  <p style="font-size:0.88em; color:#888;">其中 $r_{i,t}(\theta) = \frac{\pi_\theta(a_{i,t}|\tau_{i,t})}{\pi_{\theta_\text{old}}(a_{i,t}|\tau_{i,t})}$ 是概率比，$\hat{A}_{i,t}$ 是中心化 Critic 计算的优势估计。</p>
+</div>
+
+<p>优势函数使用 GAE（广义优势估计）：</p>
+
+<div class="formula-block">
+  <p>$$\hat{A}_{i,t} = \sum_{l=0}^{\infty} (\gamma \lambda)^l \delta_{i,t+l}, \quad \delta_{i,t} = r_{i,t} + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)$$</p>
+</div>
+
+<h4>21.2.2 MAPPO vs MADDPG 对比</h4>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>MADDPG</th>
+      <th>MAPPO</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>策略类型</td>
+      <td>确定性策略（连续动作）</td>
+      <td>随机策略（连续/离散均可）</td>
+    </tr>
+    <tr>
+      <td>参数共享</td>
+      <td>通常不共享</td>
+      <td>默认共享（同质智能体）</td>
+    </tr>
+    <tr>
+      <td>Critic 输入</td>
+      <td>所有智能体状态+动作</td>
+      <td>全局状态（不含动作）</td>
+    </tr>
+    <tr>
+      <td>更新方式</td>
+      <td>Off-policy（经验回放）</td>
+      <td>On-policy（每轮收集新数据）</td>
+    </tr>
+    <tr>
+      <td>样本效率</td>
+      <td>较高（可重用数据）</td>
+      <td>较低，但参数共享弥补</td>
+    </tr>
+    <tr>
+      <td>合作任务性能</td>
+      <td>良好</td>
+      <td>通常更优（SMAC 等基准）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="ch21-3">21.3 通信与协调</h3>
+
+<p>当局部观测不足以支撑协作决策时，智能体间的显式通信可以显著提升性能。通信架构的设计需要在通信带宽、可微性和有效性之间权衡。</p>
+
+<div class="tech-card">
+  <div class="card-title">通信架构设计</div>
+  <p><strong>通信消息生成</strong>：智能体 $i$ 基于自己的隐状态 $h_i$ 生成消息：</p>
+  <div class="formula-block">
+    <p>$$m_i = f_\text{comm}(h_i; \theta_\text{comm})$$</p>
+  </div>
+  <p><strong>消息聚合</strong>：智能体 $i$ 接收其他智能体的消息，聚合后更新自己的状态表示：</p>
+  <div class="formula-block">
+    <p>$$\tilde{h}_i = f_\text{agg}\left(h_i,\; \sum_{j \neq i} m_j\right)$$</p>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>通信架构</th>
+      <th>通信方式</th>
+      <th>特点</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CommNet</td>
+      <td>平均聚合隐状态：$\tilde{h}_i = \frac{1}{n-1}\sum_{j\neq i} h_j$</td>
+      <td>简单可微，但无法学习选择性通信</td>
+    </tr>
+    <tr>
+      <td>DIAL</td>
+      <td>端到端可微通信，训练时用实值消息，执行时离散化</td>
+      <td>支持离散通信协议的端到端学习</td>
+    </tr>
+    <tr>
+      <td>ATOC</td>
+      <td>注意力机制决定是否通信及与谁通信</td>
+      <td>动态稀疏通信，带宽高效</td>
+    </tr>
+    <tr>
+      <td>TarMAC</td>
+      <td>目标导向通信，消息附带接收者地址</td>
+      <td>支持定向通信，减少无关信息干扰</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════
+     算法对比 ECharts
+════════════════════════════════════════════════════ -->
+<h2 id="comparison">算法特性综合对比</h2>
+
+<p>下图从五个维度对本报告涵盖的六个算法进行雷达图对比：样本效率、训练稳定性、可扩展性（智能体数量）、实用性（工程难度）和理论保证。评分为相对值（1-5分）。</p>
+
+<div id="radar-chart" class="echarts-container" style="height:420px"></div>
+
+<p>下图展示各算法在不同任务类型上的适用性评分（柱状图）。</p>
+
+<div id="bar-chart" class="echarts-container" style="height:360px"></div>
+
+<hr>
+
+<!-- ════════════════════════════════════════════════════
+     章节总结对比表
+════════════════════════════════════════════════════ -->
+<h2 id="summary">章节总结</h2>
+
+<p>四章内容围绕"如何在各种约束下学习好的策略"这一核心问题展开，每章针对不同约束提出了相应的解决方案。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>章节</th>
+      <th>核心约束</th>
+      <th>代表算法</th>
+      <th>关键思想</th>
+      <th>适用场景</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>第18章</strong><br/>离线RL</td>
+      <td>无法与环境交互</td>
+      <td>BCQ, CQL</td>
+      <td>约束动作空间 / 保守Q值估计</td>
+      <td>医疗、自动驾驶、历史数据丰富的场景</td>
+    </tr>
+    <tr>
+      <td><strong>第19章</strong><br/>目标导向RL</td>
+      <td>稀疏奖励</td>
+      <td>HER</td>
+      <td>后见之明：失败轨迹也是成功的（换个目标）</td>
+      <td>机器人操控、导航等多目标稀疏奖励任务</td>
+    </tr>
+    <tr>
+      <td><strong>第20章</strong><br/>多智能体入门</td>
+      <td>非平稳性</td>
+      <td>MADDPG</td>
+      <td>CTDE：训练时中心化，执行时去中心化</td>
+      <td>合作/竞争多智能体连续控制任务</td>
+    </tr>
+    <tr>
+      <td><strong>第21章</strong><br/>多智能体进阶</td>
+      <td>值函数分解 / 大规模合作</td>
+      <td>QMIX, MAPPO</td>
+      <td>单调混合保证IGM / 参数共享提升效率</td>
+      <td>星际争霸、合作导航等大规模合作任务</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="summary-key">关键公式速查</h3>
+
+<div class="symbol-grid">
+  <div class="symbol-item">
+    <div class="sym">BCQ 约束策略</div>
+    <div class="sym-desc">$\pi(s) = \arg\max_{a_i + \xi} Q_\phi(s, a_i + \xi)$，$a_i \sim G_\omega(s)$</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">CQL 正则项</div>
+    <div class="sym-desc">$\alpha[\log\sum_a e^{Q(s,a)} - \mathbb{E}_{a\sim\beta}[Q(s,a)]]$</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">CQL 最优分布</div>
+    <div class="sym-desc">$\mu^*(a|s) \propto \beta(a|s) \cdot \exp(Q(s,a)/\alpha)$</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">HER 奖励重算</div>
+    <div class="sym-desc">$\tilde{r} = \mathbb{1}[\|s'_{\text{xy}} - g'_{\text{xy}}\| \leq d]$</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">MADDPG 策略梯度</div>
+    <div class="sym-desc">$\nabla_{\theta_i} J = \mathbb{E}[\nabla_{\theta_i}\mu_i \cdot \nabla_{a_i} Q_i^\mu]$</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">QMIX 单调性</div>
+    <div class="sym-desc">$\partial Q_\text{total}/\partial Q_i \geq 0$，保证 IGM 条件</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">MAPPO 优势</div>
+    <div class="sym-desc">$\hat{A}_{i,t} = \sum_l (\gamma\lambda)^l \delta_{i,t+l}$，中心化 Critic</div>
+  </div>
+  <div class="symbol-item">
+    <div class="sym">通信消息</div>
+    <div class="sym-desc">$m_i = f_\text{comm}(h_i)$，$\tilde{h}_i = f_\text{agg}(h_i, \sum_{j\neq i} m_j)$</div>
+  </div>
+</div>
+
+<hr>
+
+<blockquote>
+  <p><strong>参考文献</strong></p>
+  <p>[1] Fujimoto et al., "Off-Policy Deep Reinforcement Learning without Exploration", ICML 2019 (BCQ)</p>
+  <p>[2] Kumar et al., "Conservative Q-Learning for Offline Reinforcement Learning", NeurIPS 2020 (CQL)</p>
+  <p>[3] Andrychowicz et al., "Hindsight Experience Replay", NeurIPS 2017 (HER)</p>
+  <p>[4] Lowe et al., "Multi-Agent Actor-Critic for Mixed Cooperative-Competitive Environments", NeurIPS 2017 (MADDPG)</p>
+  <p>[5] Rashid et al., "QMIX: Monotonic Value Function Factorisation for Deep Multi-Agent Reinforcement Learning", ICML 2018</p>
+  <p>[6] Yu et al., "The Surprising Effectiveness of PPO in Cooperative, Multi-Agent Games", NeurIPS 2021 (MAPPO)</p>
+</blockquote>
+
+</main>
+
+<!-- ════════════════════════════════════════════════════
+     Scripts
+════════════════════════════════════════════════════ -->
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+</script>
+
+<script>
+  // ── Radar Chart ──
+  const radarChart = echarts.init(document.getElementById('radar-chart'));
+  radarChart.setOption({
+    backgroundColor: '#22223a',
+    title: { text: '算法特性雷达图（相对评分 1-5）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+    legend: {
+      data: ['BCQ', 'CQL', 'HER', 'MADDPG', 'QMIX', 'MAPPO'],
+      textStyle: { color: '#cdd6f4', fontSize: 11 },
+      bottom: 10
+    },
+    radar: {
+      indicator: [
+        { name: '样本效率', max: 5 },
+        { name: '训练稳定性', max: 5 },
+        { name: '可扩展性', max: 5 },
+        { name: '实用性', max: 5 },
+        { name: '理论保证', max: 5 }
+      ],
+      center: ['50%', '52%'],
+      radius: '62%',
+      axisName: { color: '#cdd6f4', fontSize: 12 },
+      splitLine: { lineStyle: { color: '#45475a' } },
+      splitArea: { areaStyle: { color: ['#1e1e2e', '#22223a', '#1e1e2e', '#22223a', '#1e1e2e'] } },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    series: [{
+      type: 'radar',
+      data: [
+        {
+          value: [4, 3, 4, 3, 4],
+          name: 'BCQ',
+          lineStyle: { color: '#fab387', width: 2 },
+          areaStyle: { color: 'rgba(250,179,135,0.12)' },
+          itemStyle: { color: '#fab387' }
+        },
+        {
+          value: [4, 4, 4, 4, 5],
+          name: 'CQL',
+          lineStyle: { color: '#a6e3a1', width: 2 },
+          areaStyle: { color: 'rgba(166,227,161,0.12)' },
+          itemStyle: { color: '#a6e3a1' }
+        },
+        {
+          value: [5, 5, 4, 5, 3],
+          name: 'HER',
+          lineStyle: { color: '#89dceb', width: 2 },
+          areaStyle: { color: 'rgba(137,220,235,0.12)' },
+          itemStyle: { color: '#89dceb' }
+        },
+        {
+          value: [3, 3, 3, 3, 3],
+          name: 'MADDPG',
+          lineStyle: { color: '#cba6f7', width: 2 },
+          areaStyle: { color: 'rgba(203,166,247,0.12)' },
+          itemStyle: { color: '#cba6f7' }
+        },
+        {
+          value: [4, 4, 3, 4, 4],
+          name: 'QMIX',
+          lineStyle: { color: '#f38ba8', width: 2 },
+          areaStyle: { color: 'rgba(243,139,168,0.12)' },
+          itemStyle: { color: '#f38ba8' }
+        },
+        {
+          value: [3, 5, 5, 5, 4],
+          name: 'MAPPO',
+          lineStyle: { color: '#89b4fa', width: 2 },
+          areaStyle: { color: 'rgba(137,180,250,0.15)' },
+          itemStyle: { color: '#89b4fa' }
+        }
+      ]
+    }]
+  });
+
+  // ── Bar Chart ──
+  const barChart = echarts.init(document.getElementById('bar-chart'));
+  barChart.setOption({
+    backgroundColor: '#22223a',
+    title: { text: '各算法任务适用性评分', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#313244', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+    legend: {
+      data: ['BCQ', 'CQL', 'HER', 'MADDPG', 'QMIX', 'MAPPO'],
+      textStyle: { color: '#cdd6f4', fontSize: 11 },
+      top: 36
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '22%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['离线单智能体', '稀疏奖励', '合作多智能体', '竞争多智能体', '混合场景'],
+      axisLabel: { color: '#cdd6f4', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: {
+      type: 'value', min: 0, max: 5,
+      axisLabel: { color: '#cdd6f4' },
+      splitLine: { lineStyle: { color: '#45475a' } }
+    },
+    series: [
+      { name: 'BCQ', type: 'bar', data: [5, 2, 1, 1, 1], itemStyle: { color: '#fab387' }, barMaxWidth: 16 },
+      { name: 'CQL', type: 'bar', data: [5, 2, 1, 1, 1], itemStyle: { color: '#a6e3a1' }, barMaxWidth: 16 },
+      { name: 'HER', type: 'bar', data: [2, 5, 2, 1, 1], itemStyle: { color: '#89dceb' }, barMaxWidth: 16 },
+      { name: 'MADDPG', type: 'bar', data: [1, 2, 4, 4, 4], itemStyle: { color: '#cba6f7' }, barMaxWidth: 16 },
+      { name: 'QMIX', type: 'bar', data: [1, 2, 5, 2, 3], itemStyle: { color: '#f38ba8' }, barMaxWidth: 16 },
+      { name: 'MAPPO', type: 'bar', data: [1, 2, 5, 3, 4], itemStyle: { color: '#89b4fa' }, barMaxWidth: 16 }
+    ]
+  });
+
+  window.addEventListener('resize', () => {
+    radarChart.resize();
+    barChart.resize();
+  });
+</script>
+
+<script>
+  // ── TOC Builder ──
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'sec-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  // ── Active TOC Highlight ──
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-8% 0px -78% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+
+</body>
+</html>
