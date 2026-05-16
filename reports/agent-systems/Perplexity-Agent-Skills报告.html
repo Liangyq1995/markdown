@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perplexity Agent Skills 工程实践深度解析</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.red{border-left:4px solid var(--red);}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1em 0;}
+.diff-old{background:#2e1e1e;border:1px solid var(--red);border-radius:6px;padding:14px 18px;}
+.diff-new{background:#1e2e1e;border:1px solid var(--strong);border-radius:6px;padding:14px 18px;}
+.diff-label{font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
+.diff-label.old{color:var(--red);}.diff-label.new{color:var(--strong);}
+.cost-tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.82em;font-weight:700;margin-right:6px;}
+.cost-high{background:#3a1e1e;color:var(--red);border:1px solid var(--red);}
+.cost-med{background:#3a2e1e;color:var(--yellow);border:1px solid var(--yellow);}
+.cost-low{background:#1e3a1e;color:var(--strong);border:1px solid var(--strong);}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Perplexity Agent Skills 工程实践深度解析</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Designing, Refining, and Maintaining Agent Skills · Perplexity Agents Team · 生成日期：2026-05-13</p>
+
+<blockquote>
+  <strong>核心命题：</strong>写 Skill 不是写代码，而是为模型构建上下文。这两件事有本质不同的设计原则，传统软件工程的直觉往往在 Skill 开发中变成反模式。
+</blockquote>
+
+<table>
+  <tr><th>来源</th><td>Perplexity Research Blog — Designing, Refining, and Maintaining Agent Skills at Perplexity</td></tr>
+  <tr><th>核心洞察</th><td>Skill = 上下文构建；每 token 都有成本；描述是路由触发器；Gotchas 是最高价值内容</td></tr>
+</table>
+<hr>
+
+<!-- ===== 一、系统架构 ===== -->
+<h2 id="s1">一、系统架构与三层上下文成本模型</h2>
+
+<h3 id="s1-1">1.1 三层上下文成本</h3>
+<div class="tech-card blue">
+  <p>Skill 系统的核心设计约束是<strong>上下文窗口是有限且昂贵的</strong>。Perplexity 将 Skill 内容按使用频率和成本分为三层：</p>
+  <table>
+    <tr><th>层级</th><th>内容</th><th>Token 成本</th><th>触发时机</th><th>成本标签</th></tr>
+    <tr><td><strong>索引层（Index）</strong></td><td>每个 Skill 的 name + description</td><td>~100 tokens/Skill</td><td>每次会话，每个用户都付</td><td><span class="cost-tag cost-high">始终付</span></td></tr>
+    <tr><td><strong>加载层（Load）</strong></td><td>SKILL.md 完整正文</td><td>~5,000 tokens</td><td>路由命中时加载</td><td><span class="cost-tag cost-med">按需付</span></td></tr>
+    <tr><td><strong>运行时层（Runtime）</strong></td><td>scripts/ references/ assets/ config.json</td><td>0 → 无上限</td><td>按条件按需读取</td><td><span class="cost-tag cost-low">条件付</span></td></tr>
+  </table>
+  <p><strong>设计含义：</strong>索引层的每一个词都在每次会话中向每个用户收费。一个 100 Skill 的系统中，光是所有 Skill 的 description 就要消耗约 10,000 tokens——这是注意力资源的持续税，必须精心设计。</p>
+</div>
+
+<h3 id="s1-2">1.2 目录结构</h3>
+<pre><code>my-skill/
+├── SKILL.md          # frontmatter + 核心指令（hub）— 加载层
+├── scripts/          # 确定性逻辑代码 — 运行时层
+├── references/       # 重型参考文档，按条件加载 — 运行时层
+├── assets/           # 输出模板、Schema、数据 — 运行时层
+└── config.json       # 首次运行用户配置 — 运行时层</code></pre>
+
+<h3 id="s1-3">1.3 路由机制</h3>
+<pre class="mermaid">
+flowchart TD
+  Q["用户输入"] --> IDX["扫描 Skills 索引<br>name + description<br>（每次会话都执行）"]
+  IDX --> MATCH{"隐式模式匹配<br>是否命中？"}
+  MATCH -->|"是"| LOAD["加载 SKILL.md 正文<br>~5000 tokens 进入上下文"]
+  MATCH -->|"否"| SKIP["跳过，不增加成本"]
+  LOAD --> EXEC["执行 Skill 指令"]
+  EXEC --> NEED{"需要附属文件？"}
+  NEED -->|"是"| READ["按需读取<br>scripts/ references/ assets/"]
+  NEED -->|"否"| RESP["生成响应"]
+  READ --> RESP
+</pre>
+<p><strong>激活是隐式模式匹配</strong>，而非显式调用 <code>load_skill("name")</code>。模型根据 description 与用户意图的语义匹配程度自动决策——这意味着 description 的措辞直接决定 Skill 的激活精准率。</p>
+
+<!-- ===== 二、Skill 四维定义 ===== -->
+<h2 id="s2">二、Skill 四维定义</h2>
+
+<h3 id="s2-1">2.1 目录（A Directory）</h3>
+<div class="tech-card green">
+  <p><strong>为什么是目录而非单一文件？</strong>单一文件无法支持渐进式信息加载——"始终要加载的核心指令"和"只在特定条件下需要的重型内容"必须物理分离，才能实现按需付出成本。</p>
+  <h4>税法三级嵌套案例</h4>
+  <p>Perplexity Computer 的所得税能力中，将美国国税局（IRS）全部 1,945 个章节组织成三级嵌套：</p>
+  <ul>
+    <li><strong>一级：</strong>20 个主题领域（个人所得税/企业税/遗产税…）</li>
+    <li><strong>二级：</strong>每个领域下的 15 个具体主题</li>
+    <li><strong>三级：</strong>具体条款</li>
+  </ul>
+  <p>将 1,945 个章节放进单一文件夹时，模型性能<strong>不如不加载 Skill</strong>（上下文过载导致注意力稀释）。层级化后，模型先在 20 个主题域中选择，再在 15 个具体主题中定位，精准度大幅提升。</p>
+  <blockquote>当领域知识规模超过模型一次性选择能力（>20 个选项），人工设计的信息架构是不可替代的工程工作。</blockquote>
+</div>
+
+<h3 id="s2-2">2.2 格式（A Format）</h3>
+<div class="tech-card yellow">
+  <h4>frontmatter 必填字段</h4>
+  <pre><code>---
+name: my-skill-name        # 全小写、无空格、可用连字符，必须与目录名一致
+description: Load when...  # 路由触发器，而非内部文档
+depends: other-skill       # 层级依赖（可选）
+metadata:
+  version: 1.0             # 评测和 review 用（可选）
+---
+
+[Skill 正文内容...]</code></pre>
+  <p><strong>Computer 的 frontmatter 处理：</strong>Computer 加载 Skill 时会<strong>剥离 frontmatter</strong>，模型只看到正文。这允许配置信息保留在 SKILL.md 中，同时不污染模型上下文。</p>
+  <p><strong>name 的唯一性约束：</strong>name 是路由键，必须全局唯一。两个 name 相似的 Skill 会在路由层产生干扰（action at a distance）。</p>
+</div>
+
+<h3 id="s2-3">2.3 可调用（Invocable）与渐进式（Progressive）</h3>
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">传统工具调用（显式）</div>
+    <pre><code>load_skill("my-skill")
+run_task(...)</code></pre>
+    <p>用户必须知道 Skill 名称才能调用，限制了自动化能力</p>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">Skill 路由（隐式模式匹配）</div>
+    <p>用户说："帮我监控这个 PR 直到合并"</p>
+    <p>→ 模型自动匹配 description "Load when: user says babysit, watch CI..."</p>
+    <p>→ Skill 被激活，无需用户知道 Skill 名</p>
+  </div>
+</div>
+<p><strong>渐进式加载的经济学：</strong>一次会话可能同时加载 3-5 个 Skill，每个 Skill 的 token 成本在整个对话中持续累计直到压缩边界。充斥"废话"的 Skill 几乎必然导致性能变差——因为它们挤占了真正有用内容的注意力空间。</p>
+
+<!-- ===== 三、何时需要 Skill ===== -->
+<h2 id="s3">三、何时需要 Skill</h2>
+
+<h3 id="s3-1">3.1 判断标准</h3>
+<div class="tech-card blue">
+  <p>唯一可靠的判断方法：<strong>先不加 Skill 跑几个关键查询，再评估结果</strong>。需要 Skill 当且仅当：</p>
+  <ol>
+    <li><strong>Agent 会出错</strong>：没有特殊上下文，模型会做错或做得不一致</li>
+    <li><strong>超出一句 Prompt 能解决的范围</strong>：太复杂，不是系统 prompt 里一句话能搞定的</li>
+  </ol>
+  <p><strong>核心测试：</strong>对 Skill 中每一句话问——"没有这句话，Agent 会出错吗？"如果答案是"不会"，这句话不能留。每次会话、每个用户都在为它付出 token 成本。</p>
+</div>
+
+<h3 id="s3-2">3.2 不需要 Skill 的常见误区</h3>
+<table>
+  <tr><th>误区</th><th>原因</th><th>正确做法</th></tr>
+  <tr><td>写一堆 git 命令顺序</td><td>模型本身就知道 git 用法，无需教它</td><td>删除，让模型自己决策</td></tr>
+  <tr><td>重复系统 Prompt 的内容</td><td>大多数请求都用到的知识属于全局上下文</td><td>放系统 Prompt，不建 Skill</td></tr>
+  <tr><td>描述变化比维护速度快的内容</td><td>如频繁更新的远程 MCP endpoint</td><td>不建 Skill，避免 drift</td></tr>
+  <tr><td>把所有领域知识塞入一个 Skill</td><td>上下文过载，模型性能反而下降</td><td>分层嵌套，渐进加载</td></tr>
+</table>
+
+<!-- ===== 四、五步开发流程 ===== -->
+<h2 id="s4">四、五步开发流程</h2>
+
+<pre class="mermaid">
+flowchart LR
+  S0["Step 0<br>先写评测"] --> S1["Step 1<br>设计 Description"]
+  S1 --> S2["Step 2<br>编写 Skill 正文"]
+  S2 --> S3["Step 3<br>使用层级结构"]
+  S3 --> S4["Step 4<br>分支上迭代"]
+  S4 --> S5["Step 5<br>发布"]
+  S4 -->|"发现新 Gotcha"| S2
+  S4 -->|"描述需微调"| S1
+</pre>
+
+<h3 id="s4-0">Step 0：先写评测（最重要）</h3>
+<div class="tech-card red">
+  <p><strong>为什么先写评测？</strong>如果不先定义"成功标准"，迭代无从衡量。没有评测就上 PR，是团队最常见的错误之一。</p>
+  <table>
+    <tr><th>评测用例来源</th><th>说明</th><th>重要性</th></tr>
+    <tr><td>真实用户查询</td><td>从生产环境采样，或从专家大脑中提取</td><td>正例基础</td></tr>
+    <tr><td>已知失败案例</td><td>正是因为没有这个 Skill 导致的失败</td><td>验证必要性</td></tr>
+    <tr><td><strong>邻域混淆案例</strong></td><td>接近 Skill 边界但不应路由到此 Skill 的查询</td><td><strong>最关键——负例往往比正例更有力量</strong></td></tr>
+  </table>
+  <h4>两类评测维度</h4>
+  <ul>
+    <li><strong>Skill 加载评测：</strong>精准率（不误触发）、召回率（不漏触发）、forbidden 检查</li>
+    <li><strong>端到端任务完成评测：</strong>全 Agent 循环 + LLM judge 按评分标准打分</li>
+  </ul>
+  <blockquote>"如果你在 Skill 合并后修改 description，你已经偏轨了——任何影响路由的改动都必须有对应的 eval 支撑。"</blockquote>
+</div>
+
+<h3 id="s4-1">Step 1：Description 设计（最难的部分）</h3>
+<div class="tech-card purple">
+  <p>Description 是 Skill 中最重要、最难写的部分，是路由决策的唯一依据。Description 中的每个词都在：</p>
+  <ul>
+    <li>消耗注意力资源（每次会话都付）</li>
+    <li>影响该 Skill 的命中率</li>
+    <li>通过溢出效应影响相邻 Skill 的命中率（action at a distance）</li>
+  </ul>
+  <div class="diff-grid">
+    <div class="diff-old">
+      <div class="diff-label old">坏的 Description（描述 Skill 做什么）</div>
+      <p>"A Skill for monitoring pull requests and tracking CI status"</p>
+      <p>问题：这是 Skill 的功能介绍，不是路由触发器。用户不会用这些词来描述需求。</p>
+    </div>
+    <div class="diff-new">
+      <div class="diff-label new">好的 Description（描述用户意图和语言）</div>
+      <p>"Load when: user says babysit, watch CI, make sure this lands"</p>
+      <p>直接用真实查询中出现的词汇，与用户沮丧或需要帮助时说的话完全匹配。</p>
+    </div>
+  </div>
+  <h4>写法原则</h4>
+  <ul>
+    <li>用 <code>"Load when..."</code> 格式，而非 <code>"This skill does..."</code></li>
+    <li>用真实查询中出现的词汇（包括用户沮丧时说的话）</li>
+    <li>2-3 个真实查询示例覆盖 80% 场景，不要贪多</li>
+  </ul>
+</div>
+
+<h3 id="s4-2">Step 2：编写 Skill 正文</h3>
+<div class="tech-card green">
+  <h4>Python 之禅 vs Skill 开发原则（完整反转表）</h4>
+  <table>
+    <tr><th>Python 之禅（传统代码）</th><th>Skill 开发原则（反转）</th></tr>
+    <tr><td>简单优于复杂</td><td><strong>复杂是特性</strong>（模型无法处理你认为"显而易见"的情况才需要 Skill）</td></tr>
+    <tr><td>如果实现容易解释，可能是好想法</td><td><strong>如果容易解释，模型已经知道了，删掉</strong></td></tr>
+    <tr><td>特殊情况没有特殊到要打破规则</td><td><strong>Gotchas 就是那些特殊情况，是最高价值内容</strong></td></tr>
+    <tr><td>显式优于隐式</td><td><strong>激活是隐式模式匹配</strong>（Description 路由，非显式调用）</td></tr>
+    <tr><td>稀疏优于密集</td><td><strong>每 token 最大化信息量</strong>（稀疏 = 废话 = 性能损失）</td></tr>
+    <tr><td>错误不应该被悄悄忽略</td><td><strong>Gotchas 记录的就是悄悄发生的错误模式</strong></td></tr>
+  </table>
+
+  <h4>好坏写法对比</h4>
+  <div class="diff-grid">
+    <div class="diff-old">
+      <div class="diff-label old">坏的写法（像写 README，列步骤）</div>
+      <pre><code>1. git checkout main
+2. git pull origin main
+3. git checkout -b feature/my-fix
+4. git cherry-pick &lt;commit-hash&gt;
+5. git push origin feature/my-fix</code></pre>
+      <p>过度规定步骤序列：出现异常情况时模型会僵化失败（步骤 3 失败怎么办？有冲突怎么办？）</p>
+    </div>
+    <div class="diff-new">
+      <div class="diff-label new">好的写法（意图导向，给有经验的同事的备忘）</div>
+      <pre><code>Cherry-pick the commit onto a clean branch.
+Resolve conflicts preserving intent.
+If it can't land cleanly, explain why.</code></pre>
+      <p>描述意图和原则，而非步骤。模型可以在异常情况下灵活应对，而不是僵化失败。</p>
+    </div>
+  </div>
+
+  <h4>Gotchas（陷阱条目）——最高价值内容</h4>
+  <p>Gotchas 是"模型在这个 Skill 上会犯的特定错误"的负例描述，是 Skill 中信息密度最高的部分：</p>
+  <ul>
+    <li>每当 Agent 犯一个新错误，就在 Skill 末尾追加一条 Gotcha</li>
+    <li>随时间有机增长，无需一次性写完</li>
+    <li>格式：描述错误模式 + 正确行为</li>
+  </ul>
+
+  <h4>LLM 自动生成 Skill 无效的研究结论</h4>
+  <blockquote>"Self-generated Skills provide no benefit on average, showing that models cannot reliably author the procedural knowledge they benefit from consuming."<br>——Perplexity 早期内部研究</blockquote>
+  <p><strong>含义：</strong>人类的领域专业知识和意见（opinion）不可替代。Skill 的价值在于注入人类的观点和经验，这无法被 LLM 自动化取代。</p>
+</div>
+
+<h3 id="s4-3">Step 3：Hub-and-Spoke 层级结构</h3>
+<div class="tech-card blue">
+  <table>
+    <tr><th>内容类型</th><th>放在哪里</th><th>原因</th></tr>
+    <tr><td>核心流程指令</td><td>SKILL.md（hub）</td><td>每次加载都需要，值得付成本</td></tr>
+    <tr><td>确定性逻辑代码</td><td>scripts/（spoke）</td><td>代理执行而非重新发明，按需加载</td></tr>
+    <tr><td>重型参考文档</td><td>references/（spoke）</td><td>只在特定分支条件下需要，避免总是付出成本</td></tr>
+    <tr><td>输出格式模板</td><td>assets/（spoke）</td><td>代理直接复制填写，减少幻觉</td></tr>
+    <tr><td>用户配置</td><td>config.json</td><td>询问一次，保存复用，避免重复打扰用户</td></tr>
+  </table>
+  <p><strong>hub 保持精简的原则：</strong>SKILL.md 正文应只包含"每次执行都会用到的内容"。条件分支逻辑（"如果是 Python 项目，加载 Python 规范；如果是 Go 项目，加载 Go 规范"）应推迟到运行时按需加载。</p>
+</div>
+
+<h3 id="s4-4">Step 4/5：迭代与发布</h3>
+<ul>
+  <li><strong>在独立分支上完成所有迭代</strong>，提交时包含完整变更集（评测用例 + Skill 内容）</li>
+  <li><strong>不提交小增量 PR</strong>（除新 Gotcha 外），因为 Description 改动的溢出效应让逐步审查极难</li>
+  <li>Description 字段的所有微调<strong>必须在发布前完成</strong>，之后修改需重新运行整体评测套件</li>
+</ul>
+
+<!-- ===== 五、维护：Gotchas 飞轮 ===== -->
+<h2 id="s5">五、维护：陷阱飞轮（Gotchas Flywheel）</h2>
+
+<pre class="mermaid">
+flowchart LR
+  A["Agent 在特定场景出错"] --> B["分析根本原因"]
+  B --> C["在 Gotchas 追加一条负例<br>（唯一允许不附带 eval 的 PR）"]
+  C --> D["Skill 质量提升"]
+  D --> E["Agent 在该场景不再出错"]
+  E --> F["新的边缘场景出现"] --> A
+</pre>
+
+<h3 id="s5-1">维护规则</h3>
+<table>
+  <tr><th>场景</th><th>操作</th><th>注意</th></tr>
+  <tr><td>路由误触发（精准率低）</td><td>收紧 description + 增加负例 eval</td><td>必须同时更新 eval，不能只改 description</td></tr>
+  <tr><td>路由漏触发（召回率低）</td><td>添加关键词 + 增加正例 eval</td><td>同上</td></tr>
+  <tr><td>系统 Prompt 变更</td><td>检查 Skill 是否与新 Prompt 冲突或重复</td><td>全局变更会影响所有 Skill 的路由行为</td></tr>
+  <tr><td>Agent 出现新错误</td><td>在 Gotchas 追加负例</td><td>唯一允许不附带 eval 的 PR</td></tr>
+</table>
+
+<h3 id="s5-2">多模型兼容性测试</h3>
+<div class="tech-card yellow">
+  <p>Perplexity Computer 支持至少三种编排模型家族（GPT、Claude Opus、Claude Sonnet），同一 Skill 在不同模型下路由行为差异显著。</p>
+  <table>
+    <tr><th>测试维度</th><th>内容</th><th>必须覆盖的模型</th></tr>
+    <tr><td>Skill 加载测试</td><td>精准率、召回率、forbidden 检查</td><td>GPT、Claude Opus、Claude Sonnet</td></tr>
+    <tr><td>端到端任务完成测试</td><td>全 Agent 循环 + LLM judge 评分</td><td>GPT、Claude Opus、Claude Sonnet</td></tr>
+  </table>
+  <blockquote>"发布新 Skill 前必须运行<strong>整体</strong>评测套件，不只是新 Skill 自身的测试。"新增一个 Skill 可能在不触碰旧 Skill 的情况下改变其路由行为（Action at a Distance）。</blockquote>
+</div>
+
+<!-- ===== 六、工程启示 ===== -->
+<h2 id="s6">六、工程启示与价值总结</h2>
+
+<h3 id="s6-1">6.1 核心范式转换</h3>
+<div class="tech-card purple">
+  <p><strong>写代码是给运行时系统看的；写 Skill 是给语言模型看的。</strong>两者理解和处理信息的方式完全不同：</p>
+  <ul>
+    <li>运行时系统：精确执行，步骤越详细越好，不理解意图</li>
+    <li>语言模型：理解意图，意图越清晰越好，过度规定的步骤反而限制灵活性</li>
+  </ul>
+</div>
+
+<h3 id="s6-2">6.2 三条可迁移的通用原则</h3>
+<ol>
+  <li><strong>三层渐进式上下文成本框架</strong>：适用于任何 RAG/Tool 系统的知识组织——始终付/按需付/条件付三层结构，可迁移到任何 Agent 知识系统设计。</li>
+  <li><strong>Description 即路由器</strong>：理解为什么一个词的改变会产生意想不到的全局影响——因为所有 Skill 共享同一个路由空间，改动是非局部的。</li>
+  <li><strong>负例大于正例的评测直觉</strong>：在 LLM 路由系统中，告诉模型"不要做什么"往往比"要做什么"更有力。同样适用于 prompt engineering、few-shot 示例设计等场景。</li>
+</ol>
+
+<h3 id="s6-3">6.3 Token 成本分布（示意）</h3>
+<div id="chart-cost" class="echarts-container" style="height:260px"></div>
+<script>
+echarts.init(document.getElementById('chart-cost')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'item',formatter:'{b}: {c}% ({d}%)'},
+  legend:{orient:'vertical',right:20,top:'center',textStyle:{color:'#cdd6f4'}},
+  series:[{
+    type:'pie',radius:['40%','70%'],center:['40%','50%'],
+    data:[
+      {value:5,name:'索引层\n(始终付)',itemStyle:{color:'#f38ba8'}},
+      {value:30,name:'加载层\n(路由时付)',itemStyle:{color:'#f9e2af'}},
+      {value:65,name:'运行时层\n(条件付)',itemStyle:{color:'#a6e3a1'}}
+    ],
+    label:{color:'#cdd6f4'}
+  }]
+});
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">图：典型 Skill 的 Token 成本分布——索引层虽然比例小，但每次会话都付，是设计约束最严的部分</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">
+本报告基于 Perplexity Research Blog "Designing, Refining, and Maintaining Agent Skills at Perplexity" 整理，引用研究结论均来自该文。生成日期：2026-05-13。
+</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);
+});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{
+  const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+  if(l)l.classList.toggle('active',e.isIntersecting);
+}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

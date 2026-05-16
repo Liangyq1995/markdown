@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>马尔可夫决策过程 · 技术解析</title>
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        tags: 'ams'
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+
+  <!-- Mermaid -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'dark',
+        themeVariables: {
+          primaryColor: '#7c3aed',
+          primaryTextColor: '#e2e8f0',
+          primaryBorderColor: '#a78bfa',
+          lineColor: '#94a3b8',
+          secondaryColor: '#1e293b',
+          tertiaryColor: '#0f172a',
+          background: '#1e1e2e',
+          mainBkg: '#1e293b',
+          nodeBorder: '#a78bfa',
+          clusterBkg: '#0f172a',
+          titleColor: '#e2e8f0',
+          edgeLabelBackground: '#1e293b',
+          attributeBackgroundColorEven: '#1e293b',
+          attributeBackgroundColorOdd: '#0f172a'
+        }
+      });
+    });
+  </script>
+
+  <style>
+    /* ===== CSS 变量 ===== */
+    :root {
+      --bg:        #1e1e2e;
+      --surface:   #181825;
+      --surface2:  #1e293b;
+      --border:    #313244;
+      --accent:    #7c3aed;
+      --accent2:   #a78bfa;
+      --accent3:   #c4b5fd;
+      --green:     #4ade80;
+      --cyan:      #22d3ee;
+      --orange:    #fb923c;
+      --red:       #f87171;
+      --yellow:    #fbbf24;
+      --text:      #e2e8f0;
+      --text-dim:  #94a3b8;
+      --text-muted:#64748b;
+      --radius:    10px;
+      --nav-w:     260px;
+      --shadow:    0 4px 24px rgba(0,0,0,.45);
+    }
+
+    /* ===== 基础重置 ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.75;
+      display: flex;
+    }
+
+    /* ===== 左侧导航 ===== */
+    nav#sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: var(--nav-w);
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px 0 40px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    nav#sidebar .nav-brand {
+      padding: 0 20px 20px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    nav#sidebar .nav-brand .tag {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+
+    nav#sidebar .nav-brand h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    nav#sidebar ul {
+      list-style: none;
+      padding: 0 10px;
+    }
+
+    nav#sidebar ul li a {
+      display: block;
+      padding: 7px 12px;
+      border-radius: 6px;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 13px;
+      transition: background .15s, color .15s;
+      line-height: 1.4;
+    }
+
+    nav#sidebar ul li a:hover,
+    nav#sidebar ul li a.active {
+      background: rgba(124,58,237,.18);
+      color: var(--accent3);
+    }
+
+    nav#sidebar ul li.section-header {
+      padding: 14px 12px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    nav#sidebar ul li.sub a {
+      padding-left: 24px;
+      font-size: 12px;
+    }
+
+    /* ===== 主内容区 ===== */
+    main {
+      margin-left: var(--nav-w);
+      flex: 1;
+      padding: 48px 52px 80px;
+      max-width: calc(100% - var(--nav-w));
+    }
+
+    /* ===== 页面标题 ===== */
+    .page-header {
+      margin-bottom: 48px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-header .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(124,58,237,.15);
+      border: 1px solid rgba(124,58,237,.35);
+      color: var(--accent3);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 16px;
+    }
+
+    .page-header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent3), var(--cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.25;
+      margin-bottom: 12px;
+    }
+
+    .page-header .subtitle {
+      color: var(--text-dim);
+      font-size: 15px;
+      max-width: 640px;
+    }
+
+    /* ===== 章节标题 ===== */
+    .section {
+      margin-bottom: 56px;
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2.section-title .num {
+      background: var(--accent);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 5px;
+    }
+
+    h3.sub-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent2);
+      margin: 24px 0 12px;
+    }
+
+    h4.mini-title {
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--cyan);
+      margin: 18px 0 8px;
+    }
+
+    /* ===== 段落 ===== */
+    p { margin-bottom: 12px; color: var(--text); }
+
+    /* ===== 符号表 ===== */
+    .symbol-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 14px;
+    }
+
+    .symbol-table th {
+      background: rgba(124,58,237,.25);
+      color: var(--accent3);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      border: 1px solid var(--border);
+    }
+
+    .symbol-table td {
+      padding: 9px 14px;
+      border: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: top;
+    }
+
+    .symbol-table tr:nth-child(even) td {
+      background: rgba(255,255,255,.025);
+    }
+
+    .symbol-table tr:hover td {
+      background: rgba(124,58,237,.08);
+    }
+
+    /* ===== 公式框 formula-box ===== */
+    .formula-box {
+      background: var(--surface2);
+      border: 1px solid rgba(124,58,237,.4);
+      border-left: 4px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin: 16px 0 20px;
+      overflow-x: auto;
+    }
+
+    .formula-box .fb-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .07em;
+      color: var(--accent2);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .formula-box .fb-desc {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 10px;
+    }
+
+    /* ===== 推导步骤 ===== */
+    .derivation {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin: 16px 0 20px;
+      counter-reset: step;
+    }
+
+    .derivation .d-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .derivation .d-title::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 14px;
+      background: var(--cyan);
+      border-radius: 2px;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 14px;
+      counter-increment: step;
+    }
+
+    .step:last-child { margin-bottom: 0; }
+
+    .step-num {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      background: rgba(124,58,237,.25);
+      border: 1px solid var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent3);
+      margin-top: 2px;
+    }
+
+    .step-body { flex: 1; }
+
+    .step-body .step-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    /* ===== tech-card ===== */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 16px 0 24px;
+    }
+
+    .tech-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      transition: border-color .2s, box-shadow .2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .tech-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 3px;
+    }
+
+    .tech-card.purple::before { background: var(--accent); }
+    .tech-card.cyan::before   { background: var(--cyan); }
+    .tech-card.green::before  { background: var(--green); }
+    .tech-card.orange::before { background: var(--orange); }
+    .tech-card.red::before    { background: var(--red); }
+    .tech-card.yellow::before { background: var(--yellow); }
+
+    .tech-card:hover {
+      border-color: rgba(124,58,237,.5);
+      box-shadow: var(--shadow);
+    }
+
+    .tech-card .card-icon {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    .tech-card .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .tech-card .card-body {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ===== 对比表格 ===== */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 24px;
+      font-size: 14px;
+    }
+
+    .compare-table th {
+      padding: 11px 16px;
+      text-align: left;
+      font-weight: 700;
+      border: 1px solid var(--border);
+    }
+
+    .compare-table th:first-child {
+      background: rgba(255,255,255,.04);
+      color: var(--text-dim);
+    }
+
+    .compare-table th:nth-child(2) {
+      background: rgba(34,211,238,.12);
+      color: var(--cyan);
+    }
+
+    .compare-table th:nth-child(3) {
+      background: rgba(124,58,237,.15);
+      color: var(--accent3);
+    }
+
+    .compare-table th:nth-child(4) {
+      background: rgba(74,222,128,.1);
+      color: var(--green);
+    }
+
+    .compare-table td {
+      padding: 10px 16px;
+      border: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: top;
+    }
+
+    .compare-table tr:nth-child(even) td {
+      background: rgba(255,255,255,.02);
+    }
+
+    .compare-table tr:hover td {
+      background: rgba(124,58,237,.06);
+    }
+
+    /* ===== Callout / 提示框 ===== */
+    .callout {
+      display: flex;
+      gap: 14px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin: 14px 0 18px;
+    }
+
+    .callout.info  { border-left: 4px solid var(--cyan); }
+    .callout.warn  { border-left: 4px solid var(--yellow); }
+    .callout.tip   { border-left: 4px solid var(--green); }
+    .callout.key   { border-left: 4px solid var(--accent); }
+
+    .callout .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+    .callout .callout-body { font-size: 13.5px; color: var(--text-dim); line-height: 1.65; }
+
+    .callout .callout-body strong { color: var(--text); }
+
+    /* ===== Mermaid 容器 ===== */
+    .mermaid-wrap {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin: 16px 0 24px;
+      overflow-x: auto;
+    }
+
+    .mermaid-wrap .mermaid-caption {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 12px;
+    }
+
+    /* ===== 代码块 ===== */
+    pre.code-block {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin: 12px 0 18px;
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      color: #c9d1d9;
+    }
+
+    /* ===== 行内代码 ===== */
+    code {
+      background: rgba(124,58,237,.15);
+      color: var(--accent3);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: 'Fira Code', 'Cascadia Code', monospace;
+      font-size: .88em;
+    }
+
+    /* ===== 列表 ===== */
+    ul.styled, ol.styled {
+      padding-left: 22px;
+      margin: 8px 0 14px;
+    }
+
+    ul.styled li, ol.styled li {
+      margin-bottom: 6px;
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    ul.styled li::marker { color: var(--accent2); }
+    ol.styled li::marker { color: var(--accent2); font-weight: 700; }
+
+    /* ===== 分隔线 ===== */
+    hr.divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 40px 0;
+    }
+
+    /* ===== 滚动条 ===== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: none) {
+      nav#sidebar { display: none; }
+      main { margin-left: 0; max-width: 100%; padding: 28px 20px 60px; }
+    }
+
+    /* ===== 高亮色标签 ===== */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-right: 4px;
+    }
+    .badge.purple { background: rgba(124,58,237,.25); color: var(--accent3); }
+    .badge.cyan   { background: rgba(34,211,238,.15); color: var(--cyan); }
+    .badge.green  { background: rgba(74,222,128,.15); color: var(--green); }
+    .badge.orange { background: rgba(251,146,60,.15); color: var(--orange); }
+  </style>
+</head>
+
+<body>
+
+<!-- ===== 左侧导航 ===== -->
+<nav id="sidebar">
+  <div class="nav-brand">
+    <div class="tag">强化学习</div>
+    <h2>马尔可夫决策过程<br>技术解析</h2>
+  </div>
+  <ul>
+    <li class="section-header">符号与基础</li>
+    <li><a href="#symbols">符号总表</a></li>
+
+    <li class="section-header">第3章 · 核心模型</li>
+    <li><a href="#s31">3.1 马尔可夫过程 MP</a></li>
+    <li class="sub"><a href="#s31-markov">马尔可夫性质</a></li>
+    <li class="sub"><a href="#s31-matrix">转移矩阵</a></li>
+    <li><a href="#s32">3.2 马尔可夫奖励过程 MRP</a></li>
+    <li class="sub"><a href="#s32-def">定义与回报</a></li>
+    <li class="sub"><a href="#s32-bellman">贝尔曼方程推导</a></li>
+    <li class="sub"><a href="#s32-matrix">矩阵形式求解</a></li>
+    <li class="sub"><a href="#s32-mc">蒙特卡洛估计</a></li>
+    <li><a href="#s33">3.3 马尔可夫决策过程 MDP</a></li>
+    <li class="sub"><a href="#s33-def">定义与策略</a></li>
+    <li class="sub"><a href="#s33-mrp">MDP 退化为 MRP</a></li>
+    <li><a href="#s34">3.4 价值函数</a></li>
+    <li class="sub"><a href="#s34-vq">V 与 Q 的关系</a></li>
+    <li class="sub"><a href="#s34-bellman-v">贝尔曼期望方程 V</a></li>
+    <li class="sub"><a href="#s34-bellman-q">贝尔曼期望方程 Q</a></li>
+    <li><a href="#s35">3.5 蒙特卡洛方法</a></li>
+    <li><a href="#s36">3.6 占用度量</a></li>
+    <li><a href="#s37">3.7 最优策略</a></li>
+    <li class="sub"><a href="#s37-opt">最优价值函数</a></li>
+    <li class="sub"><a href="#s37-bellman-opt">贝尔曼最优方程</a></li>
+
+    <li class="section-header">总结</li>
+    <li><a href="#summary">MRP vs MDP 对比</a></li>
+    <li><a href="#bellman-compare">贝尔曼方程对比</a></li>
+  </ul>
+</nav>
+
+<!-- ===== 主内容 ===== -->
+<main>
+
+  <!-- 页面标题 -->
+  <div class="page-header">
+    <div class="kicker">
+      <span>📖</span> 强化学习 · 第三章
+    </div>
+    <h1>马尔可夫决策过程</h1>
+    <p class="subtitle">
+      系统梳理 MP → MRP → MDP 的递进关系，完整推导贝尔曼方程、占用度量与最优策略理论，
+      涵盖全部核心公式与直觉解释。
+    </p>
+  </div>
+
+  <!-- ===== 符号总表 ===== -->
+  <div class="section" id="symbols">
+    <h2 class="section-title"><span class="num">§0</span>符号总表</h2>
+
+    <p>下表汇总本章所有核心符号，贯穿 MP、MRP、MDP 三层模型。</p>
+
+    <table class="symbol-table">
+      <thead>
+        <tr>
+          <th>符号</th>
+          <th>含义</th>
+          <th>所属模型</th>
+          <th>典型取值 / 说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>$\mathcal{S}$</td><td>状态空间</td><td>MP / MRP / MDP</td><td>有限或连续集合</td></tr>
+        <tr><td>$s, s'$</td><td>当前状态 / 下一状态</td><td>MP / MRP / MDP</td><td>$s \in \mathcal{S}$</td></tr>
+        <tr><td>$\mathcal{A}$</td><td>动作空间</td><td>MDP</td><td>有限或连续集合</td></tr>
+        <tr><td>$a$</td><td>动作</td><td>MDP</td><td>$a \in \mathcal{A}$</td></tr>
+        <tr><td>$P(s'|s)$</td><td>状态转移概率（无动作）</td><td>MP / MRP</td><td>$\sum_{s'} P(s'|s)=1$</td></tr>
+        <tr><td>$P(s'|s,a)$</td><td>状态转移概率（有动作）</td><td>MDP</td><td>$\sum_{s'} P(s'|s,a)=1$</td></tr>
+        <tr><td>$\mathcal{R}(s)$</td><td>状态奖励函数</td><td>MRP</td><td>$\mathbb{E}[r_{t+1}|S_t=s]$</td></tr>
+        <tr><td>$R(s,a)$</td><td>状态-动作奖励函数</td><td>MDP</td><td>$\mathbb{E}[r_{t+1}|S_t=s,A_t=a]$</td></tr>
+        <tr><td>$\gamma$</td><td>折扣因子</td><td>MRP / MDP</td><td>$\gamma \in [0,1)$</td></tr>
+        <tr><td>$G_t$</td><td>从时刻 $t$ 起的折扣回报</td><td>MRP / MDP</td><td>$G_t = \sum_{k=0}^{\infty}\gamma^k r_{t+k+1}$</td></tr>
+        <tr><td>$\pi(a|s)$</td><td>随机策略</td><td>MDP</td><td>$\sum_a \pi(a|s)=1$</td></tr>
+        <tr><td>$V^\pi(s)$</td><td>策略 $\pi$ 下的状态价值函数</td><td>MDP</td><td>$\mathbb{E}_\pi[G_t|S_t=s]$</td></tr>
+        <tr><td>$Q^\pi(s,a)$</td><td>策略 $\pi$ 下的动作价值函数</td><td>MDP</td><td>$\mathbb{E}_\pi[G_t|S_t=s,A_t=a]$</td></tr>
+        <tr><td>$V^*(s)$</td><td>最优状态价值函数</td><td>MDP</td><td>$\max_\pi V^\pi(s)$</td></tr>
+        <tr><td>$Q^*(s,a)$</td><td>最优动作价值函数</td><td>MDP</td><td>$\max_\pi Q^\pi(s,a)$</td></tr>
+        <tr><td>$\pi^*$</td><td>最优策略</td><td>MDP</td><td>$\forall s: V^{\pi^*}(s)=V^*(s)$</td></tr>
+        <tr><td>$\rho^\pi(s,a)$</td><td>占用度量</td><td>MDP</td><td>$(1-\gamma)\sum_{t=0}^\infty \gamma^t P_\pi(S_t=s,A_t=a)$</td></tr>
+        <tr><td>$J(\pi)$</td><td>策略期望回报</td><td>MDP</td><td>$\frac{1}{1-\gamma}\mathbb{E}_{(s,a)\sim\rho^\pi}[r(s,a)]$</td></tr>
+        <tr><td>$\mathbf{P}$</td><td>转移矩阵</td><td>MRP</td><td>$|\mathcal{S}|\times|\mathcal{S}|$ 矩阵</td></tr>
+        <tr><td>$\mathbf{V}, \mathbf{R}$</td><td>价值向量 / 奖励向量</td><td>MRP</td><td>$|\mathcal{S}|$ 维列向量</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ===== 3.1 马尔可夫过程 ===== -->
+  <div class="section" id="s31">
+    <h2 class="section-title"><span class="num">3.1</span>马尔可夫过程（MP）</h2>
+
+    <p>
+      <strong>马尔可夫过程</strong>（Markov Process，MP）是一类具有"无记忆性"的随机过程，
+      是 MRP 和 MDP 的基础。它由状态空间 $\mathcal{S}$ 和转移概率 $P$ 两个要素构成：
+      $\text{MP} = (\mathcal{S},\, P)$。
+    </p>
+
+    <h3 class="sub-title" id="s31-markov">马尔可夫性质</h3>
+
+    <div class="callout key">
+      <div class="callout-icon">🔑</div>
+      <div class="callout-body">
+        <strong>马尔可夫性质（Markov Property）：</strong>
+        给定当前状态 $S_t$，未来状态 $S_{t+1}$ 与历史状态 $S_1, S_2, \ldots, S_{t-1}$ 条件独立。
+        即"当前状态包含了所有预测未来所需的信息"。
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <div class="fb-label">马尔可夫性质（条件独立形式）</div>
+      $$P(S_{t+1} \mid S_t) = P(S_{t+1} \mid S_1, S_2, \ldots, S_t)$$
+      <div class="fb-desc">
+        等价表述：$P(S_{t+1} \mid S_t, S_{t-1}, \ldots, S_1) = P(S_{t+1} \mid S_t)$，
+        即转移概率只依赖于当前状态，与历史路径无关。
+      </div>
+    </div>
+
+    <h3 class="sub-title" id="s31-matrix">状态转移矩阵</h3>
+
+    <p>
+      对于有限状态空间 $\mathcal{S} = \{s_1, s_2, \ldots, s_n\}$，
+      所有状态间的转移概率可以组织成一个 $n \times n$ 的<strong>状态转移矩阵</strong> $\mathbf{P}$：
+    </p>
+
+    <div class="formula-box">
+      <div class="fb-label">状态转移矩阵</div>
+      $$\mathbf{P} = \begin{pmatrix}
+        P(s_1|s_1) & P(s_2|s_1) & \cdots & P(s_n|s_1) \\
+        P(s_1|s_2) & P(s_2|s_2) & \cdots & P(s_n|s_2) \\
+        \vdots      & \vdots      & \ddots & \vdots      \\
+        P(s_1|s_n) & P(s_2|s_n) & \cdots & P(s_n|s_n)
+      \end{pmatrix}$$
+      <div class="fb-desc">
+        第 $i$ 行表示从状态 $s_i$ 出发转移到各状态的概率分布，每行之和为 1：
+        $\sum_{j=1}^{n} P(s_j | s_i) = 1,\; \forall i$。
+      </div>
+    </div>
+
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+graph LR
+  S1((s₁)) -->|"P(s₂|s₁)"| S2((s₂))
+  S1 -->|"P(s₃|s₁)"| S3((s₃))
+  S2 -->|"P(s₁|s₂)"| S1
+  S2 -->|"P(s₃|s₂)"| S3
+  S3 -->|"P(s₁|s₃)"| S1
+  S3 -->|"P(s₂|s₃)"| S2
+  S1 -->|"P(s₁|s₁)"| S1
+      </pre>
+      <div class="mermaid-caption">图 3.1 — 马尔可夫过程状态转移图（含自环）</div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="tech-card purple">
+        <div class="card-icon">🔄</div>
+        <div class="card-title">随机游走</div>
+        <div class="card-body">马尔可夫链的典型例子。每一步只依赖当前位置，与走过的路径无关。</div>
+      </div>
+      <div class="tech-card cyan">
+        <div class="card-icon">📊</div>
+        <div class="card-title">稳态分布</div>
+        <div class="card-body">对于遍历性马尔可夫链，存在唯一稳态分布 $\mu$，满足 $\mu = \mu \mathbf{P}$。</div>
+      </div>
+      <div class="tech-card green">
+        <div class="card-icon">🧩</div>
+        <div class="card-title">有限状态假设</div>
+        <div class="card-body">本章主要考虑有限状态空间，确保转移矩阵存在且贝尔曼方程有解析解。</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ===== 3.2 马尔可夫奖励过程 ===== -->
+  <div class="section" id="s32">
+    <h2 class="section-title"><span class="num">3.2</span>马尔可夫奖励过程（MRP）</h2>
+
+    <h3 class="sub-title" id="s32-def">定义与回报</h3>
+
+    <p>
+      <strong>马尔可夫奖励过程</strong>（Markov Reward Process，MRP）在马尔可夫过程的基础上
+      引入奖励信号和折扣因子，形式化为四元组：
+    </p>
+
+    <div class="formula-box">
+      <div class="fb-label">MRP 四元组</div>
+      $$\text{MRP} = (\mathcal{S},\; P,\; \mathcal{R},\; \gamma)$$
+      <div class="fb-desc">
+        $\mathcal{S}$：状态空间；$P$：转移概率；$\mathcal{R}(s) = \mathbb{E}[r_{t+1}|S_t=s]$：期望即时奖励；$\gamma \in [0,1)$：折扣因子。
+      </div>
+    </div>
+
+    <h4 class="mini-title">折扣回报 $G_t$</h4>
+
+    <div class="formula-box">
+      <div class="fb-label">折扣回报（Return）</div>
+      $$G_t = r_{t+1} + \gamma r_{t+2} + \gamma^2 r_{t+3} + \cdots = \sum_{k=0}^{\infty} \gamma^k r_{t+k+1}$$
+      <div class="fb-desc">
+        折扣因子 $\gamma$ 体现了"近期奖励比远期奖励更有价值"的直觉。
+        $\gamma \to 0$ 时智能体目光短浅，$\gamma \to 1$ 时考虑长远回报。
+        $\gamma < 1$ 也保证了无穷级数的收敛性。
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>递推关系：</strong>
+        $G_t = r_{t+1} + \gamma G_{t+1}$，这是贝尔曼方程推导的关键出发点。
+      </div>
+    </div>
+
+    <h4 class="mini-title">状态价值函数</h4>
+
+    <div class="formula-box">
+      <div class="fb-label">MRP 状态价值函数</div>
+      $$V(s) = \mathbb{E}[G_t \mid S_t = s]$$
+      <div class="fb-desc">
+        从状态 $s$ 出发，按照转移概率随机游走，所能获得的折扣回报的期望值。
+      </div>
+    </div>
+
+    <h3 class="sub-title" id="s32-bellman">贝尔曼方程完整推导</h3>
+
+    <p>
+      贝尔曼方程将状态价值函数分解为"即时奖励 + 后续状态价值的折扣期望"，
+      是动态规划和强化学习的核心方程。下面给出完整推导过程：
+    </p>
+
+    <div class="derivation">
+      <div class="d-title">MRP 贝尔曼方程推导</div>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-label">展开价值函数定义</div>
+          $$V(s) = \mathbb{E}[G_t \mid S_t = s]$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-label">利用递推关系 $G_t = r_{t+1} + \gamma G_{t+1}$</div>
+          $$V(s) = \mathbb{E}[r_{t+1} + \gamma G_{t+1} \mid S_t = s]$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-label">期望的线性性质拆分</div>
+          $$V(s) = \mathbb{E}[r_{t+1} \mid S_t = s] + \gamma\, \mathbb{E}[G_{t+1} \mid S_t = s]$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-label">第一项即为即时奖励期望 $\mathcal{R}(s)$</div>
+          $$\mathbb{E}[r_{t+1} \mid S_t = s] = \mathcal{R}(s)$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-label">第二项按全期望公式对 $S_{t+1}$ 展开</div>
+          $$\mathbb{E}[G_{t+1} \mid S_t = s]
+            = \sum_{s'} P(s' \mid s)\, \mathbb{E}[G_{t+1} \mid S_{t+1} = s']
+            = \sum_{s'} P(s' \mid s)\, V(s')$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-label">合并得到 MRP 贝尔曼方程</div>
+          $$\boxed{V(s) = \mathcal{R}(s) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s)\, V(s')}$$
+        </div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-icon">✅</div>
+      <div class="callout-body">
+        <strong>直觉理解：</strong>
+        当前状态的价值 = 即时奖励期望 + 折扣 × 所有可能后继状态价值的加权平均。
+        这是一个关于 $V$ 的自洽（self-consistent）方程。
+      </div>
+    </div>
+
+    <h3 class="sub-title" id="s32-matrix">矩阵形式与解析解</h3>
+
+    <p>
+      对所有状态写出贝尔曼方程，可以整理成线性方程组的矩阵形式：
+    </p>
+
+    <div class="formula-box">
+      <div class="fb-label">贝尔曼方程矩阵形式</div>
+      $$\mathbf{V} = \mathbf{R} + \gamma \mathbf{P} \mathbf{V}$$
+      <div class="fb-desc">
+        其中 $\mathbf{V} = [V(s_1), \ldots, V(s_n)]^\top$，
+        $\mathbf{R} = [\mathcal{R}(s_1), \ldots, \mathcal{R}(s_n)]^\top$，
+        $\mathbf{P}$ 是 $n \times n$ 转移矩阵。
+      </div>
+    </div>
+
+    <div class="derivation">
+      <div class="d-title">解析解推导</div>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-label">移项</div>
+          $$\mathbf{V} - \gamma \mathbf{P} \mathbf{V} = \mathbf{R}$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-label">提取公因子</div>
+          $$(\mathbf{I} - \gamma \mathbf{P})\, \mathbf{V} = \mathbf{R}$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-label">当 $\gamma < 1$ 时 $(\mathbf{I} - \gamma \mathbf{P})$ 可逆，两边左乘逆矩阵</div>
+          $$\boxed{\mathbf{V} = (\mathbf{I} - \gamma \mathbf{P})^{-1} \mathbf{R}}$$
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <strong>计算复杂度：</strong>
+        矩阵求逆的时间复杂度为 $O(n^3)$，对于大规模状态空间不可行。
+        实践中通常采用迭代法（值迭代）或蒙特卡洛方法近似求解。
+      </div>
+    </div>
+
+    <h3 class="sub-title" id="s32-mc">蒙特卡洛估计方法</h3>
+
+    <p>
+      当状态空间很大或转移概率未知时，可以通过<strong>蒙特卡洛采样</strong>来估计状态价值：
+    </p>
+
+    <div class="cards-grid">
+      <div class="tech-card purple">
+        <div class="card-icon">🎲</div>
+        <div class="card-title">采样轨迹</div>
+        <div class="card-body">
+          从状态 $s$ 出发，按照转移概率生成多条完整轨迹：
+          $\tau_1 = (s, r_1^{(1)}, r_2^{(1)}, \ldots)$，$\tau_2, \ldots, \tau_N$。
+        </div>
+      </div>
+      <div class="tech-card cyan">
+        <div class="card-icon">🧮</div>
+        <div class="card-title">计算回报</div>
+        <div class="card-body">
+          对每条轨迹计算折扣回报：
+          $G_t^{(i)} = \sum_{k=0}^{\infty} \gamma^k r_{t+k+1}^{(i)}$。
+        </div>
+      </div>
+      <div class="tech-card green">
+        <div class="card-icon">📈</div>
+        <div class="card-title">求均值近似</div>
+        <div class="card-body">
+          由大数定律：$V(s) \approx \frac{1}{N}\sum_{i=1}^{N} G_t^{(i)}$，
+          $N$ 越大估计越精确。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ===== 3.3 马尔可夫决策过程 ===== -->
+  <div class="section" id="s33">
+    <h2 class="section-title"><span class="num">3.3</span>马尔可夫决策过程（MDP）</h2>
+
+    <h3 class="sub-title" id="s33-def">定义与策略</h3>
+
+    <p>
+      <strong>马尔可夫决策过程</strong>（Markov Decision Process，MDP）在 MRP 基础上引入
+      <strong>动作</strong>，是强化学习的标准数学框架，形式化为五元组：
+    </p>
+
+    <div class="formula-box">
+      <div class="fb-label">MDP 五元组</div>
+      $$\text{MDP} = (\mathcal{S},\; \mathcal{A},\; P,\; R,\; \gamma)$$
+      <div class="fb-desc">
+        相比 MRP，MDP 新增了动作空间 $\mathcal{A}$，并且转移概率和奖励函数都依赖于动作：
+        $P(s'|s,a)$ 和 $R(s,a)$。
+      </div>
+    </div>
+
+    <h4 class="mini-title">状态转移与奖励（含动作）</h4>
+
+    <div class="formula-box">
+      <div class="fb-label">有动作的转移与奖励</div>
+      $$P(s' \mid s, a) = \Pr(S_{t+1} = s' \mid S_t = s,\; A_t = a)$$
+      $$R(s, a) = \mathbb{E}[r_{t+1} \mid S_t = s,\; A_t = a]$$
+      <div class="fb-desc">
+        在状态 $s$ 执行动作 $a$，以概率 $P(s'|s,a)$ 转移到状态 $s'$，并获得期望奖励 $R(s,a)$。
+      </div>
+    </div>
+
+    <h4 class="mini-title">策略（Policy）</h4>
+
+    <div class="formula-box">
+      <div class="fb-label">随机策略</div>
+      $$\pi(a \mid s) = \Pr(A_t = a \mid S_t = s), \quad \sum_{a \in \mathcal{A}} \pi(a \mid s) = 1$$
+      <div class="fb-desc">
+        策略 $\pi$ 规定了在每个状态下选择各动作的概率分布。
+        确定性策略是随机策略的特例：$\pi(a|s) \in \{0, 1\}$。
+      </div>
+    </div>
+
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+graph LR
+  Agent["智能体\n(Agent)"] -->|"动作 a ~ π(·|s)"| Env["环境\n(Environment)"]
+  Env -->|"下一状态 s' ~ P(·|s,a)"| Agent
+  Env -->|"奖励 r = R(s,a)"| Agent
+  Agent -->|"观测状态 s"| Agent
+      </pre>
+      <div class="mermaid-caption">图 3.2 — MDP 智能体-环境交互循环</div>
+    </div>
+
+    <h3 class="sub-title" id="s33-mrp">给定策略 π，MDP 退化为 MRP</h3>
+
+    <p>
+      当策略 $\pi$ 固定后，MDP 中的动作被"积分掉"，退化为一个等价的 MRP。
+      这一退化关系是分析 MDP 的重要工具：
+    </p>
+
+    <div class="formula-box">
+      <div class="fb-label">MDP → MRP 的退化（边缘化动作）</div>
+      $$P^\pi(s' \mid s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, P(s' \mid s, a)$$
+      $$\mathcal{R}^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, R(s, a)$$
+      <div class="fb-desc">
+        将动作按策略概率加权平均，得到等价 MRP 的转移概率和奖励函数。
+        等价 MRP 为 $(\mathcal{S},\; P^\pi,\; \mathcal{R}^\pi,\; \gamma)$。
+      </div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>核心思想：</strong>
+        MRP 的贝尔曼方程所有结论都可以直接应用到"固定策略下的 MDP"，
+        只需将 $P$ 替换为 $P^\pi$，$\mathcal{R}$ 替换为 $\mathcal{R}^\pi$。
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ===== 3.4 价值函数 ===== -->
+  <div class="section" id="s34">
+    <h2 class="section-title"><span class="num">3.4</span>状态价值函数与动作价值函数</h2>
+
+    <h3 class="sub-title" id="s34-vq">V 与 Q 的关系</h3>
+
+    <p>
+      MDP 中存在两种价值函数：<strong>状态价值函数</strong> $V^\pi(s)$ 和
+      <strong>动作价值函数</strong>（Q 函数）$Q^\pi(s,a)$，二者通过策略相互联系。
+    </p>
+
+    <div class="formula-box">
+      <div class="fb-label">状态价值函数与 Q 函数的定义</div>
+      $$V^\pi(s) = \mathbb{E}_\pi[G_t \mid S_t = s]$$
+      $$Q^\pi(s, a) = \mathbb{E}_\pi[G_t \mid S_t = s,\; A_t = a]$$
+      <div class="fb-desc">
+        $V^\pi(s)$ 是从状态 $s$ 出发，按策略 $\pi$ 行动的期望回报。
+        $Q^\pi(s,a)$ 是在状态 $s$ 执行动作 $a$ 后，再按策略 $\pi$ 行动的期望回报。
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <div class="fb-label">V 与 Q 的互推关系</div>
+      $$V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, Q^\pi(s, a)$$
+      $$Q^\pi(s, a) = R(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\, V^\pi(s')$$
+      <div class="fb-desc">
+        第一式：$V^\pi$ 是 $Q^\pi$ 对动作的加权平均（权重为策略概率）。<br/>
+        第二式：$Q^\pi$ 等于即时奖励加上后继状态价值的折扣期望。
+      </div>
+    </div>
+
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+graph TB
+  Vs["V^π(s)\n状态价值"] -->|"按策略π选动作\nΣ_a π(a|s)"| Qsa["Q^π(s,a)\n动作价值"]
+  Qsa -->|"按转移P(s'|s,a)\n执行动作后"| Vsp["V^π(s')\n后继状态价值"]
+  Vsp -->|"按策略π选动作\nΣ_a π(a|s')"| Qsp["Q^π(s',a')\n后继动作价值"]
+      </pre>
+      <div class="mermaid-caption">图 3.3 — V 与 Q 的交替递推关系（备份图）</div>
+    </div>
+
+    <h3 class="sub-title" id="s34-bellman-v">贝尔曼期望方程（V 形式）完整推导</h3>
+
+    <div class="derivation">
+      <div class="d-title">贝尔曼期望方程 V 形式推导</div>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-label">从 V 与 Q 的关系出发</div>
+          $$V^\pi(s) = \sum_{a} \pi(a \mid s)\, Q^\pi(s, a)$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-label">代入 Q 的贝尔曼展开</div>
+          $$V^\pi(s) = \sum_{a} \pi(a \mid s) \left[ R(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^\pi(s') \right]$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-label">分配求和，得到最终形式</div>
+          $$\boxed{V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s) \left[ R(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\, V^\pi(s') \right]}$$
+        </div>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-icon">✅</div>
+      <div class="callout-body">
+        <strong>与 MRP 贝尔曼方程的对应：</strong>
+        将 $\sum_a \pi(a|s) R(s,a) = \mathcal{R}^\pi(s)$ 和
+        $\sum_a \pi(a|s) P(s'|s,a) = P^\pi(s'|s)$ 代入，
+        即可恢复 MRP 形式 $V^\pi(s) = \mathcal{R}^\pi(s) + \gamma\sum_{s'} P^\pi(s'|s) V^\pi(s')$。
+      </div>
+    </div>
+
+    <h3 class="sub-title" id="s34-bellman-q">贝尔曼期望方程（Q 形式）</h3>
+
+    <div class="derivation">
+      <div class="d-title">贝尔曼期望方程 Q 形式推导</div>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-label">Q 的定义展开</div>
+          $$Q^\pi(s, a) = R(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^\pi(s')$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-label">代入 $V^\pi(s') = \sum_{a'} \pi(a'|s') Q^\pi(s', a')$</div>
+          $$Q^\pi(s, a) = R(s, a) + \gamma \sum_{s'} P(s' \mid s, a) \sum_{a'} \pi(a' \mid s')\, Q^\pi(s', a')$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-label">最终形式（Q 的自洽方程）</div>
+          $$\boxed{Q^\pi(s, a) = R(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a) \sum_{a' \in \mathcal{A}} \pi(a' \mid s')\, Q^\pi(s', a')}$$
+        </div>
+      </div>
+    </div>
+
+    <div class="callout key">
+      <div class="callout-icon">🔑</div>
+      <div class="callout-body">
+        <strong>Q 函数的重要性：</strong>
+        Q 函数直接给出了在状态 $s$ 执行动作 $a$ 的"好坏"评估，
+        无需知道环境模型即可通过采样学习（无模型强化学习的核心）。
+        DQN、SAC 等算法都是以 Q 函数为核心构建的。
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ===== 3.5 蒙特卡洛方法 ===== -->
+  <div class="section" id="s35">
+    <h2 class="section-title"><span class="num">3.5</span>蒙特卡洛方法估计价值</h2>
+
+    <p>
+      蒙特卡洛方法（Monte Carlo Methods）通过<strong>大量采样轨迹</strong>来估计价值函数，
+      无需知道环境的转移概率模型。
+    </p>
+
+    <div class="formula-box">
+      <div class="fb-label">蒙特卡洛价值估计</div>
+      $$V^\pi(s) \approx \frac{1}{N} \sum_{i=1}^{N} G_t^{(i)}, \quad \text{其中 } S_t^{(i)} = s$$
+      <div class="fb-desc">
+        对所有经过状态 $s$ 的轨迹，计算从该时刻起的折扣回报 $G_t^{(i)}$，取平均值。
+        由大数定律，$N \to \infty$ 时收敛到真实期望值。
+      </div>
+    </div>
+
+    <h3 class="sub-title">与动态规划的对比</h3>
+
+    <div class="cards-grid">
+      <div class="tech-card purple">
+        <div class="card-icon">🌐</div>
+        <div class="card-title">动态规划（DP）</div>
+        <div class="card-body">
+          <strong>需要环境模型</strong>（$P$ 和 $R$ 已知）。通过贝尔曼方程迭代更新，
+          每次更新利用所有后继状态的信息（全宽度备份）。
+          计算精确但依赖模型。
+        </div>
+      </div>
+      <div class="tech-card cyan">
+        <div class="card-icon">🎲</div>
+        <div class="card-title">蒙特卡洛（MC）</div>
+        <div class="card-body">
+          <strong>无需环境模型</strong>，从真实或模拟轨迹中学习。
+          每个 episode 结束后才能更新，需要完整轨迹。
+          高方差但无偏，适合 episode 型任务。
+        </div>
+      </div>
+      <div class="tech-card green">
+        <div class="card-icon">⚡</div>
+        <div class="card-title">时序差分（TD）</div>
+        <div class="card-body">
+          结合 DP 和 MC 的优点：<strong>无需模型，且可在线更新</strong>。
+          利用 $V(s) \approx r + \gamma V(s')$ 进行单步自举（bootstrapping），
+          低方差但有偏。
+        </div>
+      </div>
+    </div>
+
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+graph TD
+  A["价值估计方法"] --> B["需要模型\n(Model-Based)"]
+  A --> C["无需模型\n(Model-Free)"]
+  B --> D["动态规划 DP\n精确 · 全宽度备份"]
+  C --> E["蒙特卡洛 MC\n无偏 · 需完整轨迹"]
+  C --> F["时序差分 TD\n在线 · 自举更新"]
+  F --> G["TD(0)\n单步"]
+  F --> H["TD(n)\nn步"]
+  F --> I["TD(λ)\n资格迹"]
+      </pre>
+      <div class="mermaid-caption">图 3.4 — 价值估计方法分类树</div>
+    </div>
+
+    <div class="callout info">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <strong>MC 的核心优势：</strong>
+        蒙特卡洛方法对部分可观测环境（POMDP）和非马尔可夫奖励也适用，
+        因为它不依赖马尔可夫性质进行自举，只需要最终的累积回报。
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ===== 3.6 占用度量 ===== -->
+  <div class="section" id="s36">
+    <h2 class="section-title"><span class="num">3.6</span>占用度量（Occupancy Measure）</h2>
+
+    <p>
+      占用度量是描述策略行为分布的重要工具，在逆强化学习（IRL）和模仿学习中有核心应用。
+    </p>
+
+    <h3 class="sub-title">定义</h3>
+
+    <div class="formula-box">
+      <div class="fb-label">占用度量定义</div>
+      $$\rho^\pi(s, a) = (1 - \gamma) \sum_{t=0}^{\infty} \gamma^t\, P_\pi(S_t = s,\; A_t = a)$$
+      <div class="fb-desc">
+        $P_\pi(S_t=s, A_t=a)$ 是在策略 $\pi$ 下，第 $t$ 步处于状态 $s$ 并执行动作 $a$ 的概率。
+        $(1-\gamma)$ 是归一化因子，确保 $\sum_{s,a} \rho^\pi(s,a) = 1$，即 $\rho^\pi$ 是一个概率分布。
+      </div>
+    </div>
+
+    <div class="callout key">
+      <div class="callout-icon">🔑</div>
+      <div class="callout-body">
+        <strong>直觉：</strong>
+        占用度量 $\rho^\pi(s,a)$ 表示在策略 $\pi$ 下，从折扣加权的时间维度看，
+        智能体处于状态 $s$ 并执行动作 $a$ 的"频率"（概率）。
+      </div>
+    </div>
+
+    <h3 class="sub-title">核心性质</h3>
+
+    <div class="formula-box">
+      <div class="fb-label">策略等价性定理</div>
+      $$\pi_1 = \pi_2 \iff \rho^{\pi_1} = \rho^{\pi_2}$$
+      <div class="fb-desc">
+        两个策略完全相同，当且仅当它们产生相同的占用度量。
+        这建立了策略空间与占用度量空间之间的一一对应关系。
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <div class="fb-label">策略价值的占用度量表示</div>
+      $$J(\pi) = \frac{1}{1 - \gamma}\, \mathbb{E}_{(s,a) \sim \rho^\pi}\left[r(s, a)\right]$$
+      <div class="fb-desc">
+        策略 $\pi$ 的期望折扣回报等于奖励函数在占用度量下的期望值（乘以 $\frac{1}{1-\gamma}$）。
+        这将策略优化问题转化为分布优化问题。
+      </div>
+    </div>
+
+    <div class="derivation">
+      <div class="d-title">策略价值公式推导</div>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-label">展开期望回报</div>
+          $$J(\pi) = \mathbb{E}_\pi\left[\sum_{t=0}^{\infty} \gamma^t r(S_t, A_t)\right]
+            = \sum_{t=0}^{\infty} \gamma^t\, \mathbb{E}_\pi[r(S_t, A_t)]$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-label">写出期望的积分形式</div>
+          $$J(\pi) = \sum_{t=0}^{\infty} \gamma^t \sum_{s,a} P_\pi(S_t=s, A_t=a)\, r(s,a)$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-label">交换求和顺序，提取 $(1-\gamma)$ 因子</div>
+          $$J(\pi) = \frac{1}{1-\gamma} \sum_{s,a} \underbrace{(1-\gamma)\sum_{t=0}^{\infty}\gamma^t P_\pi(S_t=s,A_t=a)}_{\rho^\pi(s,a)} r(s,a)$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-label">代入占用度量定义</div>
+          $$\boxed{J(\pi) = \frac{1}{1-\gamma}\, \mathbb{E}_{(s,a)\sim\rho^\pi}[r(s,a)]}$$
+        </div>
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="tech-card orange">
+        <div class="card-icon">🔬</div>
+        <div class="card-title">逆强化学习</div>
+        <div class="card-body">
+          IRL 的目标是从专家轨迹中恢复奖励函数。
+          占用度量提供了策略行为的紧凑表示，
+          使得"匹配专家行为"等价于"匹配占用度量"。
+        </div>
+      </div>
+      <div class="tech-card red">
+        <div class="card-icon">🎭</div>
+        <div class="card-title">模仿学习</div>
+        <div class="card-body">
+          GAIL 等算法通过最小化学习策略与专家策略的
+          占用度量差异来实现模仿学习，
+          避免了 IRL 的双层优化问题。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ===== 3.7 最优策略 ===== -->
+  <div class="section" id="s37">
+    <h2 class="section-title"><span class="num">3.7</span>最优策略</h2>
+
+    <h3 class="sub-title">策略的偏序关系</h3>
+
+    <p>
+      在 MDP 中，策略之间可以定义偏序关系，从而讨论"更好的策略"：
+    </p>
+
+    <div class="formula-box">
+      <div class="fb-label">策略偏序关系</div>
+      $$\pi_1 \geq \pi_2 \iff \forall s \in \mathcal{S}: V^{\pi_1}(s) \geq V^{\pi_2}(s)$$
+      <div class="fb-desc">
+        策略 $\pi_1$ 优于策略 $\pi_2$，当且仅当 $\pi_1$ 在所有状态下的价值都不低于 $\pi_2$。
+      </div>
+    </div>
+
+    <h3 class="sub-title" id="s37-opt">最优价值函数</h3>
+
+    <div class="formula-box">
+      <div class="fb-label">最优价值函数</div>
+      $$V^*(s) = \max_{\pi} V^\pi(s), \quad \forall s \in \mathcal{S}$$
+      $$Q^*(s, a) = \max_{\pi} Q^\pi(s, a), \quad \forall s \in \mathcal{S},\; a \in \mathcal{A}$$
+      <div class="fb-desc">
+        最优价值函数是在所有可能策略中，能达到的最大期望回报。
+        <strong>MDP 定理</strong>：存在最优策略 $\pi^*$ 使得 $V^{\pi^*}(s) = V^*(s)$ 对所有状态成立。
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <div class="fb-label">$V^*$ 与 $Q^*$ 的关系</div>
+      $$V^*(s) = \max_{a \in \mathcal{A}} Q^*(s, a)$$
+      $$Q^*(s, a) = R(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^*(s')$$
+      <div class="fb-desc">
+        最优状态价值是最优 Q 值对动作取最大值。
+        最优策略为贪心策略：$\pi^*(a|s) = \mathbf{1}[a = \arg\max_{a'} Q^*(s, a')]$。
+      </div>
+    </div>
+
+    <h3 class="sub-title" id="s37-bellman-opt">贝尔曼最优方程</h3>
+
+    <p>
+      贝尔曼最优方程将 $\max$ 算子引入贝尔曼方程，描述最优价值函数满足的自洽条件：
+    </p>
+
+    <div class="derivation">
+      <div class="d-title">贝尔曼最优方程推导（V 形式）</div>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-label">从最优策略的贪心性质出发</div>
+          $$V^*(s) = \max_{a \in \mathcal{A}} Q^*(s, a)$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-label">代入 $Q^*$ 的贝尔曼展开</div>
+          $$V^*(s) = \max_{a \in \mathcal{A}} \left[ R(s, a) + \gamma \sum_{s'} P(s' \mid s, a)\, V^*(s') \right]$$
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-label">最终形式（贝尔曼最优方程 V）</div>
+          $$\boxed{V^*(s) = \max_{a \in \mathcal{A}} \left[ R(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\, V^*(s') \right]}$$
+        </div>
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <div class="fb-label">贝尔曼最优方程（Q 形式）</div>
+      $$Q^*(s, a) = R(s, a) + \gamma \sum_{s' \in \mathcal{S}} P(s' \mid s, a)\, \max_{a' \in \mathcal{A}} Q^*(s', a')$$
+      <div class="fb-desc">
+        Q 函数的最优方程：执行动作 $a$ 后，在后继状态 $s'$ 选择最优动作 $a'$。
+        这是 Q-Learning 算法的理论基础。
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <div class="callout-icon">⚠️</div>
+      <div class="callout-body">
+        <strong>非线性性：</strong>
+        贝尔曼最优方程因为包含 $\max$ 算子而是<strong>非线性</strong>的，
+        不能直接用矩阵求逆得到解析解。
+        需要使用值迭代（Value Iteration）或策略迭代（Policy Iteration）等迭代算法求解。
+      </div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="tech-card purple">
+        <div class="card-icon">🔁</div>
+        <div class="card-title">值迭代（Value Iteration）</div>
+        <div class="card-body">
+          反复应用贝尔曼最优算子 $\mathcal{T}^*$：
+          $V_{k+1}(s) = \max_a [R(s,a) + \gamma \sum_{s'} P(s'|s,a) V_k(s')]$。
+          收缩映射定理保证收敛到 $V^*$。
+        </div>
+      </div>
+      <div class="tech-card cyan">
+        <div class="card-icon">🔄</div>
+        <div class="card-title">策略迭代（Policy Iteration）</div>
+        <div class="card-body">
+          交替进行策略评估（求 $V^\pi$）和策略改进（贪心更新 $\pi$）。
+          有限步内收敛到最优策略 $\pi^*$，通常比值迭代更快。
+        </div>
+      </div>
+      <div class="tech-card green">
+        <div class="card-icon">🧠</div>
+        <div class="card-title">Q-Learning</div>
+        <div class="card-body">
+          无模型算法，直接从采样数据中学习 $Q^*$：
+          $Q(s,a) \leftarrow Q(s,a) + \alpha[r + \gamma \max_{a'} Q(s',a') - Q(s,a)]$。
+        </div>
+      </div>
+    </div>
+
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+graph LR
+  subgraph "贝尔曼期望方程"
+    BE1["V^π(s) = Σ_a π(a|s)[R(s,a) + γΣ_{s'}P(s'|s,a)V^π(s')]"]
+  end
+  subgraph "贝尔曼最优方程"
+    BO1["V*(s) = max_a[R(s,a) + γΣ_{s'}P(s'|s,a)V*(s')]"]
+  end
+  BE1 -->|"π → 贪心策略\nπ*(a|s)=argmax_a Q*"| BO1
+  BO1 -->|"固定策略 π*\n退化"| BE1
+      </pre>
+      <div class="mermaid-caption">图 3.5 — 贝尔曼期望方程与最优方程的关系</div>
+    </div>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- ===== 小结 ===== -->
+  <div class="section" id="summary">
+    <h2 class="section-title"><span class="num">总结</span>核心概念对比</h2>
+
+    <h3 class="sub-title">MRP vs MDP 对比</h3>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>马尔可夫奖励过程（MRP）</th>
+          <th>马尔可夫决策过程（MDP）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>形式化</strong></td>
+          <td>$(\mathcal{S}, P, \mathcal{R}, \gamma)$ 四元组</td>
+          <td>$(\mathcal{S}, \mathcal{A}, P, R, \gamma)$ 五元组</td>
+        </tr>
+        <tr>
+          <td><strong>动作空间</strong></td>
+          <td>无动作</td>
+          <td>有动作空间 $\mathcal{A}$</td>
+        </tr>
+        <tr>
+          <td><strong>转移概率</strong></td>
+          <td>$P(s'|s)$，仅依赖状态</td>
+          <td>$P(s'|s,a)$，依赖状态和动作</td>
+        </tr>
+        <tr>
+          <td><strong>奖励函数</strong></td>
+          <td>$\mathcal{R}(s)$，仅依赖状态</td>
+          <td>$R(s,a)$，依赖状态和动作</td>
+        </tr>
+        <tr>
+          <td><strong>策略</strong></td>
+          <td>无策略概念</td>
+          <td>策略 $\pi(a|s)$</td>
+        </tr>
+        <tr>
+          <td><strong>价值函数</strong></td>
+          <td>$V(s)$（唯一）</td>
+          <td>$V^\pi(s)$ 和 $Q^\pi(s,a)$（依赖策略）</td>
+        </tr>
+        <tr>
+          <td><strong>贝尔曼方程</strong></td>
+          <td>$V(s) = \mathcal{R}(s) + \gamma\sum_{s'} P(s'|s)V(s')$</td>
+          <td>$V^\pi(s) = \sum_a\pi(a|s)[R(s,a)+\gamma\sum_{s'}P(s'|s,a)V^\pi(s')]$</td>
+        </tr>
+        <tr>
+          <td><strong>解析解</strong></td>
+          <td>$\mathbf{V} = (\mathbf{I}-\gamma\mathbf{P})^{-1}\mathbf{R}$</td>
+          <td>一般无解析解，需迭代算法</td>
+        </tr>
+        <tr>
+          <td><strong>决策能力</strong></td>
+          <td>被动观察，无决策</td>
+          <td>主动决策，寻找最优策略</td>
+        </tr>
+        <tr>
+          <td><strong>关系</strong></td>
+          <td>MDP 固定策略 $\pi$ 后退化为 MRP</td>
+          <td>包含 MRP 作为特例</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 class="sub-title" id="bellman-compare">贝尔曼期望方程 vs 贝尔曼最优方程</h3>
+
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>贝尔曼期望方程</th>
+          <th>贝尔曼最优方程</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>对象</strong></td>
+          <td>给定策略 $\pi$ 下的价值函数 $V^\pi, Q^\pi$</td>
+          <td>最优价值函数 $V^*, Q^*$</td>
+        </tr>
+        <tr>
+          <td><strong>V 形式</strong></td>
+          <td>$V^\pi(s) = \sum_a\pi(a|s)[R(s,a)+\gamma\sum_{s'}P(s'|s,a)V^\pi(s')]$</td>
+          <td>$V^*(s) = \max_a[R(s,a)+\gamma\sum_{s'}P(s'|s,a)V^*(s')]$</td>
+        </tr>
+        <tr>
+          <td><strong>Q 形式</strong></td>
+          <td>$Q^\pi(s,a) = R(s,a)+\gamma\sum_{s'}P(s'|s,a)\sum_{a'}\pi(a'|s')Q^\pi(s',a')$</td>
+          <td>$Q^*(s,a) = R(s,a)+\gamma\sum_{s'}P(s'|s,a)\max_{a'}Q^*(s',a')$</td>
+        </tr>
+        <tr>
+          <td><strong>算子类型</strong></td>
+          <td>线性算子（$\sum_a\pi(a|s)$）</td>
+          <td>非线性算子（$\max_a$）</td>
+        </tr>
+        <tr>
+          <td><strong>求解方法</strong></td>
+          <td>线性方程组，可矩阵求逆</td>
+          <td>非线性方程组，需迭代求解</td>
+        </tr>
+        <tr>
+          <td><strong>应用</strong></td>
+          <td>策略评估（Policy Evaluation）</td>
+          <td>值迭代、Q-Learning</td>
+        </tr>
+        <tr>
+          <td><strong>收缩性</strong></td>
+          <td>贝尔曼期望算子 $\mathcal{T}^\pi$ 是 $\gamma$-收缩</td>
+          <td>贝尔曼最优算子 $\mathcal{T}^*$ 是 $\gamma$-收缩</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="mermaid-wrap">
+      <pre class="mermaid">
+graph TD
+  MP["马尔可夫过程 MP\n(S, P)\n无奖励，无动作"] -->|"+ 奖励R + 折扣γ"| MRP
+  MRP["马尔可夫奖励过程 MRP\n(S, P, R, γ)\n有奖励，无动作"] -->|"+ 动作A + 策略π"| MDP
+  MDP["马尔可夫决策过程 MDP\n(S, A, P, R, γ)\n有奖励，有动作"] -->|"固定策略π"| MRP2["等价 MRP\n(S, P^π, R^π, γ)"]
+  MDP -->|"求最优策略"| OPT["最优策略 π*\nV* = (I-γP^{π*})^{-1}R^{π*}"]
+      </pre>
+      <div class="mermaid-caption">图 3.6 — MP → MRP → MDP 递进关系总览</div>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-icon">🎯</div>
+      <div class="callout-body">
+        <strong>核心串联：</strong>
+        马尔可夫性质 → 转移矩阵 → MRP 贝尔曼方程（线性）→ MDP 贝尔曼期望方程（含策略）
+        → 贝尔曼最优方程（含 max）→ 最优策略。
+        每一步都是在前一步基础上引入新的要素，形成完整的理论体系。
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== 导航高亮脚本 ===== -->
+<script>
+  (function () {
+    const links = document.querySelectorAll('nav#sidebar a');
+    const sections = Array.from(links)
+      .map(a => document.querySelector(a.getAttribute('href')))
+      .filter(Boolean);
+
+    function onScroll() {
+      let current = sections[0];
+      for (const sec of sections) {
+        if (sec.getBoundingClientRect().top <= 80) current = sec;
+      }
+      links.forEach(a => {
+        a.classList.toggle('active',
+          a.getAttribute('href') === '#' + current.id);
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  })();
+</script>
+
+</body>
+</html>

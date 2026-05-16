@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM 微调技术与对齐方法</title>
+  <style>
+    :root { --bg:#1e1e2e; --bg-code:#313244; --bg-nav:#181825; --text:#cdd6f4; --heading:#89b4fa; --link:#89dceb; --border:#45475a; --quote-bar:#fab387; --strong:#a6e3a1; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; line-height:1.8; }
+    #toc { position:fixed; top:0; left:0; width:230px; height:100vh; background:var(--bg-nav); overflow-y:auto; padding:20px 12px; font-size:13px; border-right:1px solid var(--border); }
+    #toc h2 { color:var(--heading); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; }
+    #toc a { display:block; color:var(--text); text-decoration:none; padding:3px 8px; border-radius:4px; margin-bottom:2px; transition:background 0.15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #toc a:hover { background:var(--border); }
+    #toc a.active { background:var(--heading); color:#1e1e2e; font-weight:600; }
+    #toc a.toc-h3 { padding-left:20px; font-size:12px; opacity:0.8; }
+    main { margin-left:250px; max-width:none; padding:40px 48px; }
+    h1 { color:var(--heading); font-size:1.9em; margin-bottom:8px; line-height:1.3; }
+    h2 { color:var(--heading); font-size:1.4em; margin:2em 0 0.6em; border-bottom:1px solid var(--border); padding-bottom:6px; }
+    h3 { color:var(--heading); font-size:1.1em; margin:1.4em 0 0.4em; }
+    h4 { color:#cba6f7; font-size:1em; margin:1em 0 0.3em; }
+    p { margin:0.6em 0; }
+    a { color:var(--link); }
+    strong { color:var(--strong); }
+    ul,ol { margin:0.6em 0 0.6em 1.6em; }
+    li { margin-bottom:0.3em; }
+    blockquote { border-left:3px solid var(--quote-bar); padding:8px 16px; margin:1em 0; background:#2a2a3e; border-radius:0 4px 4px 0; }
+    table { border-collapse:collapse; width:100%; margin:1em 0; font-size:0.93em; }
+    th { background:#2a2a3e; color:var(--heading); padding:8px 12px; text-align:left; border:1px solid var(--border); }
+    td { padding:7px 12px; border:1px solid var(--border); }
+    tr:hover td { background:#2a2a3e; }
+    pre { background:var(--bg-code); border-radius:6px; padding:16px; overflow-x:auto; margin:1em 0; font-size:0.88em; }
+    code { font-family:'JetBrains Mono','Fira Code',monospace; }
+    p code,li code,td code { background:var(--bg-code); padding:2px 5px; border-radius:3px; font-size:0.88em; }
+    figure { margin:1.4em 0; text-align:center; }
+    figure img { max-width:100%; border-radius:6px; border:1px solid var(--border); }
+    figcaption { color:#6c7086; font-size:0.85em; margin-top:6px; }
+    .mermaid { background:#2a2a3e; border-radius:6px; padding:16px; margin:1em 0; text-align:center; }
+    hr { border:none; border-top:1px solid var(--border); margin:2em 0; }
+    .article-source { background:#2a2a3e; border-radius:6px; padding:8px 14px; margin-bottom:1em; font-size:0.85em; color:#6c7086; }
+    .callout { background:#2a2a3e; border-left:4px solid #a6e3a1; border-radius:0 6px 6px 0; padding:12px 16px; margin:1em 0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LLM 微调技术与对齐方法</h1>
+<blockquote>
+  来源：<a href="https://magazine.sebastianraschka.com" target="_blank">Ahead of AI — Sebastian Raschka, PhD</a>
+  &nbsp;|&nbsp; 聚合：Finetuning 全景、Adapter、LoRA 实战、DoRA、RLHF 及替代方案
+</blockquote>
+
+<h2>微调方法全景图</h2>
+<pre class="mermaid">graph TD
+  Pretrained["预训练 LLM\n(冻结权重)"]
+
+  subgraph PEFT["参数高效微调 PEFT"]
+    Adapter["Adapter 层插入\n(Houlsby 2019)"]
+    LoRA["LoRA 低秩分解\n(Hu 2021)"]
+    DoRA["DoRA 权重分解\n(Liu 2024)"]
+    PT["Prompt/Prefix Tuning\n(软提示词)"]
+  end
+
+  subgraph FullFT["全参数微调"]
+    SFT["监督微调 SFT\n(所有层更新)"]
+    TopK["输出层微调\n(只更新最后几层)"]
+  end
+
+  subgraph AlignFT["对齐微调"]
+    RLHF["RLHF\n(PPO + 奖励模型)"]
+    DPO["DPO\n(直接偏好优化)"]
+    RLVR["RLVR\n(可验证奖励RL)"]
+  end
+
+  Pretrained --> PEFT
+  Pretrained --> FullFT
+  SFT --> AlignFT
+</pre>
+
+<!-- ============================================================ -->
+<h2>一、微调全景：从特征提取到全参数更新</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/finetuning-large-language-models" target="_blank">Finetuning Large Language Models</a></div>
+
+<p>微调的核心问题是：<strong>在有限计算资源下，更新多少参数能获得最佳性价比？</strong> Sebastian 通过在 DistilBERT 上的情感分类实验给出了系统性对比。</p>
+
+<h3>1.1 四种微调策略及实验结果</h3>
+<table>
+  <thead><tr><th>策略</th><th>更新参数</th><th>测试准确率</th><th>计算开销</th><th>适用场景</th></tr></thead>
+  <tbody>
+    <tr><td>特征提取 + 逻辑回归</td><td>0（冻结全部）</td><td>83%</td><td>最低</td><td>资源极受限</td></tr>
+    <tr><td>微调 I：仅更新输出层</td><td>仅最后2层</td><td>87%</td><td>低</td><td>数据少、快速适配</td></tr>
+    <tr><td>微调 II：全层更新</td><td>所有层</td><td>92%</td><td>高</td><td>数据足够、追求最优</td></tr>
+    <tr><td>Adapter 微调</td><td>~3.6% 参数</td><td>≈全层微调</td><td>低</td><td>多任务、存储受限</td></tr>
+  </tbody>
+</table>
+
+<h3>1.2 三种微调方式代码对比</h3>
+<pre><code class="language-python"># 方式1：特征提取（冻结全部）
+for param in model.parameters():
+    param.requires_grad = False
+# 只训练新增的分类头
+
+# 方式2：微调输出层
+for param in model.parameters():
+    param.requires_grad = False
+for param in model.classifier.parameters():
+    param.requires_grad = True  # 只解冻分类层
+
+# 方式3：全参数微调
+for param in model.parameters():
+    param.requires_grad = True  # 全部解冻</code></pre>
+
+<!-- ============================================================ -->
+<h2>二、Adapter：插件式参数高效微调</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/finetuning-llms-with-adapters" target="_blank">Finetuning LLMs Efficiently with Adapters</a></div>
+
+<p>Adapter 方法由 Houlsby et al. 2019 提出，核心思想是在 Transformer 每层的注意力和 FFN 之后插入小型"适配器瓶颈模块"，微调时只更新这些模块，预训练权重完全冻结。</p>
+
+<h3>2.1 Adapter 模块结构</h3>
+<pre class="mermaid">graph LR
+  Input["层输出 h"] --> Down["下投影\n(d → r, r &lt;&lt; d)"]
+  Down --> Act["非线性激活\n(GeLU)"]
+  Act --> Up["上投影\n(r → d)"]
+  Up --> Add["残差相加"]
+  Input --> Add
+  Add --> Output["输出"]
+</pre>
+
+<p>其中 $r$ 是瓶颈维度（通常为原始维度的 1/8 到 1/32）。整个 Adapter 模块只有 $2rd$ 个参数，远少于原始层的 $d^2$ 参数。</p>
+
+<h3>2.2 为什么 Adapter 有效</h3>
+<ul>
+  <li>Adapter 初始化为近恒等映射（下投影全零初始化），训练开始时对原模型无影响，保证稳定收敛</li>
+  <li>只需要约 3.6% 的参数即可匹配全参数微调的性能（原始论文 BERT 结果）</li>
+  <li>多任务场景优势明显：不同任务存储不同的 Adapter，共享同一预训练骨干</li>
+</ul>
+
+<h3>2.3 实验结果（DistilBERT 情感分类）</h3>
+<pre><code class="language-text">基线（只训练最后2层）: 87%
+插入 Adapter 层:       ~90%（仅3.6%参数）
+全参数微调:            92%
+Adapter + 全参数微调:   ~92%（控制实验）
+
+结论：Adapter 以极小参数代价接近全参数微调效果</code></pre>
+
+<!-- ============================================================ -->
+<h2>三、LoRA：低秩分解的优雅方案</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/practical-tips-for-finetuning-llms" target="_blank">Practical Tips for Finetuning LLMs Using LoRA</a></div>
+
+<p>LoRA（Low-Rank Adaptation）是目前最流行的参数高效微调方法，由 Hu et al. 2021 提出。其核心洞察：<strong>预训练权重矩阵的更新量 ΔW 具有低内在秩（intrinsic rank）</strong>，因此可以用两个小矩阵的乘积来近似。</p>
+
+<h3>3.1 LoRA 数学原理</h3>
+<p>原始权重更新：$W = W_0 + \Delta W$</p>
+<p>LoRA 近似：$\Delta W \approx BA$，其中 $B \in \mathbb{R}^{d \times r}$，$A \in \mathbb{R}^{r \times k}$，$r \ll \min(d, k)$</p>
+<p>前向传播：$h = W_0 x + \frac{\alpha}{r} BAx$</p>
+
+<pre><code class="language-python">class LoRALayer(nn.Module):
+    def __init__(self, in_features, out_features, rank=4, alpha=1.0):
+        super().__init__()
+        self.lora_A = nn.Parameter(torch.randn(in_features, rank))
+        self.lora_B = nn.Parameter(torch.zeros(rank, out_features))  # B初始化为0
+        self.scale = alpha / rank
+
+    def forward(self, x):
+        # lora_A @ lora_B 是低秩近似的权重增量
+        return x @ (self.lora_A @ self.lora_B) * self.scale
+
+class LinearWithLoRA(nn.Module):
+    def __init__(self, linear, rank=4, alpha=1.0):
+        super().__init__()
+        self.linear = linear
+        self.lora = LoRALayer(linear.in_features, linear.out_features, rank, alpha)
+
+    def forward(self, x):
+        return self.linear(x) + self.lora(x)  # 原始路径 + LoRA增量</code></pre>
+
+<h3>3.2 LoRA 实战 10 问（Sebastian 实验总结）</h3>
+<table>
+  <thead><tr><th>问题</th><th>实验结论</th></tr></thead>
+  <tbody>
+    <tr><td>应该用多大的 rank r？</td><td>r=4~16 通常足够；更大的 r 边际收益递减</td></tr>
+    <tr><td>应用到哪些层？</td><td>Query + Value 效果最好；也可以加 FFN 层</td></tr>
+    <tr><td>训练多少 epoch？</td><td>超过1个 epoch 通常性能下降（过拟合风险）</td></tr>
+    <tr><td>Adam vs SGD？</td><td>小 r 时两者差异小；大 r 时 Adam 优势明显</td></tr>
+    <tr><td>内存消耗？</td><td>AdamW: 17.86GB; SGD: 14.46GB（70B模型，r=64）</td></tr>
+    <tr><td>LoRA 权重能合并？</td><td>推理时可合并 W = W₀ + BA，零额外开销</td></tr>
+    <tr><td>vs 全参数微调？</td><td>通常接近全参数微调，但内存节省 3-10×</td></tr>
+    <tr><td>vs RLHF？</td><td>指令微调用 LoRA 效果好；对齐任务 RLHF 仍更优</td></tr>
+    <tr><td>QLoRA 组合？</td><td>4bit 量化 + LoRA，GPU 内存再减半，稍慢</td></tr>
+    <tr><td>层数选择规律？</td><td>越高层（靠近输出）对任务特定知识越敏感</td></tr>
+  </tbody>
+</table>
+
+<h3>3.3 冻结参数验证</h3>
+<pre><code class="language-python">def freeze_linear_layers(model):
+    for module in model.modules():
+        if isinstance(module, LinearWithLoRA):
+            module.linear.weight.requires_grad = False
+            if module.linear.bias is not None:
+                module.linear.bias.requires_grad = False
+
+freeze_linear_layers(model)
+# 验证只有 LoRA 参数可训练
+for name, param in model.named_parameters():
+    print(f"{name}: {param.requires_grad}")
+# layers.0.lora.A: True
+# layers.0.lora.B: True
+# layers.0.linear.weight: False  ← 冻结</code></pre>
+
+<!-- ============================================================ -->
+<h2>四、DoRA：权重分解的低秩自适应</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/lora-and-dora-from-scratch" target="_blank">Improving LoRA: Implementing DoRA from Scratch</a> | 2024</div>
+
+<p>DoRA（Weight-Decomposed Low-Rank Adaptation）是 LoRA 的改进版本，通过将权重矩阵分解为<strong>幅度（magnitude）</strong>和<strong>方向（direction）</strong>两个组成部分，让微调更像全参数训练的行为模式。</p>
+
+<h3>4.1 DoRA 核心思想</h3>
+<p>任意向量可以表示为幅度 × 方向。DoRA 将预训练权重 $W_0$ 分解为：</p>
+<p>$$W_0 = m \cdot \frac{V}{\|V\|_c}$$</p>
+<p>其中 $m$ 是列向量幅度，$V$ 是方向矩阵，$\|\cdot\|_c$ 是列向量范数。</p>
+<p>微调时，DoRA 用 LoRA 更新方向分量 $V$，同时单独训练幅度向量 $m$：</p>
+<p>$$W' = (m + \Delta m) \cdot \frac{V + \Delta V}{\|V + \Delta V\|_c}, \quad \Delta V = BA$$</p>
+
+<h3>4.2 PyTorch 实现</h3>
+<pre><code class="language-python">class DoRALayer(nn.Module):
+    def __init__(self, d_in, d_out, rank=4, alpha=1.0):
+        super().__init__()
+        # 幅度向量（每列一个标量）
+        self.m = nn.Parameter(torch.ones(1, d_out))
+        # 方向的 LoRA 低秩更新
+        self.lora = LoRALayer(d_in, d_out, rank, alpha)
+        # 冻结的原始线性层（存储方向基准）
+        self.linear = nn.Linear(d_in, d_out, bias=False)
+        self.linear.weight.requires_grad = False
+
+    def forward(self, x):
+        # 获取当前方向：原始权重 + LoRA 更新
+        lora_weight = self.linear.weight + (self.lora.lora_A @ self.lora.lora_B).T * self.lora.scale
+        # 按列归一化（获取单位方向）
+        norm = lora_weight.norm(p=2, dim=0, keepdim=True)
+        direction = lora_weight / norm
+        # 幅度 × 方向
+        adapted_weight = self.m * direction
+        return x @ adapted_weight</code></pre>
+
+<h3>4.3 LoRA vs DoRA 对比</h3>
+<table>
+  <thead><tr><th>特性</th><th>LoRA</th><th>DoRA</th></tr></thead>
+  <tbody>
+    <tr><td>参数分解</td><td>直接低秩增量 ΔW=BA</td><td>幅度+方向分离更新</td></tr>
+    <tr><td>额外参数</td><td>2rd</td><td>2rd + d（幅度向量）</td></tr>
+    <tr><td>训练行为</td><td>偏离全参数微调模式</td><td>更接近全参数微调</td></tr>
+    <tr><td>升级难度</td><td>基础实现</td><td>在 LoRA 基础上小改动</td></tr>
+    <tr><td>效果</td><td>强</td><td>通常优于 LoRA</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2>五、RLHF 与对齐：从 PPO 到 DPO</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/llm-training-rlhf-and-its-alternatives" target="_blank">LLM Training: RLHF and Its Alternatives</a></div>
+
+<p>LLM 对齐的核心挑战是：如何让模型不只是"能力强"，还要"听话、无害、诚实"？RLHF（Reinforcement Learning from Human Feedback）是目前最成熟的方案，但其复杂性催生了一系列更简洁的替代方案。</p>
+
+<h3>5.1 完整 RLHF 流程</h3>
+<pre class="mermaid">graph TD
+  Step1["阶段1：监督微调 SFT\n用高质量人类示例微调预训练模型"]
+  Step2["阶段2：训练奖励模型 RM\n收集人类偏好对(chosen/rejected)\n训练二元分类器"]
+  Step3["阶段3：PPO 强化学习\n用 RM 作为奖励信号\n用 PPO 算法更新策略模型"]
+  KL["KL 散度惩罚\n防止策略偏离 SFT 模型过远"]
+  Step1 --> Step2 --> Step3
+  Step3 --> KL --> Step3
+</pre>
+
+<h3>5.2 DPO：无需强化学习的对齐</h3>
+<p>DPO（Direct Preference Optimization）将 RLHF 的三步流程压缩为一步监督学习。核心数学推导证明：在给定 KL 约束下，RLHF 的最优策略有闭合解，可以直接转化为分类损失：</p>
+<p>$$\mathcal{L}_{DPO} = -\mathbb{E}\left[\log \sigma\left(\beta \log \frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)}\right)\right]$$</p>
+<p>其中 $y_w$ 是偏好回答，$y_l$ 是被拒绝回答，$\pi_{ref}$ 是参考模型（SFT 后的模型）。</p>
+
+<h3>5.3 RLHF 替代方案对比</h3>
+<table>
+  <thead><tr><th>方法</th><th>是否需要RM</th><th>是否需要RL</th><th>核心思想</th><th>特点</th></tr></thead>
+  <tbody>
+    <tr><td>RLHF (PPO)</td><td>是</td><td>是</td><td>奖励模型 + PPO 策略优化</td><td>最强但最复杂</td></tr>
+    <tr><td>DPO</td><td>否</td><td>否</td><td>偏好对 → 直接监督损失</td><td>简单稳定，主流</td></tr>
+    <tr><td>RLVR (GRPO)</td><td>否（规则验证）</td><td>是</td><td>可验证任务的规则奖励</td><td>推理任务最优</td></tr>
+    <tr><td>Rejection Sampling SFT</td><td>是（用于筛选）</td><td>否</td><td>生成K个样本，只训练最好的</td><td>Llama 2 使用</td></tr>
+    <tr><td>CPL（对比偏好学习）</td><td>否</td><td>否</td><td>对比损失（DPO 的特例）</td><td>可用于机器人控制</td></tr>
+    <tr><td>ReST（强化自训练）</td><td>弱监督</td><td>类RL</td><td>迭代生成+过滤+微调</td><td>无需人类标注</td></tr>
+  </tbody>
+</table>
+
+<h3>5.4 实践选择指南</h3>
+<div class="callout">
+  <strong>如何选择对齐方法？</strong>
+  <ul>
+    <li><strong>数学/代码任务（有明确答案）：</strong>优先选 RLVR，规则奖励信号最可靠</li>
+    <li><strong>通用对话/指令遵循：</strong>DPO 是最简单有效的起点</li>
+    <li><strong>需要最强对话质量：</strong>RLHF (PPO)，但要承受工程复杂度</li>
+    <li><strong>数据极少：</strong>Rejection Sampling SFT，利用模型自身生成能力</li>
+  </ul>
+</div>
+
+<div id="chart-ft" style="height:320px; margin:1em 0; border-radius:6px; overflow:hidden;"></div>
+<script>
+echarts.init(document.getElementById('chart-ft')).setOption({
+  backgroundColor:'#2a2a3e',
+  title:{text:'微调方法：参数效率 vs 实现复杂度',textStyle:{color:'#89b4fa'},left:'center'},
+  tooltip:{formatter:p=>`${p.data[2]}<br>参数效率: ${p.data[0]}/10<br>实现复杂度: ${p.data[1]}/10`},
+  xAxis:{name:'实现复杂度',min:0,max:10,nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#313244'}}},
+  yAxis:{name:'参数效率',min:0,max:10,nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#313244'}}},
+  series:[{
+    type:'scatter', symbolSize:16,
+    data:[
+      [1,2,'全参数微调'],[3,7,'Adapter'],[3,8,'LoRA'],
+      [4,8,'DoRA'],[5,5,'Prompt Tuning'],[6,5,'DPO'],
+      [9,4,'RLHF(PPO)'],[7,6,'RLVR/GRPO']
+    ],
+    label:{show:true,formatter:p=>p.data[2],position:'top',color:'#cdd6f4',fontSize:11},
+    itemStyle:{
+      color:p=>['#89b4fa','#a6e3a1','#fab387','#f38ba8','#cba6f7','#89dceb','#f5c2e7','#94e2d5'][p.dataIndex]
+    }
+  }]
+});
+</script>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+    if(!h.id)h.id='s'+i;
+    const a=document.createElement('a');
+    a.href='#'+h.id; a.textContent=h.textContent;
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(e=>e.forEach(x=>{
+    const l=toc.querySelector(`a[href="#${x.target.id}"]`);
+    if(l)l.classList.toggle('active',x.isIntersecting);
+  }),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

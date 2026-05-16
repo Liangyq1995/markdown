@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第14章 总结与展望 | 大语言模型</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono',monospace;}
+p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}
+.timeline-wrap{overflow-x:auto;margin:1em 0;}
+.timeline{display:flex;gap:0;min-width:900px;}
+.tl-col{flex:1;display:flex;flex-direction:column;}
+.tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 4px;font-size:.85em;border-radius:6px 6px 0 0;}
+.tl-body{flex:1;padding:10px 6px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px;}
+.tl-item{background:#313244;border-radius:5px;padding:6px 8px;margin-bottom:6px;font-size:.82em;line-height:1.5;}
+.tl-tag{display:inline-block;font-size:.72em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:3px;background:var(--heading);color:#1e1e2e;}
+.tl-tag.orange{background:#fab387;}.tl-tag.green{background:#a6e3a1;}.tl-tag.purple{background:#cba6f7;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第十四章 总结与展望</h1>
+<blockquote>
+  <strong>《大语言模型》</strong> · 赵鑫 等著 · 中国人民大学 AI Box<br>
+  章节范围：第359–363页（正文）+ 参考文献（第364–391页）
+</blockquote>
+
+<p>本章是全书的收尾章节，从四个维度对全书内容进行系统回顾：<strong>基本原理、模型架构、模型训练、模型使用与安全对齐</strong>，并展望大语言模型面临的挑战与未来研究方向。</p>
+
+<!-- ======================================================= -->
+<h2 id="pyramid">1. LLM 技术体系金字塔</h2>
+<!-- ======================================================= -->
+
+<p>全书构建了一个层次分明的 LLM 技术体系，从底层数据工程到顶层应用生态，形成完整的技术金字塔。每一层都有其核心技术支撑，并向上层提供能力基础。</p>
+
+<pre class="mermaid">
+graph TD
+    A["LLM 技术金字塔"] --> B["基础层：数据与架构"]
+    A --> C["训练层：预训练与对齐"]
+    A --> D["能力层：推理与规划"]
+    A --> E["应用层：部署与场景"]
+
+    B --> B1["大规模语料清洗<br>分词 BPE/WordPiece/SentencePiece"]
+    B --> B2["Transformer 架构改进<br>RMSNorm · RoPE · SwiGLU · GQA · MoE"]
+    B --> B3["Scaling Law<br>模型规模 / 数据规模 / 算力三角"]
+
+    C --> C1["因果语言建模预训练<br>3D 并行分布式训练"]
+    C --> C2["SFT 指令微调<br>Self-Instruct · FLAN · Alpaca"]
+    C --> C3["RLHF / PPO 对齐<br>DPO · Constitutional AI"]
+
+    D --> D1["ICL 上下文学习<br>Few-shot 推理"]
+    D --> D2["CoT 思维链<br>自洽性 · ToT · ReAct"]
+    D --> D3["Agent 规划<br>工具调用 · 多智能体"]
+
+    E --> E1["量化加速部署<br>vLLM · TGI · PagedAttention"]
+    E --> E2["RAG 知识增强<br>向量数据库 · 混合检索"]
+    E --> E3["垂直领域应用<br>代码 · 医疗 · 法律 · 科学"]
+
+    style A fill:#89b4fa,color:#1e1e2e,font-weight:bold
+    style B fill:#313244,color:#cdd6f4
+    style C fill:#313244,color:#cdd6f4
+    style D fill:#313244,color:#cdd6f4
+    style E fill:#313244,color:#cdd6f4
+</pre>
+
+<!-- ======================================================= -->
+<h2 id="arch-evo">2. 预训练架构演进</h2>
+<!-- ======================================================= -->
+
+<p>自 Transformer（2017）问世以来，研究人员针对训练稳定性、计算效率和长文本建模能力提出了多项关键改进。以下时间线梳理了主要架构节点，随后的汇总表给出了每项改进的技术细节与代表模型。</p>
+
+<div class="timeline-wrap">
+<div class="timeline">
+  <div class="tl-col">
+    <div class="tl-period">2017</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">基础</span><br><strong>Transformer</strong><br>多头自注意力 + FFN<br>Vaswani et al., NIPS</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2019–2020</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">归一化</span><br><strong>RMSNorm</strong><br>去均值计算，加速训练<br>Zhang &amp; Sennrich, NeurIPS</div>
+      <div class="tl-item"><span class="tl-tag orange">位置编码</span><br><strong>相对位置编码</strong><br>Transformer-XL / T5 相对位置</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2021–2022</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">位置编码</span><br><strong>RoPE</strong><br>旋转位置编码，长度外推<br>Su Jianlin</div>
+      <div class="tl-item"><span class="tl-tag orange">激活函数</span><br><strong>SwiGLU / GeGLU</strong><br>门控线性单元，更强非线性<br>Shazeer, 2020</div>
+      <div class="tl-item"><span class="tl-tag green">硬件优化</span><br><strong>FlashAttention v1</strong><br>IO-Aware 分块计算<br>Dao et al., NeurIPS 2022</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2022–2023</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">注意力</span><br><strong>GQA / MQA</strong><br>分组查询注意力，减少 KV 缓存<br>Ainslie et al., 2023</div>
+      <div class="tl-item"><span class="tl-tag orange">稀疏</span><br><strong>MoE 混合专家</strong><br>参数量与计算量解耦<br>GLaM, Mixtral</div>
+      <div class="tl-item"><span class="tl-tag green">硬件优化</span><br><strong>FlashAttention v2</strong><br>更好并行与分工<br>Dao, 2023</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2023–2024</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag purple">新架构</span><br><strong>Mamba / SSM</strong><br>线性复杂度状态空间模型<br>Gu &amp; Dao, 2023</div>
+      <div class="tl-item"><span class="tl-tag purple">新架构</span><br><strong>RetNet / RWKV</strong><br>保留网络 / 循环-注意力混合</div>
+      <div class="tl-item"><span class="tl-tag">长上下文</span><br><strong>YaRN / LongRoPE</strong><br>上下文窗口扩展至 128K+</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<h3 id="arch-table">2.1 架构改进汇总表</h3>
+<p>下表汇总了现代 LLM 中最重要的六项架构改进，对比原始 Transformer 的做法、改进方案、核心公式以及代表模型。</p>
+
+<table>
+<thead>
+<tr>
+  <th>改进点</th>
+  <th>原始方案</th>
+  <th>改进方案</th>
+  <th>核心公式 / 机制</th>
+  <th>代表模型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>归一化</strong></td>
+  <td>LayerNorm（含均值计算）</td>
+  <td><strong>RMSNorm</strong>（仅均方根）</td>
+  <td>$\text{RMSNorm}(\mathbf{x}) = \dfrac{\mathbf{x}}{\text{RMS}(\mathbf{x})} \cdot \gamma$，$\text{RMS}(\mathbf{x})=\sqrt{\frac{1}{H}\sum x_i^2}$</td>
+  <td>LLaMA 全系列、Gopher、Chinchilla</td>
+</tr>
+<tr>
+  <td><strong>位置编码</strong></td>
+  <td>正弦绝对位置编码</td>
+  <td><strong>RoPE</strong>（旋转位置编码）</td>
+  <td>$\mathbf{q}_i = \mathbf{x}_i W_Q \mathbf{R}_{\theta,i}$，利用 $\mathbf{R}_{\theta,i}\mathbf{R}_{\theta,j}^\top = \mathbf{R}_{\theta,i-j}$ 编码相对位置</td>
+  <td>LLaMA、PaLM、Mistral、Qwen</td>
+</tr>
+<tr>
+  <td><strong>激活函数</strong></td>
+  <td>ReLU / GELU</td>
+  <td><strong>SwiGLU</strong>（门控线性单元）</td>
+  <td>$\text{SwiGLU}(\mathbf{x}) = \text{Swish}(W_G \mathbf{x}) \odot (W_U \mathbf{x})$</td>
+  <td>PaLM、LLaMA、DeepSeek</td>
+</tr>
+<tr>
+  <td><strong>注意力头</strong></td>
+  <td>多头注意力 MHA</td>
+  <td><strong>GQA</strong>（分组查询注意力）</td>
+  <td>将 H 个查询头分为 G 组，每组共享一对 K/V 头，KV 缓存减少 H/G 倍</td>
+  <td>LLaMA-2-70B、Mistral、Gemma</td>
+</tr>
+<tr>
+  <td><strong>前馈网络</strong></td>
+  <td>密集 FFN</td>
+  <td><strong>MoE</strong>（混合专家）</td>
+  <td>$\mathbf{o}_t = \sum_{i=1}^{K} G(\mathbf{x}_t)_i \cdot E_i(\mathbf{x}_t)$，路由 $G(\mathbf{x}_t)=\text{softmax}(\text{topk}(\mathbf{x}_t W_G))$</td>
+  <td>Mixtral 8×7B、GLaM、GPT-4（传言）</td>
+</tr>
+<tr>
+  <td><strong>注意力计算</strong></td>
+  <td>标准 $O(N^2)$ 内存注意力</td>
+  <td><strong>FlashAttention</strong>（IO-Aware）</td>
+  <td>矩阵分块 + 在线 softmax，避免 $N\times N$ 矩阵实体化，内存从 $O(N^2)$ 降至 $O(N)$</td>
+  <td>所有现代 LLM 训练框架</td>
+</tr>
+</tbody>
+</table>
+
+<!-- ======================================================= -->
+<h2 id="align-evo">3. 对齐技术演进</h2>
+<!-- ======================================================= -->
+
+<p>对齐技术的核心目标是让 LLM 的行为符合人类价值观（有用、诚实、无害）。从早期的纯提示控制，到 RLHF 引入人类反馈，再到 DPO 简化训练流程，对齐技术经历了显著演进。</p>
+
+<div class="timeline-wrap">
+<div class="timeline">
+  <div class="tl-col">
+    <div class="tl-period">2020</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">提示对齐</span><br><strong>GPT-3 Few-shot</strong><br>纯提示控制，无需训练<br>Brown et al., NeurIPS 2020</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2022 上半年</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag orange">RLHF</span><br><strong>InstructGPT</strong><br>SFT + 奖励模型 + PPO<br>Ouyang et al., 2022</div>
+      <div class="tl-item"><span class="tl-tag orange">RLHF</span><br><strong>Sparrow (DeepMind)</strong><br>规则约束 + 人类判断</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2022 下半年</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag green">AI反馈</span><br><strong>Constitutional AI</strong><br>原则约束 + 模型自我批评修正<br>Bai et al., Anthropic 2022</div>
+      <div class="tl-item"><span class="tl-tag green">AI反馈</span><br><strong>RLAIF</strong><br>用 AI 生成偏好数据替代人类标注</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2023</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag purple">简化对齐</span><br><strong>DPO</strong><br>直接偏好优化，无需 RL<br>Rafailov et al., 2023</div>
+      <div class="tl-item"><span class="tl-tag purple">简化对齐</span><br><strong>RAFT / KTO</strong><br>其他无 RL 对齐变体</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2024+</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">超级对齐</span><br><strong>Superalignment</strong><br>对齐超人类 AI 的研究<br>OpenAI 2023</div>
+      <div class="tl-item"><span class="tl-tag">自我奖励</span><br><strong>Self-Rewarding LM</strong><br>模型对自身输出打分<br>Yuan et al., 2024</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<h3 id="dpo">3.1 DPO 损失函数（完整推导）</h3>
+
+<p>DPO（Direct Preference Optimization）是目前最广泛使用的无强化学习对齐算法。其核心洞察是：RLHF 中 PPO 的最优策略可以用闭合形式表达，从而绕过显式奖励模型训练。</p>
+
+<div class="tech-card blue">
+<h4>推导路径</h4>
+<p>从带 KL 约束的 PPO 目标出发：</p>
+<div class="formula-box">
+$$\mathcal{L}(\theta) = \max_{\pi_\theta} \mathbb{E}_{x \sim \mathcal{D}, y \sim \pi_\theta}\left[r(x,y)\right] - \beta\, \text{KL}\!\left[\pi_\theta(y|x) \,\|\, \pi_{\theta_\text{old}}(y|x)\right]$$
+</div>
+<p>引入配分函数 $Z(x) = \sum_y \pi_{\theta_\text{old}}(y|x)\exp\!\left(\frac{r(x,y)}{\beta}\right)$，可得最优策略的闭合形式：</p>
+<div class="formula-box">
+$$\pi^*(y|x) = \frac{1}{Z(x)}\,\pi_{\theta_\text{old}}(y|x)\exp\!\left(\frac{r(x,y)}{\beta}\right)$$
+</div>
+<p>由此推导出奖励函数与策略的关系 $r(x,y) = \beta\log\frac{\pi^*(y|x)}{\pi_{\theta_\text{old}}(y|x)} + \beta\log Z(x)$，代入 Bradley-Terry 偏好模型后，配分函数 $Z(x)$ 在分子分母中约去，最终得到 <strong>DPO 损失函数</strong>：</p>
+<div class="formula-box">
+$$\boxed{\mathcal{L}_\text{DPO}(\theta) = -\mathbb{E}_{(x,y_+,y_-)\sim\mathcal{D}}\!\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_+|x)}{\pi_{\theta_\text{old}}(y_+|x)} - \beta\log\frac{\pi_\theta(y_-|x)}{\pi_{\theta_\text{old}}(y_-|x)}\right)\right]}$$
+</div>
+<p>其中 $y_+$ 为人类偏好的回答，$y_-$ 为不偏好的回答，$\pi_{\theta_\text{old}}$ 为参考策略（SFT 模型），$\beta$ 控制 KL 散度约束强度（默认 0.1）。</p>
+</div>
+
+<div class="tech-card green">
+<h4>梯度分析</h4>
+<p>对 DPO 损失求导，令 $\hat{r}_\theta(x,y) = \beta\log\frac{\pi_\theta(y|x)}{\pi_{\theta_\text{old}}(y|x)}$，梯度为：</p>
+<div class="formula-box">
+$$\nabla\mathcal{L}(\theta) = -\beta\,\mathbb{E}\!\left[\sigma\!\left(\hat{r}_\theta(x,y_-) - \hat{r}_\theta(x,y_+)\right)\!\left(\nabla\log\pi_\theta(y_+|x) - \nabla\log\pi_\theta(y_-|x)\right)\right]$$
+</div>
+<p>系数 $\sigma(\hat{r}_\theta(x,y_-)-\hat{r}_\theta(x,y_+))$ 起到<strong>自适应权重</strong>作用：当模型已倾向于生成 $y_+$ 时权重小（防止过度更新），当模型仍倾向于 $y_-$ 时权重大（激进纠正）。</p>
+</div>
+
+<!-- ======================================================= -->
+<h2 id="scaling">4. Chinchilla 扩展法则</h2>
+<!-- ======================================================= -->
+
+<p>扩展法则（Scaling Law）是理解 LLM 能力提升的核心理论框架。Chinchilla 扩展法则（Hoffmann et al., 2022）对早期 KM 扩展法则进行了重要修正，指出之前的工作严重低估了训练数据规模的重要性。</p>
+
+<div class="tech-card yellow">
+<h4>Chinchilla 损失函数</h4>
+<div class="formula-box">
+$$L(N, D) = E + \frac{A}{N^\alpha} + \frac{B}{D^\beta}$$
+</div>
+<p>其中拟合参数为：$E=1.69$，$A=406.4$，$B=410.7$，$\alpha=0.34$，$\beta=0.28$。<br>
+$N$ 为模型参数量，$D$ 为训练 token 数。</p>
+</div>
+
+<div class="tech-card blue">
+<h4>算力约束下的最优分配</h4>
+<p>利用约束条件 $C \approx 6ND$（FLOPs），对损失函数求最优解：</p>
+<div class="formula-box">
+$$N_\text{opt}(C) = G \left(\frac{C}{6}\right)^a, \qquad D_\text{opt}(C) = G^{-1}\left(\frac{C}{6}\right)^b$$
+</div>
+<p>其中 $a = \frac{\alpha}{\alpha+\beta} \approx 0.46$，$b = \frac{\beta}{\alpha+\beta} \approx 0.54$，$G$ 为由 $A,B,\alpha,\beta$ 计算的扩展系数。</p>
+<p><strong>关键结论</strong>：Chinchilla 主张模型规模与数据规模<strong>等比例增加</strong>（$a \approx b$），而 KM 扩展法则（$a\approx 0.73, b\approx 0.27$）偏向增加模型规模。GPT-3（175B 参数仅用 300B tokens）严重"欠训练"，Chinchilla 70B 用 1.4T tokens 训练后性能超越 Gopher 280B。</p>
+</div>
+
+<!-- ======================================================= -->
+<h2 id="future">5. 未来研究方向</h2>
+<!-- ======================================================= -->
+
+<p>本章从架构、训练、推理、知识四个维度总结了 LLM 最重要的未来研究方向，每个方向均有明确的技术路径和代表性工作。</p>
+
+<h3 id="ssm">5.1 线性注意力与 Mamba SSM</h3>
+
+<p>标准 Transformer 的自注意力计算复杂度为 $O(T^2 H)$，随序列长度平方增长，严重限制长文本处理能力。参数化状态空间模型（SSM）提供了 $O(T)$ 复杂度的替代方案。</p>
+
+<div class="tech-card blue">
+<h4>标准 SSM 状态转移公式</h4>
+<div class="formula-box">
+$$\mathbf{S}_t = \mathbf{A} \otimes \mathbf{S}_{t-1} + \mathbf{B} \otimes \mathbf{x}_t$$
+$$\mathbf{y}_t = \mathbf{C} \otimes \mathbf{S}_t$$
+</div>
+<p>其中 $\mathbf{A} \in \mathbb{R}^{H\times N\times N}$，$\mathbf{B} \in \mathbb{R}^{H\times N\times 1}$，$\mathbf{C} \in \mathbb{R}^{H\times 1\times N}$ 为可学习参数，$\otimes$ 表示批量矩阵乘法。输出可展开为卷积形式：$\mathbf{y}_t = \sum_{i=1}^t \mathbf{C} \otimes \mathbf{A}^{t-i} \otimes \mathbf{B}\, \mathbf{x}_i$，支持快速傅里叶变换加速。</p>
+</div>
+
+<div class="tech-card purple">
+<h4>Mamba 的选择性机制</h4>
+<p>Mamba（Gu &amp; Dao, 2023）的核心创新是将 SSM 参数矩阵 $(\mathbf{A}, \mathbf{B}, \mathbf{C})$ 改为依赖当前输入 $\mathbf{x}_t$ 的非线性函数，实现<strong>信息选择性过滤</strong>：</p>
+<div class="formula-box">
+$$\mathbf{A}_t = f_A(\mathbf{x}_t), \quad \mathbf{B}_t = f_B(\mathbf{x}_t), \quad \mathbf{C}_t = f_C(\mathbf{x}_t)$$
+$$\mathbf{S}_t = \mathbf{A}_t \otimes \mathbf{S}_{t-1} + \mathbf{B}_t \otimes \mathbf{x}_t, \qquad \mathbf{y}_t = \mathbf{C}_t \otimes \mathbf{S}_t$$
+</div>
+<p>代价：由于引入了关于 $\mathbf{x}_t$ 的非线性关系，Mamba 无法使用 FFT 加速，训练复杂度为 $O(TN^2H + TH^2)$，但解码复杂度仅 $O(N^2H + H^2)$（无需访问历史词元）。</p>
+</div>
+
+<h3 id="ssm-compare">5.2 Transformer vs SSM 对比表</h3>
+
+<table>
+<thead>
+<tr>
+  <th>模型</th>
+  <th>可并行训练</th>
+  <th>解码复杂度（每步）</th>
+  <th>训练复杂度</th>
+  <th>长程依赖</th>
+  <th>代表工作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Transformer</strong></td>
+  <td>✓ 完全并行</td>
+  <td>$O(TH + H^2)$</td>
+  <td>$O(T^2H + TH^2)$</td>
+  <td>强（全局注意力）</td>
+  <td>GPT-4、LLaMA</td>
+</tr>
+<tr>
+  <td><strong>标准 SSM</strong></td>
+  <td>✓ 卷积并行</td>
+  <td>$O(N^2H + H^2)$</td>
+  <td>$O(TH\log T + THN^2 + TH^2)$</td>
+  <td>中（固定状态压缩）</td>
+  <td>S4、H3</td>
+</tr>
+<tr>
+  <td><strong>Mamba</strong></td>
+  <td>✗ 需顺序计算</td>
+  <td>$O(N^2H + H^2)$</td>
+  <td>$O(TN^2H + TH^2)$</td>
+  <td>中-强（选择性）</td>
+  <td>Mamba, Mamba-2</td>
+</tr>
+<tr>
+  <td><strong>RWKV</strong></td>
+  <td>✗ 类 RNN</td>
+  <td>$O(H^2)$</td>
+  <td>$O(TH^2)$</td>
+  <td>中（词元偏移）</td>
+  <td>RWKV-v4/v6</td>
+</tr>
+<tr>
+  <td><strong>RetNet</strong></td>
+  <td>✓ 并行/循环双模式</td>
+  <td>$O(H^2)$</td>
+  <td>$O(TH^2)$</td>
+  <td>中（多尺度保留）</td>
+  <td>RetNet</td>
+</tr>
+<tr>
+  <td><strong>Hyena</strong></td>
+  <td>✓ FFT 加速</td>
+  <td>$O(TMH + MH^2)$</td>
+  <td>$O(TMH\log T + TMH^2)$</td>
+  <td>中（长卷积）</td>
+  <td>Hyena</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="multimodal">5.3 多模态统一</h3>
+
+<p>未来 LLM 将统一处理文本、图像、音频、视频等多种模态。当前趋势是将各模态编码为离散 Token 序列，送入统一的 Transformer 解码器处理。</p>
+
+<pre class="mermaid">
+graph LR
+    T["文本 Token<br>BPE/SentencePiece"] --> U["统一 Transformer<br>解码器"]
+    I["图像 Token<br>ViT Patch 编码<br>VQ-VAE 离散化"] --> U
+    A["音频 Token<br>声学特征<br>Codec 编码"] --> U
+    V["视频 Token<br>时序帧采样<br>3D 卷积编码"] --> U
+    U --> O1["文本生成"]
+    U --> O2["图像生成"]
+    U --> O3["多模态推理"]
+    style U fill:#89b4fa,color:#1e1e2e,font-weight:bold
+</pre>
+
+<p>代表工作：GPT-4V（视觉理解）、Gemini（原生多模态）、LLaVA（开源视觉语言模型）。核心挑战：不同模态的 Token 粒度差异巨大（文本 ~1个词/token，图像 ~196 patches/图）。</p>
+
+<h3 id="synthetic-data">5.4 合成数据</h3>
+
+<p>随着高质量互联网文本数据接近饱和，合成数据成为扩展训练规模的关键路径。</p>
+
+<div class="tech-card green">
+<h4>合成数据的主要范式</h4>
+<ul>
+  <li><strong>蒸馏式合成</strong>：用强模型（GPT-4）生成训练数据训练弱模型（Alpaca、WizardLM、Orca）</li>
+  <li><strong>Self-Instruct</strong>：模型自我生成指令数据，迭代提升（Wang et al., 2022）</li>
+  <li><strong>数学合成</strong>：自动生成数学题及解题步骤（WizardMath、MetaMath）</li>
+  <li><strong>代码合成</strong>：从函数签名自动生成代码及测试（DeepSeek-Coder）</li>
+  <li><strong>phi 系列</strong>：Textbooks Are All You Need——高质量教科书式合成数据训练小模型</li>
+</ul>
+</div>
+
+<h3 id="continual-learning">5.5 持续学习</h3>
+
+<p>LLM 存在"知识截止日期"问题，本质上是<strong>灾难性遗忘</strong>（Catastrophic Forgetting）问题：在新数据上微调会覆盖旧知识。持续学习研究如何让模型在不遗忘旧知识的前提下学习新知识。</p>
+
+<div class="tech-card yellow">
+<h4>EWC（Elastic Weight Consolidation）正则化</h4>
+<div class="formula-box">
+$$\mathcal{L}_\text{CL} = \mathcal{L}_\text{new}(\theta) + \lambda \sum_i F_i (\theta_i - \theta_i^*)^2$$
+</div>
+<p>其中：</p>
+<ul>
+  <li>$\mathcal{L}_\text{new}(\theta)$：新任务的训练损失</li>
+  <li>$F_i$：Fisher 信息矩阵的对角元素，衡量参数 $\theta_i$ 对旧任务的重要性</li>
+  <li>$\theta_i^*$：旧任务训练后的参数值</li>
+  <li>$\lambda$：正则化强度超参数</li>
+</ul>
+<p>直觉：对旧任务重要的参数（$F_i$ 大）受到强约束，不能偏离 $\theta_i^*$ 太远；不重要的参数可以自由更新以适应新任务。</p>
+</div>
+
+<h3 id="test-time-compute">5.6 测试时计算（o1/o3 类）</h3>
+
+<p>OpenAI o1 的核心创新是在推理阶段允许模型进行更长时间的"思考"，通过增加测试时计算量来提升复杂任务性能。</p>
+
+<div class="tech-card purple">
+<h4>测试时计算扩展规律</h4>
+<div class="formula-box">
+$$\text{性能} \propto \log(\text{测试时计算量})$$
+</div>
+<p>这一对数规律意味着：通过增加推理时计算（而非增加训练参数），可以<strong>持续</strong>提升模型在困难任务上的性能，但边际收益递减。</p>
+</div>
+
+<table>
+<thead>
+<tr><th>方向</th><th>代表工作</th><th>核心思想</th><th>适用场景</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td>长链思维（Long CoT）</td>
+  <td>OpenAI o1、DeepSeek-R1</td>
+  <td>允许模型生成数千步推理链</td>
+  <td>数学竞赛、代码生成</td>
+</tr>
+<tr>
+  <td>过程奖励模型（PRM）</td>
+  <td>Math-Shepherd、PRM800K</td>
+  <td>对推理过程每一步打分，而非仅结果</td>
+  <td>数学推理</td>
+</tr>
+<tr>
+  <td>蒙特卡洛树搜索</td>
+  <td>AlphaCode 2、rStar</td>
+  <td>搜索推理路径空间，选择最优路径</td>
+  <td>代码、规划</td>
+</tr>
+<tr>
+  <td>自我验证</td>
+  <td>Self-Consistency、Self-Eval</td>
+  <td>多次采样后投票或验证</td>
+  <td>通用推理</td>
+</tr>
+<tr>
+  <td>形式化验证</td>
+  <td>AlphaProof、Lean Copilot</td>
+  <td>与定理证明器结合，保证正确性</td>
+  <td>数学证明</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="knowledge-editing">5.7 知识编辑（ROME / MEMIT）</h3>
+
+<p>当 LLM 中的知识过时或错误时，重新训练成本极高。知识编辑技术允许<strong>精准修改特定知识</strong>而不影响其他能力。</p>
+
+<div class="tech-card blue">
+<h4>ROME（Rank-One Model Editing）核心公式</h4>
+<p>ROME 的核心发现：Transformer 的 MLP 层可以看作键值存储，其中键 $\mathbf{k}$ 对应知识的"主语"表示，值 $\mathbf{v}$ 对应"宾语"表示。知识编辑等价于修改 MLP 的权重矩阵 $W$，使其对特定键 $\mathbf{k}$ 输出新值 $\mathbf{v}^*$：</p>
+<div class="formula-box">
+$$W_\text{new} = W + \Delta W, \qquad \Delta W = \frac{(\mathbf{v}^* - W\mathbf{k})\,\mathbf{k}^\top}{\mathbf{k}^\top\mathbf{k}}$$
+</div>
+<p>其中 $\mathbf{k}$ 为知识的"键"（输入隐状态），$\mathbf{v}^*$ 为期望的新"值"（目标输出表示）。这是一个<strong>秩一更新</strong>（Rank-One Update），仅修改权重矩阵的一个方向，对其他知识影响最小。</p>
+<p><strong>MEMIT</strong> 将 ROME 扩展到批量知识编辑，同时修改多层 MLP 权重，支持一次性编辑数千条知识。</p>
+</div>
+
+<!-- ======================================================= -->
+<h2 id="limitations">6. LLM 核心局限性及解决路径</h2>
+<!-- ======================================================= -->
+
+<p>尽管 LLM 能力强大，仍存在若干根本性局限，每种局限都有其技术根源和对应的解决路径。</p>
+
+<table>
+<thead>
+<tr>
+  <th>局限性</th>
+  <th>根本原因</th>
+  <th>当前缓解方法</th>
+  <th>根本解决路径</th>
+  <th>代表工作</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>幻觉</strong>（Hallucination）</td>
+  <td>语言建模目标不直接优化事实性；模型"自信"填充不确定内容</td>
+  <td>RAG 接地、RLHF 奖励真实性、自洽性验证</td>
+  <td>真实性感知训练目标；引用验证机制</td>
+  <td>HaluEval、FactScore</td>
+</tr>
+<tr>
+  <td><strong>知识截止</strong></td>
+  <td>参数知识静态，训练后无法更新</td>
+  <td>RAG（外部知识库）、知识编辑（ROME/MEMIT）</td>
+  <td>持续学习（EWC 等）；参数化与非参数化知识混合</td>
+  <td>ROME、MEMIT、IKE</td>
+</tr>
+<tr>
+  <td><strong>上下文长度限制</strong></td>
+  <td>注意力计算复杂度 $O(N^2)$，内存随序列长度平方增长</td>
+  <td>FlashAttention、滑动窗口注意力、YaRN 位置插值</td>
+  <td>SSM/线性注意力架构；混合架构</td>
+  <td>Mamba、LongRoPE</td>
+</tr>
+<tr>
+  <td><strong>推理不稳定</strong></td>
+  <td>自回归误差累积；模式匹配而非符号推理</td>
+  <td>CoT 思维链、自洽性采样、过程奖励模型</td>
+  <td>LLM + 符号系统（代码解释器、定理证明器）</td>
+  <td>o1、AlphaProof</td>
+</tr>
+<tr>
+  <td><strong>计算成本高</strong></td>
+  <td>参数量大（百亿级）；自回归串行解码</td>
+  <td>量化（GPTQ/AWQ）、投机采样、KV 缓存优化</td>
+  <td>高效架构（MoE）；硬件协同设计</td>
+  <td>PagedAttention、Medusa</td>
+</tr>
+<tr>
+  <td><strong>组合泛化失败</strong></td>
+  <td>模式匹配器本质；训练分布外的新组合失败</td>
+  <td>更多样化的训练数据；数据增强</td>
+  <td>神经-符号混合系统；结构化推理</td>
+  <td>AlphaCode 2</td>
+</tr>
+</tbody>
+</table>
+
+<!-- ======================================================= -->
+<h2 id="social">7. 社会影响分析</h2>
+<!-- ======================================================= -->
+
+<p>LLM 的广泛应用不仅带来技术革新，也对社会产生深远影响。本书（第14章安全与对齐部分）及 GPT-3/4 技术报告均对此进行了讨论。</p>
+
+<h3 id="employment">7.1 就业市场影响</h3>
+
+<div id="chart-employment" style="height:320px;margin:1em 0;border-radius:6px;overflow:hidden;"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-employment');
+  if(!dom) return;
+  var myChart = echarts.init(dom, null, {renderer:'canvas'});
+  myChart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'LLM 对不同职业的自动化风险评估',textStyle:{color:'#89b4fa',fontSize:14},left:'center',top:10},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['自动化风险','人机协作潜力'],textStyle:{color:'#cdd6f4'},bottom:5},
+    grid:{left:120,right:30,top:50,bottom:50},
+    xAxis:{type:'value',max:100,axisLabel:{color:'#cdd6f4',formatter:'{value}%'},splitLine:{lineStyle:{color:'#45475a'}}},
+    yAxis:{type:'category',data:['体力劳动','制造工人','教师','程序员','律师','记者','客服','数据录入'],axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'自动化风险',type:'bar',stack:'total',data:[15,25,30,45,50,60,75,90],itemStyle:{color:'#f38ba8'}},
+      {name:'人机协作潜力',type:'bar',stack:'total',data:[10,20,55,45,40,35,20,8],itemStyle:{color:'#89b4fa'}}
+    ]
+  });
+})();
+</script>
+
+<p>研究表明，LLM 对<strong>认知型、语言型</strong>工作的影响远大于体力型工作，这与历史上工业革命（主要冲击体力劳动）的模式相反。<strong>新兴职业</strong>包括：提示工程师、AI 产品经理、LLM 评测专家、AI 安全研究员。</p>
+
+<h3 id="info-ecology">7.2 信息生态影响</h3>
+
+<table>
+<thead>
+<tr><th>风险类型</th><th>描述</th><th>社会影响</th><th>应对措施</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>深度伪造</strong></td>
+  <td>生成以假乱真的文本/图像/视频</td>
+  <td>信任危机，虚假信息泛滥</td>
+  <td>水印技术、AI 生成检测器</td>
+</tr>
+<tr>
+  <td><strong>学术不端</strong></td>
+  <td>LLM 辅助论文写作/代码生成</td>
+  <td>学术评价体系面临挑战</td>
+  <td>AI 内容检测、评价方式改革</td>
+</tr>
+<tr>
+  <td><strong>版权争议</strong></td>
+  <td>训练数据包含受版权保护内容</td>
+  <td>法律框架需要重构</td>
+  <td>数据授权协议、版权归属明确</td>
+</tr>
+<tr>
+  <td><strong>数据隐私</strong></td>
+  <td>模型可能记忆训练数据中的隐私</td>
+  <td>个人信息泄露风险</td>
+  <td>差分隐私、联邦学习、数据去除</td>
+</tr>
+<tr>
+  <td><strong>算法偏见</strong></td>
+  <td>训练数据中的偏见被放大</td>
+  <td>歧视性输出，加剧社会不平等</td>
+  <td>偏见检测、多样性数据、RLHF</td>
+</tr>
+<tr>
+  <td><strong>过度依赖</strong></td>
+  <td>用户不加验证地信任 LLM 输出</td>
+  <td>批判性思维退化</td>
+  <td>不确定性表达、引用来源</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="agi-safety">7.3 AGI 安全（存在性风险）</h3>
+
+<p>关于 AGI 的存在性风险，学界存在显著分歧：</p>
+
+<div style="display:flex;gap:16px;margin:1em 0;flex-wrap:wrap;">
+<div class="tech-card yellow" style="flex:1;min-width:260px;">
+<h4>担忧方（Hinton、Bengio 等）</h4>
+<ul>
+  <li>超人类 AI 可能产生与人类价值观不一致的目标</li>
+  <li>一旦能力超过人类，对齐将极其困难</li>
+  <li>需要在达到超人类水平前解决对齐问题</li>
+  <li>当前 LLM 已展示出令人担忧的"欺骗性"行为</li>
+</ul>
+</div>
+<div class="tech-card green" style="flex:1;min-width:260px;">
+<h4>乐观方（LeCun 等）</h4>
+<ul>
+  <li>当前 LLM 与 AGI 存在根本性差距</li>
+  <li>语言预测目标不会自然产生危险的目标</li>
+  <li>人类有足够时间应对</li>
+  <li>AI 系统仍然依赖人类基础设施</li>
+</ul>
+</div>
+</div>
+
+<p><strong>超级对齐（Superalignment）研究方向</strong>：可解释性研究（理解模型内部表示）、可扩展监督（用弱监督指导强模型）、形式化验证（将安全性证明形式化）。</p>
+
+<!-- ======================================================= -->
+<h2 id="ruc-aibox">8. 中国人民大学 AI Box 贡献</h2>
+<!-- ======================================================= -->
+
+<p>本书由中国人民大学 AI Box 团队（赵鑫等）撰写，该团队在 LLM 领域做出了多项重要开源贡献。</p>
+
+<table>
+<thead>
+<tr>
+  <th>项目</th>
+  <th>类型</th>
+  <th>描述</th>
+  <th>技术亮点</th>
+  <th>影响</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>YuLan-Chat</strong></td>
+  <td>开源模型</td>
+  <td>12B 参数开源中英双语对话模型</td>
+  <td>1.68T tokens 预训练；Pre-RMS + RoPE + SwiGLU</td>
+  <td>国内早期高质量开源 LLM</td>
+</tr>
+<tr>
+  <td><strong>LLMSurvey</strong></td>
+  <td>综述论文</td>
+  <td>arXiv LLM 综述（arXiv:2303.18223）</td>
+  <td>首次系统梳理 LLM 完整技术链条</td>
+  <td>900+ 引用，领域内最有影响力综述之一</td>
+</tr>
+<tr>
+  <td><strong>LLMBox</strong></td>
+  <td>训练框架</td>
+  <td>统一 LLM 训练与评测框架</td>
+  <td>集成 SFT、DPO、RLHF 等训练方法</td>
+  <td>简化 LLM 研究流程</td>
+</tr>
+<tr>
+  <td><strong>YuLan-GARDEN</strong></td>
+  <td>数据流水线</td>
+  <td>高质量中英文预训练数据处理系统</td>
+  <td>自动化数据清洗、配比、课程</td>
+  <td>推动中文 LLM 数据基础设施建设</td>
+</tr>
+<tr>
+  <td><strong>RecAgent</strong></td>
+  <td>Agent 系统</td>
+  <td>带记忆与规划的推荐 Agent</td>
+  <td>模拟真实用户行为，LLM 驱动推荐</td>
+  <td>LLM Agent 垂直应用示范</td>
+</tr>
+</tbody>
+</table>
+
+<p>本书的学术定位：作为 arXiv 上引用量最高的 LLM 综述之一，其贡献在于<strong>系统性</strong>（首次完整技术链条梳理）、<strong>时效性</strong>（持续更新跟踪最新进展）、<strong>实践性</strong>（结合工程实践）和<strong>中文化</strong>（降低国内研究者学习门槛）。</p>
+
+<!-- ======================================================= -->
+<h2 id="summary">9. 全书技术脉络总结</h2>
+<!-- ======================================================= -->
+
+<p>本书从 2017 年 Transformer 提出到 2024 年推理模型普及，系统梳理了 LLM 技术演进的完整脉络。</p>
+
+<div class="timeline-wrap">
+<div class="timeline">
+  <div class="tl-col">
+    <div class="tl-period">2017–2019</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">架构</span><br><strong>Transformer</strong><br>Attention Is All You Need</div>
+      <div class="tl-item"><span class="tl-tag">预训练</span><br><strong>GPT-1 / BERT</strong><br>生成式 vs 判别式预训练</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2020–2021</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag orange">规模</span><br><strong>GPT-3 (175B)</strong><br>涌现能力首次展示<br>Few-shot 学习</div>
+      <div class="tl-item"><span class="tl-tag orange">规律</span><br><strong>Scaling Laws</strong><br>KM 扩展法则</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2022</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">对齐</span><br><strong>InstructGPT</strong><br>RLHF 对齐</div>
+      <div class="tl-item"><span class="tl-tag">推理</span><br><strong>CoT 思维链</strong><br>Wei et al.</div>
+      <div class="tl-item"><span class="tl-tag green">里程碑</span><br><strong>ChatGPT</strong><br>引爆大众认知</div>
+      <div class="tl-item"><span class="tl-tag orange">规律</span><br><strong>Chinchilla</strong><br>数据优先扩展法则</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2023</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">多模态</span><br><strong>GPT-4 / GPT-4V</strong><br>视觉理解能力</div>
+      <div class="tl-item"><span class="tl-tag orange">开源</span><br><strong>LLaMA 系列</strong><br>开源生态爆发</div>
+      <div class="tl-item"><span class="tl-tag">对齐</span><br><strong>DPO</strong><br>无 RL 简化对齐</div>
+      <div class="tl-item"><span class="tl-tag green">架构</span><br><strong>Mamba SSM</strong><br>线性复杂度序列模型</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2024+</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag purple">推理</span><br><strong>o1 / o3</strong><br>测试时计算扩展</div>
+      <div class="tl-item"><span class="tl-tag purple">推理</span><br><strong>DeepSeek-R1</strong><br>开源推理模型</div>
+      <div class="tl-item"><span class="tl-tag orange">多模态</span><br><strong>Gemini / GPT-4o</strong><br>原生多模态</div>
+      <div class="tl-item"><span class="tl-tag">长上下文</span><br><strong>1M+ Context</strong><br>Gemini 1.5 Pro</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<hr>
+
+<h2 id="conclusion">10. 结语</h2>
+
+<p>大语言模型代表了人工智能发展史上最重要的范式转变之一。本书系统梳理了这一技术革命的全貌：</p>
+
+<ul>
+  <li><strong>数据和架构奠定基础</strong>：大规模高质量语料 + Transformer 及其改进（RMSNorm/RoPE/SwiGLU/GQA/MoE/FlashAttention）</li>
+  <li><strong>预训练积累知识</strong>：Chinchilla 扩展法则指导算力最优分配，涌现能力随规模出现</li>
+  <li><strong>对齐塑造行为</strong>：从 RLHF 到 DPO，从 Constitutional AI 到超级对齐研究</li>
+  <li><strong>推理技术释放能力</strong>：CoT、ICL、Agent、测试时计算扩展（o1/o3）</li>
+  <li><strong>应用场景创造价值</strong>：搜索、推荐、代码、医疗、教育、科研等垂直领域</li>
+</ul>
+
+<p>站在 2025 年的节点上，LLM 技术正向<strong>更强推理、更长上下文、更多模态、更高效部署、更安全对齐</strong>的方向快速演进。核心挑战包括：幻觉的根本解决、持续学习与知识更新、可扩展对齐方法、以及如何在算力约束下实现更强能力。</p>
+
+<p>中国人民大学 AI Box 的 YuLan 系列工作及本书的撰写，是中国学术界在这一领域做出原创贡献的重要尝试，也为国内研究者和工程师提供了系统学习 LLM 技术的中文参考。</p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);
+});
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);});},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

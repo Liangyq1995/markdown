@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weak-Driven Learning 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.algo-box .kw{color:#cba6f7;font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:#94e2d5;}
+.algo-box .fn{color:#a6e3a1;}
+.algo-box .num{color:#f9e2af;}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Weak-Driven Learning 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">How Weak Agents make Strong Agents Stronger · 北京航空航天大学 / 中国电信天翼云 · 2026-02</p>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>Weak-Driven Learning: How Weak Agents make Strong Agents Stronger</td></tr>
+  <tr><th>机构</th><td>北京航空航天大学 / 中国电信天翼云（Zehao Chen, Yikun Ban, Fuzhen Zhuang, Xianglong Liu 等）</td></tr>
+  <tr><th>核心问题</th><td>SFT 饱和时，如何利用模型自身历史弱检查点作为纠正信号，突破性能天花板？</td></tr>
+  <tr><th>代码地址</th><td>github.com/chenzehao82/Weak-Driven-Learning</td></tr>
+  <tr><th>关键结果</th><td>Qwen3-4B AIME 2025：SFT 12.2% → WMSS 20.0%（+7.8pp），零额外推理成本</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 SFT 饱和瓶颈</h3>
+
+<p>标准后训练范式（SFT、知识蒸馏、课程学习）共同假设：从<strong>更强的监督信号</strong>中学习。这在训练早期有效，但随着优化进行，会出现<strong>性能饱和</strong>：</p>
+
+<pre class="mermaid">
+flowchart LR
+    EARLY["训练早期\nlogit 差距（target - non-target）快速增大\n梯度信号充足"]
+    SAT["饱和阶段\ntarget logit 达到上限\nnon-target logit 停止下降\n决策边界固化，梯度消失"]
+    FAIL["继续 SFT / 自我修正\n效果有限\n梯度仍然消失\n继续加强正确答案无济于事"]
+    EARLY --> SAT --> FAIL
+</pre>
+
+<div class="tech-card yellow">
+<strong>饱和的数学本质</strong>：当 $p_\mathrm{strong}(y^* | x) \approx 1$ 时，交叉熵损失的梯度 $\nabla_\theta \mathcal{L} \approx 0$——不是因为模型达到了极限，而是因为<strong>监督信号已经无法区分强模型和最优模型</strong>。真正的"提升空间"藏在 non-target token 的细粒度区分上。
+</div>
+
+<h3>1.2 反转学习流向</h3>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph CONV["传统范式（强到弱）"]
+        STRONG_T["强教师\n更大模型 / 更好标注"] -->|"知识蒸馏"| WEAK_S["弱学生"]
+    end
+    subgraph WDL["Weak-Driven Learning（弱到强）"]
+        WEAK_R["弱参考模型\n历史检查点（易获取）"] -->|"注入结构化不确定性"| STRONG_L["强学生\n继续提升"]
+    end
+    CONV -->|"颠覆假设"| WDL
+</pre>
+
+<p><strong>形式化定义（论文原文）</strong>：给定强智能体 $M_\mathrm{strong}$、弱智能体 $M_\mathrm{weak}$ 和任务数据集 $D$，Weak-Driven Learning 通过联合利用两者在 $D$ 上的输出构建训练信号，将 $M_\mathrm{strong}$ 优化为更强的 $M_\mathrm{strong}^+$。</p>
+
+<hr>
+
+<!-- ═══ 2. 背景 ═══ -->
+<h2 id="s2">2. 背景与相关工作</h2>
+
+<table>
+  <tr><th>范式</th><th>方向</th><th>依赖</th><th>饱和时的问题</th></tr>
+  <tr><td>标准 SFT</td><td>→ 标准监督</td><td>高质量标注</td><td>梯度消失，logit 固化</td></tr>
+  <tr><td>知识蒸馏（KD）</td><td>强→弱（教师→学生）</td><td>需要更强教师（昂贵）</td><td>同样受制于模仿目标的梯度消失</td></tr>
+  <tr><td>RLHF/GRPO</td><td>→ 奖励信号</td><td>奖励模型或验证器</td><td>仍依赖结果奖励，密集信号不足</td></tr>
+  <tr><td>Weak-to-Strong (Burns 2023)</td><td>弱→强</td><td>人类监督弱模型标注</td><td>不同问题：弱标注是否能激活强能力</td></tr>
+  <tr><td style="color:var(--strong)"><strong>WMSS（本文）</strong></td><td style="color:var(--strong)"><strong>自身历史弱检查点→强模型</strong></td><td style="color:var(--strong)"><strong>无需外部资源，历史检查点免费获取</strong></td><td style="color:var(--strong)"><strong>专门设计突破饱和</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 3. 方法 ═══ -->
+<h2 id="s3">3. WMSS 框架：完整方法</h2>
+
+<h3>3.1 三阶段流程</h3>
+
+<pre class="mermaid">
+flowchart TD
+    P1["阶段1：初始化\n基础模型 M₀ → 标准 SFT → M₁\n弱Agent = M₀，强Agent = M₁"]
+    P2["阶段2：CEDA（课程增强数据激活）\n基于弱强熵差诊断每个样本\n三类信号驱动采样权重"]
+    P3["阶段3：JTWS（联合弱强训练）\n混合 logit: z_mix = λz_strong + (1-λ)z_weak\n对混合 logit 最小化交叉熵"]
+    P1 --> P2 --> P3 --> OUT["更强模型 M⁺"]
+</pre>
+
+<h3>3.2 CEDA：课程增强数据激活</h3>
+
+<p>对每个样本 $x_i$，定义熵变化量（强模型相对弱模型的不确定性变化）：</p>
+
+<div class="math-block">
+$$\Delta H_i = H(M_\mathrm{strong};\, x_i) - H(M_\mathrm{weak};\, x_i)$$
+</div>
+
+<p>采样概率由三类信号线性组合：</p>
+
+<div class="math-block">
+$$p_i \propto \alpha \cdot H(M_\mathrm{weak};\, x_i) + \beta \cdot [-\Delta H_i]_+ + \gamma \cdot [\Delta H_i]_+$$
+</div>
+
+<table>
+  <tr><th>信号</th><th>条件</th><th>含义</th><th>作用</th></tr>
+  <tr><td>$\alpha H(M_\mathrm{weak})$（基础难度）</td><td>弱模型熵高</td><td>样本固有复杂性</td><td>强调有难度的概念</td></tr>
+  <tr><td>$\beta[-\Delta H_i]_+$（巩固）</td><td>$\Delta H \lt 0$，强比弱更确定</td><td>快速学习的内容，可能脆弱</td><td>防止浅层学习，巩固稳定性</td></tr>
+  <tr><td>$\gamma[\Delta H_i]_+$（回归修复）</td><td>$\Delta H \gt 0$，强比弱更不确定</td><td>能力退化点</td><td>修复强模型的遗忘区域</td></tr>
+</table>
+
+<p>论文实验最优参数：$\alpha=0.1,\; \beta=0.8,\; \gamma=0.1$（巩固信号权重最大）。</p>
+
+<h3>3.3 JTWS：联合弱强训练（Joint Training of Weak and Strong）</h3>
+
+<p>混合 logit 公式：</p>
+
+<div class="math-block">
+$$z_\mathrm{mix} = (1-\lambda)\, z_\mathrm{weak} + \lambda\, z_\mathrm{strong}, \quad \lambda \in (0,1)$$
+</div>
+
+<p>训练目标（对混合 softmax 分布最小化交叉熵）：</p>
+
+<div class="math-block">
+$$\mathcal{L}_\mathrm{JTWS} = -\sum_i y_i \log \mathrm{softmax}(z_\mathrm{mix})_i = -\log \frac{\exp(z_\mathrm{mix,target})}{\sum_k \exp(z_\mathrm{mix,k})}$$
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm: WMSS 完整训练流程</div>
+  <p><span class="kw">Input:</span> 基础模型 <span class="var">M₀</span>，任务数据集 <span class="var">D</span>，超参数 <span class="var">α,β,γ,λ</span></p>
+  <p><span class="kw">Phase 1 — 初始化：</span></p>
+  <p style="padding-left:1.5em"><span class="var">M₁</span> ← <span class="fn">StandardSFT</span>(<span class="var">M₀</span>, <span class="var">D</span>) &nbsp;<span class="cm">// 训练强模型</span></p>
+  <p style="padding-left:1.5em"><span class="var">M_weak</span> ← <span class="var">M₀</span>，<span class="var">M_strong</span> ← <span class="var">M₁</span></p>
+  <p><span class="kw">Phase 2 — CEDA 采样：</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for each</span> <span class="var">xᵢ</span> ∈ <span class="var">D</span> <span class="kw">do</span></p>
+  <p style="padding-left:3em">计算 <span class="var">ΔHᵢ</span> = <span class="fn">H</span>(<span class="var">M_strong</span>; <span class="var">xᵢ</span>) − <span class="fn">H</span>(<span class="var">M_weak</span>; <span class="var">xᵢ</span>)</p>
+  <p style="padding-left:3em">计算 <span class="var">pᵢ</span> ∝ α·<span class="fn">H</span>(<span class="var">M_weak</span>; <span class="var">xᵢ</span>) + β·[−<span class="var">ΔHᵢ</span>]₊ + γ·[<span class="var">ΔHᵢ</span>]₊</p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em"><span class="var">D'</span> ← 按 <span class="var">pᵢ</span> 采样得到增强数据集</p>
+  <p><span class="kw">Phase 3 — JTWS 训练：</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for each</span> batch (<span class="var">x</span>, <span class="var">y</span>) ∈ <span class="var">D'</span> <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="var">z_mix</span> ← (1−λ)·<span class="var">M_weak</span>(<span class="var">x</span>) + λ·<span class="var">M_strong</span>(<span class="var">x</span>)</p>
+  <p style="padding-left:3em">更新 <span class="var">M_strong</span>：最小化 <span class="fn">CrossEntropy</span>(<span class="var">y</span>, <span class="fn">softmax</span>(<span class="var">z_mix</span>))</p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p><span class="kw">return</span> <span class="var">M_strong</span>⁺ <span class="cm">// 更强的模型</span></p>
+</div>
+
+<hr>
+
+<!-- ═══ 4. 理论分析 ═══ -->
+<h2 id="s4">4. 理论分析：梯度放大机制</h2>
+
+<h3>4.1 为什么弱模型能放大梯度</h3>
+
+<p>对 non-target token $k$，标准 SFT 的梯度更新约为：</p>
+
+<div class="math-block">
+$$\Delta z_{i,k} \approx -\eta \cdot s_i \cdot P_\mathrm{strong}(k \mid x)$$
+</div>
+
+<p>当强模型已将 $P_\mathrm{strong}(k|x) \approx 0$ 时，梯度消失。混合后：</p>
+
+<div class="math-block">
+$$\Delta z_{i,k} \approx -\eta \cdot s_i \cdot P_\mathrm{mix}(k \mid x) = -\eta \cdot s_i \cdot \left[(1-\lambda) P_\mathrm{weak}(k|x) + \lambda P_\mathrm{strong}(k|x)\right]$$
+</div>
+
+<p>弱模型对 hard negative $k$ 赋予较高概率（$P_\mathrm{weak}(k|x) \gg P_\mathrm{strong}(k|x)$），使 $P_\mathrm{mix}(k|x)$ 显著增大，从而恢复有效梯度。</p>
+
+<div class="tech-card blue">
+<strong>关键定理（论文 Theorem 4.1 精简版）</strong>：若弱模型在 hard negatives 上的概率高于强模型，则存在 $\lambda^*$ 使得 JTWS 的梯度范数 $\|\nabla_\theta \mathcal{L}_\mathrm{JTWS}\| \gt \|\nabla_\theta \mathcal{L}_\mathrm{SFT}\|$，即混合训练在饱和区具有更强的优化信号。
+</div>
+
+<h3>4.2 三阶段动态机制</h3>
+
+<table>
+  <tr><th>阶段</th><th>描述</th><th>效果</th></tr>
+  <tr><td>1. 饱和区放大</td><td>弱模型混淆 non-target token，梯度被激活</td><td>突破饱和，模型开始继续学习</td></tr>
+  <tr><td>2. 梯度漂移</td><td>弱模型随训练变化，混合分布动态演化</td><td>自适应调整训练方向</td></tr>
+  <tr><td>3. 收敛稳定</td><td>弱强模型都趋近真实分布，混合回归 SFT</td><td>自动稳定，避免过度强化弱模型噪声</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 5. 实验结果 ═══ -->
+<h2 id="s5">5. 实验结果</h2>
+
+<div id="chart-results" class="echarts-box" style="height:360px"></div>
+
+<h3>5.1 Qwen3-4B-Base 详细结果</h3>
+
+<table>
+  <tr><th>数据集</th><th>SFT 基线</th><th>WMSS</th><th>提升</th></tr>
+  <tr><td>AIME 2025</td><td>12.2%</td><td style="color:var(--strong)"><strong>20.0%</strong></td><td style="color:var(--strong)">+7.8pp</td></tr>
+  <tr><td>MATH 500</td><td>66.1%</td><td style="color:var(--strong)"><strong>71.3%</strong></td><td style="color:var(--strong)">+5.2pp</td></tr>
+  <tr><td>GSM8K</td><td>83.9%</td><td style="color:var(--strong)"><strong>88.5%</strong></td><td style="color:var(--strong)">+4.6pp</td></tr>
+  <tr><td>HumanEval</td><td>57.7%</td><td style="color:var(--strong)"><strong>59.2%</strong></td><td style="color:var(--strong)">+1.5pp</td></tr>
+  <tr><td>MBPP</td><td>63.1%</td><td style="color:var(--strong)"><strong>66.8%</strong></td><td style="color:var(--strong)">+3.7pp</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 6. 消融实验 ═══ -->
+<h2 id="s6">6. 消融实验</h2>
+
+<h3>6.1 各组件贡献（Qwen3-4B AIME 2025）</h3>
+
+<table>
+  <tr><th>配置</th><th>AIME</th><th>MATH500</th><th>GSM8K</th><th>平均</th></tr>
+  <tr><td>基线 SFT</td><td>12.2</td><td>66.1</td><td>83.9</td><td>54.1</td></tr>
+  <tr><td>+ CEDA</td><td>13.3</td><td>69.4</td><td>86.2</td><td>56.3</td></tr>
+  <tr><td>+ JTWS</td><td>16.7</td><td>70.2</td><td>87.6</td><td>58.2</td></tr>
+  <tr><td style="color:var(--strong)"><strong>完整 WMSS</strong></td><td style="color:var(--strong)"><strong>20.0</strong></td><td style="color:var(--strong)"><strong>71.3</strong></td><td style="color:var(--strong)"><strong>88.5</strong></td><td style="color:var(--strong)"><strong>59.9</strong></td></tr>
+</table>
+
+<h3>6.2 混合系数 λ 的敏感性</h3>
+
+<p>最优区间：$\lambda \in [0.42, 0.48]$，峰值在 $\lambda = 0.42$。</p>
+<ul>
+  <li>$\lambda$ 太小（弱模型主导）：目标输出质量下降，引入过多弱模型噪声</li>
+  <li>$\lambda$ 太大（强模型主导）：等同于标准 SFT，梯度再次消失</li>
+  <li>$\lambda \approx 0.45$：最优弱强平衡点</li>
+</ul>
+
+<h3>6.3 关键发现："抑制主导"机制</h3>
+
+<div class="tech-card orange">
+<strong>WMSS 主要通过"抑制干扰"而非"强化目标"起效</strong>：训练后 non-target logit 均值从 2.09 降至 0.90（降低 56.9%），而 target logit 仅提升 0.6%。这验证了论文的核心假设：性能瓶颈在于模型对 hard negatives 的区分能力，而非目标 token 的置信度。
+</div>
+
+<hr>
+
+<!-- ═══ 7. 局限性 ═══ -->
+<h2 id="s7">7. 局限性</h2>
+
+<ul>
+  <li><strong>弱模型质量依赖</strong>：弱模型过弱（如完全未训练的随机模型）可能引入无意义噪声，使梯度信号混乱</li>
+  <li><strong>超参数调整</strong>：$\alpha, \beta, \gamma, \lambda$ 对不同模型规模和任务类型可能需要独立调整</li>
+  <li><strong>领域局限</strong>：目前仅验证数学推理和代码生成，创意写作等开放域效果未知</li>
+  <li><strong>弱模型选择策略</strong>：论文仅使用直接前驱检查点，更系统的弱模型选择策略（如多个历史检查点集成）未探索</li>
+</ul>
+
+<hr>
+
+<!-- ═══ 8. 核心洞见 ═══ -->
+<h2 id="s8">8. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>颠覆性前提：弱不等于无用</strong><br>
+传统机器学习的核心信条是"从更好的数据/教师学习"。WMSS 证明这个信条在饱和阶段失效——此时更好的信号不能提供新梯度，而"更差的信号"反而能暴露模型的盲点。这与人类学习的"通过纠错题学习"现象高度一致。
+</div>
+
+<div class="tech-card blue">
+<strong>与 FIPO 的对比</strong><br>
+FIPO（Future-KL）解决的是 GRPO 的信用分配问题（均匀奖励 → token 级加权）；WMSS 解决的是 SFT 的梯度消失问题（强模型饱和 → 弱模型注入梯度）。两者从不同角度解决了同一深层问题：<strong>如何在"容易"的训练信号耗尽后继续有效学习</strong>。
+</div>
+
+<div class="tech-card yellow">
+<strong>理论贡献的实践意义</strong><br>
+论文的梯度放大定理不只是数学上的优雅——它给出了一个可操作的指导原则：当强模型对某类 token 的预测概率接近0时，需要引入能"想起"这些 token 的参考模型（弱检查点恰好满足这一条件，因为它尚未完全压制这些 non-target 概率）。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于原文 arXiv:2502.08222 / 北京航空航天大学 2026-02</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  const c=echarts.init(document.getElementById('chart-results'));
+  c.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'WMSS vs SFT 性能对比（Qwen3-4B-Base）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['SFT 基线','WMSS'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['AIME 2025','MATH 500','GSM8K','HumanEval','MBPP'],axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',name:'准确率 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4',formatter:'{value}%'},min:0,max:100},
+    series:[
+      {name:'SFT 基线',type:'bar',data:[12.2,66.1,83.9,57.7,63.1],barMaxWidth:30,
+       itemStyle:{color:'rgba(69,71,90,0.8)'},
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:11,formatter:'{c}%'}},
+      {name:'WMSS',type:'bar',data:[20.0,71.3,88.5,59.2,66.8],barMaxWidth:30,
+       itemStyle:{color:'rgba(166,227,161,0.85)'},
+       label:{show:true,position:'top',color:'#a6e3a1',fontSize:11,formatter:'{c}%'}}
+    ],
+    grid:{left:60,right:20,bottom:40,top:80}
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数学基础 · 学习报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --bg-card: #2a2a3e;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --accent: #cba6f7;
+      --yellow: #f9e2af;
+      --red: #f38ba8;
+      --teal: #94e2d5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+      line-height: 1.85;
+      font-size: 15px;
+    }
+
+    /* ── 目录 ─────────────────────────────────── */
+    #toc {
+      position: fixed;
+      top: 0; left: 0;
+      width: 240px; height: 100vh;
+      background: var(--bg-nav);
+      overflow-y: auto;
+      padding: 20px 12px;
+      font-size: 12.5px;
+      border-right: 1px solid var(--border);
+      z-index: 10;
+    }
+    #toc h2 {
+      color: var(--heading);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    #toc a {
+      display: block;
+      color: var(--text);
+      text-decoration: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-bottom: 1px;
+      transition: background 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.45;
+    }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 {
+      padding-left: 18px;
+      font-size: 11.5px;
+      opacity: 0.8;
+      border-left: 2px solid var(--border);
+      margin-left: 6px;
+    }
+    #toc a.toc-h3.active { border-left-color: #1e1e2e; }
+
+    /* ── 主内容 ───────────────────────────────── */
+    main {
+      margin-left: 260px;
+      padding: 40px 64px 80px;
+      max-width: none;
+    }
+
+    /* ── 标题 ─────────────────────────────────── */
+    h1 {
+      color: var(--heading);
+      font-size: 2em;
+      margin-bottom: 10px;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+    h2 {
+      color: var(--heading);
+      font-size: 1.3em;
+      margin: 2.2em 0 0.7em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    h2::before {
+      content: '';
+      display: inline-block;
+      width: 4px; height: 1em;
+      background: var(--heading);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    h3 {
+      color: var(--accent);
+      font-size: 1.05em;
+      margin: 1.5em 0 0.5em;
+      padding-left: 10px;
+      border-left: 3px solid var(--accent);
+    }
+
+    /* ── 段落与列表 ───────────────────────────── */
+    p { margin: 0.65em 0; }
+    ul, ol { margin: 0.5em 0 0.5em 1.4em; }
+    li { margin: 0.3em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+
+    /* ── 公式块 ───────────────────────────────── */
+    .fb{background:#1a1a2e;border-left:3px solid var(--heading);padding:14px 20px;margin:1em 0;border-radius:0 6px 6px 0;overflow-x:auto;line-height:2.1;}
+    .fs{background:#252535;border-radius:6px;padding:14px 18px;margin:.8em 0;border:1px solid var(--border);overflow-x:auto;line-height:2.1;}
+    /* MathJax 块级公式左对齐，收紧行间距 */
+    .fb mjx-container[display="true"], .fs mjx-container[display="true"] {
+      display: block !important;
+      text-align: left !important;
+      margin: 0.4em 0 !important;
+      line-height: 1.6 !important;
+    }
+    .fb mjx-container[display="true"] > *, .fs mjx-container[display="true"] > * {
+      text-align: left !important;
+    }
+    /* 消除 aligned 环境里 \\[Xem] 额外撑高 */
+    .fb mjx-container[display="true"] mjx-mtr,
+    .fs mjx-container[display="true"] mjx-mtr {
+      line-height: 1 !important;
+    }
+
+    /* ── 注释/备注 ────────────────────────────── */
+    .note {
+      color: var(--yellow);
+      font-size: 0.88em;
+      margin: 0.5em 0;
+      padding: 8px 12px;
+      background: rgba(249, 226, 175, 0.07);
+      border-radius: 4px;
+      border-left: 3px solid var(--yellow);
+    }
+
+    /* ── 引用块 ───────────────────────────────── */
+    blockquote {
+      border-left: 3px solid var(--quote-bar);
+      padding: 10px 18px;
+      margin: 1.2em 0;
+      background: var(--bg-card);
+      border-radius: 0 6px 6px 0;
+      color: #bac2de;
+    }
+
+    /* ── 表格 ─────────────────────────────────── */
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+    th { background: var(--bg-card); color: var(--heading); padding: 9px 14px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 8px 14px; border: 1px solid var(--border); }
+    tr:hover td { background: var(--bg-card); }
+
+    /* ── 代码 ─────────────────────────────────── */
+    pre {
+      background: var(--bg-code);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      margin: 1em 0;
+      font-size: 0.87em;
+    }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    p code, li code {
+      background: var(--bg-code);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.87em;
+      color: var(--teal);
+    }
+
+    /* ── 图片 ─────────────────────────────────── */
+    figure { margin: 1.6em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; border: 1px solid var(--border); }
+    figcaption { color: #6c7086; font-size: 0.83em; margin-top: 7px; }
+
+    /* ── 分割线 ───────────────────────────────── */
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+
+    /* ── 概要卡片（第0节） ────────────────────── */
+    .overview-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 1em 0 1.6em;
+    }
+    .overview-card p { margin: 0.35em 0; color: #bac2de; }
+
+    /* ── 章节编号徽章 ─────────────────────────── */
+    .section-badge {
+      display: inline-block;
+      background: var(--heading);
+      color: #1e1e2e;
+      font-size: 0.75em;
+      font-weight: 700;
+      padding: 1px 8px;
+      border-radius: 10px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── 滚动条美化 ───────────────────────────── */
+    #toc::-webkit-scrollbar { width: 4px; }
+    #toc::-webkit-scrollbar-track { background: transparent; }
+    #toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$'], ['\\(','\\)']],
+        displayMath: [['$$','$$']],
+        packages: { '[+]': ['ams'] }
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea'] },
+      chtml: { displayAlign: 'left', displayIndent: '0' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+
+<nav id="toc"><h2>目录</h2></nav>
+
+<main>
+
+<h1>数学基础 · 学习报告</h1>
+<blockquote>
+  机器学习算法数学基础 —— 矩阵微积分、概率论、信息论、数值优化的系统梳理
+</blockquote>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c0">〇、与深度学习训练的关系（提要）</h2>
+
+<div class="overview-card">
+  <p>训练中最小化的是经验分布上的平均损失（及正则），即<strong>经验风险</strong>；真正关心的是测试分布上的风险。代理损失、早停等使「优化目标」与「泛化目标」分离。</p>
+  <p>代价曲面 Hessian 的<strong>病态</strong>使一阶法在某些方向极慢；这与下文「条件数、瑞利商、最优步长」同一几何。高维非凸中鞍点与平坦区常比「高代价局部极小」更值得关注。</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c1">一、矩阵运算</h2>
+
+<h3>F 范数</h3>
+<div class="fb">
+$$\|\mathbf{A}\|_F = \sqrt{\sum_{i,j} a_{i,j}^2}, \quad \text{性质：} \|\mathbf{A}\|_F = \sqrt{\text{tr}(\mathbf{A}\mathbf{A}^T)}$$
+</div>
+
+<h3>并矢（外积）</h3>
+<p>给定两个向量 $\vec{\mathbf{x}} = (x_1, x_2, \cdots, x_n)^T$，$\vec{\mathbf{y}} = (y_1, y_2, \cdots, y_n)^T$，向量的并矢（外积）：</p>
+<div class="fb">
+$$\vec{\mathbf{x}} \vec{\mathbf{y}}^T = \vec{\mathbf{x}} \otimes \vec{\mathbf{y}}$$
+</div>
+
+<h3>Hadamard 积（阿达马积）</h3>
+<p>给定两个矩阵 $\mathbf{A}, \mathbf{B} \in \mathbb{R}^{m \times n}$，逐元素积：</p>
+<div class="fb">
+$$(\mathbf{A} \circ \mathbf{B})_{ij} = a_{ij} b_{ij}$$
+</div>
+
+<h3>Kronecker 积（克罗内积）</h3>
+<div class="fb">
+$$\mathbf{A} \otimes \mathbf{B} = \begin{bmatrix} a_{1,1}\mathbf{B} & a_{1,2}\mathbf{B} & \cdots & a_{1,n}\mathbf{B} \\ a_{2,1}\mathbf{B} & a_{2,2}\mathbf{B} & \cdots & a_{2,n}\mathbf{B} \\ \vdots & \vdots & \ddots & \vdots \\ a_{m,1}\mathbf{B} & a_{m,2}\mathbf{B} & \cdots & a_{m,n}\mathbf{B} \end{bmatrix}$$
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c2">二、矩阵微积分公式</h2>
+
+<p>设 $\vec{\mathbf{x}}, \vec{\mathbf{a}}, \vec{\mathbf{b}}, \vec{\mathbf{c}}$ 为 $n$ 阶向量，$\mathbf{A}, \mathbf{B}, \mathbf{C}, \mathbf{X}$ 为 $n$ 阶方阵，则有以下偏导数公式：</p>
+
+<div class="fb">
+$$\frac{\partial(\vec{\mathbf{a}}^T \vec{\mathbf{x}})}{\partial \vec{\mathbf{x}}} = \frac{\partial(\vec{\mathbf{x}}^T \vec{\mathbf{a}})}{\partial \vec{\mathbf{x}}} = \vec{\mathbf{a}}$$
+
+$$\frac{\partial(\vec{\mathbf{a}}^T \mathbf{X} \vec{\mathbf{b}})}{\partial \mathbf{X}} = \vec{\mathbf{a}} \vec{\mathbf{b}}^T = \vec{\mathbf{a}} \otimes \vec{\mathbf{b}} \in \mathbb{R}^{n \times n}$$
+
+$$\frac{\partial(\vec{\mathbf{a}}^T \mathbf{X}^T \vec{\mathbf{b}})}{\partial \mathbf{X}} = \vec{\mathbf{b}} \vec{\mathbf{a}}^T = \vec{\mathbf{b}} \otimes \vec{\mathbf{a}} \in \mathbb{R}^{n \times n}$$
+
+$$\frac{\partial(\vec{\mathbf{a}}^T \mathbf{X} \vec{\mathbf{a}})}{\partial \mathbf{X}} = \frac{\partial(\vec{\mathbf{a}}^T \mathbf{X}^T \vec{\mathbf{a}})}{\partial \mathbf{X}} = \vec{\mathbf{a}} \otimes \vec{\mathbf{a}}$$
+
+$$\frac{\partial(\vec{\mathbf{a}}^T \mathbf{X}^T \mathbf{X} \vec{\mathbf{b}})}{\partial \mathbf{X}} = \mathbf{X}(\vec{\mathbf{a}} \otimes \vec{\mathbf{b}} + \vec{\mathbf{b}} \otimes \vec{\mathbf{a}})$$
+
+$$\frac{\partial[(\mathbf{A}\vec{\mathbf{x}}+\vec{\mathbf{a}})^T \mathbf{C}(\mathbf{B}\vec{\mathbf{x}}+\vec{\mathbf{b}})]}{\partial \vec{\mathbf{x}}} = \mathbf{A}^T \mathbf{C}(\mathbf{B}\vec{\mathbf{x}}+\vec{\mathbf{b}}) + \mathbf{B}^T \mathbf{C}(\mathbf{A}\vec{\mathbf{x}}+\vec{\mathbf{a}})$$
+
+$$\frac{\partial(\vec{\mathbf{x}}^T \mathbf{A} \vec{\mathbf{x}})}{\partial \vec{\mathbf{x}}} = (\mathbf{A} + \mathbf{A}^T)\vec{\mathbf{x}}$$
+
+$$\frac{\partial[(\mathbf{X}\vec{\mathbf{b}}+\vec{\mathbf{c}})^T \mathbf{A}(\mathbf{X}\vec{\mathbf{b}}+\vec{\mathbf{c}})]}{\partial \mathbf{X}} = (\mathbf{A}+\mathbf{A}^T)(\mathbf{X}\vec{\mathbf{b}}+\vec{\mathbf{c}})\vec{\mathbf{b}}^T$$
+
+$$\frac{\partial(\vec{\mathbf{b}}^T \mathbf{X}^T \mathbf{A} \mathbf{X} \vec{\mathbf{c}})}{\partial \mathbf{X}} = \mathbf{A}^T \mathbf{X} \vec{\mathbf{b}}\vec{\mathbf{c}}^T + \mathbf{A}\mathbf{X}\vec{\mathbf{c}}\vec{\mathbf{b}}^T$$
+</div>
+
+<h3 id="c3">三、矩阵迹（trace）恒等式</h3>
+<div class="fb">
+$$\frac{\partial[\text{tr}(f(\mathbf{X}))]}{\partial \mathbf{X}} = (f'(\mathbf{X}))^T$$
+
+$$\frac{\partial[\text{tr}(\mathbf{A}\mathbf{X}\mathbf{B})]}{\partial \mathbf{X}} = \mathbf{A}^T \mathbf{B}^T$$
+
+$$\frac{\partial[\text{tr}(\mathbf{A}\mathbf{X}^T\mathbf{B})]}{\partial \mathbf{X}} = \mathbf{B}\mathbf{A}$$
+
+$$\frac{\partial[\text{tr}(\mathbf{A} \otimes \mathbf{X})]}{\partial \mathbf{X}} = \text{tr}(\mathbf{A})\mathbf{I}$$
+
+$$\frac{\partial[\text{tr}(\mathbf{A}\mathbf{X}\mathbf{B}\mathbf{X})]}{\partial \mathbf{X}} = \mathbf{A}^T \mathbf{X}^T \mathbf{B}^T + \mathbf{B}^T \mathbf{X}^T \mathbf{A}^T$$
+
+$$\frac{\partial[\text{tr}(\mathbf{X}^T \mathbf{B} \mathbf{X} \mathbf{C})]}{\partial \mathbf{X}} = \mathbf{B}\mathbf{X}\mathbf{C} + \mathbf{B}^T \mathbf{X} \mathbf{C}^T$$
+
+$$\frac{\partial[\text{tr}(\mathbf{C}^T \mathbf{X}^T \mathbf{B} \mathbf{X} \mathbf{C})]}{\partial \mathbf{X}} = (\mathbf{B}^T + \mathbf{B})\mathbf{X}\mathbf{C}\mathbf{C}^T$$
+
+$$\frac{\partial[\text{tr}(\mathbf{A}\mathbf{X}\mathbf{B}\mathbf{X}^T\mathbf{C})]}{\partial \mathbf{X}} = \mathbf{A}^T \mathbf{C}^T \mathbf{X}\mathbf{B}^T + \mathbf{C}\mathbf{A}\mathbf{X}\mathbf{B}$$
+
+$$\frac{\partial[\text{tr}((\mathbf{A}\mathbf{X}\mathbf{B}+\mathbf{C})(\mathbf{A}\mathbf{X}\mathbf{B}+\mathbf{C}))]}{\partial \mathbf{X}} = 2\mathbf{A}^T(\mathbf{A}\mathbf{X}\mathbf{B}+\mathbf{C})\mathbf{B}^T$$
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c4">四、概率论</h2>
+
+<h3>条件概率链式法则</h3>
+<p>对于 $n$ 个随机变量 $X_1, \cdots, X_n$：</p>
+<div class="fb">
+$$P(X_1, X_2, \cdots, X_n) = P(X_1) \prod_{i=2}^{n} P(X_i | X_1, \cdots, X_{i-1})$$
+</div>
+
+<h3>条件独立</h3>
+<p>两个随机变量 $X, Y$ 关于随机变量 $Z$ 条件独立的数学描述：</p>
+<div class="fb">
+$$P(X, Y | Z) = P(X|Z) P(Y|Z)$$
+</div>
+
+<h3>期望</h3>
+<p>对于随机变量 $X$，设 $Y = g(X)$ 也为随机变量，$g(\cdot)$ 是连续函数：</p>
+
+<p><strong>离散型</strong>：</p>
+<div class="fb">
+$$\mathbb{E}_{x \sim P(X)}[g(X)] = \sum_x g(x) p(x)$$
+</div>
+
+<p><strong>连续型</strong>：</p>
+<div class="fb">
+$$\mathbb{E}_{x \sim P(X)}[g(X)] = \int g(x) p(x) dx$$
+</div>
+
+<p>该定理的意义在于：当求 $\mathbb{E}[Y]$ 时，不必计算出 $Y$ 的分布，只需要利用 $X$ 的分布即可。</p>
+
+<p><strong>二元情形</strong>：对于随机变量 $X, Y$，假设 $Z = g(X, Y)$，则：</p>
+<div class="fs">
+$$\mathbb{E}[Z] = \mathbb{E}[g(X,Y)] = \int_{-\infty}^{\infty} \int_{-\infty}^{\infty} g(x,y) p(x,y) dx dy$$
+</div>
+
+<h3>切比雪夫不等式</h3>
+<p>假设随机变量 $X$ 具有期望 $\mu$，方差 $\sigma^2$，则对于任意正数 $\epsilon$：</p>
+<div class="fb">
+$$P\{|X - \mu| \geq \epsilon\} \leq \frac{\sigma^2}{\epsilon^2}$$
+</div>
+
+<h3>n 维正态分布的四条性质</h3>
+<ol>
+  <li>$n$ 维正态变量的每一个分量都是正态变量；反之，若 $X_1, \cdots, X_n$ 都是正态变量且相互独立，则 $(X_1, \cdots, X_n)$ 是 $n$ 维正态变量；</li>
+  <li>$n$ 维随机变量 $(X_1, \cdots, X_n)$ 服从 $n$ 维正态分布的充要条件是：$X_1, \cdots, X_n$ 的任意线性组合 $l_1 X_1 + \cdots + l_n X_n$（$l_1, \cdots, l_n$ 不全为 0）服从一维正态分布；</li>
+  <li>若 $(X_1, \cdots, X_n)$ 服从 $n$ 维正态分布，设 $Y_1, \cdots, Y_k$ 是 $X_j$ 的线性函数，则 $(Y_1, \cdots, Y_k)$ 也服从多维正态分布；</li>
+  <li>设 $(X_1, \cdots, X_n)$ 服从 $n$ 维正态分布，则 $X_1, \cdots, X_n$ 相互独立的充要条件是 $X_1, \cdots, X_n$ 两两不相关。</li>
+</ol>
+
+<h3>混合概率分布</h3>
+<p>混合概率分布组合了其他几个分量的分布。在每次生成样本中，首先通过 multinoulli 分布决定选用哪个分量，然后由该分量的分布函数来生成样本：</p>
+<div class="fb">
+$$p(x) = \sum_i P(c=i) p(x|c=i)$$
+</div>
+<p>其中 $P(c=i)$ 为一个 multinoulli 分布，$c$ 的取值范围就是各分量的编号。</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c5">五、信息论</h2>
+
+<p>信息论背后的原理：从不太可能发生的事件中能学到更多的有用信息；发生可能性较大的事件包含较少的信息；独立事件包含额外的信息。</p>
+
+<h3>自信息（Self-information）</h3>
+<div class="fb">
+$$I(x) = -\log P(x)$$
+</div>
+
+<h3>信息熵（Shannon Entropy）</h3>
+<div class="fb">
+$$H(X) = -\sum_{x \in \mathcal{X}} p(x) \log p(x)$$
+</div>
+
+<h3>互信息（Mutual Information）</h3>
+<p>两个离散随机变量 $\mathbf{X}$ 和 $\mathbf{Y}$ 的互信息：</p>
+<div class="fb">
+$$I(\mathbf{X}, \mathbf{Y}) = \sum_{x \in \mathcal{X}} \sum_{y \in \mathcal{Y}} p(x,y) \log\left(\frac{p(x,y)}{p(x)p(y)}\right)$$
+</div>
+
+<h3>联合熵（Joint Entropy）</h3>
+<div class="fb">
+$$H(\mathbf{X}, \mathbf{Y}) = -\sum_{x \in \mathcal{X}} \sum_{y \in \mathcal{Y}} p(x,y) \log p(x,y)$$
+</div>
+
+<h3>条件熵（Conditional Entropy）</h3>
+<p>在已知随机变量 $\mathbf{X}$ 的条件下随机变量 $\mathbf{Y}$ 的不确定性：</p>
+<div class="fb">
+$$H(Y|X) = \mathbb{E}_{X \sim P(X)}[H(Y|X=x)] = -\mathbb{E}_{(X,Y) \sim P(X,Y)} \log P(Y|X)$$
+
+$$H(Y|X) = \sum_{x \in \mathcal{X}} p(x) H(Y|x) = -\sum_{x \in \mathcal{X}} p(x) \sum_{y \in \mathcal{Y}} p(y|x) \log p(y|x)$$
+</div>
+<p>由定义可以证明：$H(X,Y) = H(Y|X) + H(X)$</p>
+
+<h3>交叉熵（Cross Entropy）</h3>
+<p>设 $P(X)$ 为真实分布，$Q(X)$ 为非真实分布：</p>
+<div class="fb">
+$$H(P, Q) = H(P) + D_{KL}(P \| Q) = -\mathbb{E}_{X \sim P(X)} \log Q(x)$$
+
+$$H(P, Q) = -\sum_x P(x) \log Q(x)$$
+</div>
+<p>交叉熵刻画了使用错误分布 $Q$ 来表示真实分布 $P$ 中的样本的平均编码长度。</p>
+
+<h3>KL 散度（Kullback-Leibler Divergence）</h3>
+<div class="fb">
+$$D_{KL}(P \| Q) = \mathbb{E}_{X \sim P(X)}\left[\log\frac{P(x)}{Q(x)}\right] = \mathbb{E}_{X \sim P(X)}[\log P(x) - \log Q(x)]$$
+$$D_{KL}(P \| Q) = \sum_x P(x) \log\frac{P(x)}{Q(x)}$$
+</div>
+
+<div class="note">
+  <div class="note-t">KL 散度的重要性质</div>
+  <ul>
+    <li><strong>非负性</strong>：$D_{KL}(P\|Q) \geq 0$，当且仅当 $P$ 和 $Q$ 是同一个分布时等号成立（离散型），或两个分布几乎处处相等（连续型）；</li>
+    <li><strong>不对称性</strong>：$D_{KL}(P\|Q) \neq D_{KL}(Q\|P)$；</li>
+    <li><strong>含义</strong>：$D_{KL}(P\|Q)$ 刻画了用错误分布 $Q$ 编码真实分布 $P$ 带来的平均编码长度的增量。</li>
+  </ul>
+</div>
+
+<h3>信息论各量关系总结</h3>
+<table>
+  <tr><th>量</th><th>公式</th><th>含义</th></tr>
+  <tr><td>自信息</td><td>$I(x) = -\log P(x)$</td><td>单个事件 $x$ 包含的信息量</td></tr>
+  <tr><td>信息熵</td><td>$H(X) = -\sum_x p(x)\log p(x)$</td><td>随机变量 $X$ 的平均不确定性</td></tr>
+  <tr><td>联合熵</td><td>$H(X,Y) = -\sum_{x,y} p(x,y)\log p(x,y)$</td><td>$(X,Y)$ 的联合不确定性</td></tr>
+  <tr><td>条件熵</td><td>$H(Y|X) = H(X,Y) - H(X)$</td><td>已知 $X$ 后 $Y$ 的剩余不确定性</td></tr>
+  <tr><td>互信息</td><td>$I(X;Y) = H(X) - H(X|Y) = H(Y) - H(Y|X)$</td><td>$X$ 和 $Y$ 共享的信息量</td></tr>
+  <tr><td>交叉熵</td><td>$H(P,Q) = -\sum_x P(x)\log Q(x)$</td><td>用 $Q$ 编码 $P$ 的平均编码长度</td></tr>
+  <tr><td>KL 散度</td><td>$D_{KL}(P\|Q) = H(P,Q) - H(P)$</td><td>$P$ 和 $Q$ 的分布差异</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c6">六、蒙特卡洛积分与采样</h2>
+<p>蒙特卡洛方法用随机抽样近似高维积分，是贝叶斯推断与强化学习的基础工具。</p>
+
+<h3 id="c6a">积分（期望法）</h3>
+<p>设需求解的积分为 $I=\displaystyle\int_a^b f(x)\,dx$。在 $[a,b]$ 上任选一个概率密度 $p(x)$，满足</p>
+<div class="fb">
+$$\int_a^b p(x)\,dx=1,\qquad \text{且当 }f(x)\ne 0\text{ 时必有 }p(x)\ne 0.$$
+</div>
+<p>定义 $f^*(x)=f(x)/p(x)$（$p(x)\ne 0$ 时），则</p>
+<div class="fb">
+$$I = \mathbb{E}_{X\sim p}\bigl[f^*(X)\bigr] \approx \bar I = \frac{1}{N}\sum_{i=1}^N f^*(x_i), \quad x_i\stackrel{\text{i.i.d.}}{\sim}p$$
+</div>
+
+<h3 id="c6b">逆变换法与接受–拒绝采样</h3>
+<ul>
+  <li><strong>逆变换法：</strong>由均匀分布 $U(0,1)$ 生成 $z_i$，令 $x_i=\tilde P^{-1}(z_i)$，其中 $\tilde P$ 为 $p(x)$ 的 CDF。</li>
+  <li><strong>接受–拒绝：</strong>取易采样的 $q(x)$ 与常数 $k$ 使 $p(x)\le k\,q(x)$，以接受率 $\alpha_i=p(x_i)/(k\,q(x_i))$ 筛选候选点。高维时合适的 $q$ 与 $k$ 往往难选。</li>
+</ul>
+
+<figure>
+  <img src="https://raw.githubusercontent.com/Liangyq1995/markdown/master/picture/1/3.png" alt="接受拒绝采样示意图">
+  <figcaption>图：接受–拒绝采样示意</figcaption>
+</figure>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c7">七、马尔可夫链：平稳分布与细致平稳</h2>
+<p>马尔可夫性 $P(X_{t+1}\mid X_t,\ldots,X_1)=P(X_{t+1}\mid X_t)$。非周期、不可约时存在唯一平稳分布 $\pi$。</p>
+
+<div class="fb">
+$$\pi(j) = \sum_i \pi(i)P_{ij}$$
+
+$$\mathbf{P}^T\pi = \pi \quad\text{（平稳条件，列向量 }\pi,\,\sum_j\pi_j=1\text{）}$$
+
+$$\pi(i)P_{ij} = \pi(j)P_{ji} \implies \sum_i\pi(i)P_{ij} = \pi(j) \quad\text{（细致平稳 }\Rightarrow\text{ 平稳）}$$
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c8">八、MCMC：从提议链到 Metropolis–Hastings</h2>
+<p>目标：构造转移使平稳分布为 $\tilde p$。已有提议矩阵 $\mathbf{Q}$，一般不满足细致平稳，引入接受率修正。</p>
+
+<div class="fb">
+$$\tilde p(i)\,Q_{ij}\,\alpha(i,j)=\tilde p(j)\,Q_{ji}\,\alpha(j,i)$$
+</div>
+<p>取使接受率尽量大的形式，得到 <strong>M-H 接受率</strong>：</p>
+<div class="fb">
+$$\alpha(i,j)=\min\left\{1,\ \frac{\tilde p(j)\,Q_{ji}}{\tilde p(i)\,Q_{ij}}\right\}$$
+</div>
+<div class="note">
+  接受率过小会导致链原地踏步、混合慢。等比例放大形式的推导：令 $\alpha^*(i,j)=K\,\tilde p(j)Q_{ji}$，$\alpha^*(j,i)=K\,\tilde p(i)Q_{ij}$，取 $K=1/\max(\tilde p(i)Q_{ij},\,\tilde p(j)Q_{ji})$ 即得上式。
+</div>
+
+<figure>
+  <img src="https://raw.githubusercontent.com/Liangyq1995/markdown/master/picture/2/83.png" alt="MCMC 示意图">
+  <figcaption>图：MCMC 采样示意</figcaption>
+</figure>
+
+<h3 id="c8g">Gibbs 采样：条件更新与细致平稳</h3>
+<p>对 $\tilde p(x,y)$，固定 $x=x_1$，在直线 $x=x_1$ 上取 $A=(x_1,y_1)$、$B=(x_1,y_2)$，有：</p>
+<div class="fb">
+$$\tilde p(x_1,y_1)\,\tilde p(y_2\mid x_1)=\tilde p(x_1,y_2)\,\tilde p(y_1\mid x_1)$$
+</div>
+<p>故在固定 $x$ 上用条件分布 $\tilde p(y\mid x)$ 作转移满足细致平稳。推广到「交替按轴条件跳转」的 $\mathbf{Q}$，链收敛到 $\tilde p$。</p>
+
+<figure>
+  <img src="https://raw.githubusercontent.com/Liangyq1995/markdown/master/picture/2/84.png" alt="Gibbs 采样示意图">
+  <figcaption>图：Gibbs 采样示意</figcaption>
+</figure>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c9">九、数值稳定性、条件数与梯度法</h2>
+<p>下溢/上溢；<strong>条件数</strong>刻画「输入微小扰动时输出变化有多大」，大则舍入误差易被放大。</p>
+
+<div class="fb">
+$$\kappa(\mathbf{A}) = \max_{i\ne j}\bigl|\lambda_i/\lambda_j\bigr| \quad\text{（方阵条件数，}\lambda_i\text{ 为特征值）}$$
+
+$$\nabla_{\vec{\mathbf{x}}} f = \Bigl(\frac{\partial f}{\partial x_1},\ldots,\frac{\partial f}{\partial x_n}\Bigr)^T$$
+
+$$\vec{\mathbf{x}}' = \vec{\mathbf{x}}-\epsilon\nabla_{\vec{\mathbf{x}}} f(\vec{\mathbf{x}})$$
+
+$$\epsilon^* = \arg\min_{\epsilon>0} f\bigl(\vec{\mathbf{x}}-\epsilon\nabla_{\vec{\mathbf{x}}} f(\vec{\mathbf{x}})\bigr)$$
+</div>
+
+<p>目标凸时梯度下降得全局最优；一般非凸不保证。</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c10">十、Hessian、泰勒展开、最优步长与牛顿法</h2>
+<p>$\mathbf{H}_{ij}=\partial^2 f/(\partial x_i\partial x_j)$，二阶偏导连续时 $\mathbf{H}=\mathbf{H}^T$。在 $\vec{\mathbf{x}}_0$ 处沿 $-\vec{\mathbf{g}}$ 方向做泰勒近似：</p>
+
+<div class="fb">
+$$f(\vec{\mathbf{x}}_0-\epsilon\vec{\mathbf{g}}) \approx f(\vec{\mathbf{x}}_0)-\epsilon\,\vec{\mathbf{g}}^T\vec{\mathbf{g}}+\tfrac12\epsilon^2\,\vec{\mathbf{g}}^T\mathbf{H}\vec{\mathbf{g}}$$
+
+$$\epsilon^* = \frac{\vec{\mathbf{g}}^T\vec{\mathbf{g}}}{\vec{\mathbf{g}}^T\mathbf{H}\vec{\mathbf{g}}}=\frac{1}{R(\vec{\mathbf{g}})},\quad R(\vec{\mathbf{x}})=\frac{\vec{\mathbf{x}}^T\mathbf{H}\vec{\mathbf{x}}}{\vec{\mathbf{x}}^T\vec{\mathbf{x}}}\in[\lambda_n,\lambda_1]$$
+</div>
+
+<div class="note">
+  若 $\vec{\mathbf{g}}^T\mathbf{H}\vec{\mathbf{g}}\le 0$，二次项不会"顶上去"，近似下无论步长多大均可下降。若 $\vec{\mathbf{g}}^T\mathbf{H}\vec{\mathbf{g}}>0$，步长不能过大，否则函数值反而上升。最坏情形 $\vec{\mathbf{g}}$ 与 $\lambda_1$ 特征方向平行时 $\epsilon^*=1/\lambda_1$。
+</div>
+
+<p><strong>牛顿法：</strong>二次正定一步 $\vec{\mathbf{x}}^*=\vec{\mathbf{x}}_0-\mathbf{H}^{-1}\vec{\mathbf{g}}$；多维迭代 $\vec{\mathbf{x}}^{k+1}=\vec{\mathbf{x}}^k-\mathbf{H}_k^{-1}\vec{\mathbf{g}}_k$；一维切线形式 $x^{k+1}=x^k-f'(x^k)/f''(x^k)$。</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c11">十一、拟牛顿：割线条件、DFP 与 BFGS</h2>
+<p>记 $\vec{\mathbf{y}}_k=\vec{\mathbf{g}}_{k+1}-\vec{\mathbf{g}}_k$，$\vec{\boldsymbol{\delta}}_k=\vec{\mathbf{x}}^{k+1}-\vec{\mathbf{x}}^k$，<strong>割线（拟牛顿）条件</strong>：$\mathbf{H}_k^{-1}\vec{\mathbf{y}}_k\approx\vec{\boldsymbol{\delta}}_k$。用正定 $\mathbf{G}_k\approx\mathbf{H}_k^{-1}$，DFP 更新：</p>
+
+<div class="fb">
+$$\mathbf{G}_{k+1} = \mathbf{G}_k+\frac{\vec{\boldsymbol{\delta}}_k\vec{\boldsymbol{\delta}}_k^T}{\vec{\boldsymbol{\delta}}_k^T\vec{\mathbf{y}}_k}-\frac{\mathbf{G}_k\vec{\mathbf{y}}_k\vec{\mathbf{y}}_k^T\mathbf{G}_k}{\vec{\mathbf{y}}_k^T\mathbf{G}_k\vec{\mathbf{y}}_k}$$
+
+$$\mathbf{G}_{k+1}\vec{\mathbf{y}}_k = \vec{\boldsymbol{\delta}}_k$$
+</div>
+
+<div class="note">
+  BFGS 标准写法为对 Hessian 近似 $\mathbf{B}_k$ 的秩二校正（满足 $\mathbf{B}_{k+1}\vec{\boldsymbol{\delta}}_k=\vec{\mathbf{y}}_k$）：
+</div>
+<div class="fb">
+$$\mathbf{B}_{k+1}=\mathbf{B}_k+\frac{\vec{\mathbf{y}}_k\vec{\mathbf{y}}_k^T}{\vec{\mathbf{y}}_k^T\vec{\boldsymbol{\delta}}_k}-\frac{\mathbf{B}_k\vec{\boldsymbol{\delta}}_k\vec{\boldsymbol{\delta}}_k^T\mathbf{B}_k}{\vec{\boldsymbol{\delta}}_k^T\mathbf{B}_k\vec{\boldsymbol{\delta}}_k}$$
+</div>
+<p>若 $\mathbf{B}_0\succ0$ 则 $\mathbf{B}_k\succ0$ 保持。对 $\mathbf{G}\approx\mathbf{B}^{-1}$ 有对偶的 Sherman–Morrison–Woodbury 形式（实现常用 L-BFGS）。</p>
+
+<!-- ═══════════════════════════════════════════════ -->
+<h2 id="c12">十二、约束优化：拉格朗日、弱对偶、强对偶与 KKT</h2>
+<p>原问题 $\min f(\vec{\mathbf{x}})$ s.t. $c_i(\vec{\mathbf{x}})\le0$，$h_j(\vec{\mathbf{x}})=0$。广义 Lagrange 函数：</p>
+
+<div class="fb">
+$$L(\vec{\mathbf{x}},\vec{\boldsymbol{\alpha}},\vec{\boldsymbol{\beta}})=f+\sum_i\alpha_i c_i+\sum_j\beta_j h_j,\quad \alpha_i\ge0$$
+</div>
+
+<div class="fb">
+$$\theta_P(\vec{\mathbf{x}}) = \max_{\vec{\boldsymbol{\alpha}},\vec{\boldsymbol{\beta}}:\alpha_i\ge0} L(\vec{\mathbf{x}},\vec{\boldsymbol{\alpha}},\vec{\boldsymbol{\beta}})$$
+
+$$d^* = \max_{\alpha\ge0}\min_{\vec{\mathbf{x}}} L \ \le\ \min_{\vec{\mathbf{x}}}\max_{\alpha\ge0} L = p^* \quad\text{（弱对偶）}$$
+</div>
+
+<p>凸 $f,c_i$、仿射 $h_j$、Slater 严格可行 $\Rightarrow$ 强对偶 $p^*=d^*$，存在 $(\vec{\mathbf{x}}^*,\vec{\boldsymbol{\alpha}}^*,\vec{\boldsymbol{\beta}}^*)$ 满足 <strong>KKT 条件</strong>：</p>
+
+<div class="fb">
+$$\nabla_{\vec{\mathbf{x}}}L(\vec{\mathbf{x}}^*,\vec{\boldsymbol{\alpha}}^*,\vec{\boldsymbol{\beta}}^*) = \vec{0} \quad\text{（驻点）}$$
+
+$$\nabla_{\vec{\boldsymbol{\alpha}}}L = \vec{0},\quad \nabla_{\vec{\boldsymbol{\beta}}}L = \vec{0}$$
+
+$$\alpha_i^* \ge 0,\quad c_i(\vec{\mathbf{x}}^*)\le 0 \quad\text{（原始/对偶可行）}$$
+
+$$\alpha_i^* c_i(\vec{\mathbf{x}}^*) = 0,\quad h_j(\vec{\mathbf{x}}^*)=0 \quad\text{（互补松弛）}$$
+</div>
+
+</main>
+
+<script>
+  (function() {
+    var toc = document.getElementById('toc');
+    var headings = document.querySelectorAll('main h2, main h3');
+    headings.forEach(function(h, i) {
+      if (!h.id) h.id = 'section-' + i;
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        var link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (!link) return;
+        if (e.isIntersecting) {
+          toc.querySelectorAll('a.active').forEach(function(n) { n.classList.remove('active'); });
+          link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-8% 0px -80% 0px', threshold: [0, 0.1] });
+
+    headings.forEach(function(h) { observer.observe(h); });
+  })();
+</script>
+
+</body>
+</html>

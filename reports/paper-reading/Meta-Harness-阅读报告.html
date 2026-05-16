@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meta-Harness 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.algo-box .kw{color:#cba6f7;font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:#94e2d5;}
+.algo-box .fn{color:#a6e3a1;}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Meta-Harness 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">End-to-End Optimization of Model Harnesses · Stanford / MIT / KRAFTON · 2026-03</p>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>Meta-Harness: End-to-End Optimization of Model Harnesses</td></tr>
+  <tr><th>机构</th><td>Stanford（Yoonho Lee, Chelsea Finn）/ MIT（Omar Khattab）/ KRAFTON</td></tr>
+  <tr><th>核心问题</th><td>LLM 系统的"套件（Harness）"能否自动化优化，取代人工设计？关键在于允许提议者访问<strong>完整历史日志</strong>而非压缩摘要</td></tr>
+  <tr><th>项目主页</th><td>yoonholee.com/meta-harness/</td></tr>
+  <tr><th>关键结果</th><td>文本分类比 SOTA 手工设计 +7.7pp，同时用 4× 更少 token；IMO 数学推理 +4.7pp；TerminalBench-2 Haiku #1</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 什么是 Harness？</h3>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph SYS["LLM 系统"]
+        HARNESS["Harness（套件）\n决定模型看什么信息\n• 检索策略\n• 记忆管理\n• 工具调用逻辑\n• Prompt 构建\n• 状态更新规则"]
+        MODEL["LLM 模型权重\n固定不变"]
+        HARNESS --> MODEL
+    end
+    TASK["任务"] --> HARNESS
+    MODEL --> OUTPUT["输出"]
+    NOTE["同一个 LLM + 不同 Harness\n可产生 6× 的性能差距！"] -.-> SYS
+</pre>
+
+<div class="tech-card yellow">
+<strong>核心洞见</strong>：修改同一个固定 LLM 的 Harness，可以在同一基准上产生 <strong>6 倍</strong>的性能差距。这意味着 Harness 工程的重要性与模型选择本身相当——但目前这个过程几乎完全依赖人工设计。
+</div>
+
+<h3>1.2 现有文本优化方法的致命缺陷：反馈压缩</h3>
+
+<table>
+  <tr><th>方法</th><th>反馈压缩方式</th><th>MTok/迭代</th><th>问题</th></tr>
+  <tr><td>OPRO</td><td>窗口（解答, 分数）对</td><td>0.002</td><td>丢失执行轨迹细节</td></tr>
+  <tr><td>TextGrad</td><td>当前版本的文本反馈</td><td>0.015</td><td>只看当前候选，无历史</td></tr>
+  <tr><td>AlphaEvolve</td><td>程序数据库 + 评估分数</td><td>0.022</td><td>标量分数无法诊断根因</td></tr>
+  <tr><td style="color:var(--strong)"><strong>Meta-Harness</strong></td><td style="color:var(--strong)"><strong>全部日志 + 分数（无压缩）</strong></td><td style="color:var(--strong)"><strong>10.0</strong></td><td style="color:var(--strong)"><strong>允许跨候选诊断因果链</strong></td></tr>
+</table>
+
+<p>单次 Harness 评估可产生多达 <strong>10,000,000 tokens</strong> 的诊断信息——比现有方法的最大反馈预算高出约 <strong>3 个数量级</strong>。</p>
+
+<hr>
+
+<!-- ═══ 2. 方法 ═══ -->
+<h2 id="s2">2. Meta-Harness 方法</h2>
+
+<h3>2.1 核心设计：文件系统作为无损反馈通道</h3>
+
+<pre class="mermaid">
+flowchart TD
+    FS["文件系统 D\n存储所有历史信息：\n候选 Harness 源码 / 执行轨迹 / 得分\n每个候选 = 一个目录"]
+    PROP["编码 Agent（提议者）\nClaude Code / Claude Opus 4.6\n读取 FS 中全部历史（中位数 82 个文件/迭代）\n诊断失败原因 → 提出改进版本"]
+    EVAL["评估\n在任务上运行新 Harness\n收集执行轨迹"]
+    LOG["记录全部日志到文件系统\n源码 + 执行轨迹 + 分数"]
+    FS --> PROP --> EVAL --> LOG --> FS
+</pre>
+
+<h3>2.2 正式目标函数</h3>
+
+<div class="math-block">
+$$H^{*} = \arg\max_{H}\; \mathbb{E}_{x \sim X,\; \tau \sim p_M(H,x)}\; r(\tau, x)$$
+</div>
+
+<p>其中 $M$ 为固定 LLM，$X$ 为任务分布，$H$ 为 Harness 程序，$\tau$ 为执行轨迹，$r(\tau, x)$ 为任务奖励函数。</p>
+
+<p>多目标时（如准确率 vs 上下文 token 数），报告 <strong>Pareto 前沿</strong>而非单一指标。</p>
+
+<h3>2.3 关键设计决策：编码 Agent vs 原始 LLM</h3>
+
+<p>提议者必须是<strong>编码 Agent</strong>（而非原始 LLM），原因：</p>
+<ul>
+  <li>历史快速超出单次上下文限制，Agent 需自主决定读取哪些历史文件</li>
+  <li>必须通过 <code>grep</code>、<code>cat</code> 等文件操作工具选择性检索（而非一次性吞入）</li>
+  <li>需要直接编辑代码并通过交互验证修改的正确性</li>
+</ul>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm: Meta-Harness 搜索循环</div>
+  <p><span class="kw">Input:</span> 任务分布 <span class="var">X</span>，固定 LLM <span class="var">M</span>，初始 Harness <span class="var">H₀</span>，预算 <span class="var">N</span></p>
+  <p>初始化：文件系统 <span class="var">D</span> ← ∅</p>
+  <p><span class="kw">for</span> i = 1, …, N <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 1. 提议阶段：编码 Agent 读取文件系统</span></p>
+  <p style="padding-left:1.5em"><span class="var">H_new</span> ← <span class="fn">CodingAgent</span>.propose(<span class="var">D</span>) <span class="cm">// 选择性读取历史，诊断失败，生成改进</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 2. 评估阶段</span></p>
+  <p style="padding-left:1.5em"><span class="var">score</span>, <span class="var">traces</span> ← <span class="fn">Evaluate</span>(<span class="var">H_new</span>, <span class="var">M</span>, <span class="var">X</span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// 3. 记录阶段：无损存储所有信息</span></p>
+  <p style="padding-left:1.5em"><span class="var">D</span> ← <span class="var">D</span> ∪ {(<span class="var">H_new</span>, <span class="var">score</span>, <span class="var">traces</span>)}</p>
+  <p><span class="kw">end for</span></p>
+  <p><span class="kw">return</span> argmax<sub><span class="var">H∈D</span></sub> <span class="fn">score</span>(<span class="var">H</span>)</p>
+</div>
+
+<hr>
+
+<!-- ═══ 3. 实验结果 ═══ -->
+<h2 id="s3">3. 实验结果</h2>
+
+<h3>3.1 在线文本分类</h3>
+
+<div id="chart-cls" class="echarts-box" style="height:300px"></div>
+
+<table>
+  <tr><th>方法</th><th>平均准确率</th><th>上下文 token（K）</th><th>效率</th></tr>
+  <tr><td>Zero-Shot</td><td>27.4%</td><td>0</td><td>—</td></tr>
+  <tr><td>Few-Shot（全量）</td><td>40.8%</td><td>12.3k</td><td>—</td></tr>
+  <tr><td>ACE（手工设计最优）</td><td>40.9%</td><td>50.8k</td><td>—</td></tr>
+  <tr><td>MCE（文本优化方法）</td><td>40.0%</td><td>28.5k</td><td>—</td></tr>
+  <tr><td style="color:var(--strong)"><strong>Meta-Harness</strong></td><td style="color:var(--strong)"><strong>48.6%</strong></td><td style="color:var(--strong)"><strong>11.4k</strong></td><td style="color:var(--strong)"><strong>+7.7pp，用 4× 更少 token</strong></td></tr>
+</table>
+
+<h3>3.2 消融：原始执行轨迹 vs 摘要（关键对比）</h3>
+
+<table>
+  <tr><th>提议者可访问的信息</th><th>中位数准确率</th><th>最优准确率</th></tr>
+  <tr><td>仅分数（标量）</td><td>34.6%</td><td>41.3%</td></tr>
+  <tr><td>分数 + 摘要</td><td>34.9%</td><td>38.7%</td></tr>
+  <tr><td style="color:var(--strong)"><strong>完整日志（Meta-Harness）</strong></td><td style="color:var(--strong)"><strong>50.0%</strong></td><td style="color:var(--strong)"><strong>56.7%</strong></td></tr>
+</table>
+
+<div class="tech-card purple">
+<strong>核心发现：摘要不能替代原始轨迹</strong><br>
+提供摘要比只给分数几乎没有提升（34.9% vs 34.6%），而完整日志带来质变（50.0%）。这证明了压缩确实丢失了诊断关键信息——失败模式的根因往往藏在执行轨迹的中间步骤中，摘要无法保留这些因果线索。
+</div>
+
+<h3>3.3 IMO 级数学推理（跨模型泛化）</h3>
+
+<table>
+  <tr><th>方法</th><th>GPT-5.4n</th><th>GPT-5.4m</th><th>Gem-3.1FL</th><th>平均</th></tr>
+  <tr><td>无检索</td><td>23.0</td><td>28.8</td><td>28.6</td><td>34.1</td></tr>
+  <tr><td>Dense 检索（k=5）</td><td>31.1</td><td>28.3</td><td>37.1</td><td>38.1</td></tr>
+  <tr><td style="color:var(--strong)"><strong>Meta-Harness</strong></td><td style="color:var(--strong)"><strong>31.7</strong></td><td style="color:var(--strong)"><strong>30.4</strong></td><td style="color:var(--strong)"><strong>34.9</strong></td><td style="color:var(--strong)"><strong>38.8（+4.7pp）</strong></td></tr>
+</table>
+
+<blockquote>关键：优化时使用的 Harness 从未见过这些测试模型，展示了<strong>良好的跨模型泛化</strong>能力。</blockquote>
+
+<h3>3.4 TerminalBench-2 Agentic 代码</h3>
+
+<table>
+  <tr><th>模型</th><th>方法</th><th>通过率</th><th>排名</th></tr>
+  <tr><td>Claude Opus 4.6</td><td>Terminus-KIRA（手工）</td><td>74.7%</td><td>#1</td></tr>
+  <tr><td style="color:var(--strong)">Claude Opus 4.6</td><td style="color:var(--strong)"><strong>Meta-Harness</strong></td><td style="color:var(--strong)"><strong>76.4%</strong></td><td style="color:var(--strong)"><strong>#2（超越所有其他手工设计）</strong></td></tr>
+  <tr><td>Claude Haiku 4.5</td><td>Terminus-KIRA（手工）</td><td>33.7%</td><td>—</td></tr>
+  <tr><td style="color:var(--strong)">Claude Haiku 4.5</td><td style="color:var(--strong)"><strong>Meta-Harness</strong></td><td style="color:var(--strong)"><strong>37.6%</strong></td><td style="color:var(--strong)"><strong>#1（全榜最高）</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 4. 局限性 ═══ -->
+<h2 id="s4">4. 局限性</h2>
+
+<ul>
+  <li><strong>提议者质量依赖</strong>：目前依赖 Claude Code + Opus 4.6 作为提议者，提议者能力直接影响搜索效率；更弱的提议者会显著降低发现优质 Harness 的速度</li>
+  <li><strong>计算成本高</strong>：每次搜索运行数小时，不适合频繁迭代的快速实验场景</li>
+  <li><strong>过拟合风险</strong>：在代码空间中过拟合更易检测（可见的 if 链、硬编码逻辑），但仍需人工审查以确保 Harness 的泛化性</li>
+  <li><strong>任务特异性</strong>：当前每个任务领域需要独立的搜索过程，跨任务的 Harness 知识迁移未充分探索</li>
+</ul>
+
+<hr>
+
+<!-- ═══ 5. 核心洞见 ═══ -->
+<h2 id="s5">5. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>"元优化"范式：优化优化者本身</strong><br>
+Meta-Harness 的哲学是"用 LLM 优化 LLM 的工作方式"。这不是 fine-tuning（改变权重），不是提示词优化（改变单次输入），而是改变<strong>信息流动的架构</strong>——决定模型在什么时候看到什么信息。这是一个更高层次的自动化，理论上比调整模型本身更高效（因为 Harness 可以即时更改，权重无法）。
+</div>
+
+<div class="tech-card blue">
+<strong>完整日志 vs 摘要：信息论视角</strong><br>
+摘要本质上是有损压缩——任何压缩都会以某种方式丢失信息，而哪些信息在优化中是关键的，事先无法确定。Meta-Harness 的关键决策是让提议者<strong>自主决定读取哪些历史信息</strong>（通过文件系统操作），而不是由外部系统预先决定哪些信息"值得"保留。这是自适应检索 vs 固定摘要的核心区别。
+</div>
+
+<div class="tech-card orange">
+<strong>对 Agent 系统工程的实践启示</strong><br>
+Harness 工程目前是 AI 应用开发中最耗时且最依赖专家直觉的环节。Meta-Harness 展示了一个路径：先用人工设计基础 Harness，再用自动搜索在其基础上继续优化。实验中仅 4 次评估就达到了竞争对手需要 60 次才能达到的水平——这暗示了搜索效率与诊断信息的丰富度直接相关，验证了"更多信息 → 更快找到好方案"的直觉。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于原文 arXiv:2503.XXXXX / Stanford, MIT, KRAFTON 2026-03</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  const c=echarts.init(document.getElementById('chart-cls'));
+  c.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'文本分类任务：准确率 vs Token 消耗',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'item',formatter:p=>`${p.name}<br>准确率: ${p.value[0]}%<br>Token: ${p.value[1]}k`},
+    xAxis:{type:'value',name:'上下文 Token（k）',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:0,max:60},
+    yAxis:{type:'value',name:'准确率 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4',formatter:'{value}%'},min:25,max:55},
+    series:[{type:'scatter',
+      data:[
+        {name:'Zero-Shot',value:[0,27.4],itemStyle:{color:'#45475a'},symbolSize:12},
+        {name:'Few-Shot全量',value:[12.3,40.8],itemStyle:{color:'#45475a'},symbolSize:14},
+        {name:'ACE（手工最优）',value:[50.8,40.9],itemStyle:{color:'#fab387'},symbolSize:16},
+        {name:'MCE',value:[28.5,40.0],itemStyle:{color:'#45475a'},symbolSize:14},
+        {name:'Meta-Harness',value:[11.4,48.6],itemStyle:{color:'#a6e3a1'},symbolSize:20}
+      ],
+      label:{show:true,position:'right',color:'#cdd6f4',formatter:p=>p.name}
+    }],
+    grid:{left:70,right:100,bottom:50,top:50}
+  });
+});
+</script>
+</body>
+</html>

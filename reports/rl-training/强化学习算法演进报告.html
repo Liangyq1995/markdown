@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>强化学习算法演进技术报告 1992–2025</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.red{border-left:4px solid var(--red);}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1em 0;}
+.diff-old{background:#2e1e1e;border:1px solid var(--red);border-radius:6px;padding:14px 18px;}
+.diff-new{background:#1e2e1e;border:1px solid var(--strong);border-radius:6px;padding:14px 18px;}
+.diff-label{font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
+.diff-label.old{color:var(--red);}.diff-label.new{color:var(--strong);}
+.timeline-wrap{overflow-x:auto;margin:1em 0;}
+.timeline{display:flex;gap:0;min-width:1000px;}
+.tl-col{flex:1;display:flex;flex-direction:column;}
+.tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 4px;font-size:.85em;border-radius:6px 6px 0 0;}
+.tl-body{flex:1;padding:10px 6px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px;}
+.tl-item{background:#313244;border-radius:5px;padding:6px 8px;margin-bottom:6px;font-size:.82em;line-height:1.5;}
+.tl-item:last-child{margin-bottom:0;}
+.tl-tag{display:inline-block;font-size:.72em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:3px;background:var(--heading);color:#1e1e2e;}
+.tl-tag.orange{background:#fab387;}.tl-tag.green{background:#a6e3a1;}.tl-tag.purple{background:#cba6f7;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>强化学习算法演进技术报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">从经典 RL 到 LLM 对齐 · 1992–2025 · 生成日期：2026-05-13</p>
+
+<table>
+  <tr><th>覆盖范围</th><td>Q-Learning → DQN → PPO → RLHF → DPO → GRPO → DAPO</td></tr>
+  <tr><th>核心主线</th><td>值函数方法 → 策略梯度 → Actor-Critic → LLM 对齐</td></tr>
+</table>
+<hr>
+
+<!-- ===== 一、时间线 ===== -->
+<h2 id="s1">一、发展时间线</h2>
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col"><div class="tl-period">1992–1998</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">基础</span><br>Q-Learning (Watkins 1992)</div>
+      <div class="tl-item"><span class="tl-tag">基础</span><br>SARSA (1994)</div>
+      <div class="tl-item"><span class="tl-tag green">教材</span><br>Sutton & Barto 强化学习教材 (1998)</div>
+    </div></div>
+    <div class="tl-col"><div class="tl-period">2013–2016</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag orange">深度RL</span><br>DQN Atari (2013)<br>深度 RL 里程碑</div>
+      <div class="tl-item"><span class="tl-tag orange">深度RL</span><br>TRPO (2015)<br>GAE (2015)</div>
+      <div class="tl-item"><span class="tl-tag orange">深度RL</span><br>A3C (2016)</div>
+    </div></div>
+    <div class="tl-col"><div class="tl-period">2017–2020</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag purple">主流算法</span><br>PPO (Schulman 2017)<br>OpenAI 主力算法</div>
+      <div class="tl-item"><span class="tl-tag purple">游戏AI</span><br>AlphaGo Zero (2017)<br>纯 RL 围棋</div>
+      <div class="tl-item"><span class="tl-tag green">LLM对齐</span><br>InstructGPT 雏形 RLHF (2020)</div>
+    </div></div>
+    <div class="tl-col"><div class="tl-period">2022–2023</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag orange">对齐</span><br>InstructGPT (2022)<br>RLHF 标准流程确立</div>
+      <div class="tl-item"><span class="tl-tag orange">对齐</span><br>Constitutional AI (2022)</div>
+      <div class="tl-item"><span class="tl-tag green">离线偏好</span><br>DPO (Rafailov 2023)</div>
+    </div></div>
+    <div class="tl-col"><div class="tl-period">2024–2025</div><div class="tl-body">
+      <div class="tl-item"><span class="tl-tag purple">推理RL</span><br>GRPO (DeepSeekMath 2024)</div>
+      <div class="tl-item"><span class="tl-tag purple">推理RL</span><br>DeepSeek-R1 RLVR (2025)</div>
+      <div class="tl-item"><span class="tl-tag purple">推理RL</span><br>Kimi k1.5 长上下文RL</div>
+      <div class="tl-item"><span class="tl-tag green">改进</span><br>DAPO (ByteDance 2025)</div>
+    </div></div>
+  </div>
+</div>
+
+<h3 id="s1-2">算法谱系</h3>
+<pre class="mermaid">
+graph TD
+  QL["Q-Learning (1992)"] --> DQN["DQN (2013)"]
+  DQN --> DDQN["Double DQN (2015)"]
+  DQN --> Duel["Dueling DQN (2015)"]
+  RF["REINFORCE (1992)"] --> AC["Actor-Critic (2000)"]
+  AC --> A3C["A3C (2016)"]
+  AC --> TRPO["TRPO (2015)"]
+  TRPO --> PPO["PPO (2017)"]
+  PPO --> RLHF["PPO-RLHF InstructGPT (2022)"]
+  RLHF --> DPO["DPO (2023)"]
+  RLHF --> GRPO["GRPO DeepSeekMath (2024)"]
+  DPO --> KTO["KTO (2024)"]
+  GRPO --> DAPO["DAPO (2025)"]
+  GRPO --> RLVR["RLVR DeepSeek-R1 (2025)"]
+</pre>
+
+<!-- ===== 二、MDP 基础 ===== -->
+<h2 id="s2">二、强化学习基础框架</h2>
+
+<h3 id="s2-1">2.1 马尔可夫决策过程（MDP）</h3>
+<div class="tech-card blue">
+  <p>MDP 是强化学习的数学基础，定义为五元组 $\mathcal{M} = \langle \mathcal{S}, \mathcal{A}, \mathcal{R}, \mathcal{P}, \rho_0 \rangle$：</p>
+  <ul>
+    <li>$\mathcal{S}$：状态空间；$\mathcal{A}$：动作空间</li>
+    <li>$\mathcal{R}: \mathcal{S}\times\mathcal{A}\times\mathcal{S}\to\mathbb{R}$：奖励函数</li>
+    <li>$\mathcal{P}: \mathcal{S}\times\mathcal{A}\to\mathcal{P}(\mathcal{S})$：状态转移概率</li>
+    <li>$\rho_0$：初始状态分布</li>
+  </ul>
+  <p><strong>马尔可夫性质：</strong>$P(s_{t+1}|s_t,a_t,s_{t-1},\ldots) = P(s_{t+1}|s_t,a_t)$</p>
+
+  <h4>三种价值函数</h4>
+  <div class="formula-box">
+    $$G_t = \sum_{k=0}^{\infty}\gamma^k r_{t+k} \quad \text{（折扣回报，}\gamma\in[0,1)\text{）}$$
+    $$V^\pi(s) = \mathbb{E}_\pi\!\left[\sum_{t=0}^\infty \gamma^t r_t \;\middle|\; s_0=s\right]$$
+    $$Q^\pi(s,a) = \mathbb{E}_\pi\!\left[\sum_{t=0}^\infty \gamma^t r_t \;\middle|\; s_0=s, a_0=a\right]$$
+    $$A^\pi(s,a) = Q^\pi(s,a) - V^\pi(s) \quad \text{（优势函数）}$$
+  </div>
+</div>
+
+<h3 id="s2-2">2.2 贝尔曼方程完整推导</h3>
+<div class="tech-card green">
+  <h4>贝尔曼期望方程</h4>
+  <div class="formula-box">
+    $$V^\pi(s) = \sum_{a}\pi(a|s)\left[\mathcal{R}(s,a) + \gamma\sum_{s'}\mathcal{P}(s'|s,a)V^\pi(s')\right]$$
+    $$Q^\pi(s,a) = \mathcal{R}(s,a) + \gamma\sum_{s'}\mathcal{P}(s'|s,a)\sum_{a'}\pi(a'|s')Q^\pi(s',a')$$
+  </div>
+  <h4>贝尔曼最优方程</h4>
+  <div class="formula-box">
+    $$V^*(s) = \max_a\!\left[\mathcal{R}(s,a) + \gamma\sum_{s'}\mathcal{P}(s'|s,a)V^*(s')\right]$$
+    $$Q^*(s,a) = \mathcal{R}(s,a) + \gamma\sum_{s'}\mathcal{P}(s'|s,a)\max_{a'}Q^*(s',a')$$
+    $$\pi^*(s) = \arg\max_a Q^*(s,a)$$
+  </div>
+  <p><strong>推导要点：</strong>将 $V^\pi(s) = \mathbb{E}_\pi[G_t|s_0=s]$ 展开，利用期望的线性性和马尔可夫性质，将无限时域求和分解为即时奖励加折扣后续价值，即得到递推形式。</p>
+</div>
+
+<!-- ===== 三、值函数方法 ===== -->
+<h2 id="s3">三、值函数方法</h2>
+
+<h3 id="s3-1">3.1 Q-Learning</h3>
+<div class="tech-card blue">
+  <div class="formula-box">
+    $$Q(s_t,a_t) \leftarrow Q(s_t,a_t) + \alpha\underbrace{\left[r_t + \gamma\max_{a'}Q(s_{t+1},a') - Q(s_t,a_t)\right]}_{\delta_t\text{：TD 误差}}$$
+  </div>
+  <p><strong>TD 误差直觉：</strong>$\delta_t > 0$ 说明当前估计低估了真实价值，需上调；$\delta_t < 0$ 则下调。</p>
+  <p><strong>收敛定理（Watkins & Dayan, 1992）：</strong>满足以下条件时以概率 1 收敛到 $Q^*$：(1) 所有状态-动作对被无限次访问；(2) 学习率满足 Robbins-Monro 条件 $\sum_t \alpha_t = \infty,\, \sum_t \alpha_t^2 < \infty$。</p>
+  <p><strong>Q-Learning 是离策略（off-policy）算法</strong>：更新目标使用贪婪最优动作 $\max_{a'} Q$，而非当前策略实际执行的动作，因此可以从任意行为策略收集的数据中学习。</p>
+</div>
+
+<h3 id="s3-2">3.2 SARSA（同策略）</h3>
+<div class="formula-box">
+  $$Q(s_t,a_t) \leftarrow Q(s_t,a_t) + \alpha\left[r_t + \gamma Q(s_{t+1},a_{t+1}) - Q(s_t,a_t)\right]$$
+</div>
+<p>SARSA 是同策略（on-policy）算法：使用实际执行的动作 $a_{t+1}$（而非贪婪最优）更新，因此学习的是当前策略（含探索）的价值，适合有风险的环境（如悬崖行走问题）。</p>
+
+<h3 id="s3-3">3.3 深度 Q 网络（DQN）</h3>
+<div class="tech-card yellow">
+  <p>用神经网络 $Q(s,a;\theta)$ 近似 Q 函数，损失函数为：</p>
+  <div class="formula-box">
+    $$\mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s')\sim\mathcal{D}}\!\left[\left(r + \gamma\max_{a'}Q(s',a';\theta^-) - Q(s,a;\theta)\right)^2\right]$$
+  </div>
+  <h4>两项关键技术（解决训练不稳定）</h4>
+  <ul>
+    <li><strong>经验回放（Experience Replay）：</strong>将历史转移 $(s_t,a_t,r_t,s_{t+1})$ 存入缓冲区 $\mathcal{D}$，随机采样打破数据相关性。<em>原因：连续帧之间高度相关，直接训练导致梯度估计有偏。</em></li>
+    <li><strong>目标网络（Target Network）：</strong>用独立参数 $\theta^-$ 计算 TD 目标，每 $C$ 步更新一次。<em>原因：若目标随参数同步变化，等同于"追逐移动目标"，导致振荡。</em></li>
+  </ul>
+  <h4>DQN 改进系列</h4>
+  <table>
+    <tr><th>算法</th><th>核心改进</th><th>解决的问题</th></tr>
+    <tr><td>Double DQN (2015)</td><td>$y = r + \gamma Q(s', \arg\max_{a'} Q(s',a';\theta); \theta^-)$，分离选择与评估</td><td>过估计 Q 值（overestimation bias）</td></tr>
+    <tr><td>Dueling DQN (2015)</td><td>$Q = V(s) + (A(s,a) - \frac{1}{|\mathcal{A}|}\sum_{a'}A(s,a'))$</td><td>无动作影响的状态学习效率低</td></tr>
+    <tr><td>Prioritized Replay</td><td>按 TD 误差 $|\delta_t|$ 优先采样</td><td>均匀采样忽略高信息量样本</td></tr>
+    <tr><td>Rainbow (2017)</td><td>整合上述所有改进</td><td>综合</td></tr>
+  </table>
+</div>
+
+<!-- ===== 四、策略梯度 ===== -->
+<h2 id="s4">四、策略梯度方法</h2>
+
+<h3 id="s4-1">4.1 策略梯度定理（完整推导）</h3>
+<div class="tech-card blue">
+  <p>直接对策略参数 $\theta$ 求梯度以最大化 $J(\theta) = \mathbb{E}_{\pi_\theta}[G_0]$：</p>
+  <div class="formula-box">
+    $$J(\theta) = \sum_s d^\pi(s)\sum_a \pi_\theta(a|s)Q^\pi(s,a)$$
+    $$\nabla_\theta J(\theta) = \sum_s d^\pi(s)\sum_a \nabla_\theta\pi_\theta(a|s)\cdot Q^\pi(s,a)$$
+  </div>
+  <p>利用恒等式 $\nabla_\theta \pi_\theta(a|s) = \pi_\theta(a|s)\cdot\nabla_\theta\log\pi_\theta(a|s)$，得到：</p>
+  <div class="formula-box">
+    $$\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta}\!\left[\nabla_\theta\log\pi_\theta(a|s)\cdot Q^\pi(s,a)\right]$$
+  </div>
+  <p>引入基线 $b(s)$（通常取 $V^\pi(s)$）减小方差：</p>
+  <div class="formula-box">
+    $$\nabla_\theta J(\theta) = \mathbb{E}_{\pi_\theta}\!\left[\nabla_\theta\log\pi_\theta(a|s)\cdot A^\pi(s,a)\right]$$
+  </div>
+  <p>其中 $A^\pi(s,a) = Q^\pi(s,a) - V^\pi(s)$，基线不改变梯度期望（$\mathbb{E}[\nabla_\theta\log\pi_\theta \cdot b(s)] = 0$），但显著降低方差。</p>
+</div>
+
+<h3 id="s4-2">4.2 Actor-Critic 框架</h3>
+<pre class="mermaid">
+graph LR
+  S["状态 s_t"] --> Actor["Actor π_θ(a|s)"]
+  S --> Critic["Critic V_φ(s)"]
+  Actor -->|"动作 a_t"| Env["环境"]
+  Env -->|"r_t, s_{t+1}"| TD["TD 误差 δ_t = r_t + γV_φ(s_{t+1}) - V_φ(s_t)"]
+  Critic --> TD
+  TD -->|"更新 θ（策略）"| Actor
+  TD -->|"更新 φ（价值）"| Critic
+</pre>
+<div class="formula-box">
+  $$\text{Actor 更新：}\nabla_\theta J(\theta) = \mathbb{E}\!\left[\nabla_\theta\log\pi_\theta(a_t|s_t)\cdot\delta_t\right]$$
+  $$\text{Critic 更新：}\phi \leftarrow \phi - \beta\nabla_\phi\left(r_t + \gamma V_\phi(s_{t+1}) - V_\phi(s_t)\right)^2$$
+</div>
+
+<!-- ===== 五、PPO ===== -->
+<h2 id="s5">五、PPO：近端策略优化</h2>
+
+<h3 id="s5-1">5.1 从 TRPO 到 PPO</h3>
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">TRPO（2015）— 约束优化</div>
+    <p>$\max_\theta\, \mathbb{E}\!\left[\frac{\pi_\theta(a|s)}{\pi_{\theta_\text{old}}(a|s)}A\right]$</p>
+    <p>$\text{s.t.}\; \mathbb{E}_s[D_\text{KL}(\pi_{\theta_\text{old}}\|\pi_\theta)]\leq\delta$</p>
+    <p>需要二阶优化（共轭梯度），计算代价高</p>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">PPO（2017）— 裁剪目标</div>
+    <p>用简单裁剪替代约束，同样有效限制策略更新幅度</p>
+    <p>$L^\text{CLIP}(\theta) = \mathbb{E}\!\left[\min(r_t A_t,\,\text{clip}(r_t,1-\epsilon,1+\epsilon)A_t)\right]$</p>
+    <p>一阶优化，实现简单，广泛应用</p>
+  </div>
+</div>
+
+<h3 id="s5-2">5.2 PPO-Clip 裁剪机制分析</h3>
+<div class="tech-card blue">
+  <p>重要性采样比率：$r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_\text{old}}(a_t|s_t)}$</p>
+  <table>
+    <tr><th>情形</th><th>$A_t > 0$（好动作）</th><th>$A_t < 0$（坏动作）</th></tr>
+    <tr><td>$r_t > 1+\epsilon$</td><td>梯度截断，不过度增大好动作概率</td><td>正常减小坏动作概率</td></tr>
+    <tr><td>$r_t < 1-\epsilon$</td><td>正常增大好动作概率</td><td>梯度截断，不过度减小坏动作概率</td></tr>
+    <tr><td>$1-\epsilon\leq r_t\leq 1+\epsilon$</td><td>正常更新</td><td>正常更新</td></tr>
+  </table>
+  <p><strong>直觉：</strong>取 $\min$ 使目标函数在策略偏离过大时停止提供收益，形成"信任域"约束的同等效果，但无需二阶优化。</p>
+
+  <h4>完整 PPO 目标（含价值函数损失和熵正则化）</h4>
+  <div class="formula-box">
+    $$L^\text{PPO}(\theta) = \mathbb{E}_t\!\left[L^\text{CLIP}(\theta) - c_1\underbrace{(V_\theta(s_t)-V_t^\text{target})^2}_{L^\text{VF}} + c_2\underbrace{S[\pi_\theta](s_t)}_{\text{熵，鼓励探索}}\right]$$
+  </div>
+</div>
+
+<h3 id="s5-3">5.3 广义优势估计（GAE）</h3>
+<div class="tech-card green">
+  <p>GAE 通过指数加权平均 $n$ 步优势估计，在偏差与方差间取得平衡：</p>
+  <div class="formula-box">
+    $$\delta_t^V = r_t + \gamma V(s_{t+1}) - V(s_t) \quad \text{（1步TD残差）}$$
+    $$\hat{A}_t^\text{GAE(\gamma,\lambda)} = \sum_{l=0}^{\infty}(\gamma\lambda)^l\delta_{t+l}^V$$
+  </div>
+  <p><strong>递推计算（从后向前，$O(T)$）：</strong></p>
+  <div class="formula-box">
+    $$\hat{A}_t = \delta_t^V + \gamma\lambda\hat{A}_{t+1}$$
+  </div>
+  <p><strong>参数含义：</strong></p>
+  <ul>
+    <li>$\lambda=0$：退化为 1步TD（低方差，高偏差）</li>
+    <li>$\lambda=1$：退化为蒙特卡洛估计（无偏，高方差）</li>
+    <li>$\lambda\in(0.9,0.99)$：实践常用，平衡偏差与方差</li>
+  </ul>
+</div>
+
+<!-- ===== 六、RLHF ===== -->
+<h2 id="s6">六、RLHF：人类反馈强化学习</h2>
+
+<h3 id="s6-1">6.1 三阶段流程</h3>
+<pre class="mermaid">
+flowchart TD
+  LM["预训练语言模型"] --> SFT["阶段1：SFT 监督微调<br>人工标注示例训练"]
+  SFT --> RM["阶段2：奖励模型训练<br>偏好对数据 + Bradley-Terry 模型"]
+  RM --> PPO_LM["阶段3：PPO 强化学习<br>最大化奖励 - β·KL惩罚"]
+  PPO_LM --> ALIGNED["对齐后的 LLM"]
+</pre>
+
+<h3 id="s6-2">6.2 Bradley-Terry 奖励模型</h3>
+<div class="tech-card yellow">
+  <div class="formula-box">
+    $$P(y_w \succ y_l \mid x) = \sigma\!\left(r_\phi(x,y_w) - r_\phi(x,y_l)\right)$$
+    $$\mathcal{L}_\text{RM}(\phi) = -\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\!\left[\log\sigma\!\left(r_\phi(x,y_w) - r_\phi(x,y_l)\right)\right]$$
+  </div>
+  <p><strong>梯度分析：</strong>$\sigma(r_\phi(y_l)-r_\phi(y_w))$ 是自适应权重——当模型对偏好判断错误时（$r_l > r_w$），权重更大，学习信号更强。正确时权重趋近于零，避免过拟合。</p>
+  <p><strong>奖励模型结构：</strong>以 SFT 模型为骨干，在最后一层添加线性投影头，将 EOS token 的隐状态 $h_T$ 映射为标量：$r_\phi(x,y) = W^\top h_T(x,y;\phi)$。</p>
+</div>
+
+<h3 id="s6-3">6.3 PPO 在 LLM 上的适配</h3>
+<div class="tech-card blue">
+  <p><strong>语言模型视角下的 MDP：</strong></p>
+  <ul>
+    <li><strong>状态</strong> $s_t$：提示 $x$ + 已生成 token $(y_1,\ldots,y_{t-1})$</li>
+    <li><strong>动作</strong> $a_t$：下一个 token $y_t$（词汇表大小 $|\mathcal{V}|$）</li>
+    <li><strong>策略</strong> $\pi_\theta(y_t|x,y_{\lt t})$：语言模型本身</li>
+    <li><strong>奖励</strong>：仅在序列末尾由奖励模型 $r_\phi(x,y)$ 给出（稀疏奖励）</li>
+  </ul>
+  <h4>带 KL 惩罚的奖励（防止策略偏离参考模型过远）</h4>
+  <div class="formula-box">
+    $$\tilde{r}(x,y) = r_\phi(x,y) - \beta\log\frac{\pi_\theta(y|x)}{\pi_\text{ref}(y|x)}$$
+    $$\text{完整目标：}\max_{\pi_\theta}\mathbb{E}[r_\phi(x,y)] - \beta\cdot D_\text{KL}[\pi_\theta\|\pi_\text{ref}]$$
+  </div>
+  <p>KL 惩罚的三重作用：(1) 防止奖励欺骗；(2) 保持语言流畅性；(3) 理论上保证最优解唯一。</p>
+</div>
+
+<!-- ===== 七、DPO ===== -->
+<h2 id="s7">七、DPO：直接偏好优化</h2>
+
+<h3 id="s7-1">7.1 四步完整推导</h3>
+<div class="tech-card purple">
+  <h4>步骤一：RLHF 最优策略的闭合形式</h4>
+  <p>对 KL 约束的期望奖励最大化问题（逐分布求极值）：</p>
+  <div class="formula-box">
+    $$\pi^*(y|x) = \frac{1}{Z(x)}\pi_\text{ref}(y|x)\exp\!\left(\frac{r(x,y)}{\beta}\right), \quad Z(x)=\sum_y\pi_\text{ref}(y|x)e^{r(x,y)/\beta}$$
+  </div>
+
+  <h4>步骤二：反推奖励函数</h4>
+  <div class="formula-box">
+    $$r(x,y) = \beta\log\frac{\pi^*(y|x)}{\pi_\text{ref}(y|x)} + \beta\log Z(x)$$
+  </div>
+
+  <h4>步骤三：代入 Bradley-Terry（$Z(x)$ 相消）</h4>
+  <div class="formula-box">
+    $$P(y_w\succ y_l|x) = \sigma\!\left(\beta\log\frac{\pi^*(y_w|x)}{\pi_\text{ref}(y_w|x)} - \beta\log\frac{\pi^*(y_l|x)}{\pi_\text{ref}(y_l|x)}\right)$$
+  </div>
+
+  <h4>步骤四：DPO 损失（用 $\pi_\theta$ 替换 $\pi^*$）</h4>
+  <div class="formula-box">
+    $$\mathcal{L}_\text{DPO}(\theta) = -\mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}}\!\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w|x)}{\pi_\text{ref}(y_w|x)} - \beta\log\frac{\pi_\theta(y_l|x)}{\pi_\text{ref}(y_l|x)}\right)\right]$$
+  </div>
+  <p><strong>核心洞察：语言模型本身就是隐式奖励模型</strong>：$r_\theta(x,y) = \beta\log(\pi_\theta(y|x)/\pi_\text{ref}(y|x))$，策略与奖励合二为一。</p>
+</div>
+
+<h3 id="s7-2">7.2 DPO vs PPO 对比</h3>
+<table>
+  <tr><th>维度</th><th>PPO-RLHF</th><th>DPO</th></tr>
+  <tr><td>奖励模型</td><td>需要显式训练</td><td>隐式（策略本身）</td></tr>
+  <tr><td>在线/离线</td><td>在线（on-policy）</td><td>离线（off-policy）</td></tr>
+  <tr><td>模型数量</td><td>4 个（Actor/Critic/Ref/RM）</td><td>2 个（Policy/Ref）</td></tr>
+  <tr><td>探索能力</td><td>强（在线采样）</td><td>弱（固定数据集）</td></tr>
+  <tr><td>推理性能</td><td>更强（数学/代码）</td><td>相对较弱</td></tr>
+  <tr><td>实现难度</td><td>高</td><td>低</td></tr>
+</table>
+
+<!-- ===== 八、GRPO ===== -->
+<h2 id="s8">八、GRPO：组相对策略优化</h2>
+
+<h3 id="s8-1">8.1 动机：消除 Critic 网络</h3>
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">PPO 的优势估计</div>
+    <p>需要 Critic 网络 $V_\phi(s)$ 估计价值函数</p>
+    <p>671B 模型：Critic 同等规模，显存 ×2</p>
+    <p>GAE 需要多步展开，计算复杂</p>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">GRPO 的组内相对优势</div>
+    <p>对同一问题采样 $G$ 个回答，用组内排名替代 Critic</p>
+    <p>$\hat{A}_i = (r_i - \text{mean}(\{r_j\})) / \text{std}(\{r_j\})$</p>
+    <p>无需额外网络，训练简单稳定</p>
+  </div>
+</div>
+
+<h3 id="s8-2">8.2 完整目标函数</h3>
+<div class="tech-card green">
+  <div class="formula-box">
+    $$\mathcal{L}_\text{GRPO}(\theta) = -\mathbb{E}\!\left[\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\!\left(\min\!\left(r_{i,t}\hat{A}_{i,t},\,\text{clip}(r_{i,t},1-\epsilon,1+\epsilon)\hat{A}_{i,t}\right) - \beta D_\text{KL}(\pi_\theta\|\pi_\text{ref})\right)\right]$$
+    $$r_{i,t}(\theta) = \frac{\pi_\theta(o_{i,t}|q, o_{i,\lt t})}{\pi_{\theta_\text{old}}(o_{i,t}|q, o_{i,\lt t})}$$
+  </div>
+  <p>注意：KL 散度直接加入损失（而非 PPO 那样加入奖励），使用无偏估计 $\pi_\theta/\pi_\text{ref} - \log(\pi_\theta/\pi_\text{ref}) - 1$。</p>
+</div>
+
+<!-- ===== 九、奖励设计 ===== -->
+<h2 id="s9">九、奖励设计演进</h2>
+
+<pre class="mermaid">
+graph LR
+  A["标量 RM<br>序列级奖励<br>InstructGPT"] -->|"稀疏，易欺骗"| B["ORM<br>结果奖励<br>数学/代码"]
+  B -->|"步骤级反馈"| C["PRM<br>过程奖励模型<br>PRM800K"]
+  C -->|"无神经网络奖励"| D["RLVR<br>可验证奖励<br>DeepSeek-R1"]
+</pre>
+
+<table>
+  <tr><th>类型</th><th>粒度</th><th>是否需标注</th><th>适用任务</th><th>代表工作</th></tr>
+  <tr><td>标量 RM</td><td>序列级</td><td>人工偏好对</td><td>通用对话</td><td>InstructGPT</td></tr>
+  <tr><td>ORM</td><td>序列级</td><td>答案正确性</td><td>数学/代码</td><td>DeepSeekMath</td></tr>
+  <tr><td>PRM</td><td>步骤级</td><td>步骤正确性</td><td>复杂推理</td><td>Let's Verify Step by Step</td></tr>
+  <tr><td><strong>RLVR</strong></td><td>序列级</td><td>无需标注</td><td>可验证任务</td><td><strong>DeepSeek-R1</strong></td></tr>
+</table>
+
+<!-- ===== 十、KTO + DAPO ===== -->
+<h2 id="s10">十、KTO 与 DAPO</h2>
+
+<h3 id="s10-1">10.1 KTO：基于前景理论的对齐</h3>
+<div class="tech-card blue">
+  <p>KTO（Kahneman-Tversky Optimization）无需偏好对，只需单条"好/坏"标签：</p>
+  <div class="formula-box">
+    $$v(x,y;\theta) = \begin{cases}\lambda_D\cdot\sigma\!\left(\beta(r_\theta(x,y)-z_\text{ref})\right) & y\text{ 是好的} \\ \lambda_U\cdot\sigma\!\left(\beta(z_\text{ref}-r_\theta(x,y))\right) & y\text{ 是坏的}\end{cases}$$
+    $$z_\text{ref} = \mathbb{E}_{y'\sim\pi_\text{ref}}\!\left[\beta\log\frac{\pi_\theta(y'|x)}{\pi_\text{ref}(y'|x)}\right]$$
+  </div>
+  <p>$\lambda_U > \lambda_D$（损失厌恶）：对坏样本的惩罚权重大于好样本的奖励权重，符合人类心理学。$z_\text{ref}$ 是当前策略相对参考策略的"基准表现"，奖励相对于参考点而非绝对值。</p>
+</div>
+
+<h3 id="s10-2">10.2 DAPO：解耦裁剪与动态采样</h3>
+<div class="tech-card yellow">
+  <p>DAPO（ByteDance 2025）针对 GRPO 在大规模训练中的四个问题：</p>
+  <ol>
+    <li><strong>解耦裁剪：</strong> $\text{clip}(r_{i,t},\, 1-\epsilon_\text{low},\, 1+\epsilon_\text{high})$，其中 $\epsilon_\text{low}=0.2$，$\epsilon_\text{high}=0.28$。正向更新限制更宽松，防止熵崩溃（策略过早收敛到单一输出）。</li>
+    <li><strong>动态采样：</strong>过滤组内奖励全为 0 或全为 1 的 batch（无信息梯度，梯度为零但浪费计算）。</li>
+    <li><strong>Token 级梯度归一化：</strong>对长思维链序列，序列级 loss 导致长序列梯度消失，改为 token 级归一化。</li>
+    <li><strong>过长奖励塑形：</strong>超过长度限制的回复施加渐进惩罚，减少奖励噪声。</li>
+  </ol>
+  <p><strong>效果：</strong>DAPO 在 AIME 2024 上用 Qwen2.5-32B 达到 50 分，比 DeepSeek-R1-Zero 少 50% 训练步数。</p>
+</div>
+
+<!-- ===== 十一、在线 vs 离线 ===== -->
+<h2 id="s11">十一、在线 vs 离线 RL</h2>
+
+<table>
+  <tr><th>维度</th><th>在线（On-Policy）</th><th>离线（Off-Policy）</th><th>半在线</th></tr>
+  <tr><td>代表算法</td><td>PPO, GRPO</td><td>DPO, KTO</td><td>Iterative DPO</td></tr>
+  <tr><td>数据来源</td><td>当前策略实时采样</td><td>预收集固定数据集</td><td>定期重新采样</td></tr>
+  <tr><td>探索能力</td><td>强</td><td>弱</td><td>中等</td></tr>
+  <tr><td>分布偏移</td><td>无</td><td>有</td><td>较小</td></tr>
+  <tr><td>性能上限</td><td>高</td><td>较低</td><td>接近在线</td></tr>
+</table>
+<blockquote>研究结论（Lanchantin et al., 2025）：离线 DPO ≪ 半在线 DPO ≈ 在线 GRPO。半在线 DPO（每 5-10 步重新采样）与完全在线 GRPO 性能相当，离线方法存在显著性能差距。</blockquote>
+
+<!-- ===== 十二、推理模型 ===== -->
+<h2 id="s12">十二、RL 在推理模型中的应用</h2>
+
+<h3 id="s12-1">12.1 长思维链的涌现机制</h3>
+<div class="tech-card purple">
+  <p>DeepSeek-R1-Zero（纯 RL，无 SFT）在训练过程中自发涌现：</p>
+  <ul>
+    <li><strong>响应长度增长：</strong>约 4000 步时从 ~300 token 增至 ~7800 token，模型自发学会"思考更久"</li>
+    <li><strong>"顿悟"时刻：</strong>自发出现 "wait" 式自我反思，重新评估和修正推理步骤</li>
+    <li><strong>上下文 Scaling：</strong>性能随 RL 训练上下文长度增大持续提升（Kimi k1.5：4K→128K，AIME 15→77.5）</li>
+  </ul>
+</div>
+
+<h3 id="s12-2">12.2 Kimi k1.5：Partial Rollouts</h3>
+<div class="tech-card green">
+  <p>128K 上下文 RL 训练的基础设施创新：</p>
+  <div class="formula-box">
+    $$\text{if }|y| > L_\text{budget}:\; y = y_{1:L_\text{budget}} + \text{replay}(y_{L_\text{budget}+1:})$$
+  </div>
+  <p>超过 token 预算的轨迹存入回放缓冲区，下一轮继续，避免长轨迹独占资源，使 128K 上下文 RL 训练的效率大幅提升。</p>
+  <h4>长度奖励（防止冗长无效推理）</h4>
+  <div class="formula-box">
+    $$r_\text{length}(x,y) = \begin{cases}+\alpha\cdot\mathbf{1}[\text{correct}]\cdot\frac{L_\text{ref}-|y|}{L_\text{ref}} & |y| < L_\text{ref} \\ -\alpha\cdot\mathbf{1}[\text{incorrect}]\cdot\frac{|y|-L_\text{ref}}{L_\text{ref}} & |y| > L_\text{ref}\end{cases}$$
+  </div>
+</div>
+
+<h3 id="s12-3">12.3 Test-Time Compute Scaling</h3>
+<div id="chart-ttc" class="echarts-container" style="height:280px"></div>
+<script>
+echarts.init(document.getElementById('chart-ttc')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  grid:{left:70,right:30,bottom:50},
+  xAxis:{type:'category',data:['4K','8K','16K','32K','64K','128K'],axisLabel:{color:'#cdd6f4'}},
+  yAxis:{type:'value',name:'AIME 2024 Pass@1 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+  series:[{name:'Kimi k1.5',type:'line',data:[15,25,38,52,65,77.5],smooth:true,
+    itemStyle:{color:'#a6e3a1'},lineStyle:{width:3},
+    label:{show:true,position:'top',color:'#cdd6f4',formatter:p=>p.value+'%'}}]
+});
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">图：RL 训练上下文长度 vs 推理性能（Kimi k1.5，来源 arXiv:2501.12599）——性能随上下文增大持续提升，无明显饱和</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告覆盖 1992–2025 年强化学习核心算法，关键引用：Watkins(1992) Q-Learning · Mnih(2013) DQN · Schulman(2017) PPO · Ouyang(2022) InstructGPT · Rafailov(2023) DPO · Shao(2024) GRPO · Guo(2025) DeepSeek-R1。生成日期：2026-05-13。</p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);
+});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{
+  const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+  if(l)l.classList.toggle('active',e.isIntersecting);
+}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

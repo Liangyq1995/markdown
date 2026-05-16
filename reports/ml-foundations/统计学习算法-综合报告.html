@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>统计学习算法综合报告</title>
+  <style>
+    :root { --bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--accent:#f38ba8;--yellow:#f9e2af;--teal:#94e2d5; }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.9;}
+    #toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:18px 10px;font-size:12px;border-right:1px solid var(--border);}
+    #toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #toc a:hover{background:var(--border);}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+    #toc a.h3{padding-left:18px;font-size:11px;opacity:.8;}
+    #toc a.h4{padding-left:32px;font-size:10.5px;opacity:.65;}
+    main{margin-left:256px;padding:40px 64px;}
+    h1{color:var(--heading);font-size:2em;margin-bottom:14px;}
+    h2{color:var(--heading);font-size:1.5em;margin:2.4em 0 .8em;border-bottom:2px solid var(--border);padding-bottom:8px;}
+    h3{color:var(--teal);font-size:1.2em;margin:1.7em 0 .5em;}
+    h4{color:var(--yellow);font-size:1.05em;margin:1.3em 0 .4em;}
+    p{margin:.7em 0;}
+    strong{color:var(--strong);}
+    blockquote{border-left:3px solid var(--quote-bar);padding:10px 16px;margin:1em 0;background:#252535;border-radius:0 6px 6px 0;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.91em;}
+    th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+    td{padding:7px 12px;border:1px solid var(--border);vertical-align:top;}
+    tr:hover td{background:#252535;}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+    code{font-family:'JetBrains Mono','Fira Code',monospace;}
+    p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.87em;color:var(--teal);}
+    .mermaid{background:#252535;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+    hr{border:none;border-top:1px solid var(--border);margin:2.8em 0;}
+    ul,ol{padding-left:1.6em;margin:.6em 0;}
+    li{margin:.3em 0;}
+    .fb{background:#1a1a2e;border-left:3px solid var(--heading);padding:14px 20px;margin:1em 0;border-radius:0 6px 6px 0;overflow-x:auto;line-height:2.1;}
+    .fs{background:#252535;border-radius:6px;padding:14px 18px;margin:.8em 0;border:1px solid var(--border);overflow-x:auto;line-height:2.1;}
+    .note{background:#1a2535;border:1px solid #3a5a8a;border-radius:6px;padding:12px 16px;margin:1em 0;}
+    .note-t{color:var(--link);font-weight:bold;margin-bottom:6px;}
+    .sup{background:#1a2a1a;border:1px solid #3a5a3a;border-radius:6px;padding:14px 18px;margin:1em 0;}
+    .sup-t{color:var(--strong);font-weight:bold;margin-bottom:8px;}
+    .card{background:#252535;border-radius:8px;padding:16px 20px;margin:1em 0;border:1px solid var(--border);}
+    .card-t{color:var(--accent);font-weight:bold;margin-bottom:8px;}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1em 0;}
+    .proof{background:#1e2030;border-radius:6px;padding:16px 20px;margin:1em 0;border:1px solid #444460;}
+    .proof-t{color:var(--yellow);font-weight:bold;font-style:italic;margin-bottom:10px;}
+    ol.steps{counter-reset:sc;list-style:none;padding-left:0;}
+    ol.steps li{counter-increment:sc;position:relative;padding-left:34px;margin:.7em 0;}
+    ol.steps li::before{content:counter(sc);position:absolute;left:0;top:2px;width:22px;height:22px;background:var(--heading);color:#1e1e2e;border-radius:50%;font-size:12px;font-weight:bold;text-align:center;line-height:22px;}
+    @media(max-width:1100px){.g2{grid-template-columns:1fr;}}
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea']}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+<h1>统计学习算法综合报告</h1>
+<p>本报告系统梳理统计学习核心算法，涵盖完整数学推导过程。</p>
+
+<h2>一、机器学习基础</h2>
+
+<h3>1.1 任务类型</h3>
+<table>
+<tr><th>任务类型</th><th>说明</th><th>代表算法</th></tr>
+<tr><td><strong>监督学习</strong></td><td>从已标记的训练数据来训练模型，主要分为：分类任务、回归任务、序列标注任务</td><td>SVM、决策树、逻辑回归</td></tr>
+<tr><td><strong>无监督学习</strong></td><td>从未标记的训练数据来训练模型，主要分为：聚类任务、降维任务</td><td>K-Means、PCA、GMM</td></tr>
+<tr><td><strong>半监督学习</strong></td><td>用大量未标记训练数据和少量已标记数据来训练模型</td><td>标签传播、图半监督</td></tr>
+<tr><td><strong>强化学习</strong></td><td>从系统与环境的大量交互知识中训练模型</td><td>Q-Learning、PPO</td></tr>
+</table>
+
+<h3>1.2 没有免费午餐定理</h3>
+<div class="note">
+<div class="note-t">NFL定理（No Free Lunch Theorem）</div>
+<p>对于一个学习算法 $A$，如果在某些问题上它比算法 $B$ 好，那么必然存在另一些问题，在那些问题中 $B$ 比 $A$ 更好。因此<strong>要谈论算法的优劣必须基于具体的学习问题</strong>，脱离具体问题讨论算法优劣是没有意义的。</p>
+<p>数学表述：对所有可能的数据分布求平均，所有学习算法的期望性能相同：
+$$\sum_{f} E_{ote}(\mathcal{A}|X,f) = \sum_{f} E_{ote}(\mathcal{B}|X,f)$$
+其中 $E_{ote}$ 为泛化误差，$f$ 为目标函数。</p>
+</div>
+
+<h3>1.3 生成模型 vs 判别模型</h3>
+<div class="g2">
+<div class="card">
+<div class="card-t">生成模型（Generative Model）</div>
+<p>通过数据学习联合概率分布 $p(\vec{\mathbf{x}},y)$，然后求出条件概率分布：</p>
+<div class="fb">$$p(y|\vec{\mathbf{x}}) = \frac{p(\vec{\mathbf{x}},y)}{p(\vec{\mathbf{x}})}$$</div>
+<p><strong>优点：</strong>能还原联合概率分布，收敛速度快，当存在隐变量时只能用生成方法。</p>
+<p><strong>代表：</strong>朴素贝叶斯、隐马尔可夫模型、GMM</p>
+</div>
+<div class="card">
+<div class="card-t">判别模型（Discriminative Model）</div>
+<p>直接学习决策函数 $f(\vec{\mathbf{x}})$ 或条件概率分布 $p(y|\vec{\mathbf{x}})$：</p>
+<div class="fb">$$\hat{y} = f(\vec{\mathbf{x}}) \quad \text{或} \quad \hat{y} = \arg\max_y p(y|\vec{\mathbf{x}})$$</div>
+<p><strong>优点：</strong>直接预测，一般准确率更高，简化问题。</p>
+<p><strong>代表：</strong>逻辑回归、SVM、决策树、CRF</p>
+</div>
+</div>
+
+<h3>1.4 机器学习三要素</h3>
+<p>不同机器学习算法的区别在于<strong>模型、策略（学习准则）、优化算法</strong>三要素的差异。</p>
+
+<h4>模型（Model）</h4>
+<p>模型定义了解空间。解空间包含所有可能的条件概率分布或决策函数。通常由参数向量 $\vec{\theta}=(\theta_1,\cdots,\theta_n)$ 决定：</p>
+<div class="fs">
+$$\mathcal{F} = \{p|p_{\vec{\theta}}(y|\vec{\mathbf{x}}), \vec{\theta}\in \mathbb{R}^n\} \quad \text{（概率模型）}$$
+$$\mathcal{F} = \{y=f_{\vec{\theta}}(\vec{\mathbf{x}}), \vec{\theta}\in \mathbb{R}^n\} \quad \text{（决策函数模型）}$$
+</div>
+
+<h4>策略（Strategy）</h4>
+<p>损失函数度量错误程度，记作 $L(\tilde{y}, \hat{y})$。</p>
+<table>
+<tr><th>名称</th><th>定义</th></tr>
+<tr><td>损失函数 Loss Function</td><td>通常针对单个训练样本</td></tr>
+<tr><td>代价函数 Cost Function</td><td>通常针对整个训练集</td></tr>
+<tr><td>目标函数 Objective Function</td><td>表示任意希望被优化的函数</td></tr>
+</table>
+
+<h4>算法（Algorithm）</h4>
+<p>通常采用数值计算的方法求解，如：梯度下降法、牛顿法、拟牛顿法等。</p>
+
+<h3>1.5 所有损失函数</h3>
+
+<h4>0-1 损失函数</h4>
+<div class="fb">$$\mathcal{L}(\tilde{y},\hat{y})=\begin{cases}0 & \hat{y}=\tilde{y} \\ 1 & \hat{y} \neq \tilde{y}\end{cases} = I(\hat{y} \neq \tilde{y})$$</div>
+<p>不可微，难以直接优化，常用于理论分析。</p>
+
+<h4>均方误差损失 MSE</h4>
+<div class="fb">$$\mathcal{L}(\tilde{y},\hat{y})=\frac{1}{2}(\tilde{y}-\hat{y})^{2}$$</div>
+<div class="proof">
+<div class="proof-t">推导：MSE 来自高斯分布假设</div>
+<p>假设模型预测与真实值之间的误差服从标准高斯分布 $\epsilon \sim \mathcal{N}(0,1)$，即：</p>
+<div class="fs">$$P(y_i|\vec{\mathbf{x}}_i) = \frac{1}{\sqrt{2\pi}}\exp\left(-\frac{(\tilde{y}-\hat{y})^2}{2}\right)$$</div>
+<p>给定所有样本，似然函数为：</p>
+<div class="fs">$$L(\vec{\mathbf{x}},\tilde{y})=\prod_{i=1}^N\frac{1}{\sqrt{2\pi}}\exp\left(-\frac{(\tilde{y}_i-\hat{y}_i)^2}{2}\right)$$</div>
+<p>取对数：</p>
+<div class="fs">$$LL = -\frac{N}{2}\log 2\pi - \frac{1}{2}\sum_{i=1}^N(\tilde{y}_i-\hat{y}_i)^2$$</div>
+<p>去掉与 $\hat{y}$ 无关项，转化为最小化负对数似然（NLL）：</p>
+<div class="fb">$$NLL = \frac{1}{2}\sum_{i=1}^N(\tilde{y}_i-\hat{y}_i)^2$$</div>
+<p><strong>结论：在误差服从高斯分布的假设下，最小化 MSE ≡ 极大似然估计。</strong></p>
+</div>
+
+<h4>平均绝对误差损失 MAE</h4>
+<div class="fb">$$\mathcal{L}(\tilde{y}, \hat{y}) = |\tilde{y}-\hat{y}|$$</div>
+<div class="proof">
+<div class="proof-t">推导：MAE 来自拉普拉斯分布假设</div>
+<p>假设误差服从拉普拉斯分布（均值为0，尺度参数为1）：</p>
+<div class="fs">$$P(y_i|\vec{\mathbf{x}}_i) = \frac{1}{2}\exp(-|\tilde{y}_i-\hat{y}_i|)$$</div>
+<p>似然函数：</p>
+<div class="fs">$$L = \prod_{i=1}^N\frac{1}{2}\exp(-|y_i-\hat{y}_i|)$$</div>
+<p>负对数似然：</p>
+<div class="fb">$$NLL = \sum_{i=1}^N|y_i-\hat{y}_i|$$</div>
+<p><strong>结论：在误差服从拉普拉斯分布的假设下，最小化 MAE ≡ 极大似然估计。</strong></p>
+<p>MAE 对异常点比 MSE 更鲁棒，但在零点不可微。</p>
+</div>
+
+<h4>Huber Loss</h4>
+<div class="fb">$$L_{\delta}(\tilde{y},\hat{y})=\begin{cases}\frac{1}{2}(\tilde{y}-\hat{y})^2 & |\tilde{y}-\hat{y}| \le \delta \\ \delta|\tilde{y}-\hat{y}|-\frac{1}{2}\delta^2 & \text{else}\end{cases}$$</div>
+<p>结合了 MSE 和 MAE 的优点：误差小时使用 MSE（可导、梯度稳定），误差大时使用 MAE（降低异常点影响）。$\delta$ 为超参数，控制切换点。</p>
+
+<h4>分位数损失</h4>
+<div class="fb">$$L_{r}(\tilde{y},\hat{y})=\begin{cases}(1-r)|\tilde{y}-\hat{y}| & \hat{y}\ge \tilde{y} \\ r|\tilde{y}-\hat{y}| & \hat{y}<\tilde{y}\end{cases}$$</div>
+<p>其中 $r$ 为分位数系数，分别用不同系数控制高估和低估的损失，实现分位数回归。</p>
+
+<h4>交叉熵损失</h4>
+<div class="fb">$$\mathcal{L}(\mathbf{y}, f(\mathbf{x}, \theta))=-\sum_{c=1}^{C} y_{c} \log f_{c}(\mathbf{x}, \theta)$$</div>
+
+<div class="proof">
+<div class="proof-t">推导：二分类 Sigmoid 交叉熵</div>
+<p>用 Sigmoid 函数将输出压缩到 $(0,1)$：$\hat{y}_i = \sigma(z_i) \in (0,1)$，代表正类概率。</p>
+<p>正负类概率合并写：</p>
+<div class="fs">$$p(y_i|\vec{\mathbf{x}}_i) = (\hat{y}_i)^{y_i}(1-\hat{y}_i)^{1-y_i}$$</div>
+<p>假设样本 i.i.d.，似然函数：</p>
+<div class="fs">$$L = \prod_{i=1}^N(\hat{y}_i)^{y_i}(1-\hat{y}_i)^{1-y_i}$$</div>
+<p>负对数似然（即交叉熵损失）：</p>
+<div class="fb">$$NLL = -\sum_{i=1}^N[y_i\log(\hat{y}_i)+(1-y_i)\log(1-\hat{y}_i)]$$</div>
+</div>
+
+<div class="proof">
+<div class="proof-t">推导：多分类 Softmax 交叉熵</div>
+<p>Softmax 输出 $K$ 个类别的概率分布，$\hat{y}_i^k$ 为样本 $i$ 属于类别 $k$ 的概率。</p>
+<div class="fs">$$p(y_i|\vec{\mathbf{x}}_i) = \prod_{k=1}^K(\hat{y}^k_i)^{y^k_i}$$</div>
+<p>负对数似然：</p>
+<div class="fb">$$NLL = -\sum_{i=1}^N\sum_{k=1}^Ky_i^k\log(\hat{y}^k_i) = -\sum_{i=1}^N y_i^{c_i}\log(\hat{y}^{c_i}_i)$$</div>
+<p>其中 $c_i$ 是样本 $i$ 的目标类（one-hot 向量仅目标类为1）。</p>
+<p><strong>KL 散度视角：</strong>最小化交叉熵等价于最小化真实分布与预测分布之间的 KL 散度（真实分布的熵为常数）。</p>
+</div>
+
+<h4>Hinge Loss（合页损失）</h4>
+<div class="fb">$$\mathcal{L}(y, f(x, \theta)) = \max(0,1-y f(x, \theta)) \triangleq [1-yf(x,\theta)]_+$$</div>
+<p>适用于 maximum-margin 分类（SVM）。不仅惩罚预测错误的样本，还对置信度不高的正确预测给予惩罚，只有高置信度才有零损失。</p>
+
+<h4>指数损失函数</h4>
+<div class="fb">$$L(y, f(x, \theta))=\frac{1}{n}\sum_{i=1}^n \exp[-y_if(x_i)]$$</div>
+<p>AdaBoost 使用指数损失函数。对错误分类的样本给予指数级惩罚。</p>
+
+<h3>1.6 风险函数</h3>
+
+<h4>期望风险（Expected Risk）</h4>
+<div class="fb">$$R_{exp}=\mathbb{E}_{P}[L(\tilde{y}, \hat{y})]=\int_{\mathcal{X} \times \mathcal{Y}} L(\tilde{y}, \hat{y}) p(\vec{\mathbf{x}}, y) d\vec{\mathbf{x}} dy$$</div>
+
+<h4>经验风险最小化（ERM）</h4>
+<div class="fb">$$\mathcal{R}_{\mathcal{D}}^{emp}(\theta)=\frac{1}{N} \sum_{n=1}^{N} \mathcal{L}(\tilde{y}_i,\hat{y}_i)$$</div>
+<p>经验风险最小化策略：经验风险最小的模型就是最优模型。</p>
+
+<h4>结构风险最小化（SRM）</h4>
+<div class="fb">$$R_{srm}=\frac{1}{N} \sum_{n=1}^{N} \mathcal{L}(\tilde{y}_i,\hat{y}_i)+\lambda\mathcal{J}(f)$$</div>
+<p>$\mathcal{J}(f)$ 为正则化项，$\lambda$ 控制正则化强度，防止过拟合。</p>
+
+<h3>1.7 MLE=ERM，MAP=SRM 的完整推导</h3>
+
+<div class="proof">
+<div class="proof-t">定理：极大似然估计 = 经验风险最小化</div>
+<p>已知训练集 $\mathbb{D}=\{(\vec{\mathbf{x}}_1, \tilde{y}_1),\cdots,(\vec{\mathbf{x}}_N, \tilde{y}_N)\}$，出现该训练集的概率为 $\prod_{i=1}^N p(\tilde{y}_i|\vec{\mathbf{x}}_i)$。</p>
+<p>根据 $\mathbb{D}$ 出现概率最大（MLE）：</p>
+<div class="fs">$$\max \prod_{i=1}^{N} p(\tilde{y}_i|\vec{\mathbf{x}}_i) \Rightarrow \max \sum_{i=1}^{N} \log p(\tilde{y}_i|\vec{\mathbf{x}}_i) \Rightarrow \min \sum_{i=1}^{N}(-\log p(\tilde{y}_i|\vec{\mathbf{x}}_i))$$</div>
+<p>定义损失函数 $L(\tilde{y}, \hat{y})=-\log p(\tilde{y}|\vec{\mathbf{x}})$，则：</p>
+<div class="fb">$$\min \sum_{i=1}^{N}(-\log p(\tilde{y}_i|\vec{\mathbf{x}}_i)) \Rightarrow \min \sum_{i=1}^{N} L(\tilde{y}_i, \hat{y}_i) \Rightarrow \min \frac{1}{N} \sum_{i=1}^{N} L(\tilde{y}_i, \hat{y}_i)$$</div>
+<p>即：<strong>极大似然估计 = 经验风险最小化</strong>。</p>
+</div>
+
+<div class="proof">
+<div class="proof-t">定理：最大后验估计 = 结构风险最小化</div>
+<p>假设已知参数 $\theta$ 的先验分布为 $g(\theta)$，则出现训练集 $\mathbb{D}$ 的概率为 $\prod_{i=1}^N p(\tilde{y}_i|\vec{\mathbf{x}}_i) g(\theta)$。</p>
+<p>根据 $\mathbb{D}$ 出现概率最大（MAP）：</p>
+<div class="fs">$$\max \prod_{i=1}^{N} p(\tilde{y}_i|\vec{\mathbf{x}}_i)g(\theta) \Rightarrow \max \sum_{i=1}^{N} \log p(\tilde{y}_i|\vec{\mathbf{x}}_i)+\log g(\theta)$$
+$$\Rightarrow \min \sum_{i=1}^{N}(-\log p(\tilde{y}_i|\vec{\mathbf{x}}_i))+\log\frac{1}{g(\theta)}$$</div>
+<p>定义损失函数 $L(\tilde{y}, \hat{y})=-\log p(\tilde{y}|\vec{\mathbf{x}})$，模型复杂度 $J(f)=\log\frac{1}{g(\theta)}$，正则化系数 $\lambda=\frac{1}{N}$，则：</p>
+<div class="fb">$$\min \frac{1}{N} \sum_{i=1}^{N} L(\tilde{y}_i, \hat{y}_i)+\lambda J(f)$$</div>
+<p>即：<strong>最大后验估计 = 结构风险最小化</strong>。</p>
+<p>特别地：若先验 $g(\theta) \propto e^{-\frac{\lambda}{2}\|\theta\|^2}$（高斯先验），则 $J(f) = \frac{1}{2}\|\theta\|^2$，对应 L2 正则化；若先验 $g(\theta) \propto e^{-\lambda\|\theta\|_1}$（拉普拉斯先验），则对应 L1 正则化。</p>
+</div>
+
+<h3>1.8 缺失值处理</h3>
+<ul>
+<li><strong>均值插补：</strong>连续属性用均值，离散属性用众数</li>
+<li><strong>同类均值插补：</strong>先对样本分类，再以该类均值插补</li>
+<li><strong>建模预测：</strong>将缺失属性作为预测目标，用其他属性建模预测。缺陷：若其他属性与缺失属性无关则无意义</li>
+<li><strong>高维映射：</strong>将属性 $j$（取值 $\{a_1,\cdots,a_K\}$）扩展为 $K+1$ 个属性，缺失样本在 $j_{K+1}$ 上取值为1。完整保留原始信息但计算量大</li>
+<li><strong>多重插补：</strong>多次插补取平均，减少不确定性</li>
+</ul>
+
+<h3>1.9 特征编码</h3>
+
+<h4>特征二元化</h4>
+<p>对属性 $j$ 指定阈值 $\epsilon$：$\ge \epsilon$ 编码为1，$< \epsilon$ 编码为0。</p>
+
+<h4>One-Hot 编码</h4>
+<p>属性 $j$ 取值 $\{a_1,\cdots,a_K\}$ 扩展成 $K$ 个二值属性。</p>
+<div class="note">
+<div class="note-t">决策树不推荐 One-Hot 的原因</div>
+<ul>
+<li><strong>切分不平衡：</strong>One-Hot 后每个特征只有0/1，导致切分增益极小</li>
+<li><strong>统计信息不准确：</strong>决策树依赖数据统计信息，One-Hot 把数据切分到零散小空间，统计信息不可靠，学习效果变差</li>
+</ul>
+</div>
+
+<h3>1.10 标准化和正则化</h3>
+<div class="g2">
+<div class="card">
+<div class="card-t">Min-Max 标准化</div>
+<div class="fb">$$\hat{x}_{i,j}=\frac{x_{i,j}-j_{\min}}{j_{\max}-j_{\min}}$$</div>
+<p>将属性值缩放到 $[0,1]$。参数 $j_{\max}, j_{\min}$ 从训练集计算。</p>
+</div>
+<div class="card">
+<div class="card-t">Z-Score 标准化</div>
+<div class="fb">$$\hat{x}_{i,j}=\frac{x_{i,j}-\mu_j}{\sigma_j}$$</div>
+<p>零均值单位方差。参数 $\mu_j, \sigma_j$ 从训练集计算，验证集/测试集使用相同参数。</p>
+</div>
+</div>
+<p><strong>数据正则化</strong>（针对单个样本）：$\hat{\vec{\mathbf{x}}}_i = \vec{\mathbf{x}}_i / L_p(\vec{\mathbf{x}}_i)$，其中 $L_p = (\sum|x_{i,k}|^p)^{1/p}$。</p>
+
+<h3>1.11 类别不平衡问题</h3>
+<ul>
+<li><strong>阈值移动（threshold-moving）：</strong>基于再缩放策略调整决策阈值</li>
+<li><strong>欠采样（undersampling）：</strong>对多数类样本进行下采样</li>
+<li><strong>过采样（oversampling）：</strong>对少数类样本进行上采样（如SMOTE）</li>
+</ul>
+<p>对正负样本极不平衡的场景，可转化为一分类（One-Class Learning）或异常检测（Novelty Detection）问题，使用 One-class SVM。</p>
+
+<h3>1.12 多分类问题</h3>
+<table>
+<tr><th>方法</th><th>说明</th><th>训练</th><th>预测</th></tr>
+<tr><td><strong>OvR (One vs Rest)</strong></td><td>为每个类别训练一个分类器，共 $K$ 个</td><td>$CL_i$：类别 $i$ 为正类，其余为负类</td><td>选置信度最高的分类器 $CL_m$，预测为 $c_m$</td></tr>
+<tr><td><strong>OvO (One vs One)</strong></td><td>为每对类别训练一个分类器，共 $\frac{K(K-1)}{2}$ 个</td><td>$CL_{i,j}$：仅用类别 $c_i, c_j$ 的样本训练</td><td>投票，$s_m$ 最大则预测为 $c_m$</td></tr>
+<tr><td><strong>MvM (Many vs Many)</strong></td><td>每次将若干类作正类，若干类作反类</td><td>$M$ 次划分，训练 $M$ 个分类器</td><td>预测编码与各类编码比较，选距离最小的类</td></tr>
+</table>
+
+<h2>二、线性模型</h2>
+
+<h3>2.1 线性回归</h3>
+<p>给定数据集 $\mathbb{D}=\{(\vec{\mathbf{x}}_1,\tilde{y}_1),\cdots,(\vec{\mathbf{x}}_N,\tilde{y}_N)\}$，线性回归试图学习模型 $f(\vec{\mathbf{x}})=\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}+b$，采用平方损失：</p>
+<div class="fb">$$L(f)=\sum_{i=1}^N(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i+b-\tilde{y}_i)^2$$</div>
+
+<div class="proof">
+<div class="proof-t">最小二乘法解析解完整推导</div>
+<p>将参数 $b$ 吸收进 $\vec{\mathbf{w}}$，令 $\mathbf{X}\in\mathbb{R}^{N\times(n+1)}$，$\vec{\mathbf{y}}=(\tilde{y}_1,\cdots,\tilde{y}_N)^T$，则损失函数写作：</p>
+<div class="fs">$$L(\vec{\mathbf{w}}) = (\mathbf{X}\vec{\mathbf{w}}-\vec{\mathbf{y}})^T(\mathbf{X}\vec{\mathbf{w}}-\vec{\mathbf{y}})$$</div>
+<p>展开：</p>
+<div class="fs">$$L(\vec{\mathbf{w}}) = \vec{\mathbf{w}}^T\mathbf{X}^T\mathbf{X}\vec{\mathbf{w}} - 2\vec{\mathbf{y}}^T\mathbf{X}\vec{\mathbf{w}} + \vec{\mathbf{y}}^T\vec{\mathbf{y}}$$</div>
+<p>对 $\vec{\mathbf{w}}$ 求梯度并令其为零：</p>
+<div class="fs">$$\frac{\partial L}{\partial \vec{\mathbf{w}}} = 2\mathbf{X}^T\mathbf{X}\vec{\mathbf{w}} - 2\mathbf{X}^T\vec{\mathbf{y}} = \mathbf{0}$$</div>
+<p>即 $\mathbf{X}^T\mathbf{X}\vec{\mathbf{w}} = \mathbf{X}^T\vec{\mathbf{y}}$（正规方程）。</p>
+<p>当 $\mathbf{X}^T\mathbf{X}$ 满秩时，解析解为：</p>
+<div class="fb">$$\vec{\mathbf{w}}^* = (\mathbf{X}^T\mathbf{X})^{-1}\mathbf{X}^T\vec{\mathbf{y}}$$</div>
+<p>当 $\mathbf{X}^T\mathbf{X}$ 不满秩时（特征数 $n > N$ 或特征线性相关），存在多个解析解，通常通过正则化（如岭回归）来处理：$\vec{\mathbf{w}}^* = (\mathbf{X}^T\mathbf{X}+\lambda\mathbf{I})^{-1}\mathbf{X}^T\vec{\mathbf{y}}$。</p>
+</div>
+
+<h3>2.2 广义线性模型</h3>
+<p>考虑单调可微函数 $g(\cdot)$，令 $g(y)=\vec{\mathbf{w}}^T\vec{\mathbf{x}}+b$，称作广义线性模型，$g(\cdot)$ 为联系函数（link function）。</p>
+<p>指数分布族的形式：$p(y;\eta)=b(y)\exp(\eta T(y)-a(\eta))$，其中 $\eta=\vec{\mathbf{w}}^T\vec{\mathbf{x}}$。</p>
+
+<h4>高斯分布的指数族形式</h4>
+<div class="fs">$$p(y)=\frac{1}{\sqrt{2\pi}\sigma}\exp\left(-\frac{(y-\mu)^2}{2\sigma^2}\right) = \frac{1}{\sqrt{2\pi}\sigma}\exp\left(-\frac{y^2}{2\sigma^2}\right)\exp\left(\frac{\mu}{\sigma^2}y-\frac{\mu^2}{2\sigma^2}\right)$$</div>
+<p>对应：$b(y)=\frac{1}{\sqrt{2\pi}\sigma}e^{-y^2/(2\sigma^2)}$，$T(y)=y$，$\eta=\mu/\sigma^2$，$a(\eta)=\mu^2/(2\sigma^2)$。</p>
+
+<h4>伯努利分布的指数族形式（逻辑回归推导基础）</h4>
+<div class="fs">$$p(y;\phi)=\phi^y(1-\phi)^{1-y}=\exp\left(y\ln\frac{\phi}{1-\phi}+\ln(1-\phi)\right)$$</div>
+<p>其中 $\eta=\ln\frac{\phi}{1-\phi}$，即 $\phi=\frac{1}{1+e^{-\eta}}$（sigmoid 函数的来源）。</p>
+
+<h4>多元伯努利分布（Softmax 推导基础）</h4>
+<p>$K$ 个分类，概率 $\phi_1,\cdots,\phi_K$（$\sum\phi_i=1$）。令 $\eta_i=\ln(\phi_i/\phi_K)$，则：</p>
+<div class="fb">$$\phi_i=\frac{e^{\eta_i}}{1+\sum_{j=1}^{K-1}e^{\eta_j}} \quad (i=1,\cdots,K-1), \quad \phi_K=\frac{1}{1+\sum_{j=1}^{K-1}e^{\eta_j}}$$</div>
+<p>这就是 Softmax 函数的来源。</p>
+
+<h3>2.3 逻辑回归</h3>
+<p>考虑二分类问题，$y_i\in\{0,1\}$。线性函数 $\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}+b$ 取值为 $\mathbb{R}$，不符合概率范围 $[0,1]$，需要采用广义线性模型。</p>
+
+<h4>Sigmoid 函数推导</h4>
+<p>最理想的是单位阶跃函数，但不满足单调可微。对数几率函数（sigmoid）作为替代：</p>
+<div class="fb">$$p(y=1|\vec{\mathbf{x}})=\frac{1}{1+e^{-z}}, \quad z=\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}+b$$</div>
+<p>等价地，对数几率（log-odds）为线性函数：</p>
+<div class="fb">$$\ln\frac{P(y=1|\vec{\mathbf{x}})}{P(y=0|\vec{\mathbf{x}})}=\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}+b$$</div>
+
+<h4>参数估计：极大似然完整推导</h4>
+<p>令 $\pi(\vec{\mathbf{x}})=P(y=1|\vec{\mathbf{x}})=\frac{\exp(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}})}{1+\exp(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}})}$，似然函数：</p>
+<div class="fs">$$L(\vec{\mathbf{w}}) = \prod_{i=1}^N[\pi(\vec{\mathbf{x}}_i)]^{\tilde{y}_i}[1-\pi(\vec{\mathbf{x}}_i)]^{1-\tilde{y}_i}$$</div>
+<p>对数似然：</p>
+<div class="fs">$$\ell(\vec{\mathbf{w}})=\sum_{i=1}^N\left[\tilde{y}_i\ln\frac{\pi(\vec{\mathbf{x}}_i)}{1-\pi(\vec{\mathbf{x}}_i)}+\ln(1-\pi(\vec{\mathbf{x}}_i))\right]$$
+$$=\sum_{i=1}^N\left[\tilde{y}_i(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i)-\ln(1+\exp(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i))\right]$$</div>
+<p>梯度（对 $\vec{\mathbf{w}}$ 求导）：</p>
+<div class="fb">$$\frac{\partial\ell}{\partial\vec{\mathbf{w}}} = \sum_{i=1}^N\left[\tilde{y}_i - \pi(\vec{\mathbf{x}}_i)\right]\vec{\mathbf{x}}_i = \sum_{i=1}^N(\tilde{y}_i - \hat{y}_i)\vec{\mathbf{x}}_i$$</div>
+<p>求解最优化问题 $\vec{\mathbf{w}}^*=\arg\max_{\vec{\mathbf{w}}}\ell(\vec{\mathbf{w}})$，通常用梯度下降法或拟牛顿法（L-BFGS）求解。</p>
+
+<h3>2.4 线性判别分析 LDA</h3>
+<p>LDA 基本思想：将样例投影到某条直线上，使得<strong>同类样例的投影点尽可能接近、异类样例的投影点尽可能远离</strong>。</p>
+
+<h4>类内散度矩阵和类间散度矩阵</h4>
+<div class="fb">$$\mathbf{S}_w = \Sigma_0 + \Sigma_1 = \sum_{\vec{\mathbf{x}}\in\mathbb{D}_0}(\vec{\mathbf{x}}-\vec{\mu}_0)(\vec{\mathbf{x}}-\vec{\mu}_0)^T + \sum_{\vec{\mathbf{x}}\in\mathbb{D}_1}(\vec{\mathbf{x}}-\vec{\mu}_1)(\vec{\mathbf{x}}-\vec{\mu}_1)^T$$</div>
+<div class="fb">$$\mathbf{S}_b = (\vec{\mu}_0-\vec{\mu}_1)(\vec{\mu}_0-\vec{\mu}_1)^T$$</div>
+
+<h4>最优化目标（广义瑞利商）</h4>
+<div class="fb">$$J=\frac{\vec{\mathbf{w}}^T\mathbf{S}_b\vec{\mathbf{w}}}{\vec{\mathbf{w}}^T\mathbf{S}_w\vec{\mathbf{w}}}$$</div>
+<p>令 $\vec{\mathbf{w}}^T\mathbf{S}_w\vec{\mathbf{w}}=1$，问题转化为：</p>
+<div class="fs">$$\min_{\vec{\mathbf{w}}} -\vec{\mathbf{w}}^T\mathbf{S}_b\vec{\mathbf{w}} \quad \text{s.t. } \vec{\mathbf{w}}^T\mathbf{S}_w\vec{\mathbf{w}}=1$$</div>
+<p>应用拉格朗日乘子法，等价于广义特征值问题 $\mathbf{S}_b\vec{\mathbf{w}}=\lambda\mathbf{S}_w\vec{\mathbf{w}}$。</p>
+<p>令 $(\vec{\mu}_0-\vec{\mu}_1)^T\vec{\mathbf{w}}=\lambda_{\vec{\mathbf{w}}}$（实数），则 $\mathbf{S}_b\vec{\mathbf{w}}=\lambda_{\vec{\mathbf{w}}}(\vec{\mu}_0-\vec{\mu}_1)$，代入有：</p>
+<div class="fb">$$\vec{\mathbf{w}}^* = \mathbf{S}_w^{-1}(\vec{\mu}_0-\vec{\mu}_1)$$</div>
+
+<h4>多分类 LDA</h4>
+<p>多分类 LDA 使用投影矩阵 $\mathbf{W}$（而非投影向量），广义特征值问题：$\mathbf{S}_b\mathbf{W}=\lambda\mathbf{S}_w\mathbf{W}$。</p>
+<ul>
+<li>$\mathbf{W}$ 的解析解为 $\mathbf{S}_w^{-1}\mathbf{S}_b$ 的 $M-1$ 个最大广义特征值对应的特征向量组成的矩阵</li>
+<li>多分类 LDA 将样本投影到 $M-1$ 维空间，是经典的监督降维技术</li>
+</ul>
+
+<h2>三、支持向量机</h2>
+
+<h3>3.1 函数间隔与几何间隔</h3>
+<p>对于给定的训练数据集 $\mathbb{D}$ 和超平面 $(\vec{\mathbf{w}},b)$：</p>
+<div class="g2">
+<div class="card">
+<div class="card-t">函数间隔</div>
+<div class="fb">$$\hat{\gamma}_i = \tilde{y}_i(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i+b)$$</div>
+<p>$\mathbb{D}$ 的函数间隔：$\hat{\gamma}=\min_i\hat{\gamma}_i$</p>
+<p>当超平面参数等比例变化时，函数间隔也按比例变化。</p>
+</div>
+<div class="card">
+<div class="card-t">几何间隔</div>
+<div class="fb">$$\gamma_i = \tilde{y}_i\left(\frac{\vec{\mathbf{w}}}{\|\vec{\mathbf{w}}\|_2}\cdot\vec{\mathbf{x}}_i+\frac{b}{\|\vec{\mathbf{w}}\|_2}\right)$$</div>
+<p>$\mathbb{D}$ 的几何间隔：$\gamma=\min_i\gamma_i$</p>
+<p>当超平面参数等比例变化时，几何间隔保持不变。</p>
+</div>
+</div>
+<p>关系：$\gamma_i = \hat{\gamma}_i / \|\vec{\mathbf{w}}\|_2$。</p>
+
+<h3>3.2 硬间隔 SVM 原始问题</h3>
+<p>求解几何间隔最大的分离超平面。取 $\hat{\gamma}=1$（函数间隔归一化），则：</p>
+<div class="fb">$$\min_{\vec{\mathbf{w}},b}\frac{1}{2}\|\vec{\mathbf{w}}\|_2^2 \quad \text{s.t. } \tilde{y}_i(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i+b)-1\ge0, \; i=1,\cdots,N$$</div>
+<p>这是一个凸二次规划问题（目标函数为二次，约束为仿射）。</p>
+
+<h3>3.3 硬间隔 SVM 对偶推导（完整5步）</h3>
+<div class="proof">
+<div class="proof-t">完整对偶推导</div>
+<ol class="steps">
+<li><strong>建立拉格朗日函数：</strong>
+<div class="fs">$$L(\vec{\mathbf{w}},b,\vec{\alpha})=\frac{1}{2}\|\vec{\mathbf{w}}\|^2_2-\sum_{i=1}^N\alpha_i[\tilde{y}_i(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i+b)-1]$$</div>
+其中 $\alpha_i\ge0$ 为拉格朗日乘子。</li>
+<li><strong>对 $\vec{\mathbf{w}}, b$ 求偏导并令其为零：</strong>
+<div class="fs">$$\nabla_{\vec{\mathbf{w}}}L = \vec{\mathbf{w}}-\sum_{i=1}^N\alpha_i\tilde{y}_i\vec{\mathbf{x}}_i=0 \Rightarrow \vec{\mathbf{w}}=\sum_{i=1}^N\alpha_i\tilde{y}_i\vec{\mathbf{x}}_i$$
+$$\nabla_b L = \sum_{i=1}^N\alpha_i\tilde{y}_i=0$$</div></li>
+<li><strong>代入拉格朗日函数消去 $\vec{\mathbf{w}}, b$：</strong>
+<div class="fs">$$\min_{\vec{\mathbf{w}},b}L = -\frac{1}{2}\sum_{i=1}^N\sum_{j=1}^N\alpha_i\alpha_j\tilde{y}_i\tilde{y}_j(\vec{\mathbf{x}}_i\cdot\vec{\mathbf{x}}_j)+\sum_{i=1}^N\alpha_i$$</div></li>
+<li><strong>对偶问题（极大化对偶函数，等价转化为极小）：</strong>
+<div class="fb">$$\min_{\vec{\alpha}}\frac{1}{2}\sum_{i=1}^N\sum_{j=1}^N\alpha_i\alpha_j\tilde{y}_i\tilde{y}_j(\vec{\mathbf{x}}_i\cdot\vec{\mathbf{x}}_j)-\sum_{i=1}^N\alpha_i$$
+$$\text{s.t. } \sum_{i=1}^N\alpha_i\tilde{y}_i=0, \quad \alpha_i\ge0$$</div></li>
+<li><strong>KKT 条件：</strong>
+<div class="fs">$$\vec{\mathbf{w}}^*=\sum_{i=1}^N\alpha_i^*\tilde{y}_i\vec{\mathbf{x}}_i, \quad \sum_{i=1}^N\alpha_i^*\tilde{y}_i=0$$
+$$\alpha_i^*[\tilde{y}_i(\vec{\mathbf{w}}^*\cdot\vec{\mathbf{x}}_i+b^*)-1]=0, \quad \tilde{y}_i(\vec{\mathbf{w}}^*\cdot\vec{\mathbf{x}}_i+b^*)-1\ge0, \quad \alpha_i^*\ge0$$</div></li>
+</ol>
+<p>分离超平面：$\sum_{i=1}^N\alpha_i^*\tilde{y}_i(\vec{\mathbf{x}}\cdot\vec{\mathbf{x}}_i)+b^*=0$。</p>
+</div>
+
+<h4>支持向量</h4>
+<p>训练数据集中与分离超平面距离最近的样本点称为<strong>支持向量</strong>，即满足 $\tilde{y}_i(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i+b)-1=0$ 的点，对应 $\alpha_i^*>0$。</p>
+<p>只有支持向量决定分离超平面，其他点不起作用（稀疏性）。</p>
+
+<h3>3.4 软间隔 SVM</h3>
+<p>对每个样本引入松弛变量 $\zeta_i\ge0$，使得约束变为 $\tilde{y}_i(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i+b)\ge1-\zeta_i$：</p>
+<div class="fb">$$\min_{\vec{\mathbf{w}},b,\vec{\zeta}}\frac{1}{2}\|\vec{\mathbf{w}}\|_2^2+C\sum_{i=1}^N\zeta_i \quad \text{s.t. } \tilde{y}_i(\vec{\mathbf{w}}\cdot\vec{\mathbf{x}}_i+b)\ge1-\zeta_i, \; \zeta_i\ge0$$</div>
+<p>对偶问题：</p>
+<div class="fb">$$\min_{\vec{\alpha}}\frac{1}{2}\sum_{i,j}\alpha_i\alpha_j\tilde{y}_i\tilde{y}_j(\vec{\mathbf{x}}_i\cdot\vec{\mathbf{x}}_j)-\sum_{i=1}^N\alpha_i \quad \text{s.t. } \sum_{i=1}^N\alpha_i\tilde{y}_i=0, \; 0\le\alpha_i\le C$$</div>
+
+<h4>三种支持向量情况（由 KKT 条件推导）</h4>
+<p>由 $C-\alpha_i-\mu_i=0$ 和 $\mu_i\zeta_i=0$：</p>
+<ul>
+<li>若 $\alpha_i^*<C$，则 $\mu_i^*>0$，$\zeta_i^*=0$：<strong>支持向量恰好落在间隔边界上</strong></li>
+<li>若 $\alpha_i^*=C$，$0<\zeta_i^*<1$：<strong>支持向量落在间隔边界与分离超平面之间，分类正确</strong></li>
+<li>若 $\alpha_i^*=C$，$\zeta_i^*=1$：<strong>支持向量落在分离超平面上</strong></li>
+<li>若 $\alpha_i^*=C$，$\zeta_i^*>1$：<strong>支持向量落在误分类一侧，分类错误</strong></li>
+</ul>
+
+<h3>3.5 非线性 SVM 与核技巧</h3>
+<p>核技巧：用变换 $\phi$ 将原始空间映射到高维特征空间，在新空间中用线性 SVM 学习。</p>
+<p>核函数替代法：将内积 $\vec{\mathbf{x}}_i\cdot\vec{\mathbf{x}}_j$ 替换为 $K(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_j)=\phi(\vec{\mathbf{x}}_i)\cdot\phi(\vec{\mathbf{x}}_j)$，无需显式计算 $\phi$。</p>
+
+<table>
+<tr><th>核函数名称</th><th>公式</th><th>说明</th></tr>
+<tr><td>线性核</td><td>$K(\mathbf{x},\mathbf{z})=\mathbf{x}\cdot\mathbf{z}$</td><td>原始空间，线性可分</td></tr>
+<tr><td>多项式核</td><td>$K(\mathbf{x},\mathbf{z})=(\mathbf{x}\cdot\mathbf{z}+1)^p$</td><td>$p$ 次多项式分类器</td></tr>
+<tr><td>高斯核（RBF）</td><td>$K(\mathbf{x},\mathbf{z})=\exp(-\frac{\|\mathbf{x}-\mathbf{z}\|^2}{2\sigma^2})$</td><td>映射到无穷维空间</td></tr>
+<tr><td>Sigmoid 核</td><td>$K(\mathbf{x},\mathbf{z})=\tanh(\kappa\mathbf{x}\cdot\mathbf{z}+c)$</td><td>神经网络激活函数</td></tr>
+<tr><td>拉普拉斯核</td><td>$K(\mathbf{x},\mathbf{z})=\exp(-\frac{\|\mathbf{x}-\mathbf{z}\|}{\sigma})$</td><td>鲁棒，对噪声不敏感</td></tr>
+</table>
+
+<h3>3.6 SVDD（支持向量数据描述）</h3>
+<p>一类分类策略：训练出一个最小超球面把正类数据包起来。</p>
+<p>优化目标（引入松弛变量）：</p>
+<div class="fb">$$\min_{R,\vec{\mathbf{o}},\vec{\xi}} R^2+C\sum_{i=1}^N\xi_i \quad \text{s.t. } \|\vec{\mathbf{x}}_i-\vec{\mathbf{o}}\|^2_2\le R^2+\xi_i, \; \xi_i\ge0$$</div>
+
+<div class="proof">
+<div class="proof-t">拉格朗日求解过程</div>
+<p>建立拉格朗日函数，对 $R, \vec{\mathbf{o}}, \xi_i$ 求偏导令其为零：</p>
+<div class="fs">$$\sum_{i=1}^N\alpha_i=1, \quad \vec{\mathbf{o}}=\sum_{i=1}^N\alpha_i\vec{\mathbf{x}}_i, \quad C-\alpha_i-\gamma_i=0$$</div>
+<p>代入得对偶问题：</p>
+<div class="fb">$$\max_{\vec{\alpha}} \sum_{i=1}^N\alpha_i(\vec{\mathbf{x}}_i\cdot\vec{\mathbf{x}}_i)-\sum_{i,j}\alpha_i\alpha_j(\vec{\mathbf{x}}_i\cdot\vec{\mathbf{x}}_j) \quad \text{s.t. } 0\le\alpha_i\le C, \; \sum_{i=1}^N\alpha_i=1$$</div>
+<p>引入核函数 $K(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_j)$：</p>
+<div class="fb">$$\max_{\vec{\alpha}} \sum_{i=1}^N\alpha_iK(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_i)-\sum_{i,j}\alpha_i\alpha_jK(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_j)$$</div>
+<p>判断新样本 $\vec{\mathbf{z}}$：若 $\|\vec{\mathbf{z}}-\vec{\mathbf{o}}\|^2_2\le R^2$（即 $K(\vec{\mathbf{z}},\vec{\mathbf{z}})-2\sum_i\alpha_iK(\vec{\mathbf{x}}_i,\vec{\mathbf{z}})+\sum_{i,j}\alpha_i\alpha_jK(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_j)\le R^2$），则判定为属于该类。</p>
+</div>
+
+<h2>四、贝叶斯与 KNN</h2>
+
+<h3>4.1 朴素贝叶斯</h3>
+<p>朴素贝叶斯基于贝叶斯定理与<strong>特征条件独立假设</strong>：</p>
+<div class="fb">$$p(\vec{\mathbf{x}}|y)=\prod_{j=1}^n p(x_j|y)$$</div>
+<p>分类器公式：</p>
+<div class="fb">$$f(\vec{\mathbf{x}})=\arg\max_{y\in\mathcal{Y}} \frac{p(y)\prod_{i=1}^n p(x_i|y)}{\sum_{y'} p(\vec{\mathbf{x}}|y')p(y')}$$</div>
+<p>由于分母与 $y$ 无关，等价于：</p>
+<div class="fb">$$f(\vec{\mathbf{x}})=\arg\max_{y\in\mathcal{Y}} p(y)\prod_{i=1}^n p(x_i|y)$$</div>
+
+<h4>MLE 参数估计</h4>
+<div class="fs">$$p(y=c_k)=\frac{1}{N}\sum_{i=1}^N I(\tilde{y}_i=c_k)$$
+$$p(x_j=a_{j,l}|y=c_k)=\frac{\sum_{i=1}^N I(x_{i,j}=a_{j,l}, \tilde{y}_i=c_k)}{\sum_{i=1}^N I(\tilde{y}_i=c_k)}$$</div>
+
+<h4>拉普拉斯平滑（贝叶斯估计）</h4>
+<div class="fb">$$p_{\lambda}(x_j=a_{j,l}|y=c_k)=\frac{\sum_{i=1}^N I(x_{i,j}=a_{j,l}, \tilde{y}_i=c_k)+\lambda}{\sum_{i=1}^N I(\tilde{y}_i=c_k)+s_j\lambda}$$
+$$p_{\lambda}(y=c_k)=\frac{\sum_{i=1}^N I(\tilde{y}_i=c_k)+\lambda}{N+K\lambda}$$</div>
+<p>$\lambda=0$：极大似然估计；$\lambda=1$：拉普拉斯平滑，避免零概率问题。</p>
+
+<h3>4.2 完整证明：朴素贝叶斯 = 后验概率最大化 = 期望风险最小化</h3>
+<div class="proof">
+<div class="proof-t">定理证明</div>
+<p>令损失函数为 0-1 损失，期望风险为：</p>
+<div class="fs">$$R_{exp}(f) = \mathbb{E}[L(y,f(\vec{\mathbf{x}}))] = \mathbb{E}_X\left[\sum_{y\in\mathcal{Y}} L(y,f(\vec{\mathbf{x}}))p(y|\vec{\mathbf{x}})\right]$$</div>
+<p>为使期望风险最小，对每个 $\vec{\mathbf{x}}$ 极小化：</p>
+<div class="fs">$$\arg\min_{\hat{y}} \sum_{y\in\mathcal{Y}} L(y,\hat{y})p(y|\vec{\mathbf{x}}) = \arg\min_{\hat{y}} \sum_{y\in\mathcal{Y}} p(y\ne\hat{y}|\vec{\mathbf{x}})$$
+$$= \arg\min_{\hat{y}}(1-p(\hat{y}|\vec{\mathbf{x}})) = \arg\max_{\hat{y}} p(\hat{y}|\vec{\mathbf{x}})$$</div>
+<p><strong>结论：期望风险最小化 ≡ 后验概率最大化。</strong></p>
+<p>朴素贝叶斯分类器正是后验概率最大化（MAP），因此三者等价。</p>
+</div>
+
+<h3>4.3 半朴素贝叶斯分类器</h3>
+<p>适当考虑一部分特征之间的相互依赖信息，每个特征在类别之外最多依赖于一个其他特征：</p>
+<div class="fb">$$p(\vec{\mathbf{x}}|y)=\prod_{j=1}^n p(x_j|y, x_j^P)$$</div>
+<p>其中 $x_j^P$ 为特征 $x_j$ 的父特征。</p>
+
+<h4>SPODE（Super-Parent ODE）</h4>
+<p>假设所有特征都依赖于同一个超父特征 $x_1$（通过交叉验证选择）：</p>
+<div class="fs">$$p(y|\vec{\mathbf{x}}) \propto p(y,x_1) \prod_{j=2}^n p(x_j|y,x_1)$$</div>
+
+<h4>TAN（Tree Augmented Naive Bayes）</h4>
+<p>基于最大带权生成树，步骤如下：</p>
+<ol class="steps">
+<li>计算任意两个特征之间的<strong>条件互信息</strong>：
+<div class="fb">$$I(\mathbf{X}_i,\mathbf{X}_j|\mathbf{Y})=\sum_y\sum_{x_i}\sum_{x_j} p(x_i,x_j|y)\log\frac{p(x_i,x_j|y)}{p(x_i|y)p(x_j|y)}$$</div></li>
+<li>以特征为节点构建完全图，边的权重为条件互信息 $I(\mathbf{X}_i,\mathbf{X}_j|\mathbf{Y})$</li>
+<li>构建完全图的<strong>最大带权生成树</strong>（Prim 或 Kruskal 算法），选择根节点，将边置为有向边</li>
+<li>加入类别节点 $\mathbf{Y}$，增加 $\mathbf{Y}$ 到每个特征的有向边</li>
+</ol>
+
+<h3>4.4 K 近邻（KNN）</h3>
+<p>KNN 的三要素：<strong>K 值选择、Lp 距离、决策规则</strong>。</p>
+
+<h4>K 值选择</h4>
+<ul>
+<li>$k$ 较小：邻域小，偏差小，方差大，易过拟合</li>
+<li>$k$ 较大：邻域大，方差小，偏差大，欠拟合</li>
+<li>通常用交叉验证选取最优 $k$ 值</li>
+</ul>
+
+<h4>Lp 距离</h4>
+<div class="fb">$$L_p(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_j)=\left(\sum_{l=1}^n|x_{i,l}-x_{j,l}|^p\right)^{1/p}$$</div>
+<p>$p=1$：曼哈顿距离；$p=2$：欧氏距离；$p\to\infty$：切比雪夫距离。</p>
+
+<h4>决策规则（多数表决等价于经验风险最小化）</h4>
+<p>设分类损失函数为 0-1 损失，$\mathcal{N}_k(\vec{\mathbf{x}})$ 为 $k$ 个最近邻，覆盖区域类别为 $c_m$：</p>
+<div class="fs">$$L=\frac{1}{k}\sum_{\vec{\mathbf{x}}_i\in\mathcal{N}_k(\vec{\mathbf{x}})} I(\tilde{y}_i\ne c_m) = 1-\frac{1}{k}\sum_{\vec{\mathbf{x}}_i\in\mathcal{N}_k(\vec{\mathbf{x}})} I(\tilde{y}_i=c_m)$$</div>
+<p>经验风险最小 ⟺ $\sum I(\tilde{y}_i=c_m)$ 最大 ⟺ 多数表决：$c_m=\arg\max_{c_m}\sum_{\vec{\mathbf{x}}_i\in\mathcal{N}_k} I(\tilde{y}_i=c_m)$。</p>
+
+<h3>4.5 KD 树</h3>
+<p>KD 树是对 $k$ 维空间进行存储和快速检索的二叉树，每个节点对应于一个 $k$ 维超矩形区域。</p>
+
+<h4>KD 树构建</h4>
+<ol class="steps">
+<li>选择维度：选取当前数据集中方差最大的维度 $j$</li>
+<li>选择切分点：取该维度的中位数</li>
+<li>递归：对左右子集递归构建，直到节点中样本数小于阈值</li>
+</ol>
+
+<h4>KD 树搜索（回溯算法）</h4>
+<ol class="steps">
+<li>从根节点出发，递归向下查找到叶节点（二叉搜索）</li>
+<li>将叶节点作为当前最近邻，回溯</li>
+<li>对每个父节点，检查另一侧子树是否可能存在更近的点（超球体是否与超平面相交）</li>
+<li>若相交，则进入另一侧子树搜索；否则继续回溯</li>
+<li>直到回溯到根节点，得到最终最近邻</li>
+</ol>
+
+<h2>五、决策树与提升树</h2>
+
+<h3>5.1 决策树原理</h3>
+<p>决策树将特征空间划分为互不相交的单元，在每个单元定义一个条件概率分布 $p(y|\vec{\mathbf{x}}),\vec{\mathbf{x}}\in\mathbb{S}$。单元类别为 $\arg\max_y p(y|\vec{\mathbf{x}})$。</p>
+<p><strong>选择最优决策树是 NP 完全问题</strong>，实际中采用启发式方法（递归地选择最优特征）近似求解。</p>
+
+<h3>5.2 特征选择</h3>
+
+<h4>熵与条件熵</h4>
+<div class="fb">$$H(\mathbb{D})=-\sum_{k=1}^K\frac{N_k}{N}\log\frac{N_k}{N}$$</div>
+<div class="fb">$$H(\mathbb{D}|A)=\sum_{i=1}^{n_A}\frac{N_{a_i}}{N}\left[-\sum_{k=1}^K\frac{N_{a_i,k}}{N_{a_i}}\log\frac{N_{a_i,k}}{N_{a_i}}\right]$$</div>
+
+<h4>信息增益</h4>
+<div class="fb">$$g(\mathbb{D},A)=H(\mathbb{D})-H(\mathbb{D}|A)$$</div>
+<p>信息增益大的特征具有更强的分类能力。缺点：偏向于选取取值较多的特征（极端情况：ID 号特征信息增益最大但无分类能力）。</p>
+
+<h4>信息增益比</h4>
+<div class="fb">$$g_R(\mathbb{D},A)=\frac{g(\mathbb{D},A)}{H_A(\mathbb{D})}$$</div>
+<p>其中 $H_A(\mathbb{D})=-\sum_{i=1}^{n_A}\frac{N_{a_i}}{N}\log\frac{N_{a_i}}{N}$。信息增益比对取值多的特征乘以惩罚系数。</p>
+
+<h4>基尼指数</h4>
+<div class="fb">$$\text{Gini}(p)=\sum_{k=1}^K p_k(1-p_k)=1-\sum_{k=1}^K p_k^2$$</div>
+<p>基尼指数表示：随机选中一个样本被分错的概率，越小越好。</p>
+<div class="fb">$$\text{Gini}(\mathbb{D},A:a)=\frac{N_1}{N}\text{Gini}(\mathbb{D}_1)+\frac{N_2}{N}\text{Gini}(\mathbb{D}_2)$$</div>
+
+<h4>三种特征选择准则对比</h4>
+<table>
+<tr><th>算法</th><th>特征选择准则</th><th>树结构</th><th>特征类型</th><th>剪枝</th></tr>
+<tr><td><strong>ID3</strong></td><td>信息增益</td><td>N叉树</td><td>离散</td><td>无</td></tr>
+<tr><td><strong>C4.5</strong></td><td>信息增益比</td><td>N叉树</td><td>离散+连续（二分法）</td><td>有</td></tr>
+<tr><td><strong>CART</strong></td><td>基尼指数（分类）/平方误差（回归）</td><td>二叉树</td><td>离散+连续</td><td>有（代价复杂度剪枝）</td></tr>
+</table>
+
+<h3>5.3 剪枝损失函数</h3>
+<p>设树 $T$ 的叶节点个数为 $|T_f|$，叶节点 $T_t$ 有 $N_t$ 个样本，经验熵 $H(t)$：</p>
+<div class="fb">$$C_{\alpha}(T)=\sum_{t=1}^{|T_f|}N_t H(t)+\alpha|T_f| = C(T)+\alpha|T_f|$$</div>
+<p>其中 $H(t)=-\sum_{k=1}^K\frac{N_{t,k}}{N_t}\log\frac{N_{t,k}}{N_t}$，$C(T)$ 为预测误差，$\alpha|T_f|$ 为正则化项。</p>
+<p>$\alpha$ 大：选较简单模型；$\alpha$ 小：选较复杂模型；$\alpha=0$：不剪枝。</p>
+
+<h3>5.4 CART 树</h3>
+<p>CART 假设决策树是<strong>二叉树</strong>，递归地二分每个特征。</p>
+
+<h4>CART 回归树（平方误差推导）</h4>
+<div class="fs">$$\sum_{m=1}^M\sum_{\vec{\mathbf{x}}_i\in R_m}(\tilde{y}_i-c_m)^2$$</div>
+<p>最优输出值 $\hat{c}_m = \frac{1}{N_m}\sum_{\vec{\mathbf{x}}_i\in R_m}\tilde{y}_i$（区域内均值）。</p>
+<p>寻找最优切分变量 $j$ 和切分点 $s$：</p>
+<div class="fb">$$(j^*,s^*)=\min_{j,s}\left[\min_{c_1}\sum_{\vec{\mathbf{x}}_i\in R_1(j,s)}(\tilde{y}_i-c_1)^2+\min_{c_2}\sum_{\vec{\mathbf{x}}_i\in R_2(j,s)}(\tilde{y}_i-c_2)^2\right]$$</div>
+
+<h4>CART 分类树（基尼指数）</h4>
+<div class="fb">$$(j^*,s^*)=\min_{j,s}\text{Gini}(\mathbb{D},j:s)$$</div>
+
+<h4>连续值处理（二分法）</h4>
+<p>对连续属性 $A$，取值排序为 $a_1<a_2<\cdots<a_M$，选取 $M-1$ 个划分点 $\{\frac{a_i+a_{i+1}}{2}\}$，选最优划分点。</p>
+
+<h4>缺失值处理</h4>
+<p>定义 $\rho$（无缺失样本比例）、$\tilde{p}_k$（无缺失样本中第 $k$ 类比例）、$\tilde{r}_i$（无缺失样本中属性值为 $a_i$ 的比例）：</p>
+<div class="fb">$$g(\mathbb{D},A)=\rho\times G(\tilde{\mathbb{D}},A)$$</div>
+<p>对缺失属性值的样本，同时划入所有子节点，权值调整为 $\tilde{r}_i\times\omega_{\vec{\mathbf{x}}}$。</p>
+
+<h3>5.5 提升树</h3>
+<p>加法模型：$f(\vec{\mathbf{x}})=\sum_{m=1}^M h_m(\vec{\mathbf{x}};\Theta_m)$，采用前向分步算法。</p>
+<p>每步确定第 $m$ 个决策树参数：$\hat{\Theta}_m=\arg\min_{\Theta_m}\sum_{i=1}^N L(\tilde{y}_i, f_{m-1}(\vec{\mathbf{x}}_i)+h_m(\vec{\mathbf{x}}_i;\Theta_m))$</p>
+
+<h3>5.6 GBDT</h3>
+<p>梯度提升树：利用损失函数的<strong>负梯度</strong>作为残差的近似值，拟合一棵回归树。</p>
+<div class="fb">$$r_{m,i}=-\left[\frac{\partial L(\tilde{y}_i,f(\vec{\mathbf{x}}_i))}{\partial f(\vec{\mathbf{x}}_i)}\right]_{f=f_{m-1}}$$</div>
+
+<table>
+<tr><th>损失函数</th><th>负梯度（伪残差）</th></tr>
+<tr><td>平方损失 $(y-\hat{y})^2/2$</td><td>$y-\hat{y}$（真实残差）</td></tr>
+<tr><td>绝对值损失 $|y-\hat{y}|$</td><td>$\text{sign}(y-\hat{y})$</td></tr>
+<tr><td>Huber 损失</td><td>$y-\hat{y}$（误差小时），$\delta\cdot\text{sign}(y-\hat{y})$（误差大时）</td></tr>
+<tr><td>对数损失（二分类）</td><td>$y-p$（$p$ 为预测概率）</td></tr>
+</table>
+
+<h3>5.7 XGBoost</h3>
+<p>XGBoost 通过结构风险极小化确定决策树参数，并使用<strong>二阶泰勒展开</strong>。</p>
+
+<div class="proof">
+<div class="proof-t">完整二阶泰勒展开推导</div>
+<p><strong>第1步：定义一阶二阶梯度</strong></p>
+<div class="fs">$$\hat{y}^{m-1}=f_{m-1}(\vec{\mathbf{x}}_i), \quad g_i=\frac{\partial L(\tilde{y}_i,\hat{y}^{m-1})}{\partial \hat{y}^{m-1}}, \quad h_i=\frac{\partial^2 L(\tilde{y}_i,\hat{y}^{m-1})}{\partial^2 \hat{y}^{m-1}}$$</div>
+<p><strong>第2步：对目标函数执行二阶泰勒展开</strong></p>
+<div class="fs">$$\mathcal{L}\approx\sum_{i=1}^N\left[L(\tilde{y}_i,\hat{y}^{m-1})+g_i h_m(\vec{\mathbf{x}}_i)+\frac{1}{2}h_i h^2_m(\vec{\mathbf{x}}_i)\right]+\Omega(h_m)$$</div>
+<p>其中正则化项 $\Omega(h_m)=\gamma T+\frac{1}{2}\lambda\sum_{j=1}^T\omega_j^2$（$T$ 为叶节点数）。</p>
+<p><strong>第3步：按叶节点重组</strong></p>
+<p>定义 $\mathbb{I}_j=\{i|q(\vec{\mathbf{x}}_i)=j\}$，$G_j=\sum_{i\in\mathbb{I}_j}g_i$，$H_j=\sum_{i\in\mathbb{I}_j}h_i$：</p>
+<div class="fs">$$\mathcal{L}\approx\sum_{j=1}^T\left[G_j\omega_j+\frac{1}{2}(H_j+\lambda)\omega_j^2\right]+\gamma T + \text{const}$$</div>
+<p><strong>第4步：求最优叶权重 $\omega_j^*$</strong></p>
+<p>对 $\omega_j$ 求导令其为零：</p>
+<div class="fb">$$\omega_j^*=-\frac{G_j}{H_j+\lambda}$$</div>
+<p><strong>第5步：结构分（Structure Score）</strong></p>
+<div class="fb">$$\mathcal{L}^*=-\frac{1}{2}\sum_{j=1}^T\frac{G_j^2}{H_j+\lambda}+\gamma T$$</div>
+<p><strong>第6步：分裂增益 Gain</strong></p>
+<div class="fb">$$\text{Gain}=\frac{1}{2}\left[\frac{G_L^2}{H_L+\lambda}+\frac{G_R^2}{H_R+\lambda}-\frac{G^2}{H+\lambda}\right]-\gamma$$</div>
+<p>若 Gain > 0 则分裂，否则不分裂（$\gamma$ 控制最小增益阈值）。</p>
+</div>
+
+<h3>5.8 LightGBM</h3>
+<p>LightGBM 的核心思想：减少训练样本数量（GOSS）或减少特征数量（EFB）来大幅提高训练速度。</p>
+
+<h4>GOSS（Gradient-based One-Side Sampling）</h4>
+<p>基于梯度的单边采样：保留梯度大的样本（未充分训练），随机丢弃梯度小的样本（已充分训练）。</p>
+<ol class="steps">
+<li>按梯度绝对值从大到小排列所有样本</li>
+<li>取 top $a\times N$ 的样本作为重要性样本（保留全部）</li>
+<li>从剩余 $(1-a)\times N$ 的样本中随机保留 $b\times N$ 个</li>
+<li>构建新训练集：重要性样本（权重=1）+ 随机保留样本（权重=$\frac{1-a}{b}$）</li>
+</ol>
+<p>权重修正系数 $\frac{1-a}{b}$ 的意义：从不重要样本中随机保留比例的倒数，用于修正分布偏移。</p>
+<div class="fb">$$\text{权重修正系数} = \frac{1-a}{b}$$</div>
+
+<h4>EFB（Exclusive Feature Bundling）</h4>
+<p><strong>互斥特征定义：</strong>对每个样本 $\vec{\mathbf{x}}_i$，不会出现 $x_{i,j}\ne0$ 且 $x_{i,k}\ne0$ 的情况，则特征 $j$ 和 $k$ 互斥。</p>
+<ol class="steps">
+<li>将每个特征视为图中的顶点</li>
+<li>遍历每个样本，若特征 $j,k$ 不互斥则在顶点 $j,k$ 之间连边（权重为冲突次数）</li>
+<li>允许少量冲突（图着色问题的近似）：按度从大到小排序顶点，贪心分配到打包集合</li>
+<li>打包时用<strong>偏移量编码</strong>区分特征来源：特征 a 范围 $[0,10)$，特征 b 加偏移量20后变为 $[20,40)$，打包特征范围 $[0,40)$</li>
+</ol>
+
+<h4>Histogram 算法</h4>
+<p>将连续浮点特征离散化为 $k$ 个整数，构建宽度为 $k$ 的直方图：</p>
+<ul>
+<li>遍历数据，根据离散化后的值作为索引在直方图中累积统计量（梯度之和、Hessian之和、样本数）</li>
+<li>遍历直方图的离散值，寻找最优分割点</li>
+<li>父节点直方图 - 子节点直方图 = 另一个子节点直方图（减少计算量）</li>
+</ul>
+
+<h4>Leaf-wise vs Level-wise</h4>
+<table>
+<tr><th>策略</th><th>优点</th><th>缺点</th></tr>
+<tr><td><strong>Level-wise</strong>（按层生长）</td><td>过一遍数据可同时分裂同一层叶子，易并行，不易过拟合</td><td>低效，很多叶子分裂增益低，带来不必要开销</td></tr>
+<tr><td><strong>Leaf-wise</strong>（按叶生长，LightGBM）</td><td>每次找分裂增益最大的叶子，同等分裂次数下误差更低，精度更高</td><td>可能长出较深的树，产生过拟合</td></tr>
+</table>
+<p>LightGBM 在 leaf-wise 基础上增加<strong>最大深度限制</strong>，防止过拟合。</p>
+
+<h4>分类损失函数</h4>
+<div class="fb">$$L(\theta)=\sum_i\left[y_i\ln(1+e^{-\hat{y}_i})+(1-y_i)\ln(1+e^{\hat{y}_i})\right]$$</div>
+
+<h2>六、集成学习</h2>
+
+<h3>6.1 集成学习定义</h3>
+<p>集成学习通过构建并结合多个学习器来完成学习任务。</p>
+<ul>
+<li><strong>同质集成（Homogeneous）：</strong>个体学习器来自同一种学习算法（基学习器）</li>
+<li><strong>异质集成（Heterogeneous）：</strong>个体学习器来自不同学习算法</li>
+</ul>
+<p>集成学习方法分类：</p>
+<ul>
+<li><strong>Boosting：</strong>个体学习器间存在强依赖关系，串行生成</li>
+<li><strong>Bagging/随机森林：</strong>个体学习器间无强依赖关系，并行生成</li>
+</ul>
+
+<h3>6.2 Boosting 原理</h3>
+<ol class="steps">
+<li>从初始训练集训练出一个基学习器</li>
+<li>根据基学习器的表现对训练样本分布进行调整，使得先前做错的样本受到更多关注</li>
+<li>基于调整后的样本分布训练下一个基学习器</li>
+<li>重复，直到基学习器数量达到事先指定的值 $M$</li>
+<li>将 $M$ 个基学习器加权组合</li>
+</ol>
+
+<h3>6.3 AdaBoost</h3>
+
+<h4>核心两步</h4>
+<ul>
+<li><strong>改变样本权值：</strong>提高被前一轮弱分类器错误分类样本的权值，降低正确分类样本的权值</li>
+<li><strong>组合弱分类器：</strong>加大分类误差率较小的弱分类器的权值</li>
+</ul>
+
+<h4>两个特点</h4>
+<ul>
+<li>不改变训练数据，只改变训练数据权值分布</li>
+<li>利用基本分类器的线性组合构成最终分类器：$H(\vec{\mathbf{x}})=\text{sign}\left(\sum_{m=1}^M\alpha_m h_m(\vec{\mathbf{x}})\right)$</li>
+</ul>
+
+<h4>完整算法（含权重更新公式）</h4>
+<ol class="steps">
+<li>初始化训练数据的权值分布：$w_i^1 = 1/N, i=1,\cdots,N$</li>
+<li>对 $m=1,\cdots,M$：
+<ul>
+<li>使用具有权值分布 $W^m=(w_1^m,\cdots,w_N^m)$ 的训练数据，学习得到基分类器 $h_m$</li>
+<li>计算 $h_m$ 的分类误差率：$e_m=\sum_{i=1}^N w_i^m I(h_m(\vec{\mathbf{x}}_i)\ne\tilde{y}_i)$</li>
+<li>计算 $h_m$ 的权重：$\alpha_m=\frac{1}{2}\ln\frac{1-e_m}{e_m}$</li>
+<li>更新训练数据的权值分布：
+<div class="fb">$$w_i^{m+1}=\frac{w_i^m}{Z_m}\exp(-\alpha_m\tilde{y}_i h_m(\vec{\mathbf{x}}_i))$$</div>
+其中 $Z_m=\sum_{i=1}^N w_i^m\exp(-\alpha_m\tilde{y}_i h_m(\vec{\mathbf{x}}_i))$ 为归一化因子。</li>
+</ul></li>
+<li>构建最终分类器：$H(\vec{\mathbf{x}})=\text{sign}\left(\sum_{m=1}^M\alpha_m h_m(\vec{\mathbf{x}})\right)$</li>
+</ol>
+
+<h4>训练误差上界推导</h4>
+<div class="proof">
+<div class="proof-t">AdaBoost 训练误差上界</div>
+<p>AdaBoost 的训练误差满足：</p>
+<div class="fb">$$\frac{1}{N}\sum_{i=1}^N I(H(\vec{\mathbf{x}}_i)\ne\tilde{y}_i) \le \frac{1}{N}\sum_{i=1}^N\exp(-\tilde{y}_i f(\vec{\mathbf{x}}_i)) = \prod_{m=1}^M Z_m$$</div>
+<p>推导：注意到 $I(H(\vec{\mathbf{x}}_i)\ne\tilde{y}_i) \le \exp(-\tilde{y}_i f(\vec{\mathbf{x}}_i))$（当 $H\ne y$ 时，$yf\le0$，指数 $\ge1$）。</p>
+<p>又有 $\frac{1}{N}\sum_i\exp(-\tilde{y}_i f(\vec{\mathbf{x}}_i)) = \prod_{m=1}^M Z_m$（由权值更新公式递推得到）。</p>
+<p>当基分类器的加权误差率 $e_m < 0.5$ 时，$Z_m = 2\sqrt{e_m(1-e_m)} < 1$，因此训练误差随 $M$ 增大而指数级下降。</p>
+</div>
+
+<h3>6.4 加法模型与前向分步算法</h3>
+<div class="fb">$$f(\vec{\mathbf{x}})=\sum_{m=1}^M\beta_m b(\vec{\mathbf{x}};\gamma_m)$$</div>
+<p>前向分步算法每步优化：</p>
+<div class="fb">$$(\beta_m,\gamma_m)=\arg\min_{\beta,\gamma}\sum_{i=1}^N L(\tilde{y}_i, f_{m-1}(\vec{\mathbf{x}}_i)+\beta b(\vec{\mathbf{x}}_i;\gamma))$$</div>
+
+<h3>6.5 Bagging</h3>
+<p>基于<strong>自助采样法</strong>（bootstrap sampling）：每次从 $N$ 个样本中有放回地采样 $N$ 次，约有 $63.2\%$ 的样本被选中，约 $36.8\%$ 未被选中作为包外估计（OOB）。</p>
+
+<div class="proof">
+<div class="proof-t">36.8% 推导</div>
+<p>一个样本在 $N$ 次采样中始终未被选中的概率：</p>
+<div class="fs">$$\lim_{N\to\infty}\left(1-\frac{1}{N}\right)^N = e^{-1} \approx 0.368$$</div>
+</div>
+
+<h3>6.6 随机森林</h3>
+<p>在 Bagging 基础上，对基决策树的每个节点，先从属性集合中<strong>随机选择 $k$ 个属性的子集</strong>，再从子集中选最优属性划分。</p>
+<ul>
+<li>$k=n$：等同于传统决策树</li>
+<li>$k=1$：完全随机选择</li>
+<li>推荐 $k=\log_2 n$</li>
+</ul>
+
+<h3>6.7 偏差-方差视角</h3>
+<div class="g2">
+<div class="card">
+<div class="card-t">Bagging 降方差</div>
+<p>多个模型的平均降低了方差：$\text{Var}(\bar{f}) = \frac{\sigma^2}{M}$（独立时）。对非剪枝决策树、神经网络等易受样本扰动的模型效果更明显。</p>
+</div>
+<div class="card">
+<div class="card-t">Boosting 降偏差</div>
+<p>通过不断纠正前一轮的错误，将弱学习器提升为强学习器，主要降低偏差。对 SVM、KNN 等不易受样本扰动的模型效果更明显。</p>
+</div>
+</div>
+
+<h3>6.8 集成策略</h3>
+
+<h4>平均法（回归）</h4>
+<div class="fs">$$H(\vec{\mathbf{x}})=\frac{1}{M}\sum_{i=1}^M h_i(\vec{\mathbf{x}}) \quad \text{（简单平均）}$$
+$$H(\vec{\mathbf{x}})=\sum_{i=1}^M\omega_i h_i(\vec{\mathbf{x}}), \quad \omega_i\ge0, \sum\omega_i=1 \quad \text{（加权平均）}$$</div>
+
+<h4>投票法（分类）</h4>
+<ul>
+<li><strong>绝对多数投票：</strong>某标记得票数过半则预测为该标记，否则拒绝预测</li>
+<li><strong>相对多数投票：</strong>$H(\vec{\mathbf{x}})=\arg\max_{c_j}\sum_{i=1}^M I(h_i(\vec{\mathbf{x}})=c_j)$</li>
+<li><strong>加权投票：</strong>$H(\vec{\mathbf{x}})=\arg\max_{c_j}\sum_{i=1}^M\omega_i I(h_i(\vec{\mathbf{x}})=c_j)$</li>
+</ul>
+
+<h3>6.9 Stacking</h3>
+<ol class="steps">
+<li>从初始数据集训练出<strong>初级学习器</strong>（多个不同类型）</li>
+<li>使用<strong>交叉验证</strong>（避免过拟合）：用训练初级学习器时未使用的样本产生次级训练集</li>
+<li>将初级学习器的输出类概率作为特征，训练<strong>次级学习器</strong></li>
+</ol>
+<p>次级学习算法推荐使用<strong>多响应线性回归（MLR）</strong>，输入特征为初级学习器的输出类概率。</p>
+
+<h2>七、模型评估</h2>
+
+<h3>7.1 过拟合与欠拟合</h3>
+<div class="g2">
+<div class="card">
+<div class="card-t">过拟合（Overfitting）</div>
+<p>模型参数过多，对已知数据预测好但对未知数据预测差，训练误差与测试误差差距太大。原因：将训练样本本身的特点当作了所有样本的一般性质。过拟合无法避免，只能缓解。</p>
+</div>
+<div class="card">
+<div class="card-t">欠拟合（Underfitting）</div>
+<p>模型参数太少，对已知数据预测也很差，训练误差较大。原因：学习能力低下。</p>
+</div>
+</div>
+
+<h3>7.2 偏差方差分解完整推导</h3>
+<div class="proof">
+<div class="proof-t">偏差-方差分解定理</div>
+<p>期望误差分解为（$f^*$ 为最优模型，$\varepsilon$ 为噪声）：</p>
+<div class="fs">$$\mathcal{R}(f) = \mathbb{E}_{(\mathbf{x},y)}[(y-f(\mathbf{x}))^2] = \mathbb{E}_{\mathbf{x}}[(f(\mathbf{x})-f^*(\mathbf{x}))^2] + \varepsilon$$</div>
+<p>对单个样本 $\mathbf{x}$，不同训练集 $\mathcal{D}$ 得到的模型 $f_{\mathcal{D}}(\mathbf{x})$ 与最优模型的期望差距：</p>
+<div class="fs">$$\mathbb{E}_{\mathcal{D}}[(f_{\mathcal{D}}(\mathbf{x})-f^*(\mathbf{x}))^2]$$
+$$= \mathbb{E}_{\mathcal{D}}\left[(f_{\mathcal{D}}(\mathbf{x})-\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}(\mathbf{x})]+\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}(\mathbf{x})]-f^*(\mathbf{x}))^2\right]$$</div>
+<p>展开后交叉项为零（因为 $\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}(\mathbf{x})-\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}(\mathbf{x})]]=0$）：</p>
+<div class="fb">$$= \underbrace{(\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}(\mathbf{x})]-f^*(\mathbf{x}))^2}_{\text{bias}^2} + \underbrace{\mathbb{E}_{\mathcal{D}}[(f_{\mathcal{D}}(\mathbf{x})-\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}(\mathbf{x})])^2]}_{\text{variance}}$$</div>
+<p><strong>交叉项为零的证明：</strong></p>
+<div class="fs">$$2(\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}]-f^*)\cdot\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}-\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}]]$$
+$$= 2(\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}]-f^*)\cdot(\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}]-\mathbb{E}_{\mathcal{D}}[f_{\mathcal{D}}]) = 0$$</div>
+</div>
+
+<h3>7.3 误差诊断</h3>
+<table>
+<tr><th>情况</th><th>诊断</th><th>缓解策略</th></tr>
+<tr><td>训练误差高</td><td>高偏差（欠拟合）</td><td>选更复杂模型；更先进的优化算法</td></tr>
+<tr><td>训练误差低，测试误差高</td><td>高方差（过拟合）</td><td>增加训练数据；使用正则化</td></tr>
+<tr><td>训练误差低，测试误差也低</td><td>理想状态</td><td>-</td></tr>
+<tr><td>训练误差高，测试误差更高</td><td>高偏差+高方差</td><td>两者兼顾</td></tr>
+</table>
+
+<h3>7.4 泛化能力评估</h3>
+<table>
+<tr><th>方法</th><th>说明</th><th>特点</th></tr>
+<tr><td><strong>Hold-out</strong></td><td>数据切分为训练/验证/测试三部分</td><td>简单快速，依赖划分方式</td></tr>
+<tr><td><strong>K折交叉验证</strong></td><td>数据随机划分为K份，轮流用K-1份训练，1份测试</td><td>充分利用数据，常用K=5或10</td></tr>
+<tr><td><strong>留一法（LOO）</strong></td><td>K折交叉验证的特例，K=N</td><td>结果稳定，计算量大</td></tr>
+<tr><td><strong>自助法</strong></td><td>有放回采样N次，约63.2%样本作训练，其余作测试（包外估计）</td><td>适合数据集小的情况</td></tr>
+</table>
+
+<h4>训练/验证/测试集比例建议</h4>
+<ul>
+<li>小批量数据（无验证集）：训练集70%，测试集30%</li>
+<li>小批量数据（有验证集）：训练集60%，验证集20%，测试集20%</li>
+<li>大批量数据（百万级）：验证集1万，测试集1万即可</li>
+</ul>
+
+<h3>7.5 分类性能度量</h3>
+
+<h4>准确率与错误率</h4>
+<div class="fs">$$r_{test}=\frac{1}{N'}\sum_{i=1}^{N'}I(\tilde{y}'_i=\hat{y}'_i), \quad c_{test}=\frac{1}{N'}\sum_{i=1}^{N'}I(\tilde{y}'_i\ne\hat{y}'_i)$$</div>
+
+<h4>混淆矩阵</h4>
+<table>
+<tr><th></th><th>预测：正类</th><th>预测：负类</th></tr>
+<tr><td>真实：正类</td><td>TP（真正例）</td><td>FN（假负例）</td></tr>
+<tr><td>真实：负类</td><td>FP（假正例）</td><td>TN（真负例）</td></tr>
+</table>
+<div class="g2">
+<div class="card">
+<div class="card-t">查准率 P（Precision）</div>
+<div class="fb">$$P=\frac{TP}{TP+FP}$$</div>
+<p>预测为正类中真正正类的比例</p>
+</div>
+<div class="card">
+<div class="card-t">查全率 R（Recall）</div>
+<div class="fb">$$R=\frac{TP}{TP+FN}$$</div>
+<p>真实正类中被找出来的比例</p>
+</div>
+</div>
+<div class="fb">$$F1=\frac{2PR}{P+R}$$</div>
+
+<h4>P-R 曲线</h4>
+<p>按预测为正类的概率从高到低排序，依次以 $p_i$ 作为分类阈值，计算 $(R_i, P_i)$，绘制 P-R 曲线。</p>
+<ul>
+<li>若分类器 B 的 P-R 曲线被 A 完全包住，则 A 性能好于 B</li>
+<li>曲线交叉时，用 P-R 曲线下面积或平衡点（P=R 处）比较</li>
+</ul>
+
+<h4>ROC 曲线与 AUC</h4>
+<div class="fs">$$TPR=\frac{TP}{TP+FN} \quad \text{（真阳率，纵轴）}$$
+$$FPR=\frac{FP}{TN+FP} \quad \text{（假阳率，横轴）}$$</div>
+<p>按预测概率排序，依次以 $p_i$ 作阈值，计算 $(FPR_i, TPR_i)$，绘制 ROC 曲线。</p>
+<p><strong>AUC 物理含义：</strong>从所有正样本中随机挑选一个，从所有负样本中随机挑选一个，正样本预测概率 $p_1$ 大于负样本预测概率 $p_0$ 的概率，即 $P(p_1>p_0)$。AUC 反映模型对样本的排序能力，对样本不平衡不敏感。</p>
+<p><strong>AUC 计算：</strong>ROC 曲线下面积，等价于 $\frac{\sum_{i\in\text{正}}\text{rank}_i - \frac{m_1(m_1+1)}{2}}{m_1 m_0}$（其中 $m_1, m_0$ 为正负样本数）。</p>
+
+<h4>KS 曲线</h4>
+<div class="fs">$$KS = \max(TPR - FPR)$$</div>
+<p>绘制步骤：</p>
+<ol class="steps">
+<li>按预测为正例的概率降序排列样本</li>
+<li>按顺序选取 N 个截断点，计算 TPR 和 FPR</li>
+<li>横轴为样本占比（0到1），纵轴分别为 TPR、FPR、(TPR-FPR)，绘制 KS 曲线</li>
+<li>KS 值为 TPR-FPR 曲线的最大值</li>
+</ol>
+
+<h4>CAP 曲线</h4>
+<p>将客户按违约概率从高到低排序：</p>
+<ul>
+<li><strong>完美曲线：</strong>模型将所有坏客户排在左方</li>
+<li><strong>随机曲线：</strong>斜率为45度的直线</li>
+<li><strong>实际曲线：</strong>介于两者之间</li>
+</ul>
+<div class="fb">$$AR = \frac{\text{A的面积}}{\text{A的面积}+\text{B的面积}}$$</div>
+
+<h3>7.6 回归性能度量</h3>
+<table>
+<tr><th>指标</th><th>公式</th></tr>
+<tr><td>MSE</td><td>$\frac{1}{N'}\sum_{i=1}^{N'}(\tilde{y}'_i-\hat{y}'_i)^2$</td></tr>
+<tr><td>RMSE</td><td>$\sqrt{\frac{1}{N'}\sum_{i=1}^{N'}(\tilde{y}'_i-\hat{y}'_i)^2}$</td></tr>
+<tr><td>RMSLE</td><td>$\sqrt{\frac{1}{N'}\sum_{i=1}^{N'}[\log(\tilde{y}'_i+1)-\log(\hat{y}'_i+1)]^2}$</td></tr>
+<tr><td>MAE</td><td>$\frac{1}{N'}\sum_{i=1}^{N'}|\tilde{y}'_i-\hat{y}'_i|$</td></tr>
+</table>
+<p>RMSLE 优势：关注预测误差的比例，对真实值较小的样本同等重要，对大异常值影响较小。</p>
+
+<h3>7.7 最大似然估计</h3>
+<div class="fb">$$\theta_{ML}=\arg\max_{\theta}\prod_{i=1}^m p_{model}(\vec{\mathbf{x}}_i;\theta) = \arg\max_{\theta}\sum_{i=1}^m\log p_{model}(\vec{\mathbf{x}}_i;\theta)$$</div>
+<p>等价于最小化经验分布 $\hat{p}_{data}$ 与模型分布 $p_{model}$ 之间的 KL 散度。</p>
+<p><strong>两个优良性质：</strong></p>
+<ul>
+<li><strong>一致性：</strong>当训练样本数趋向无穷时，MLE 依概率收敛到参数真实值</li>
+<li><strong>统计效率：</strong>只需较少样本就能达到良好泛化误差</li>
+</ul>
+
+<h3>7.8 贝叶斯估计</h3>
+<div class="fb">$$p(\theta|\mathbf{X})= \frac{p(\mathbf{X}|\theta)p(\theta)}{p(\mathbf{X})}$$</div>
+<p>MAP（最大后验估计）：</p>
+<div class="fb">$$\theta_{MAP}=\arg\max_{\theta}p(\theta|\mathbf{X})=\arg\max_{\theta}[\log p(\mathbf{X}|\theta)+\log p(\theta)]$$</div>
+<p>MAP 相比 MLE：拥有先验知识信息，有助于减少方差，但增加偏差。</p>
+
+<h3>7.9 参数估计准则完整对比</h3>
+<table>
+<tr><th>准则</th><th>目标</th><th>等价正则化</th><th>特点</th></tr>
+<tr><td><strong>MLE</strong></td><td>$\max\prod p(\tilde{y}_i|\vec{\mathbf{x}}_i;\theta)$</td><td>无正则化（ERM）</td><td>无偏，大样本下一致</td></tr>
+<tr><td><strong>MAP</strong></td><td>$\max\prod p(\tilde{y}_i|\vec{\mathbf{x}}_i;\theta)p(\theta)$</td><td>L2正则（高斯先验），L1正则（拉普拉斯先验）</td><td>有偏，减少方差</td></tr>
+<tr><td><strong>贝叶斯估计</strong></td><td>$p(\theta|\mathbf{X})$ 完整后验</td><td>完整后验，包含所有不确定性</td><td>计算开销大，小样本优势明显</td></tr>
+</table>
+<ul>
+<li>MLE = ERM（经验风险最小化）</li>
+<li>MAP = SRM（结构风险最小化）</li>
+<li>高斯先验 $\Leftrightarrow$ L2 正则化（Ridge）</li>
+<li>拉普拉斯先验 $\Leftrightarrow$ L1 正则化（Lasso）</li>
+</ul>
+
+<h2>八、降维算法</h2>
+
+<h3>8.1 维度灾难</h3>
+<p>在高维情形下出现的数据样本稀疏、距离计算困难等问题，称作<strong>维度灾难（curse of dimensionality）</strong>。降维有效的原因：高维数据往往分布在一个低维流形上，与学习任务相关的仅是某个低维分布。</p>
+
+<h3>8.2 PCA 完整推导</h3>
+
+<h4>坐标变换</h4>
+<p>给定数据集 $\mathbb{D}=\{\vec{\mathbf{x}}_1,\cdots,\vec{\mathbf{x}}_N\}$（已中心化），坐标变换矩阵 $\mathbf{W}=(\vec{\mathbf{w}}_1,\cdots,\vec{\mathbf{w}}_d)\in\mathbb{R}^{n\times d}$（$d<n$）：</p>
+<div class="fb">$$\vec{\mathbf{z}} = \mathbf{W}^T\vec{\mathbf{x}} \in \mathbb{R}^d$$</div>
+<p>约束：$\|\vec{\mathbf{w}}_i\|_2=1$，$\mathbf{W}^T\mathbf{W}=\mathbf{I}_{d\times d}$，$\vec{\mathbf{w}}_i\cdot\vec{\mathbf{w}}_j=0 (i\ne j)$。</p>
+
+<h4>重构误差 → 最大可分性等价</h4>
+<div class="proof">
+<div class="proof-t">PCA 最优化目标推导</div>
+<p>重构误差最小化目标：</p>
+<div class="fs">$$\min_{\mathbf{W}}\sum_{i=1}^N\|\hat{\mathbf{x}}_i-\vec{\mathbf{x}}_i\|_2^2 = \min_{\mathbf{W}}\|\mathbf{X}-\mathbf{X}\mathbf{W}\mathbf{W}^T\|_F^2$$</div>
+<p>展开并利用 $\mathbf{W}^T\mathbf{W}=\mathbf{I}$：</p>
+<div class="fs">$$\|\mathbf{X}-\mathbf{X}\mathbf{W}\mathbf{W}^T\|_F^2 = \text{tr}(\mathbf{X}^T\mathbf{X}) - \text{tr}(\mathbf{W}^T\mathbf{X}^T\mathbf{X}\mathbf{W})$$</div>
+<p>由于 $\text{tr}(\mathbf{X}^T\mathbf{X})$ 为常数，最小化重构误差等价于：</p>
+<div class="fb">$$\max_{\mathbf{W}} \text{tr}(\mathbf{W}^T\mathbf{X}^T\mathbf{X}\mathbf{W}) \quad \text{s.t. } \mathbf{W}^T\mathbf{W}=\mathbf{I}_{d\times d}$$</div>
+<p>注意 $\text{tr}(\mathbf{W}^T\mathbf{X}^T\mathbf{X}\mathbf{W}) = \sum_{i=1}^N\mathbf{W}^T\vec{\mathbf{x}}_i\vec{\mathbf{x}}_i^T\mathbf{W}$ 正是样本在低维空间的<strong>方差之和</strong>，即最大可分性。</p>
+<p>这证明了：<strong>最近重构性 ≡ 最大可分性</strong>。</p>
+</div>
+
+<h4>特征值问题求解</h4>
+<p>用拉格朗日乘子法，最优化等价于特征值问题：</p>
+<div class="fb">$$\mathbf{X}^T\mathbf{X}\mathbf{W} = \lambda\mathbf{W}$$</div>
+<p>取协方差矩阵 $\mathbf{S}=\mathbf{X}^T\mathbf{X}/N$ 的前 $d$ 个最大特征值对应的特征向量，组成投影矩阵 $\mathbf{W}^*$。</p>
+
+<h3>8.3 PCA 与 SVD 等价性推导</h3>
+<div class="proof">
+<div class="proof-t">等价性证明</div>
+<p>对数据矩阵 $\mathbf{X}\in\mathbb{R}^{N\times n}$ 进行 SVD 分解：$\mathbf{X}=\mathbf{V}\Sigma\mathbf{U}^T$，则：</p>
+<div class="fs">$$\mathbf{X}^T\mathbf{X} = \mathbf{U}\Sigma^T\mathbf{V}^T\mathbf{V}\Sigma\mathbf{U}^T = \mathbf{U}\mathbf{M}\mathbf{U}^T$$</div>
+<p>其中 $\mathbf{M}=\Sigma^T\Sigma$ 为对角矩阵。则 $\mathbf{X}^T\mathbf{X}\mathbf{U}=\mathbf{U}\mathbf{M}$，即 $\mathbf{U}$ 的列向量就是 $\mathbf{X}^T\mathbf{X}$ 的特征向量，$\mathbf{M}$ 的对角元素 $\lambda_i=\sigma_i^2$ 为对应特征值。</p>
+<p><strong>结论：SVD 奇异值分解等价于 PCA，核心都是求 $\mathbf{X}^T\mathbf{X}$ 的特征值及对应的单位特征向量。</strong></p>
+</div>
+
+<h3>8.4 KPCA</h3>
+<p>通过映射 $\phi$ 将样本映射到高维特征空间，在高维空间做 PCA。定义核矩阵：</p>
+<div class="fb">$$\mathbf{K}_{ij} = \kappa(\vec{\mathbf{x}}_i, \vec{\mathbf{x}}_j) = \phi(\vec{\mathbf{x}}_i)\cdot\phi(\vec{\mathbf{x}}_j)$$</div>
+<p>投影方向推导：$\mathbf{W}=\mathbf{X}_{\phi}^T\mathbf{A}$，代入特征方程得 $\mathbf{K}\mathbf{A}=\lambda\mathbf{A}$。</p>
+<p>对新样本 $\vec{\mathbf{x}}$ 的预测（第 $j$ 维坐标）：</p>
+<div class="fb">$$z_j = \sum_{i=1}^N\alpha_{i,j}\kappa(\vec{\mathbf{x}}_i, \vec{\mathbf{x}})$$</div>
+
+<h3>8.5 流形学习概念</h3>
+<p>流形是在局部和欧氏空间同胚的空间，在局部具有欧氏空间的性质，能用欧氏距离计算。低维流形嵌入到高维空间中，数据在高维空间的分布虽然复杂，但在局部仍具有欧氏空间的性质。</p>
+
+<h3>8.6 MDS（多维缩放）</h3>
+<p>要求原始空间中样本之间的距离在低维空间中得到保持。</p>
+<div class="proof">
+<div class="proof-t">距离矩阵 → 内积矩阵推导</div>
+<p>设降维后样本被中心化，则 $\mathbf{B}=\mathbf{Z}\mathbf{Z}^T$ 每行每列之和为零。</p>
+<p>由 $d_{ij}^2=b_{ii}+b_{jj}-2b_{ij}$，对行/列/全体求和：</p>
+<div class="fs">$$d_{i,\cdot}^2=\frac{tr(\mathbf{B})}{N}+b_{ii}, \quad d_{j,\cdot}^2=\frac{tr(\mathbf{B})}{N}+b_{jj}, \quad d_{\cdot,\cdot}^2=\frac{2tr(\mathbf{B})}{N}$$</div>
+<p>联立求解：</p>
+<div class="fb">$$b_{ij}=\frac{d_{i,\cdot}^2+d_{j,\cdot}^2-d_{\cdot,\cdot}^2-d_{ij}^2}{2}$$</div>
+<p>对 $\mathbf{B}$ 做特征值分解 $\mathbf{B}=\mathbf{V}\Lambda\mathbf{V}^T$，取前 $n^*$ 个非零特征值，得到：</p>
+<div class="fb">$$\mathbf{Z}=\mathbf{V}^*\Lambda^{*1/2}$$</div>
+</div>
+
+<h3>8.7 Isomap（等度量映射）</h3>
+<p>基本观点：在高维空间中的直线距离具有误导性，应使用低维流形上的测地距离。</p>
+<ol class="steps">
+<li>对每个样本 $\vec{\mathbf{x}}_i$，计算 $k$ 近邻（$k$ 近邻图）或 $\epsilon$ 邻居（$\epsilon$ 近邻图），设置对应欧氏距离，其余为无穷大</li>
+<li>调用最短路径算法（Dijkstra 或 Floyd-Warshall）计算任意两样本间的测地距离矩阵 $\mathbf{D}$</li>
+<li>调用 MDS 算法，获得样本在低维空间的表示 $\mathbf{Z}$</li>
+</ol>
+
+<h3>8.8 LLE（局部线性嵌入）</h3>
+<p>试图保持邻域内样本之间的线性关系。</p>
+<div class="proof">
+<div class="proof-t">LLE 两个重构误差</div>
+<p><strong>第一个重构误差（原始空间中求线性重构系数）：</strong></p>
+<div class="fs">$$\min_{\vec{\mathbf{w}}_1,\cdots,\vec{\mathbf{w}}_N}\sum_{i=1}^N\left\|\vec{\mathbf{x}}_i-\sum_{j\in\mathbb{Q}_i}w_{i,j}\vec{\mathbf{x}}_j\right\|_2^2 \quad \text{s.t. }\sum_{j\in\mathbb{Q}_i}w_{i,j}=1$$</div>
+<p>解析解（$C_{j,k}=(\vec{\mathbf{x}}_i-\vec{\mathbf{x}}_j)^T(\vec{\mathbf{x}}_i-\vec{\mathbf{x}}_k)$）：</p>
+<div class="fb">$$w_{i,j}=\frac{\sum_{k\in\mathbb{Q}_i}C_{j,k}^{-1}}{\sum_{l,s\in\mathbb{Q}_i}C_{l,s}^{-1}}, \quad j\in\mathbb{Q}_i$$</div>
+<p><strong>第二个重构误差（低维空间中求坐标）：</strong></p>
+<div class="fs">$$\min_{\mathbf{Z}}\text{tr}(\mathbf{Z}^T\mathbf{M}\mathbf{Z}) \quad \text{s.t. }\mathbf{Z}^T\mathbf{Z}=\mathbf{I}_{n'\times n'}$$</div>
+<p>其中 $\mathbf{M}=(\mathbf{I}-\mathbf{W})^T(\mathbf{I}-\mathbf{W})$。取 $\mathbf{M}$ 最小的 $n'$ 个特征值对应的特征向量组成 $\mathbf{Z}$。</p>
+</div>
+
+<h3>8.9 度量学习</h3>
+<p>马氏距离（Mahalanobis distance）：</p>
+<div class="fb">$$\text{dist}_{mah}^2(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_j)=(\vec{\mathbf{x}}_i-\vec{\mathbf{x}}_j)^T\mathbf{M}(\vec{\mathbf{x}}_i-\vec{\mathbf{x}}_j)$$</div>
+<p>$\mathbf{M}$ 为度量矩阵（半正定对称矩阵，$\mathbf{M}=\mathbf{P}\mathbf{P}^T$）。度量学习将 $\mathbf{M}$ 的学习嵌入到学习器的评价指标中，通过优化学习器目标来求得 $\mathbf{M}$。</p>
+
+<h3>8.10 概率 PCA（PPCA）</h3>
+<p>定义隐变量 $\vec{\mathbf{z}}\in\mathbb{R}^d$，先验分布 $p(\vec{\mathbf{z}})=\mathcal{N}(\vec{\mathbf{0}},\mathbf{I})$；条件概率：</p>
+<div class="fb">$$p(\vec{\mathbf{x}}|\vec{\mathbf{z}})=\mathcal{N}(\mathbf{W}\vec{\mathbf{z}}+\vec{\mu}, \sigma^2\mathbf{I})$$</div>
+<p>边缘分布推导（利用高斯分布的封闭性）：</p>
+<div class="fb">$$p(\vec{\mathbf{x}})=\mathcal{N}(\vec{\mu}, \mathbf{C}), \quad \mathbf{C}=\mathbf{W}\mathbf{W}^T+\sigma^2\mathbf{I}$$</div>
+<p>MLE 解析解：</p>
+<ul>
+<li>$\mathbf{W}=\mathbf{U}_d(\Lambda_d-\sigma^2\mathbf{I})^{1/2}\mathbf{R}$（$\mathbf{U}_d$ 为协方差矩阵前 $d$ 个特征向量，$\mathbf{R}$ 为任意正交矩阵）</li>
+<li>$\sigma^2=\frac{1}{n-d}\sum_{i=d+1}^n\lambda_i$（丢弃维度的平均方差）</li>
+</ul>
+
+<h3>8.11 因子分析</h3>
+<p>与 PPCA 唯一差别：条件概率协方差矩阵为<strong>对角矩阵</strong> $\Psi$（而非各向同性）：</p>
+<div class="fb">$$p(\vec{\mathbf{x}}|\vec{\mathbf{z}})=\mathcal{N}(\mathbf{W}\vec{\mathbf{z}}+\vec{\mu}, \Psi)$$</div>
+<p>无解析解，用 EM 算法迭代求解。</p>
+<p><strong>E 步</strong>（$\mathbf{G}=(\mathbf{I}+\mathbf{W}^T\Psi^{-1}\mathbf{W})^{-1}$）：</p>
+<div class="fb">$$\mathbb{E}[\vec{\mathbf{z}}_i]=\mathbf{G}\mathbf{W}^T\Psi^{-1}\vec{\mathbf{x}}_i$$
+$$\mathbb{E}[\vec{\mathbf{z}}_i\vec{\mathbf{z}}_i^T]=\mathbf{G}+\mathbb{E}[\vec{\mathbf{z}}_i]\mathbb{E}[\vec{\mathbf{z}}_i]^T$$</div>
+<p><strong>M 步</strong>：</p>
+<div class="fb">$$\mathbf{W}_{new}\leftarrow\left[\sum_{i=1}^N\vec{\mathbf{x}}_i\mathbb{E}[\vec{\mathbf{z}}_i]^T\right]\left[\sum_{i=1}^N\mathbb{E}[\vec{\mathbf{z}}_i\vec{\mathbf{z}}_i^T]\right]^{-1}$$
+$$\Psi_{new}\leftarrow\text{diag}\left[\mathbf{S}-\mathbf{W}_{new}\frac{1}{N}\sum_{i=1}^N\mathbb{E}[\vec{\mathbf{z}}_i]\vec{\mathbf{x}}_i^T\right]$$</div>
+
+<h3>8.12 ICA（独立成分分析）</h3>
+<p>鸡尾酒会问题：$n$ 个人说话，$n$ 个麦克风采集信号，恢复原始信号。</p>
+<div class="fb">$$\vec{\mathbf{x}}=\mathbf{A}\vec{\mathbf{s}} \quad \text{（混合矩阵 A）}$$
+$$\vec{\mathbf{s}}=\mathbf{W}\vec{\mathbf{x}} \quad \text{（分离矩阵 W=A}^{-1}\text{）}$$</div>
+<p>最大似然估计（假设累积分布函数为 sigmoid）：</p>
+<div class="fb">$$\mathcal{L}=\sum_{i=1}^N\left(\log|\mathbf{W}|+\sum_{j=1}^n\log p_s(\vec{\mathbf{w}}_j^T\vec{\mathbf{x}}_i)\right)$$</div>
+<p>梯度公式：</p>
+<div class="fb">$$\nabla_{\mathbf{W}}\mathcal{L}=\begin{pmatrix}1-2g(\vec{\mathbf{w}}_1^T\vec{\mathbf{x}}_i)\\ \vdots\\ 1-2g(\vec{\mathbf{w}}_n^T\vec{\mathbf{x}}_i)\end{pmatrix}\vec{\mathbf{x}}_i^T+(\mathbf{W}^{-1})^T$$</div>
+<p>其中 $g$ 为 sigmoid 函数，$1-2g(\cdot)$ 来自对数密度函数的导数。</p>
+
+<h3>8.13 t-SNE</h3>
+<p>SNE 基本思想：高维相似的样本，在低维也相似。</p>
+<h4>高维概率定义</h4>
+<div class="fb">$$p_{j|i}=\frac{\exp(-\|\vec{\mathbf{x}}_j-\vec{\mathbf{x}}_i\|^2/(2\sigma_i^2))}{\sum_{k\ne i}\exp(-\|\vec{\mathbf{x}}_k-\vec{\mathbf{x}}_i\|^2/(2\sigma_i^2))}$$</div>
+<h4>低维 t 分布（解决拥挤问题）</h4>
+<p>t-SNE 在低维空间使用自由度为1的 t 分布（重尾分布），将高维中等距离的点在低维中拉得更远：</p>
+<div class="fb">$$q_{ij}=\frac{(1+\|\vec{\mathbf{z}}_i-\vec{\mathbf{z}}_j\|^2)^{-1}}{\sum_k\sum_{l\ne k}(1+\|\vec{\mathbf{z}}_k-\vec{\mathbf{z}}_l\|^2)^{-1}}$$</div>
+<h4>梯度公式</h4>
+<p>损失函数 $\mathcal{L}=\sum_i KL(P_i\|Q_i)$，梯度为：</p>
+<div class="fb">$$\nabla_{\vec{\mathbf{z}}_i}\mathcal{L}=\sum_j 4(p_{ij}-q_{ij})(\vec{\mathbf{z}}_i-\vec{\mathbf{z}}_j)(1+\|\vec{\mathbf{z}}_i-\vec{\mathbf{z}}_j\|^2)^{-1}$$</div>
+<p><strong>拥挤问题解决原理：</strong>高维中中等距离的点，在低维中映射到较远的位置（t 分布重尾），避免所有点聚集在一起。</p>
+
+<h2>九、聚类算法</h2>
+
+<h3>9.1 外部指标</h3>
+<p>对于数据集 $\mathbb{D}$，聚类结果 $\mathcal{C}$ 与参考模型 $\mathcal{C}^*$ 的比较。定义：</p>
+<ul>
+<li>$a=|SS|$：同时隶属于 $\mathcal{C}$ 和 $\mathcal{C}^*$ 的样本对</li>
+<li>$b=|SD|$：隶属于 $\mathcal{C}$ 但不隶属于 $\mathcal{C}^*$ 的样本对</li>
+<li>$c=|DS|$：不隶属于 $\mathcal{C}$ 但隶属于 $\mathcal{C}^*$ 的样本对</li>
+<li>$d=|DD|$：既不隶属于 $\mathcal{C}$ 又不隶属于 $\mathcal{C}^*$ 的样本对</li>
+</ul>
+<table>
+<tr><th>指标</th><th>公式</th></tr>
+<tr><td>Jaccard 系数（JC）</td><td>$JC=\frac{a}{a+b+c}$</td></tr>
+<tr><td>FM 指数（FMI）</td><td>$FMI=\sqrt{\frac{a}{a+b}\cdot\frac{a}{a+c}}$</td></tr>
+<tr><td>Rand 指数（RI）</td><td>$RI=\frac{a+d}{N(N-1)/2}$</td></tr>
+<tr><td>调整 Rand 指数（ARI）</td><td>$ARI=\frac{\sum_{ij}C_{n_{ij}}^2-[\sum_i C_{s_i}^2\cdot\sum_j C_{t_j}^2]/C_N^2}{\frac{1}{2}[\sum_i C_{s_i}^2+\sum_j C_{t_j}^2]-[\sum_i C_{s_i}^2\cdot\sum_j C_{t_j}^2]/C_N^2}$</td></tr>
+</table>
+
+<h3>9.2 内部指标</h3>
+<table>
+<tr><th>指标</th><th>公式</th><th>含义</th></tr>
+<tr><td>DB 指数（DBI）</td><td>$DBI=\frac{1}{K}\sum_{k=1}^K\max_{l\ne k}\frac{\text{avg}(\mathbb{C}_k)+\text{avg}(\mathbb{C}_l)}{d_{cen}(\mathbb{C}_k,\mathbb{C}_l)}$</td><td>越小越好</td></tr>
+<tr><td>Dunn 指数（DI）</td><td>$DI=\frac{\min_{k\ne l}d_{\min}(\mathbb{C}_k,\mathbb{C}_l)}{\max_i\text{diam}(\mathbb{C}_i)}$</td><td>越大越好</td></tr>
+</table>
+
+<h3>9.3 K-Means</h3>
+<p>目标函数（最小化簇内平方误差）：</p>
+<div class="fb">$$\min_{\mathcal{C}}\sum_{k=1}^K\sum_{\vec{\mathbf{x}}_i\in\mathbb{C}_k}\|\vec{\mathbf{x}}_i-\vec{\mu}_k\|^2_2$$</div>
+<p>其中 $\vec{\mu}_k=\frac{1}{|\mathbb{C}_k|}\sum_{\vec{\mathbf{x}}_i\in\mathbb{C}_k}\vec{\mathbf{x}}_i$ 为簇均值向量。</p>
+
+<h4>算法步骤</h4>
+<ol class="steps">
+<li>随机初始化 $K$ 个均值向量 $\vec{\mu}_1,\cdots,\vec{\mu}_K$</li>
+<li>对每个样本，计算与各均值向量的距离，划分到最近的簇</li>
+<li>更新每个簇的均值向量</li>
+<li>重复2-3直到均值向量不变或达到最大迭代次数</li>
+</ol>
+
+<h4>优缺点</h4>
+<ul>
+<li><strong>优点：</strong>计算复杂度低，思想简单，易实现</li>
+<li><strong>缺点：</strong>需预设 $K$；依赖初始化；只能保证局部最优；对噪声敏感；无法处理非球形簇；无法处理离散特征</li>
+</ul>
+
+<h4>5条性质</h4>
+<ul>
+<li>假设数据呈球形分布（GMM 更一般）</li>
+<li>假设各簇先验概率相同</li>
+<li>使用欧氏距离，假设各维度等重要</li>
+<li>硬分簇（每个样本只属于一个簇）</li>
+<li>迭代过程等价于 EM 算法</li>
+</ul>
+
+<h3>9.4 K-Means++</h3>
+<p>改进初始化，使初始均值向量尽量分散：</p>
+<ol class="steps">
+<li>从 $\mathbb{D}$ 中随机选择1个样本作为第一个均值向量</li>
+<li>对每个样本计算到已选均值向量的最小距离 $d_i$</li>
+<li>以正比于 $d_i$ 的概率选择下一个均值向量（距离越远越可能被选）</li>
+<li>重复2-3直到选出 $K$ 个初始均值向量</li>
+</ol>
+
+<h3>9.5 K-Modes</h3>
+<p>解决 K-Means 无法处理离散特征的问题。</p>
+<p>距离函数（汉明距离）：</p>
+<div class="fb">$$\text{dis}(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_j)=\sum_{d=1}^n I(x_{i,d}\ne x_{j,d})$$</div>
+<p>簇中心更新（众数）：</p>
+<div class="fb">$$\hat{u}_{k,d}=\arg\max_v\sum_{\vec{\mathbf{x}}_i\in\mathbb{C}_k}I(x_{i,d}=v)$$</div>
+
+<h3>9.6 K-Medoids</h3>
+<p>解决 K-Means 对噪声敏感的问题。计算新簇心时，不用均值，而是挑选<strong>簇内距离其他所有点最近的样本</strong>作为簇心（中心点必须是实际样本点）。</p>
+
+<h3>9.7 学习向量量化 LVQ</h3>
+<p>利用样本类别标记辅助聚类。目标：从特征空间挑选一组原型向量 $\{\vec{\mathbf{p}}_1,\cdots,\vec{\mathbf{p}}_Q\}$，每个原型向量代表一个聚类簇。</p>
+<p>Voronoi 剖分：每个原型向量 $\vec{\mathbf{p}}_q$ 定义一个区域：</p>
+<div class="fb">$$\mathbf{R}_q=\{\vec{\mathbf{x}}\in\mathcal{X}|\|\vec{\mathbf{x}}-\vec{\mathbf{p}}_q\|_2\le\min_{q'\ne q}\|\vec{\mathbf{x}}-\vec{\mathbf{p}}_{q'}\|_2\}$$</div>
+
+<h3>9.8 DBSCAN</h3>
+<p>基于密度的聚类，参数 $(\epsilon, \text{MinPts})$。</p>
+<ul>
+<li><strong>$\epsilon$-邻域：</strong>$N_{\epsilon}(\vec{\mathbf{x}}_i)=\{\vec{\mathbf{x}}_j|\text{dist}(\vec{\mathbf{x}}_i,\vec{\mathbf{x}}_j)\le\epsilon\}$</li>
+<li><strong>核心对象：</strong>若 $|N_{\epsilon}(\vec{\mathbf{x}}_i)|\ge\text{MinPts}$，则 $\vec{\mathbf{x}}_i$ 是核心对象</li>
+<li><strong>密度直达：</strong>$\vec{\mathbf{x}}_i$ 是核心对象且 $\vec{\mathbf{x}}_j\in N_{\epsilon}(\vec{\mathbf{x}}_i)$，则 $\vec{\mathbf{x}}_j$ 由 $\vec{\mathbf{x}}_i$ 密度直达</li>
+<li><strong>密度可达：</strong>存在样本序列 $\vec{\mathbf{p}}_0=\vec{\mathbf{x}}_i,\cdots,\vec{\mathbf{p}}_{m+1}=\vec{\mathbf{x}}_j$，每步密度直达</li>
+<li><strong>密度相连：</strong>存在 $\vec{\mathbf{x}}_k$，使得 $\vec{\mathbf{x}}_i$ 和 $\vec{\mathbf{x}}_j$ 都由 $\vec{\mathbf{x}}_k$ 密度可达</li>
+</ul>
+<p>簇定义：满足连接性（簇内任意两点密度相连）和最大性（密度可达的点都在簇内）的非空样本子集。</p>
+<p>算法思想：任选一个核心对象作为种子，由此出发确定相应的聚类簇（所有密度可达的样本）。</p>
+
+<h3>9.9 Mean-Shift</h3>
+<p>给定球形区域 $\mathbb{S}$（中心 $\vec{\mathbf{x}}$，半径 $h$），Mean-Shift 向量：</p>
+<div class="fb">$$\vec{\mathbf{M}}(\vec{\mathbf{x}})=\frac{1}{|\mathbb{S}|}\sum_{\vec{\mathbf{x}}_i\in\mathbb{S}}(\vec{\mathbf{x}}_i-\vec{\mathbf{x}})$$</div>
+<p>沿 Mean-Shift 向量方向迭代移动，直到收敛到密度峰值。</p>
+
+<h3>9.10 层次聚类与 BIRCH</h3>
+<p>BIRCH 算法使用 CF 树对数据进行压缩。</p>
+<p><strong>聚类特征（CF）三元组：</strong></p>
+<div class="fb">$$CF = (	ext{num}, \vec{\Sigma}_l, \Sigma_s)$$</div>
+<ul>
+<li>$\text{num}$：簇内样本数量</li>
+<li>$\vec{\Sigma}_l=\sum_{\vec{x}_i\in\mathbb{S}}\vec{\mathbf{x}}_i$：簇内样本的线性求和</li>
+<li>$\Sigma_s=\sum_{\vec{x}_i\in\mathbb{S}}\|\vec{x}_i\|^2$：簇内样本的长度平方和</li>
+</ul>
+<p>CF 可加性：$CF_{merge}=CF_1+CF_2$。</p>
+<p><strong>CF 树的三个关键参数：</strong></p>
+<ul>
+<li>枝平衡因子 $\beta$：非叶节点最多不超过 $\beta$ 个 CF</li>
+<li>叶平衡因子 $\lambda$：叶节点最多不超过 $\lambda$ 个 CF</li>
+<li>空间阈值 $\tau$：叶节点每个 CF 对应的子簇大小不超过 $\tau$</li>
+</ul>
+
+<h3>9.11 谱聚类</h3>
+<p>基于图切割的聚类方法。</p>
+
+<h4>拉普拉斯矩阵性质</h4>
+<div class="fb">$$\mathbf{L}=\mathbf{D}-\mathbf{W}$$</div>
+<p>性质：</p>
+<ul>
+<li>$\mathbf{L}$ 是实对称半正定矩阵</li>
+<li>最小特征值为0，对应特征向量为全1向量</li>
+<li>对任意向量 $\vec{\mathbf{f}}$：$\vec{\mathbf{f}}^T\mathbf{L}\vec{\mathbf{f}}=\frac{1}{2}\sum_{i,j}w_{ij}(f_i-f_j)^2\ge0$</li>
+</ul>
+
+<h4>最小切图</h4>
+<div class="fb">$$\min_{\mathbf{Q}}\text{tr}(\mathbf{Q}^T\mathbf{L}\mathbf{Q}) \quad \text{s.t. } q_{j,m}\in\{0,1\}, \vec{\mathbf{q}}_i\cdot\vec{\mathbf{q}}_j=\begin{cases}0&i\ne j\\|\mathbb{A}_j|&i=j\end{cases}$$</div>
+
+<h4>RatioCut</h4>
+<div class="fb">$$\text{RatioCut}(\mathbb{A}_1,\cdots,\mathbb{A}_k)=\sum_{i=1}^k\frac{W(\mathbb{A}_i,\bar{\mathbb{A}}_i)}{|\mathbb{A}_i|}$$</div>
+<p>松弛为：$\min_{\mathbf{H}}\text{tr}(\mathbf{H}^T\mathbf{L}\mathbf{H})$，s.t. $\mathbf{H}^T\mathbf{H}=\mathbf{I}$。</p>
+
+<h4>Ncut 完整公式和约束优化</h4>
+<div class="fb">$$\text{Ncut}(\mathbb{A}_1,\cdots,\mathbb{A}_k)=\sum_{i=1}^k\frac{W(\mathbb{A}_i,\bar{\mathbb{A}}_i)}{\text{vol}(\mathbb{A}_i)}$$</div>
+<p>其中 $\text{vol}(\mathbb{A}_i)=\sum_{j\in\mathbb{A}_i}d_j$。引入指示向量 $h_{j,i}=1/\sqrt{\text{vol}(\mathbb{A}_j)}$（若 $i\in\mathbb{A}_j$），则：</p>
+<div class="fb">$$\min_{\mathbf{H}}\text{tr}(\mathbf{H}^T\mathbf{L}\mathbf{H}) \quad \text{s.t. }\mathbf{H}^T\mathbf{D}\mathbf{H}=\mathbf{I}$$</div>
+<p>令 $\tilde{\mathbf{H}}=\mathbf{D}^{1/2}\mathbf{H}$，转化为标准特征值问题：$\mathbf{D}^{-1/2}\mathbf{L}\mathbf{D}^{-1/2}\tilde{\mathbf{H}}=\lambda\tilde{\mathbf{H}}$，即求归一化拉普拉斯矩阵的最小 $k$ 个特征向量。</p>
+
+<h3>9.12 GMM（高斯混合模型）</h3>
+
+<div class="sup">
+<div class="sup-t">补充内容：GMM 完整推导</div>
+<p>混合密度公式：</p>
+<div class="fb">$$p(\vec{\mathbf{x}})=\sum_{k=1}^K\pi_k\mathcal{N}(\vec{\mathbf{x}}|\vec{\mu}_k,\Sigma_k)$$</div>
+<p>其中 $\pi_k\ge0$，$\sum_{k=1}^K\pi_k=1$ 为混合系数。</p>
+<p><strong>E 步（计算责任 $\gamma_{ik}$）：</strong></p>
+<div class="fb">$$\gamma_{ik}=\frac{\pi_k\mathcal{N}(\vec{\mathbf{x}}_i|\vec{\mu}_k,\Sigma_k)}{\sum_{j=1}^K\pi_j\mathcal{N}(\vec{\mathbf{x}}_i|\vec{\mu}_j,\Sigma_j)}$$</div>
+<p><strong>M 步（三个参数更新公式）：</strong></p>
+<div class="fb">$$\vec{\mu}_k^{new}=\frac{\sum_{i=1}^N\gamma_{ik}\vec{\mathbf{x}}_i}{\sum_{i=1}^N\gamma_{ik}}$$
+$$\Sigma_k^{new}=\frac{\sum_{i=1}^N\gamma_{ik}(\vec{\mathbf{x}}_i-\vec{\mu}_k^{new})(\vec{\mathbf{x}}_i-\vec{\mu}_k^{new})^T}{\sum_{i=1}^N\gamma_{ik}}$$
+$$\pi_k^{new}=\frac{\sum_{i=1}^N\gamma_{ik}}{N}$$</div>
+<p>GMM 相比 K-Means：使用更一般的高斯分布（而非球形），支持软分簇，能处理椭圆形簇。</p>
+</div>
+
+<h2>十、半监督学习</h2>
+
+<h3>10.1 定义</h3>
+<p>给定有标记样本集 $\mathbb{D}_l$ 和未标记样本集 $\mathbb{D}_u$，其中 $l\ll u$（有标记样本远少于无标记样本）。学习器自动利用 $\mathbb{D}_u$ 提升学习性能。</p>
+
+<h3>10.2 基本假设</h3>
+<ul>
+<li><strong>聚类假设（Cluster Assumption）：</strong>数据存在簇结构，同一个簇的样本属于同一个类别</li>
+<li><strong>流形假设（Manifold Assumption）：</strong>数据分布在流形结构上，邻近的样本拥有相似的输出值</li>
+</ul>
+
+<h3>10.3 纯半监督学习 vs 直推学习</h3>
+<ul>
+<li><strong>纯半监督学习：</strong>$\mathbb{D}_u$ 并非待预测的数据，目标是学习泛化模型</li>
+<li><strong>直推学习：</strong>$\mathbb{D}_u$ 就是待预测的数据，目标是在 $\mathbb{D}_u$ 上获取最优泛化性能</li>
+</ul>
+
+<h3>10.4 图半监督学习</h3>
+
+<h4>标签传播算法</h4>
+<p>亲和矩阵定义（基于高斯函数）：</p>
+<div class="fb">$$w_{i,j}=\begin{cases}\exp\left(-\frac{\|\vec{x}_i-\vec{x}_j\|_2^2}{2\sigma^2}\right) & i\ne j \\ 0 & i=j\end{cases}$$</div>
+<p>能量函数：</p>
+<div class="fb">$$E(f)=\frac{1}{2}\sum_{i=1}^N\sum_{j=1}^N w_{i,j}(f(\vec{\mathbf{x}}_i)-f(\vec{\mathbf{x}}_j))^2=\vec{\mathbf{f}}^T\mathbf{L}\vec{\mathbf{f}}$$</div>
+<p>约束最优化求解（将 $\vec{\mathbf{f}}$ 分块为有标记部分 $\vec{\mathbf{f}}_l$ 和无标记部分 $\vec{\mathbf{f}}_u$，拉普拉斯矩阵相应分块）：</p>
+<div class="fb">$$\vec{\mathbf{f}}_u = -L_{uu}^{-1}L_{ul}\vec{\mathbf{f}}_l$$</div>
+<p>其中 $L_{uu}$ 为无标记样本之间的拉普拉斯子矩阵，$L_{ul}$ 为无标记与有标记样本之间的子矩阵。</p>
+
+<h4>多类标签传播</h4>
+<p>标记矩阵 $\mathbf{F}\in\mathbb{R}^{N\times K}$（$F_{i,k}$ 表示样本 $i$ 属于类别 $k$ 的概率），常量矩阵 $\mathbf{Y}\in\mathbb{R}^{N\times K}$（有标记样本的 one-hot 编码）。</p>
+
+<h4>Label Propagation</h4>
+<p>概率转移矩阵：</p>
+<div class="fb">$$p_{i,j}=\frac{w_{i,j}}{d_i}=\frac{w_{i,j}}{\sum_{j=1}^N w_{i,j}}$$</div>
+<p>迭代格式：$\mathbf{F}^{(t+1)}=\mathbf{P}\mathbf{F}^{(t)}$，然后将有标记样本的标签重置为 $\mathbf{Y}_l$，直到收敛。</p>
+
+<h4>Label Spreading</h4>
+<p>在 Label Propagation 基础上，使用归一化拉普拉斯矩阵，并引入平衡系数 $\alpha$：</p>
+<div class="fs">$$\mathbf{F}^{(t+1)} = \alpha\mathbf{S}\mathbf{F}^{(t)}+(1-\alpha)\mathbf{Y}$$</div>
+<p>其中 $\mathbf{S}=\mathbf{D}^{-1/2}\mathbf{W}\mathbf{D}^{-1/2}$ 为归一化邻接矩阵。</p>
+
+<h3>10.5 标签传播与 PageRank</h3>
+<p>PageRank 利用能量在有向图中的流动来计算网页重要性得分。用户两种行为：</p>
+<ul>
+<li>以概率 $1-e$ 选择超链接进入下一个网页（能量流向下游）</li>
+<li>以概率 $e$ 随机选择网页（能量进入全局能量池，再均匀分配）</li>
+</ul>
+<p>稳态方程推导（设总能量 $\text{Total}=1$，$\mathbf{T}$ 为全1矩阵）：</p>
+<div class="fb">$$\left[(1-e)\mathbf{P}+\frac{e}{N}\mathbf{T}\right]\vec{\mathbf{y}}=\vec{\mathbf{y}}$$</div>
+<p>令 $\mathbf{U}=\left[(1-e)\mathbf{P}+\frac{e}{N}\mathbf{T}\right]$，则 $\mathbf{U}\vec{\mathbf{y}}=\vec{\mathbf{y}}$，即 $\vec{\mathbf{y}}$ 是 $\mathbf{U}$ 对应特征值为1的特征向量。</p>
+
+<h3>10.6 标签传播与社区发现</h3>
+<p>Modularity 指标 $Q$（当前网络 - 随机网络期望）：</p>
+<div class="fb">$$Q=\frac{1}{2M}\sum_{i\in V}\sum_{j\in V}\left[w_{i,j}-\frac{d_i\times d_j}{2M}\right]\delta(c_i,c_j)$$</div>
+
+<div class="proof">
+<div class="proof-t">$p_{ij}=d_id_j/2M$ 推导过程</div>
+<p>随机图中，顶点 $i$ 和 $j$ 之间的期望权重 $p_{ij}$ 满足：</p>
+<ul>
+<li>$\sum_{ij}p_{ij}=2M$（总度数不变）</li>
+<li>$\sum_j p_{ij}=d_i$（每个顶点度不变）</li>
+<li>随机连边独立性：$p_{ij}=f(d_i)f(d_j)$</li>
+</ul>
+<p>由 $\sum_j p_{ij}=f(d_i)\sum_j f(d_j)=d_i$，得 $f(d_i)=Td_i$（$T$ 为常数）。</p>
+<p>由 $\sum_{ij}p_{ij}=T^2(\sum_i d_i)^2=T^2(2M)^2=2M$，得 $T^2=\frac{1}{2M}$。</p>
+<div class="fb">$$p_{ij}=T^2 d_i d_j=\frac{d_i d_j}{2M}$$</div>
+</div>
+
+<p>化简后：</p>
+<div class="fb">$$Q=\sum_{k=1}^K\left(\frac{m_k}{M}-\left(\frac{D_k}{2M}\right)^2\right)$$</div>
+<p>其中 $m_k$ 为社区 $\mathbb{C}_k$ 内部边总权重，$D_k=\sum_{i\in\mathbb{C}_k}d_i$ 为社区内所有顶点度之和。</p>
+<p>$Q\in(-1,1)$：社区间无边时 $Q$ 最大，每个点单独一个社区时 $Q$ 最小。</p>
+
+<h3>10.7 Fast Unfolding 算法</h3>
+<p>基于 modularity 的社区划分算法，迭代使得整个网络的 modularity 不断增大：</p>
+<ol class="steps">
+<li><strong>模块化阶段：</strong>每个节点初始为独立社区，对每个节点，尝试将其移入邻居社区，选择 $\Delta Q$ 最大的移动，直到无改善</li>
+<li><strong>聚合阶段：</strong>将同一社区的节点合并为超节点，社区间的边权重为两社区间所有边的权重之和</li>
+<li>重复上述两阶段直到收敛</li>
+</ol>
+
+<h2>十一、隐马尔可夫模型</h2>
+
+<h3>11.1 三要素定义</h3>
+<p>隐马尔可夫模型 $\lambda=(\mathbf{A},\mathbf{B},\vec{\pi})$：</p>
+<ul>
+<li><strong>状态转移概率矩阵 $\mathbf{A}$：</strong>$a_{i,j}=P(i_{t+1}=j|i_t=i)$，在时刻 $t$ 处于状态 $\mathbf{q}_i$ 的条件下，$t+1$ 时刻转移到 $\mathbf{q}_j$ 的概率</li>
+<li><strong>观测概率矩阵 $\mathbf{B}$：</strong>$b_j(k)=P(o_t=k|i_t=j)$，处于状态 $\mathbf{q}_j$ 时生成观测 $\mathbf{v}_k$ 的概率</li>
+<li><strong>初始状态概率向量 $\vec{\pi}$：</strong>$\pi_i=P(i_1=i)$，$t=1$ 时处于状态 $\mathbf{q}_i$ 的概率</li>
+</ul>
+
+<h3>11.2 两个基本假设</h3>
+<ul>
+<li><strong>齐次性假设（马尔可夫假设）：</strong>$P(i_t|i_{t-1},o_{t-1},\cdots,i_1,o_1)=P(i_t|i_{t-1})$，当前状态只依赖于前一时刻状态</li>
+<li><strong>观测独立性假设：</strong>$P(o_t|i_T,o_T,\cdots,i_t,\cdots,i_1,o_1)=P(o_t|i_t)$，观测值只依赖于当前状态</li>
+</ul>
+
+<h3>11.3 三个基本问题</h3>
+<ul>
+<li><strong>概率计算问题：</strong>给定 $\lambda$ 和观测序列 $\mathbf{O}$，计算 $P(\mathbf{O};\lambda)$（前向/后向算法）</li>
+<li><strong>学习问题：</strong>已知观测序列 $\mathbf{O}$，估计 $\lambda$ 使 $P(\mathbf{O};\lambda)$ 最大（Baum-Welch 算法）</li>
+<li><strong>预测问题：</strong>已知 $\lambda$ 和 $\mathbf{O}$，求最优状态序列 $\mathbf{I}$（维特比算法）</li>
+</ul>
+
+<h3>11.4 前向算法完整推导</h3>
+<p>定义前向概率：$\alpha_t(i)=P(o_1,o_2,\cdots,o_t,i_t=i;\lambda)$（时刻 $t$ 观测到 $o_1,\cdots,o_t$ 且状态为 $\mathbf{q}_i$ 的概率）。</p>
+<p><strong>初始化：</strong></p>
+<div class="fb">$$\alpha_1(i)=\pi_i b_i(o_1), \quad i=1,\cdots,Q$$</div>
+<p><strong>递推公式推导过程：</strong></p>
+<div class="proof">
+<div class="proof-t">前向递推推导</div>
+<p>$\alpha_t(j)\times a_{j,i}$ 表示：时刻 $t$ 观测到 $o_1,\cdots,o_t$，状态为 $\mathbf{q}_j$，且 $t+1$ 时刻转移到 $\mathbf{q}_i$ 的概率。</p>
+<p>$\sum_{j=1}^Q\alpha_t(j)\times a_{j,i}$ 表示：时刻 $t$ 观测序列为 $o_1,\cdots,o_t$，且 $t+1$ 时刻状态为 $\mathbf{q}_i$ 的概率。</p>
+<p>再考虑 $b_i(o_{t+1})$，得到递推公式：</p>
+<div class="fb">$$\alpha_{t+1}(i)=\left[\sum_{j=1}^Q\alpha_t(j)a_{j,i}\right]b_i(o_{t+1}), \quad i=1,\cdots,Q$$</div>
+</div>
+<p><strong>终止：</strong></p>
+<div class="fb">$$P(\mathbf{O};\lambda)=\sum_{i=1}^Q\alpha_T(i)$$</div>
+
+<h3>11.5 后向算法完整推导</h3>
+<p>定义后向概率：$\beta_t(i)=P(o_{t+1},o_{t+2},\cdots,o_T|i_t=i;\lambda)$（时刻 $t$ 状态为 $\mathbf{q}_i$ 的条件下，$t+1$ 到 $T$ 的观测序列的概率）。</p>
+<p><strong>初始化：</strong></p>
+<div class="fb">$$\beta_T(i)=1, \quad i=1,\cdots,Q$$</div>
+<p><strong>递推公式：</strong></p>
+<div class="fb">$$\beta_t(i)=\sum_{j=1}^Q a_{i,j}b_j(o_{t+1})\beta_{t+1}(j)$$</div>
+<p><strong>统一形式：</strong></p>
+<div class="fb">$$P(\mathbf{O};\lambda)=\sum_{j=1}^Q\alpha_t(j)\beta_t(j), \quad t=1,2,\cdots,T$$</div>
+
+<h3>11.6 $\gamma_t(i)$ 和 $\xi_t(i,j)$ 完整公式</h3>
+<div class="fb">$$\gamma_t(i)=P(i_t=i|\mathbf{O};\lambda)=\frac{\alpha_t(i)\beta_t(i)}{\sum_{j=1}^Q\alpha_t(j)\beta_t(j)}$$</div>
+<div class="fb">$$\xi_t(i,j)=P(i_t=i,i_{t+1}=j|\mathbf{O};\lambda)=\frac{\alpha_t(i)a_{i,j}b_j(o_{t+1})\beta_{t+1}(j)}{\sum_{u=1}^Q\sum_{v=1}^Q\alpha_t(u)a_{u,v}b_v(o_{t+1})\beta_{t+1}(v)}$$</div>
+
+<h3>11.7 有监督学习（极大似然估计三个公式）</h3>
+<div class="fb">$$\hat{a}_{i,j}=\frac{A_{i,j}}{\sum_{u=1}^Q A_{i,u}}$$</div>
+<div class="fb">$$\hat{b}_j(k)=\frac{B_{j,k}}{\sum_{v=1}^V B_{j,v}}$$</div>
+<div class="fb">$$\hat{\pi}_i=\frac{C_i}{\sum_{j=1}^Q C_j}$$</div>
+<p>其中 $A_{i,j}$ 为状态 $i$ 转移到状态 $j$ 的频数，$B_{j,k}$ 为状态 $j$ 观测为 $k$ 的频数，$C_i$ 为初始时刻处于状态 $i$ 的频数。</p>
+
+<h3>11.8 无监督学习（Baum-Welch）</h3>
+<p>Q 函数（EM 算法的 E 步）：</p>
+<div class="fb">$$Q(\lambda,\bar{\lambda})=\sum_{j=1}^N\frac{1}{\tilde{P}_j}\left(\sum_{\mathbf{I}} P(\mathbf{I},\mathbf{O}=\mathbf{O}_j;\bar{\lambda})\log P(\mathbf{I},\mathbf{O}=\mathbf{O}_j;\lambda)\right)$$</div>
+<p>M 步三个参数更新公式：</p>
+<div class="fb">$$\pi_i=\frac{\sum_{j=1}^N P(i_1=i|\mathbf{O}=\mathbf{O}_j;\bar{\lambda})}{N}$$</div>
+<div class="fb">$$a_{i,j}=\frac{\sum_{k=1}^N\sum_{t=1}^{T_k-1}P(i_t=i,i_{t+1}=j|\mathbf{O}=\mathbf{O}_k;\bar{\lambda})}{\sum_{k=1}^N\sum_{t=1}^{T_k-1}P(i_t=i|\mathbf{O}=\mathbf{O}_k;\bar{\lambda})}$$</div>
+<div class="fb">$$b_j(k)=\frac{\sum_{i=1}^N\sum_{t=1}^{T_i}P(i_t=j,o_t=k|\mathbf{O}=\mathbf{O}_i;\bar{\lambda})}{\sum_{i=1}^N\sum_{t=1}^{T_i}P(i_t=j|\mathbf{O}=\mathbf{O}_i;\bar{\lambda})}$$</div>
+
+<h3>11.9 维特比算法完整推导</h3>
+<p>定义：$\delta_t(i)=\max_{i_1,\cdots,i_{t-1}}P(i_t=i,i_{t-1},\cdots,i_1,o_t,\cdots,o_1;\lambda)$（时刻 $t$ 状态为 $i$ 的所有路径中概率最大值）。</p>
+<p><strong>初始化：</strong></p>
+<div class="fb">$$\delta_1(i)=\pi_i b_i(o_1), \quad \Psi_1(i)=0$$</div>
+<p><strong>递推（$\Psi_t(i)$ 定义为最优路径中第 $t-1$ 个结点）：</strong></p>
+<div class="fb">$$\delta_{t+1}(i)=\max_{1\le j\le Q}\delta_t(j)\times a_{j,i}\times b_i(o_{t+1})$$
+$$\Psi_{t+1}(i)=\arg\max_{1\le j\le Q}\delta_t(j)a_{j,i}$$</div>
+<p><strong>终止与回溯：</strong></p>
+<div class="fb">$$P^*=\max_{1\le i\le Q}\delta_T(i), \quad i_T^*=\arg\max_{1\le i\le Q}\delta_T(i)$$
+$$i_t^*=\Psi_{t+1}(i_{t+1}^*), \quad t=T-1,T-2,\cdots,1$$</div>
+
+<h3>11.10 最大熵马尔可夫模型 MEMM</h3>
+<p>HMM 放松观测独立假设：MEMM 不通过联合概率建模，而是学习条件概率：</p>
+<div class="fb">$$P(i_t|i_{t-1},o_t)$$</div>
+<p>它刻画在当前观察值 $o_t$ 和前一个状态 $i_{t-1}$ 的条件下，当前状态 $i_t$ 的概率。</p>
+
+<h3>11.11 CRF 补充对比</h3>
+<table>
+<tr><th>模型</th><th>建模方式</th><th>假设</th><th>特点</th></tr>
+<tr><td><strong>HMM</strong></td><td>联合概率 $P(\mathbf{O},\mathbf{I})$</td><td>观测独立+马尔可夫</td><td>生成模型，训练高效</td></tr>
+<tr><td><strong>MEMM</strong></td><td>条件概率 $P(i_t|i_{t-1},o_t)$</td><td>马尔可夫（放松观测独立）</td><td>判别模型，存在标记偏置问题</td></tr>
+<tr><td><strong>CRF</strong></td><td>全局条件概率 $P(\mathbf{I}|\mathbf{O})$</td><td>无局部归一化</td><td>判别模型，解决标记偏置，性能最好</td></tr>
+</table>
+<div class="note">
+<div class="note-t">标记偏置问题（Label Bias Problem）</div>
+<p>MEMM 中，每个状态的转移概率局部归一化，导致概率质量集中在转移较少的状态上，影响全局最优。CRF 通过全局归一化解决了这个问题。</p>
+</div>
+
+<h2>十二、EM 算法</h2>
+
+<h3>12.1 问题设定</h3>
+<p>令 $\mathbf{Y}$ 为观测随机变量（不完全数据），$\mathbf{Z}$ 为隐随机变量，$\mathbb{Y}$ 和 $\mathbb{Z}$ 合称<strong>完全数据</strong>。</p>
+<p>不完全数据的对数似然函数：</p>
+<div class="fb">$$L(\theta)=\log P(\mathbb{Y};\theta)=\sum_i\log P(Y=y_i;\theta)=\sum_i\log\sum_Z P(Y=y_i,Z;\theta)$$</div>
+
+<h3>12.2 Jensen 不等式推导下界</h3>
+<div class="proof">
+<div class="proof-t">引入 $Q_i(Z)$ 建立下界</div>
+<p>对每个样本 $i$，引入隐变量分布 $Q_i(Z)$（$\sum_Z Q_i(Z)=1$，$Q_i(Z)\ge0$）：</p>
+<div class="fs">$$\sum_i\log P(y_i;\theta) = \sum_i\log\sum_Z Q_i(Z)\frac{P(y_i,Z;\theta)}{Q_i(Z)}$$</div>
+<p>由 Jensen 不等式（$\log$ 为凹函数，$\mathbb{E}[f(X)]\le f(\mathbb{E}[X])$）：</p>
+<div class="fb">$$\ge \sum_i\sum_Z Q_i(Z)\log\frac{P(y_i,Z;\theta)}{Q_i(Z)} = J(Z,Q)$$</div>
+<p><strong>等号成立条件：</strong>$\frac{P(y_i,Z;\theta)}{Q_i(Z)}=c$（常数），即：</p>
+<div class="fb">$$Q_i(Z)=\frac{P(y_i,Z;\theta)}{\sum_Z P(y_i,Z;\theta)}=\frac{P(y_i,Z;\theta)}{P(y_i;\theta)}=P(Z|y_i;\theta)$$</div>
+<p>即：等号成立时，$Q_i(Z)$ 等于给定观测 $y_i$ 的隐变量后验分布。</p>
+</div>
+
+<h3>12.3 E 步和 M 步精确定义</h3>
+<h4>E 步（Expectation Step）</h4>
+<p>计算 Q 函数（完全数据对数似然的期望）：</p>
+<div class="fb">$$Q(\theta,\theta^{(t)})=\mathbb{E}_{Z|Y,\theta^{(t)}}[\log P(Y,Z;\theta)] = \sum_Z P(Z|Y;\theta^{(t)})\log P(Y,Z;\theta)$$</div>
+
+<h4>M 步（Maximization Step）</h4>
+<p>极大化 Q 函数：</p>
+<div class="fb">$$\theta^{(t+1)}=\arg\max_{\theta} Q(\theta,\theta^{(t)})$$</div>
+
+<h3>12.4 收敛性证明</h3>
+<div class="proof">
+<div class="proof-t">EM 算法单调性证明</div>
+<p>需证明 $L(\theta^{(t+1)})\ge L(\theta^{(t)})$。</p>
+<p>由 Jensen 不等式建立的下界：$L(\theta)\ge B(\theta,\theta^{(t)})$，且 $L(\theta^{(t)})=B(\theta^{(t)},\theta^{(t)})$。</p>
+<p>M 步确保 $B(\theta^{(t+1)},\theta^{(t)})\ge B(\theta^{(t)},\theta^{(t)})$，因此：</p>
+<div class="fb">$$L(\theta^{(t+1)})\ge B(\theta^{(t+1)},\theta^{(t)})\ge B(\theta^{(t)},\theta^{(t)})=L(\theta^{(t)})$$</div>
+<p>等价地，利用 KL 散度：$L(\theta)-L(\theta^{(t)})\ge Q(\theta,\theta^{(t)})-Q(\theta^{(t)},\theta^{(t)})$（KL 散度 $\ge 0$）。</p>
+<p>M 步极大化 $Q$ 函数，保证 $Q$ 单调不减，从而 $L$ 单调不减。EM 算法收敛到局部极大值。</p>
+</div>
+
+<h3>12.5 EM 的坐标上升视角</h3>
+<p>EM 算法可以看作对下界函数 $B(\theta,Q)=\sum_i\sum_Z Q_i(Z)\log\frac{P(y_i,Z;\theta)}{Q_i(Z)}$ 进行坐标上升：</p>
+<ul>
+<li><strong>E 步：</strong>固定 $\theta$，对 $Q$ 优化（令 $Q_i=P(Z|y_i;\theta)$，使下界紧）</li>
+<li><strong>M 步：</strong>固定 $Q$，对 $\theta$ 优化（极大化下界）</li>
+</ul>
+
+<h3>12.6 应用总结</h3>
+<table>
+<tr><th>模型</th><th>完全数据</th><th>隐变量</th><th>E 步</th><th>M 步</th></tr>
+<tr><td><strong>GMM</strong></td><td>$(\vec{\mathbf{x}}_i, z_i)$</td><td>簇分配 $z_i$</td><td>计算责任 $\gamma_{ik}$</td><td>更新 $\mu_k, \Sigma_k, \pi_k$</td></tr>
+<tr><td><strong>HMM</strong></td><td>$(\mathbf{O},\mathbf{I})$</td><td>状态序列 $\mathbf{I}$</td><td>计算 $\gamma_t(i), \xi_t(i,j)$</td><td>更新 $\pi, A, B$</td></tr>
+<tr><td><strong>PPCA</strong></td><td>$(\vec{\mathbf{x}}_i, \vec{\mathbf{z}}_i)$</td><td>隐变量 $\vec{\mathbf{z}}_i$</td><td>计算 $\mathbb{E}[\vec{\mathbf{z}}_i], \mathbb{E}[\vec{\mathbf{z}}_i\vec{\mathbf{z}}_i^T]$</td><td>更新 $\mathbf{W}, \sigma^2$</td></tr>
+<tr><td><strong>因子分析</strong></td><td>$(\vec{\mathbf{x}}_i, \vec{\mathbf{z}}_i)$</td><td>因子 $\vec{\mathbf{z}}_i$</td><td>计算 $\mathbb{E}[\vec{\mathbf{z}}_i]$（利用 $\mathbf{G}$）</td><td>更新 $\mathbf{W}, \Psi$</td></tr>
+<tr><td><strong>K-Means</strong></td><td>$(\vec{\mathbf{x}}_i, c_i)$</td><td>簇分配 $c_i$</td><td>硬分配（距离最近）</td><td>更新均值向量</td></tr>
+</table>
+
+<hr>
+<div class="note">
+<div class="note-t">报告说明</div>
+<p>本报告系统覆盖统计学习算法的核心内容，包含完整的数学推导过程。各章节相互关联：损失函数→风险函数→MLE/MAP（第一章），线性模型→SVM→核方法（第二、三章），贝叶斯框架贯穿朴素贝叶斯、HMM、EM算法（第四、十一、十二章），集成学习连接决策树与提升树（第五、六章），降维与聚类共享谱方法（第八、九章）。</p>
+</div>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',securityLevel:'loose'});
+hljs.highlightAll();
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3,main h4').forEach((h,i)=>{
+  if(!h.id)h.id='h'+i;
+  const a=document.createElement('a');
+  a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('h3');
+  if(h.tagName==='H4')a.classList.add('h4');
+  toc.appendChild(a);
+});
+const obs=new IntersectionObserver(es=>es.forEach(e=>{const l=toc.querySelector(`a[href="#${e.target.id}"]`);if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

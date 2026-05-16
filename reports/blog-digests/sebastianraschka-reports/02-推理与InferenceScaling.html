@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM 推理能力与推断时计算 Scaling</title>
+  <style>
+    :root { --bg:#1e1e2e; --bg-code:#313244; --bg-nav:#181825; --text:#cdd6f4; --heading:#89b4fa; --link:#89dceb; --border:#45475a; --quote-bar:#fab387; --strong:#a6e3a1; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; line-height:1.8; }
+    #toc { position:fixed; top:0; left:0; width:230px; height:100vh; background:var(--bg-nav); overflow-y:auto; padding:20px 12px; font-size:13px; border-right:1px solid var(--border); }
+    #toc h2 { color:var(--heading); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; }
+    #toc a { display:block; color:var(--text); text-decoration:none; padding:3px 8px; border-radius:4px; margin-bottom:2px; transition:background 0.15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #toc a:hover { background:var(--border); }
+    #toc a.active { background:var(--heading); color:#1e1e2e; font-weight:600; }
+    #toc a.toc-h3 { padding-left:20px; font-size:12px; opacity:0.8; }
+    main { margin-left:250px; max-width:none; padding:40px 48px; }
+    h1 { color:var(--heading); font-size:1.9em; margin-bottom:8px; line-height:1.3; }
+    h2 { color:var(--heading); font-size:1.4em; margin:2em 0 0.6em; border-bottom:1px solid var(--border); padding-bottom:6px; }
+    h3 { color:var(--heading); font-size:1.1em; margin:1.4em 0 0.4em; }
+    h4 { color:#cba6f7; font-size:1em; margin:1em 0 0.3em; }
+    p { margin:0.6em 0; }
+    a { color:var(--link); }
+    strong { color:var(--strong); }
+    ul,ol { margin:0.6em 0 0.6em 1.6em; }
+    li { margin-bottom:0.3em; }
+    blockquote { border-left:3px solid var(--quote-bar); padding:8px 16px; margin:1em 0; background:#2a2a3e; border-radius:0 4px 4px 0; }
+    table { border-collapse:collapse; width:100%; margin:1em 0; font-size:0.93em; }
+    th { background:#2a2a3e; color:var(--heading); padding:8px 12px; text-align:left; border:1px solid var(--border); }
+    td { padding:7px 12px; border:1px solid var(--border); }
+    tr:hover td { background:#2a2a3e; }
+    pre { background:var(--bg-code); border-radius:6px; padding:16px; overflow-x:auto; margin:1em 0; font-size:0.88em; }
+    code { font-family:'JetBrains Mono','Fira Code',monospace; }
+    p code,li code,td code { background:var(--bg-code); padding:2px 5px; border-radius:3px; font-size:0.88em; }
+    figure { margin:1.4em 0; text-align:center; }
+    figure img { max-width:100%; border-radius:6px; border:1px solid var(--border); }
+    figcaption { color:#6c7086; font-size:0.85em; margin-top:6px; }
+    .mermaid { background:#2a2a3e; border-radius:6px; padding:16px; margin:1em 0; text-align:center; }
+    hr { border:none; border-top:1px solid var(--border); margin:2em 0; }
+    .article-source { background:#2a2a3e; border-radius:6px; padding:8px 14px; margin-bottom:1em; font-size:0.85em; color:#6c7086; }
+    .callout { background:#2a2a3e; border-left:4px solid var(--heading); border-radius:0 6px 6px 0; padding:12px 16px; margin:1em 0; }
+    .callout-key { border-left-color:#a6e3a1; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LLM 推理能力与推断时计算 Scaling</h1>
+<blockquote>
+  来源：<a href="https://magazine.sebastianraschka.com" target="_blank">Ahead of AI — Sebastian Raschka, PhD</a>
+  &nbsp;|&nbsp; 本报告聚合：推理 LLM 理解、RL for Reasoning、Inference-Time Scaling、Beyond Standard LLMs
+</blockquote>
+
+<h2>推理 Scaling 全景概览</h2>
+<p>2024-2025 年，LLM 领域最重要的范式转变之一是：<strong>在推理时投入更多计算，而不仅靠更大的模型参数</strong>。这一趋势的标志性事件是 OpenAI o1 的发布，其核心思想是让模型在输出前花更多 token"思考"——这被称为推断时计算扩展（Inference-Time Compute Scaling）。</p>
+
+<pre class="mermaid">graph TD
+  Q["用户问题"] --> Think["扩展思考<br>（内部推理链）"]
+  Think --> Verify["自我验证<br>（Process Reward Model）"]
+  Verify -->|"答案不对"| Think
+  Verify -->|"答案正确"| Ans["最终答案"]
+  subgraph 训练时Scaling
+    PT["预训练<br>更多数据/参数"]
+    FT["后训练<br>RLHF/RLVR"]
+  end
+  subgraph 推断时Scaling
+    Think
+    Verify
+    Search["树搜索/束搜索"]
+    Refine["迭代自我改进"]
+  end
+</pre>
+
+<!-- ============================================================ -->
+<h2>一、理解推理 LLM</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/understanding-reasoning-llms" target="_blank">Understanding Reasoning LLMs</a> | Feb 2025</div>
+
+<p>推理 LLM（Reasoning LLM）是指能够在给出最终答案前进行显式多步推理的模型，典型代表是 OpenAI o1、DeepSeek R1。这不仅是提示词工程的改进，而是模型在训练层面被显式优化为"思考后回答"。</p>
+
+<h3>1.1 什么是推理模型</h3>
+<p>推理模型通过生成<strong>内部推理链</strong>（Chain of Thought）来解决需要多步组合的复杂问题。关键区分：</p>
+<ul>
+  <li><strong>标准 LLM：</strong>直接预测答案，适合知识检索型问题</li>
+  <li><strong>推理 LLM：</strong>先生成推理过程再得出结论，适合数学证明、代码调试、逻辑推导</li>
+</ul>
+
+<div class="callout callout-key">
+  <strong>关键洞察（来自论文实验）：</strong>对推理模型的最佳提示策略与普通 LLM 相反——
+  <ul>
+    <li>零样本（zero-shot）优于少样本（few-shot），少样本示例反而会降低性能</li>
+    <li>直接描述问题 + 指定输出格式，效果最好</li>
+    <li>保持语言一致性（不要在同一提示中混用多种语言）</li>
+  </ul>
+</div>
+
+<h3>1.2 推理模型的构建方法</h3>
+<table>
+  <thead><tr><th>方法</th><th>核心思想</th><th>代表工作</th><th>优缺点</th></tr></thead>
+  <tbody>
+    <tr><td>长 CoT 监督微调</td><td>用人工标注的推理链做 SFT</td><td>早期 o1</td><td>数据贵，难扩展</td></tr>
+    <tr><td>RLVR（可验证奖励RL）</td><td>用数学/代码的正确性作为奖励信号</td><td>DeepSeek R1, GRPO</td><td>数据便宜，效果强</td></tr>
+    <tr><td>蒸馏</td><td>从强推理模型蒸馏到小模型</td><td>DeepSeek R1-Distill</td><td>小模型也能推理</td></tr>
+    <tr><td>Self-Refinement</td><td>让模型迭代改进自己的答案</td><td>Reflexion, STaR</td><td>无需额外标注</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2>二、LLM 推理的强化学习训练</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/the-state-of-llm-reasoning-model-training" target="_blank">The State of Reinforcement Learning for LLM Reasoning</a> | 2025</div>
+
+<p>RLVR（Reinforcement Learning with Verifiable Rewards）成为 2025 年训练推理模型的主流范式。与 RLHF 依赖人类偏好判断不同，RLVR 利用数学和代码任务的<strong>确定性正确性检验</strong>作为奖励，大幅降低了标注成本。</p>
+
+<h3>2.1 GRPO：DeepSeek 的 RL 训练算法</h3>
+<p>Group Relative Policy Optimization（GRPO）是 DeepSeek 提出的训练算法，是 PPO 的简化版本：</p>
+<ul>
+  <li>对同一问题生成多个候选答案（一组）</li>
+  <li>通过组内相对排名（而非绝对奖励）计算优势函数</li>
+  <li>避免了 PPO 需要独立 Critic 网络的复杂性</li>
+</ul>
+
+<h3>2.2 结果奖励 vs 过程奖励</h3>
+<pre class="mermaid">graph LR
+  ORM["结果奖励模型 ORM<br>只判断最终答案对错"]
+  PRM["过程奖励模型 PRM<br>判断每个推理步骤质量"]
+  ORM -->|"实现简单\n适合数学/代码"| A["RLVR / GRPO"]
+  PRM -->|"信号更密集\n但标注难"| B["Let's Verify Step by Step\nDeepSeekMath V2"]
+</pre>
+
+<h3>2.3 扩展通用 RL 的新发现</h3>
+<p>来自 <em>Competitive Programming with Large Reasoning Models</em> 等论文的发现：扩展通用 RL 允许模型自主发展推理和验证方法，<strong>无需人工启发式规则或领域专用推理管道</strong>。相比之下，早期 o1-ioi 依赖手工设计的测试时策略（如对数千个样本聚类重排），需要大量人工设计与调优。</p>
+
+<p><em>Exploring the Limit of Outcome Reward for Learning Mathematical Reasoning</em>（2025）进一步证明，即使只使用结果奖励信号（而非过程奖励），通过足够的 RL 训练，模型仍能在数学推理上取得极强表现。</p>
+
+<!-- ============================================================ -->
+<h2>三、推断时计算 Scaling 技术全谱</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/state-of-llm-reasoning-and-inference-scaling" target="_blank">The State of LLM Reasoning Model Inference</a> | 2025</div>
+
+<p>推断时计算扩展是一个宽泛的研究方向，涵盖从极简的 token 干预到复杂的搜索优化。核心问题：<strong>在模型权重不变的情况下，如何通过更多推理计算提升答案质量？</strong></p>
+
+<h3>3.1 技术分类</h3>
+
+<table>
+  <thead><tr><th>类别</th><th>技术</th><th>核心思路</th><th>计算开销</th></tr></thead>
+  <tbody>
+    <tr><td>Token 干预</td><td>"Wait" Token 注入</td><td>强制模型延迟输出，多思考</td><td>极低</td></tr>
+    <tr><td>采样策略</td><td>Best-of-N 采样</td><td>生成N个答案，选最好的</td><td>中（×N）</td></tr>
+    <tr><td>树搜索</td><td>Tree of Thought + MCTS</td><td>搜索推理树，回溯错误分支</td><td>高</td></tr>
+    <tr><td>自我验证</td><td>Self-Consistency</td><td>多路径推理取多数投票</td><td>中</td></tr>
+    <tr><td>过程奖励引导</td><td>PRM 引导搜索</td><td>PRM 为每步评分，剪枝差路径</td><td>高</td></tr>
+    <tr><td>自我精炼</td><td>Iterative Refinement</td><td>模型审查并改进自己的输出</td><td>中</td></tr>
+    <tr><td>测试时优化</td><td>Test-Time Preference Opt.</td><td>测试时基于反馈微调</td><td>极高</td></tr>
+  </tbody>
+</table>
+
+<h3>3.2 关键实验结论</h3>
+
+<div class="callout callout-key">
+  <strong>小模型 + 推断时 Scaling &gt; 大模型：</strong><br>
+  研究表明，配合合适的推断时 Scaling 策略，<strong>1B 参数模型可以超越 405B Llama 3</strong>（无推断时Scaling）；7B 模型可以超越 DeepSeek-R1，同时保持更高推理效率。
+</div>
+
+<p>然而，<em>Chain-of-Thought vs Tree-of-Thought vs Reasoning as Planning</em> 的跨任务对比研究（11个任务）发现：<strong>没有任何单一技术能在所有任务上一致地超越其他技术</strong>。最优策略高度依赖任务类型。</p>
+
+<h3>3.3 Inner Thinking Transformer</h3>
+<p>Inner Thinking Transformer 是一种动态深度扩展方法——通过在推理时动态增加模型深度（而非固定层数）来适应任务复杂度。难题分配更多计算层，简单问题用浅层快速回答，实现自适应内部思考。</p>
+
+<!-- ============================================================ -->
+<h2>四、超越标准 LLM：线性注意力与新范式</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/beyond-standard-llms" target="_blank">Beyond Standard LLMs</a> | Nov 2025</div>
+
+<p>标准 Transformer 的 $O(n^2)$ 注意力复杂度在超长序列上形成根本性瓶颈。本文梳理了试图突破这一限制的四个研究方向。</p>
+
+<h3>4.1 四大非标准 LLM 方向</h3>
+
+<pre class="mermaid">graph TD
+  Standard["标准 Transformer\n(O(n²) 注意力)"]
+  LA["线性注意力混合\nLinear Attention Hybrids\n(Mamba, RWKV, Gated DeltaNet)"]
+  TD["文本扩散模型\nText Diffusion Models\n(非自回归生成)"]
+  CWM["代码世界模型\nCode World Models\n(模拟代码执行)"]
+  SRT["小型递归 Transformer\nSmall Recursive Transformers\n(权重复用+递归)"]
+  Standard -->|"长序列效率"| LA
+  Standard -->|"生成范式"| TD
+  Standard -->|"代码推理"| CWM
+  Standard -->|"参数效率"| SRT
+</pre>
+
+<h4>线性注意力混合（Linear Attention Hybrids）</h4>
+<p>用递归/状态空间机制替代 Softmax 注意力，推理复杂度从 $O(n^2)$ 降至 $O(n)$。典型架构：</p>
+<ul>
+  <li><strong>Mamba：</strong>选择性状态空间模型，输入依赖的状态转移</li>
+  <li><strong>RWKV：</strong>线性注意力 + 递归，兼容 Transformer 训练范式</li>
+  <li><strong>Gated DeltaNet：</strong>快权重记忆更新，属于线性时间门控序列模型家族</li>
+  <li><strong>混合策略：</strong>大部分层用线性注意力，少数层用标准注意力（如 Qwen3.5）</li>
+</ul>
+
+<h4>文本扩散模型（Text Diffusion）</h4>
+<p>将图像生成中的扩散过程迁移到文本：从噪声序列逐步去噪得到文本，而非逐 token 自回归生成。潜在优势：支持双向生成、更好的全局一致性；挑战：推理速度和质量仍落后于自回归模型。</p>
+
+<h4>代码世界模型（Code World Models）</h4>
+<p>专门为代码任务设计的模型架构，内部隐式模拟代码执行过程，而非仅做模式匹配。类似于规划领域的模型学习真实世界动态。</p>
+
+<h4>小型递归 Transformer（Small Recursive Transformers）</h4>
+<p>通过跨层权重共享和递归计算，用极少参数量达到更深层的表达能力。适合边缘设备部署场景。</p>
+
+<div id="chart-scaling" style="height:300px; margin:1em 0; border-radius:6px; overflow:hidden;"></div>
+<script>
+echarts.init(document.getElementById('chart-scaling')).setOption({
+  backgroundColor:'#2a2a3e',
+  title:{text:'推断时Scaling技术对比（性能提升 vs 计算开销）',textStyle:{color:'#89b4fa'},left:'center'},
+  tooltip:{formatter:p=>`${p.data[2]}<br>计算开销: ${p.data[0]}<br>性能提升: ${p.data[1]}`},
+  xAxis:{name:'相对计算开销',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#313244'}}},
+  yAxis:{name:'性能提升',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#313244'}}},
+  series:[{
+    type:'scatter',
+    symbolSize:14,
+    data:[
+      [1,2,'Wait Token'],[3,5,'Best-of-N(small)'],[8,7,'Best-of-N(large)'],
+      [5,6,'Self-Consistency'],[10,8,'Tree搜索'],[6,7,'PRM引导'],
+      [15,9,'Test-Time Opt.'],[4,6,'Inner Thinking']
+    ],
+    label:{show:true,formatter:p=>p.data[2],position:'top',color:'#cdd6f4',fontSize:11},
+    itemStyle:{color:'#89b4fa'}
+  }]
+});
+</script>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+    if(!h.id)h.id='s'+i;
+    const a=document.createElement('a');
+    a.href='#'+h.id; a.textContent=h.textContent;
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(e=>e.forEach(x=>{
+    const l=toc.querySelector(`a[href="#${x.target.id}"]`);
+    if(l)l.classList.toggle('active',x.isIntersecting);
+  }),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

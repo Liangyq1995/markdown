@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoBA 深度阅读报告</title>
+<style>
+:root{
+  --bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;
+  --text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;
+  --quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;
+  --purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC','Hiragino Sans GB',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.45;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+#toc a.toc-h3.active{border-left-color:#1e1e2e;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+h4{color:var(--yellow);font-size:.97em;margin:1.2em 0 .4em;}
+p{margin:.65em 0;}
+ul,ol{margin:.5em 0 .5em 1.4em;}
+li{margin:.3em 0;}
+a{color:var(--link);}
+strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:.55em 0!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;font-size:1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.algo-box .kw{color:var(--purple);font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:var(--teal);}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1.2em 0;}
+#toc::-webkit-scrollbar{width:4px;}
+#toc::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>MoBA 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Mixture of Block Attention for Long-Context LLMs · Moonshot AI / 清华大学 / 浙江大学</p>
+
+<table>
+  <tr><th style="width:130px">标题</th><td>MoBA: Mixture of Block Attention for Long-Context LLMs</td></tr>
+  <tr><th>机构</th><td>Moonshot AI（Kimi）/ 清华大学 Mingxing Zhang / 浙江大学 Jiezhong Qiu</td></tr>
+  <tr><th>核心思路</th><td>将 MoE 的 Top-K 门控原理迁移至注意力机制，实现模型自主决定"关注哪些历史块"，无预设偏置</td></tr>
+  <tr><th>关键优势</th><td>全注意力与稀疏注意力无缝切换；已部署于 Kimi 百万 token 长上下文服务</td></tr>
+  <tr><th>开源</th><td>github.com/MoonshotAI/MoBA</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 长上下文注意力的根本困境</h3>
+
+<p>传统 Transformer 注意力的计算复杂度为 $O(N^2)$，其中 $N$ 为序列长度。对百万 token 的序列，全注意力在单次 forward 的计算代价极为巨大：</p>
+
+<div class="math-block">
+$$\mathrm{Attn}(q, K, V) = \mathrm{Softmax}\!\left(qK^\top\right)V, \quad q \in \mathbb{R}^{1\times d},\; K, V \in \mathbb{R}^{N\times d}$$
+</div>
+
+<p>序列长度从 8K 扩展到 1M，注意力计算量增加约 <strong>16,000 倍</strong>，这构成了实际部署的核心瓶颈。</p>
+
+<h3>1.2 现有方案及其局限</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["静态稀疏注意力\nSink Attention / Sliding Window\n问题：高度任务特异性，泛化差"]
+    B["动态推理时稀疏\nQuest / Minference / RetrievalAttention\n问题：只降推理成本，不降训练成本\n无法实现百万 token 规模训练"]
+    C["线性注意力替代\nMamba / RWKV / RetNet\n问题：高转换成本\n复杂推理能力未充分验证"]
+    D["MoBA（本文）\n少结构原则：模型自主决定关注哪里\n全/稀疏双模式无缝切换\n训练+推理同时加速"]
+    A & B & C -->|"各有局限"| D
+</pre>
+
+<div class="tech-card yellow">
+<strong>"少结构（Less Structure）"原则</strong>：MoBA 的核心设计哲学是不引入预定义偏置（如"一定要关注初始 token"或"一定要关注局部窗口"），而是通过可学习的门控机制让模型自主发现最相关的历史块。SWA 和 Attention Sink 均可视为 MoBA 使用固定门控网络时的特殊情况。
+</div>
+
+<hr>
+
+<!-- ═══ 2. 方法 ═══ -->
+<h2 id="s2">2. MoBA 核心方法</h2>
+
+<h3>2.1 基本框架</h3>
+
+<p>标准注意力让每个 query token 关注全部 $N$ 个 key-value；MoBA 仅关注一个选定子集 $I \subseteq [N]$：</p>
+
+<div class="math-block">
+$$\mathrm{MoBA}(q, K, V) = \mathrm{Softmax}\!\left(qK[I]^\top\right)V[I] \tag{2}$$
+</div>
+
+<h3>2.2 块划分与 Top-K 门控</h3>
+
+<p>将长度 $N$ 的上下文等分为 $n$ 个块，每块大小 $B = N/n$，第 $i$ 块的 token 范围为：</p>
+
+<div class="math-block">
+$$I_i = [(i-1)\times B + 1,\; i \times B] \tag{3}$$
+</div>
+
+<p>门控分数（query 与块均值 key 的内积）：</p>
+
+<div class="math-block">
+$$s_i = \langle q,\; \mathrm{mean\_pool}(K[I_i])\rangle \tag{6}$$
+</div>
+
+<p>Top-K 选择：</p>
+
+<div class="math-block">
+$$g_i = \begin{cases} 1 & s_i \in \mathrm{Top\text{-}K}(\{s_j\}_{j\in[n]},\, k) \\ 0 & \text{otherwise} \end{cases}, \quad I = \bigcup_{g_i > 0} I_i \tag{4,5}$$
+</div>
+
+<h3>2.3 因果性保证——两条规则</h3>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph R1["规则1：禁止路由到未来块"]
+        A1["若 pos(q) < i × B\n则强制 sᵢ = −∞，gᵢ = 0"]
+    end
+    subgraph R2["规则2：当前块强制关注 + 因果掩码"]
+        A2["当前块 gᵢ = 1（强制选中）\n施加因果掩码防止看到未来 token"]
+    end
+    R1 & R2 --> CAUSAL["自回归因果性完全保证"]
+</pre>
+
+<div class="tech-card blue">
+<strong>当前块的作用类比 MoE 中的共享专家</strong>：在现代 MoE 架构（如 DeepSeekMoE、Qwen-MoE）中，共享专家接受所有 token，类似地，MoBA 中当前块永远被选中，保证局部上下文始终被利用。
+</div>
+
+<h3>2.4 与滑动窗口注意力 / Attention Sink 的关系</h3>
+
+<table>
+  <tr><th>注意力类型</th><th>等价的 MoBA 门控策略</th><th>灵活性</th></tr>
+  <tr><td>滑动窗口注意力（SWA）</td><td>门控总是选择最近的 $k$ 个块</td><td>固定，无法动态适应内容</td></tr>
+  <tr><td>Attention Sink</td><td>门控总是选择初始块 + 最近块</td><td>固定，不可学习</td></tr>
+  <tr><td><strong>MoBA（本文）</strong></td><td>门控由内积相似度动态决定，完全可学习</td><td><strong>最强，可逼近任意稀疏模式</strong></td></tr>
+</table>
+
+<h3>2.5 FlashAttention 集成实现</h3>
+
+<pre class="mermaid">
+flowchart TD
+    KV["KV 矩阵分块\n{K̃ᵢ, Ṽᵢ} ∈ ℝ^{B×h×d}, i∈[n]"]
+    GATE["计算门控分数\n均值池化 K̄ ∈ ℝ^{n×h×d}\nS = QK̄ᵀ → Top-K + 因果掩码"]
+    SELF["当前块注意力\nFlash Attention（有因果掩码）"]
+    MOBA["历史选中块注意力\nFlash Attention（无因果掩码，变长）"]
+    COMB["Online Softmax 合并\n（Milakov 2018 / H. Liu 2023 Tiling）"]
+    KV --> GATE --> SELF & MOBA --> COMB
+</pre>
+
+<hr>
+
+<!-- ═══ 3. 算法 ═══ -->
+<h2 id="s3">3. 算法伪代码（原文 Algorithm 1）</h2>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: MoBA (Mixture of Block Attention)</div>
+  <p><span class="kw">Require:</span> <span class="var">Q, K, V</span> ∈ ℝ<sup>N×h×d</sup>; 超参数 block_size <span class="var">B</span>, top-k <span class="var">k</span>; n = N/B</p>
+  <p><span class="cm">// Step 1: 划分 KV 块</span></p>
+  <p>{K̃ᵢ, Ṽᵢ} = <span class="kw">split_blocks</span>(<span class="var">K, V, B</span>)，其中 K̃ᵢ, Ṽᵢ ∈ ℝ<sup>B×h×d</sup>, i ∈ [n]</p>
+  <p><span class="cm">// Step 2: 计算门控分数（内积相似度）</span></p>
+  <p>K̄ = <span class="kw">mean_pool</span>(<span class="var">K</span>, <span class="var">B</span>) ∈ ℝ<sup>n×h×d</sup> &nbsp;<span class="cm">// 每块 key 的均值</span></p>
+  <p>S = Q K̄<sup>⊤</sup> ∈ ℝ<sup>N×h×n</sup> &nbsp;<span class="cm">// 每个 query 对每个块的相似度</span></p>
+  <p><span class="cm">// Step 3: Top-K 选择（含因果掩码）</span></p>
+  <p>M = <span class="kw">create_causal_mask</span>(N, n) &nbsp;<span class="cm">// 屏蔽未来块：M[pos, i] = −∞ 若 pos < i×B</span></p>
+  <p>G = <span class="kw">topk</span>(S + M, k) &nbsp;<span class="cm">// 稀疏路由矩阵</span></p>
+  <p><span class="cm">// Step 4: 分别计算两部分注意力</span></p>
+  <p>Qs, K̃s, Ṽs = <span class="kw">get_self_attn_block</span>(Q, K̃, Ṽ) &nbsp;<span class="cm">// 当前块（带因果掩码）</span></p>
+  <p>Qm, K̃m, Ṽm = <span class="kw">index_select_moba_attn_block</span>(Q, K̃, Ṽ, G) &nbsp;<span class="cm">// 历史选中块（无因果掩码）</span></p>
+  <p>Os = <span class="kw">flash_attention_varlen</span>(Qs, K̃s, Ṽs, causal=<span class="kw">True</span>)</p>
+  <p>Om = <span class="kw">flash_attention_varlen</span>(Qm, K̃m, Ṽm, causal=<span class="kw">False</span>)</p>
+  <p><span class="cm">// Step 5: Online Softmax 合并</span></p>
+  <p>O = <span class="kw">combine_with_online_softmax</span>(Os, Om)</p>
+  <p><span class="kw">return</span> O</p>
+</div>
+
+<hr>
+
+<!-- ═══ 4. 关键设计选择 ═══ -->
+<h2 id="s4">4. 关键设计选择与消融实验</h2>
+
+<h3>4.1 细粒度分块的重要性</h3>
+
+<p>消融实验（1.5B 模型，32K 上下文，固定稀疏度 75%）：</p>
+
+<table>
+  <tr><th>总块数 n</th><th>Top-K 数</th><th>块大小 B</th><th>精细程度</th><th>验证损失</th></tr>
+  <tr><td>8</td><td>2</td><td>4096</td><td>最粗糙</td><td>最高（差约 1e-2）</td></tr>
+  <tr><td>16</td><td>4</td><td>2048</td><td>粗</td><td>中等</td></tr>
+  <tr><td>32</td><td>8</td><td>1024</td><td>中</td><td>下降</td></tr>
+  <tr><td>64</td><td>16</td><td>512</td><td>细粒度</td><td>最低</td></tr>
+  <tr><td>128</td><td>32</td><td>256</td><td>最细</td><td>与64相近（边际收益递减）</td></tr>
+</table>
+
+<div id="chart-granularity" class="echarts-box" style="height:280px"></div>
+
+<blockquote>细粒度分块是 MoE 家族的通用技术（DeepSeekMoE、Qwen MoE 均采用），MoBA 将其迁移到上下文长度维度，同样获益。</blockquote>
+
+<h3>4.2 MoBA/全注意力混合策略</h3>
+
+<p>三种训练方案对比（1.5B 参数，30B tokens，32K 上下文）：</p>
+
+<pre class="mermaid">
+flowchart LR
+    PURE_M["纯 MoBA\n尾部 token 位置损失偏高\n原因：SFT 中 prompt 被 mask\n梯度传播不充分"]
+    HYBRID["MoBA/全注意力混合\n两阶段：90% tokens 用 MoBA\n末10% tokens 切换为全注意力\n损失接近纯全注意力"]
+    PURE_F["纯全注意力\n性能最优但计算成本最高"]
+    PURE_M -->|"层级混合修复"| HYBRID
+    HYBRID -.->|"几乎等同"| PURE_F
+</pre>
+
+<p><strong>层级混合策略（Layer-wise Hybrid）</strong>：SFT 阶段最后若干 Transformer 层保持全注意力，其余层使用 MoBA。实验表明 <strong>最后 3 层</strong>使用全注意力可有效弥补 SFT 损失，同时保留 97% 以上层的 MoBA 效率收益。</p>
+
+<hr>
+
+<!-- ═══ 5. Scaling Law ═══ -->
+<h2 id="s5">5. Scaling Law 验证</h2>
+
+<p>按照 Chinchilla scaling law，训练五个不同规模模型（545M ~ 2.1B 参数），比较 MoBA 与全注意力的扩展律：</p>
+
+<table>
+  <tr><th>指标</th><th>MoBA 拟合</th><th>Full Attention 拟合</th><th>稀疏度</th></tr>
+  <tr><td>LM Loss（8K 序列）</td><td>$2.625 \times C^{-0.063}$</td><td>$2.622 \times C^{-0.063}$</td><td>81.25%</td></tr>
+  <tr><td>Trailing Loss（32K 序列尾部 2K）</td><td>$1.546 \times C^{-0.108}$</td><td>$1.464 \times C^{-0.097}$</td><td>95.31%</td></tr>
+</table>
+
+<div class="tech-card green">
+<strong>结论</strong>：短序列（8K）损失几乎完全相同（差距 < 1e-3）；长序列（32K）尾部有轻微差距，但指数项（-0.108 vs -0.097）表明差距随规模增大而收窄，MoBA 在大模型上更具竞争力。
+</div>
+
+<p>各规模模型配置：</p>
+<table>
+  <tr><th>参数量（无 Emb）</th><th>层数</th><th>Hidden Size</th><th>注意力头数</th><th>训练 Token 数</th><th>块大小</th><th>Top-K</th></tr>
+  <tr><td>545M</td><td>14</td><td>1792</td><td>14</td><td>10.8B</td><td>512</td><td>3</td></tr>
+  <tr><td>822M</td><td>16</td><td>2048</td><td>16</td><td>15.3B</td><td>512</td><td>3</td></tr>
+  <tr><td>1.1B</td><td>18</td><td>2304</td><td>18</td><td>20.6B</td><td>512</td><td>3</td></tr>
+  <tr><td>1.5B</td><td>20</td><td>2560</td><td>20</td><td>27.4B</td><td>512</td><td>3</td></tr>
+  <tr><td>2.1B</td><td>22</td><td>2816</td><td>22</td><td>36.9B</td><td>512</td><td>3</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 6. 实际部署效果 ═══ -->
+<h2 id="s6">6. 实际部署效果（Llama-8B-1M）</h2>
+
+<h3>6.1 训练流程</h3>
+
+<pre class="mermaid">
+flowchart LR
+    BASE["Llama 3.1 8B Base\n128K 上下文"]
+    CPT["连续预训练\n128K→256K→512K→1M\n（位置插值辅助）"]
+    MOBA["MoBA 激活\n100B tokens\n稀疏度 95.31%\nBlock=4096, Top-K=12"]
+    HYBRID2["层级混合\n最后 3 层保持全注意力\n其余 29 层 → MoBA"]
+    SFT["SFT\n32K→1M 渐进增长"]
+    BASE --> CPT --> MOBA --> HYBRID2 --> SFT
+</pre>
+
+<h3>6.2 基准测试结果</h3>
+
+<table>
+  <tr><th>基准</th><th>Llama-8B-1M-MoBA</th><th>Llama-8B-1M-Full</th><th>MoBA 是否超出</th></tr>
+  <tr><td>AGIEval [0-shot]</td><td>0.5144</td><td>0.5146</td><td>持平</td></tr>
+  <tr><td>BBH [3-shot]</td><td>0.6573</td><td>0.6589</td><td>相差 0.2%</td></tr>
+  <tr><td>CEval [5-shot]</td><td>0.6273</td><td>0.6165</td><td><strong style="color:var(--strong)">+1.1%</strong></td></tr>
+  <tr><td>GSM8K [5-shot]</td><td><strong style="color:var(--strong)">0.7278</strong></td><td>0.7142</td><td><strong style="color:var(--strong)">+1.4%</strong></td></tr>
+  <tr><td>LongBench @32K</td><td><strong style="color:var(--strong)">0.4828</strong></td><td>0.4821</td><td>持平</td></tr>
+  <tr><td>MBPP Sanitized</td><td><strong style="color:var(--strong)">0.6926</strong></td><td>0.6615</td><td><strong style="color:var(--strong)">+3.1%</strong></td></tr>
+  <tr><td>MMLU [0-shot]</td><td>0.4903</td><td>0.4904</td><td>持平</td></tr>
+  <tr><td>RULER NIAH @128K (multi-key-2)</td><td>0.9700</td><td><strong>1.000</strong></td><td>轻微差距</td></tr>
+  <tr><td>HumanEval [pass@1]</td><td>0.6951</td><td>0.7012</td><td>相差 0.6%</td></tr>
+</table>
+
+<h3>6.3 Needle in Haystack（1M 上下文）</h3>
+
+<p>Llama-8B-1M-MoBA 在完整 100 万 token 的针刺测试中表现几乎完美，验证了 MoBA 的超长上下文处理能力。稀疏度高达 95.31%（仅关注 4.69% 的 KV）仍能维持极高的信息检索准确率。</p>
+
+<hr>
+
+<!-- ═══ 7. 效率分析 ═══ -->
+<h2 id="s7">7. 效率分析</h2>
+
+<h3>7.1 计算时间对比</h3>
+
+<div id="chart-efficiency" class="echarts-box" style="height:320px"></div>
+
+<table>
+  <tr><th>序列长度</th><th>MoBA 时间（ms）</th><th>Flash Attention 时间（ms）</th><th>加速比</th></tr>
+  <tr><td>32K</td><td>~5</td><td>~20</td><td>~4×</td></tr>
+  <tr><td>128K</td><td>~12</td><td>~80</td><td>~6.7×</td></tr>
+  <tr><td>256K</td><td>~25</td><td>~180</td><td>~7.2×</td></tr>
+  <tr><td>512K</td><td>~50</td><td>~380</td><td>~7.6×</td></tr>
+  <tr><td>1M</td><td>~80</td><td>~750</td><td><strong style="color:var(--strong)">~9.4×</strong></td></tr>
+  <tr><td>10M</td><td>—</td><td>—</td><td><strong style="color:var(--strong)">~16×</strong></td></tr>
+</table>
+
+<p>注：稀疏度 95.31%（64 块固定，Top-K=3，块大小随序列长度按比例增大）</p>
+
+<h3>7.2 复杂度分析</h3>
+
+<table>
+  <tr><th>方法</th><th>时间复杂度</th><th>空间复杂度</th><th>适用场景</th></tr>
+  <tr><td>标准全注意力</td><td>$O(N^2 d)$</td><td>$O(N^2)$</td><td>短序列（≤ 32K）</td></tr>
+  <tr><td>Flash Attention</td><td>$O(N^2 d)$</td><td>$O(N)$（IO-aware）</td><td>通用，但仍是 $N^2$</td></tr>
+  <tr><td style="color:var(--strong)">MoBA (稀疏度 $\rho$)</td><td style="color:var(--strong)">$O((1-\rho) N^2 d)$</td><td style="color:var(--strong)">$O(N)$</td><td style="color:var(--strong)">长序列（128K ~ 1M+）</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 8. 局限性 ═══ -->
+<h2 id="s8">8. 局限性与未来工作</h2>
+
+<ul>
+  <li><strong>尾部 trailing loss 差距</strong>：长序列末尾 token 的损失仍略高于全注意力，尤其在 SFT 阶段（prompt masking 导致梯度传播不充分）</li>
+  <li><strong>门控分数的局限</strong>：均值池化 key 作为块代表可能不是最优方案，最大池化、注意力加权池化等替代方案未充分探索</li>
+  <li><strong>推理阶段的回退</strong>：生成阶段当前仍切回全注意力以获取最佳性能，稀疏注意力的推理加速未完全实现</li>
+  <li><strong>超长训练成本</strong>：100B tokens 的 MoBA 激活阶段依然需要大量计算，门控网络本身也有开销</li>
+</ul>
+
+<hr>
+
+<!-- ═══ 9. 与 MoE 的类比 ═══ -->
+<h2 id="s9">9. MoBA 与 MoE 的深度类比</h2>
+
+<table>
+  <tr><th>维度</th><th>MoE（混合专家）</th><th>MoBA（混合块注意力）</th></tr>
+  <tr><td>作用对象</td><td>FFN 中间维度（专家网络）</td><td>注意力上下文（KV 块）</td></tr>
+  <tr><td>门控输入</td><td>Token 的隐状态</td><td>Query token vs 块均值 key</td></tr>
+  <tr><td>选择粒度</td><td>选 Top-K 个专家（FFN）</td><td>选 Top-K 个历史块（KV）</td></tr>
+  <tr><td>共享专家类比</td><td>共享专家接受所有 token</td><td>当前块强制关注（始终选中）</td></tr>
+  <tr><td>细粒度原则</td><td>更多小专家优于少量大专家</td><td>更多小块优于少量大块</td></tr>
+  <tr><td>计算稀疏化</td><td>每 token 只激活少数专家</td><td>每 query 只关注少数块</td></tr>
+</table>
+
+<div class="tech-card purple">
+<strong>本质洞见</strong>：MoBA 将 MoE 的"条件计算（Conditional Computation）"范式从模型宽度维度扩展到了上下文长度维度。两者共享相同的哲学：通过动态稀疏路由，在保持表达能力的同时实现计算效率的质的飞跃。
+</div>
+
+<hr>
+
+<!-- ═══ 10. 核心评注 ═══ -->
+<h2 id="s10">10. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>为什么 MoBA 比 SWA 更优雅</strong>：滑动窗口注意力假设"越近的 token 越重要"，这在文本摘要、RAG 等需要关注早期信息的场景完全失效。MoBA 不预设任何局部性偏置，门控网络学习到的是真正的语义相关性——在 Needle-in-Haystack 测试中，MoBA 能在百万 token 中精准定位答案，正是因为其门控能够跨越长距离选择相关块。
+</div>
+
+<div class="tech-card orange">
+<strong>SFT 中的梯度传播难题</strong>：MoBA 在 SFT 阶段表现不如预训练阶段的根本原因在于 prompt masking。SFT 的 loss 只从 completion tokens 反向传播，而稀疏注意力模式下，远处 prompt blocks 的梯度路径非常有限。层级混合（最后 N 层全注意力）是一个务实的工程解法，但从理论上看，这是稀疏注意力在有监督场景下的内在局限，值得更深入研究。
+</div>
+
+<div class="tech-card blue">
+<strong>部署实践的关键选择</strong>：生成阶段回退到全注意力（KV Cache）意味着 MoBA 主要在 Prefill 阶段加速。对于 Kimi 的长文档理解场景，Prefill 往往是主要瓶颈（处理百万 token 的输入），因此这一设计取舍是合理的：推理生成的 KV Cache 规模有限，加速收益不如 Prefill 阶段显著。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于 MoBA Technical Report / Moonshot AI</p>
+
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach(h => {
+    if (!h.id) return;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent.replace(/\s+/g,' ').trim();
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const a = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (a) a.classList.toggle('active', e.isIntersecting);
+    });
+  }, {threshold:0.3});
+  document.querySelectorAll('main h2, main h3').forEach(h => h.id && obs.observe(h));
+});
+
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+
+window.addEventListener('load', () => {
+  // 细粒度分块消融图
+  const c1 = echarts.init(document.getElementById('chart-granularity'));
+  c1.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'块粒度消融：验证损失 vs 分块设置（1.5B, 32K, 稀疏度75%）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis'},
+    xAxis:{type:'category',data:['8块/选2\n(B=4096)','16块/选4\n(B=2048)','32块/选8\n(B=1024)','64块/选16\n(B=512)','128块/选32\n(B=256)'],axisLabel:{color:'#cdd6f4',fontSize:11}},
+    yAxis:{type:'value',name:'LM Loss',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:2.23,max:2.265},
+    series:[
+      {name:'MoBA',type:'line',smooth:true,data:[2.260,2.250,2.243,2.232,2.231],
+       lineStyle:{color:'#89b4fa',width:2.5},itemStyle:{color:'#89b4fa'},symbol:'circle',symbolSize:7,
+       label:{show:true,formatter:'{c}',color:'#cdd6f4',fontSize:11}},
+      {name:'Full Attention 基线',type:'line',
+       data:[2.230,2.230,2.230,2.230,2.230],
+       lineStyle:{color:'#a6e3a1',width:2,type:'dashed'},itemStyle:{color:'#a6e3a1'}}
+    ],
+    legend:{data:['MoBA','Full Attention 基线'],textStyle:{color:'#cdd6f4'}},
+    grid:{left:60,right:20,bottom:60}
+  });
+
+  // 效率对比图
+  const c2 = echarts.init(document.getElementById('chart-efficiency'));
+  c2.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'MoBA vs Flash Attention 计算时间（稀疏度 95.31%）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',formatter:params=>{
+      let s = params[0].axisValue + '<br>';
+      params.forEach(p => s += `${p.marker}${p.seriesName}: ${p.value}ms<br>`);
+      return s;
+    }},
+    legend:{data:['Flash Attention','MoBA'],textStyle:{color:'#cdd6f4'}},
+    xAxis:{type:'category',data:['32K','128K','256K','512K','1M'],axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',name:'时间（ms）',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'Flash Attention',type:'bar',data:[20,80,180,380,750],
+       itemStyle:{color:'rgba(69,71,90,0.8)'},barMaxWidth:40},
+      {name:'MoBA',type:'bar',data:[5,12,25,50,80],
+       itemStyle:{color:'rgba(137,180,250,0.85)'},barMaxWidth:40,
+       label:{show:true,position:'top',color:'#a6e3a1',formatter:p=>{
+         const fa=[20,80,180,380,750],moba=[5,12,25,50,80];
+         return (fa[p.dataIndex]/moba[p.dataIndex]).toFixed(1)+'×';
+       }}}
+    ],
+    grid:{left:60,right:20,bottom:40}
+  });
+});
+</script>
+</body>
+</html>

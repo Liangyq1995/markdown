@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKILL0 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.algo-box .kw{color:#cba6f7;font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:#94e2d5;}
+.algo-box .fn{color:#a6e3a1;}
+.algo-box .num{color:#f9e2af;}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>SKILL0 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">In-Context Agentic Reinforcement Learning for Skill Internalization · 浙江大学 / 美团 / 清华大学 · 2026-04</p>
+
+<blockquote style="font-size:1.1em;font-style:italic;margin-bottom:1.6em">
+"Skills at training, zero at inference." —— SKILL0 核心理念
+</blockquote>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>SKILL0: In-Context Agentic Reinforcement Learning for Skill Internalization</td></tr>
+  <tr><th>机构</th><td>浙江大学 / 美团 / 清华大学（Zhengxi Lu, Yongliang Shen, Qi Gu 等）</td></tr>
+  <tr><th>核心问题</th><td>Agent 技能能否从"推理时检索注入"转变为"训练时内化到参数"，实现零样本自主推理？</td></tr>
+  <tr><th>代码</th><td>github.com/ZJU-REAL/SkillZero</td></tr>
+  <tr><th>关键结果</th><td>ALFWorld（3B）：+9.7pp；Search-QA：+6.6pp；推理时 token/步 仅 0.38k（比 SkillRL 低 5×）</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 推理时技能增强的根本局限</h3>
+
+<pre class="mermaid">
+flowchart TD
+    P["推理时技能增强（现有主流范式）\n每次推理从 SkillBank 检索 → 注入上下文 → 辅助推理"]
+    P1["问题1：检索噪声\n无关或误导性技能污染上下文\n被错误引导执行错误动作"]
+    P2["问题2：Token 开销\n多轮交互中技能内容快速累积\n上下文膨胀，限制可扩展性"]
+    P3["问题3（最根本）\n模型只是在执行技能，而不是学习技能\n能力存在于上下文中，而非模型参数\n每次推理都需要重新检索——永远在第一阶段"]
+    P --> P1 & P2 & P3
+</pre>
+
+<div class="tech-card yellow">
+<strong>认知科学依据（Anderson, 1982）</strong>：技能获取分两个阶段——显式指令阶段（看着说明书做）→ 内化阶段（不用说明书也能自动完成）。推理时技能增强让 Agent 永远停在第一阶段。SKILL0 旨在让 Agent 达到第二阶段。
+</div>
+
+<h3>1.2 重新定位问题</h3>
+
+<pre class="mermaid">
+flowchart LR
+    OLD["旧问题\n如何更好地检索和注入技能？"] -->|"重新定位"| NEW["新问题\n技能能否内化到模型参数？\n让推理时不需要检索"]
+    NEW --> CHALLENGE["核心挑战\n没有技能：缺乏多步行为引导，学习困难\n始终有技能：模型形成依赖，永远不内化"]
+    CHALLENGE --> SOLUTION["解决方案：课程学习\n从有技能开始，以无技能结束\n系统地将能力从上下文转移到参数"]
+</pre>
+
+<hr>
+
+<!-- ═══ 2. 背景 ═══ -->
+<h2 id="s2">2. 背景与相关工作</h2>
+
+<table>
+  <tr><th>方法类别</th><th>代表方法</th><th>技能位置</th><th>局限</th></tr>
+  <tr><td>原始记忆</td><td>Reflexion、ExpeL</td><td>轨迹数据库（长、冗余、噪声）</td><td>直接注入效率低</td></tr>
+  <tr><td>技能提取+检索</td><td>SkillRL、EvolveR</td><td>结构化技能文件，按语义相似度检索</td><td>推理时仍需检索，token 开销大</td></tr>
+  <tr><td>Agent 记忆</td><td>Mem0、MemRL</td><td>外部记忆数据库</td><td>模型参数本身没有能力提升</td></tr>
+  <tr><td style="color:var(--strong)"><strong>SKILL0（本文）</strong></td><td style="color:var(--strong)"><strong>训练时提供，推理时归零</strong></td><td style="color:var(--strong)"><strong>能力固化到模型参数</strong></td><td style="color:var(--strong)"><strong>推理零开销，真正内化</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 3. 方法 ═══ -->
+<h2 id="s3">3. SKILL0 方法（完整技术细节）</h2>
+
+<h3>3.1 整体架构：三阶段流程</h3>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph A["步骤1：相关性驱动的技能分组（离线）"]
+        SB["SkillBank = {Sk}：N 个 Markdown 技能文件\n按任务类型 + 技能类别组织"]
+        GRP["将验证集子任务与技能文件配对\n每个 Sk 对应一组验证子任务 Tk\n基于领域与目标的相关性判断"]
+        SB --> GRP
+    end
+    subgraph B["步骤2：In-Context RL + 动态课程（训练时）"]
+        RENDER["上下文渲染\n交互历史 + 技能 → RGB 图像\n视觉编码器 → 向量 Vt"]
+        ROLLOUT["Rollout\n策略同时输出动作 at 和压缩比 ct"]
+        HELP["帮助度评估（每d步）\nΔk = Acc(有Sk) - Acc(无Sk)"]
+        FILTER["动态筛选：Filter(Δk>0) + Rank + Select 前M(s)个\n预算线性递减 N→...→0"]
+        RENDER --> ROLLOUT --> HELP --> FILTER --> RENDER
+    end
+    subgraph C["推理时"]
+        ZERO["零技能推理\n不检索任何技能\n仅凭内化后的参数自主完成"]
+    end
+    A --> B --> C
+</pre>
+
+<h3>3.2 上下文渲染与自适应压缩</h3>
+
+<p>将文本交互历史和技能渲染为压缩 RGB 图像：</p>
+
+<div class="math-block">
+$$V_t = \mathrm{Enc}(h_t,\, S;\, c_t), \quad V_t \in \mathbb{R}^d$$
+</div>
+
+<p>压缩比 $c_t \in (0,1]$ 由策略<strong>自动生成</strong>（非固定超参数）：</p>
+
+<div class="math-block">
+$$(a_t,\, c_t) \sim \pi_\theta(a_t, c_t \mid I, V_t)$$
+</div>
+
+<h3>3.3 复合奖励设计</h3>
+
+<div class="math-block">
+$$r_t^{\mathrm{comp}} = \begin{cases} \ln(c_t) & \text{if } I_\mathrm{succ}(\tau) = 1 \\ 0 & \text{otherwise} \end{cases}$$
+$$\tilde{r}_t = r_t + \lambda \cdot r_t^{\mathrm{comp}}$$
+</div>
+
+<p>对数函数反映压缩的边际递减效益；$\lambda$ 控制任务性能与压缩效率的权衡。</p>
+
+<h3>3.4 SKILL0 训练目标函数</h3>
+
+<div class="math-block">
+$$\mathcal{L}_\mathrm{SKILL0}(\theta) = \mathbb{E}_{\tau_i \sim \pi_{\theta_\mathrm{old}}(q),\, q\sim D}\!\left[\frac{1}{\sum_i |\tau_i|}\sum_{i=1}^{G}\sum_{t=1}^{|\tau_i|} \mathrm{clip}(r_{i,t}(\theta), A_i, \epsilon) - \beta \cdot D_\mathrm{KL}[\pi_\theta \| \pi_\mathrm{ref}]\right]$$
+</div>
+
+<h3>3.5 动态课程：技能预算线性递减</h3>
+
+<p>训练分 $N_S$ 个阶段，预算从全部技能线性递减至零：</p>
+
+<div class="math-block">
+$$M^{(s)} = \left\lfloor N \cdot \frac{N_S - s}{N_S - 1} \right\rfloor, \quad s = 1, \ldots, N_S$$
+</div>
+
+<p>从 $M^{(1)} = N$ 线性递减至 $M^{(N_S)} = 0$（零技能）。每次阶段切换时，策略分布偏移被约束在 PPO 重要性采样比范围内，训练稳定。</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: SKILL0 完整训练流程</div>
+  <p><span class="kw">Input:</span> 策略 <span class="var">π_θ</span>，数据集 <span class="var">D</span>，技能库 <span class="var">SkillBank = {Sk}</span>，验证任务 <span class="var">{Tk}</span>，阶段数 <span class="var">N_S</span>，间隔 <span class="var">d</span></p>
+  <p>初始化：活跃技能集 <span class="var">S</span> ← <span class="var">SkillBank</span></p>
+  <p><span class="kw">for</span> 阶段 s = 1, …, N_S <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> 步骤 t = 1, …, ⌊T_total/N_S⌋ <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="kw">if</span> t mod d == 0 <span class="kw">and</span> M(s) &gt; 0 <span class="kw">then</span></p>
+  <p style="padding-left:4.5em"><span class="cm">// Step 1: 计算每个技能的帮助度</span></p>
+  <p style="padding-left:4.5em"><span class="kw">for each</span> <span class="var">Sk</span> ∈ <span class="var">SkillBank</span> <span class="kw">do</span></p>
+  <p style="padding-left:6em"><span class="var">Δk</span> ← <span class="fn">Acc</span>(<span class="var">π_θ</span>, <span class="var">Tk</span>, <span class="var">with Sk</span>) − <span class="fn">Acc</span>(<span class="var">π_θ</span>, <span class="var">Tk</span>, <span class="var">no skill</span>)</p>
+  <p style="padding-left:4.5em"><span class="cm">// Step 2: 动态筛选</span></p>
+  <p style="padding-left:4.5em"><span class="var">S</span> ← <span class="fn">Select</span>(<span class="fn">Rank</span>(<span class="fn">Filter</span>(<span class="var">{Sk}</span>, <span class="var">Δk</span> &gt; 0)), M(s))</p>
+  <p style="padding-left:3em"><span class="cm">// 用 GRPO 在 S 增强的上下文下训练</span></p>
+  <p style="padding-left:3em">更新 <span class="var">π_θ</span>：最大化 <span class="var">L_SKILL0(θ)</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p><span class="kw">end for</span></p>
+  <p><span class="kw">return</span> <span class="var">π_θ</span> <span class="cm">// M(N_S) = 0，零技能推理策略</span></p>
+</div>
+
+<hr>
+
+<!-- ═══ 4. 实验结果 ═══ -->
+<h2 id="s4">4. 实验结果</h2>
+
+<h3>4.1 ALFWorld 结果（成功率 %）</h3>
+
+<div id="chart-alf" class="echarts-box" style="height:340px"></div>
+
+<table>
+  <tr><th>方法</th><th>平均</th><th>Token/步</th><th>相比 GRPO</th></tr>
+  <tr><td>Zero-Shot（3B）</td><td>15.2%</td><td>1.21k</td><td>基准</td></tr>
+  <tr><td>GRPO（3B）</td><td>79.9%</td><td>1.02k</td><td>—</td></tr>
+  <tr><td>SkillRL†（3B，有技能）</td><td>82.4%</td><td>2.21k</td><td>+2.5pp，但 Token 2.2×</td></tr>
+  <tr><td>AgentOCR（3B）</td><td>78.2%</td><td>0.38k</td><td>−1.7pp</td></tr>
+  <tr><td style="color:var(--strong)"><strong>SKILL0（3B）</strong></td><td style="color:var(--strong)"><strong>87.9%</strong></td><td style="color:var(--strong)"><strong>0.38k</strong></td><td style="color:var(--strong)"><strong>+9.7pp</strong></td></tr>
+  <tr><td>GRPO（7B）</td><td>81.8%</td><td>0.95k</td><td>—</td></tr>
+  <tr><td style="color:var(--strong)"><strong>SKILL0（7B）</strong></td><td style="color:var(--strong)"><strong>89.8%</strong></td><td style="color:var(--strong)"><strong>0.41k</strong></td><td style="color:var(--strong)"><strong>+8.0pp</strong></td></tr>
+</table>
+
+<h3>4.2 与闭源大模型对比（ALFWorld 7B）</h3>
+
+<table>
+  <tr><th>方法</th><th>模型规模</th><th>平均成功率</th></tr>
+  <tr><td>GPT-4o</td><td>~千亿参数</td><td>48.0%</td></tr>
+  <tr><td>Gemini-2.5-Pro</td><td>~千亿参数</td><td>60.3%</td></tr>
+  <tr><td style="color:var(--strong)"><strong>SKILL0</strong></td><td style="color:var(--strong)"><strong>Qwen2.5-VL-7B</strong></td><td style="color:var(--strong)"><strong>89.8%</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 5. 消融实验 ═══ -->
+<h2 id="s5">5. 消融实验与关键发现</h2>
+
+<h3>5.1 技能预算方案消融（核心发现）</h3>
+
+<table>
+  <tr><th>预算方案</th><th>有技能推理</th><th><strong>无技能推理</strong></th><th>迁移增益 Δ</th></tr>
+  <tr><td style="color:var(--strong)"><strong>SKILL0 [6,3,0]（递减至零）</strong></td><td>86.3%</td><td style="color:var(--strong)"><strong>87.9%</strong></td><td style="color:var(--strong)"><strong>+1.6%（正向迁移）</strong></td></tr>
+  <tr><td>[6,6,6]（始终保留技能）</td><td>85.9%</td><td style="color:var(--red)">72.6%</td><td style="color:var(--red)">−13.3%（依赖技能）</td></tr>
+  <tr><td>[0,0,0]（始终无技能）</td><td>—</td><td>78.9%</td><td>—</td></tr>
+</table>
+
+<div class="tech-card purple">
+<strong>正向迁移的实验证明</strong>：只有递减到零的预算方案 [6,3,0] 实现了正向迁移——无技能推理（87.9%）<strong>超过</strong>有技能推理（86.3%）。这意味着内化后的模型参数中的知识比上下文中的技能更可靠、更精准。始终保留技能 [6,6,6] 的方案反而导致模型形成表面依赖，去掉技能后崩溃 −13.3%。
+</div>
+
+<h3>5.2 动态课程三步骤消融</h3>
+
+<table>
+  <tr><th>配置</th><th>有技能</th><th>无技能</th><th>说明</th></tr>
+  <tr><td><strong>完整 Filter+Rank+Select</strong></td><td>86.3%</td><td><strong>87.9%</strong></td><td>最优</td></tr>
+  <tr><td>去掉 Filter（保留 Δk≤0 的技能）</td><td>81.6%</td><td>78.9%</td><td>噪声技能污染上下文</td></tr>
+  <tr><td>去掉 Rank（随机选技能）</td><td>76.6%</td><td>62.9%</td><td><strong>最差，Rank 最关键</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 6. 局限性 ═══ -->
+<h2 id="s6">6. 局限性</h2>
+
+<ul>
+  <li><strong>技能库质量依赖</strong>：初始 SkillBank 的质量直接影响内化效果；低质量技能可能引入错误知识</li>
+  <li><strong>离线分组需重新划分</strong>：相关性驱动的技能分组是离线完成的，新任务域需重新划分验证集</li>
+  <li><strong>视觉编码器依赖</strong>：上下文渲染依赖视觉语言模型（VLM）的图像理解，纯文本 LLM 无法直接使用</li>
+</ul>
+
+<hr>
+
+<!-- ═══ 7. 核心洞见 ═══ -->
+<h2 id="s7">7. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>技能内化：从"查手册"到"本能"</strong><br>
+SKILL0 解决的是一个深层的 AI 学习问题：如何将外部知识真正内化为内在能力，而不是每次推理都依赖外部脚手架。这与 AlphaGo → AlphaZero 的演进有相似之处：前者依赖人类棋谱作为先验，后者完全从自对弈中学习。SKILL0 的"有技能训练+无技能推理"是这一思路在 Agent 领域的具体实例。
+</div>
+
+<div class="tech-card blue">
+<strong>帮助度驱动的动态课程：比固定退火更聪明</strong><br>
+传统课程学习用固定的难度递增策略。SKILL0 的 Δk（帮助度）指标是一个<strong>在线的、自适应的</strong>技能效用估计——当策略已经从技能 Sk 中学到足够多时，Δk 自然下降，课程自动移除该技能。这比人工设计退火时间表更精准，且不需要额外的标注或监督。
+</div>
+
+<div class="tech-card yellow">
+<strong>5× token 效率的工程意义</strong><br>
+推理时 0.38k tokens/步 vs SkillRL 的 2.21k，差距5倍。在长上下文、多轮交互的 Agent 任务中，这个效率差距意味着：相同的计算预算下，SKILL0 可以处理更多轮次的交互，或者在相同推理成本下部署更多并发 Agent 实例。技能内化不只是更聪明，还更便宜。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于原文 arXiv:2504.XXXXX / 浙江大学 & 美团 & 清华大学 2026-04</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  const c=echarts.init(document.getElementById('chart-alf'));
+  c.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'ALFWorld 主要结果对比（3B 模型）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['成功率 (%)','Token/步 (k)'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['Zero-Shot','GRPO','SkillRL†','AgentOCR','SKILL0'],axisLabel:{color:'#cdd6f4'}},
+    yAxis:[
+      {type:'value',name:'成功率 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4',formatter:'{value}%'},min:0,max:100},
+      {type:'value',name:'Token/步 (k)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:0,max:3}
+    ],
+    series:[
+      {name:'成功率 (%)',type:'bar',data:[
+        {value:15.2,itemStyle:{color:'#45475a'}},
+        {value:79.9,itemStyle:{color:'#fab387'}},
+        {value:82.4,itemStyle:{color:'#fab387'}},
+        {value:78.2,itemStyle:{color:'#45475a'}},
+        {value:87.9,itemStyle:{color:'#a6e3a1'}}
+      ],barMaxWidth:40,label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}%'}},
+      {name:'Token/步 (k)',type:'line',yAxisIndex:1,
+       data:[1.21,1.02,2.21,0.38,0.38],
+       lineStyle:{color:'#89b4fa',width:2},itemStyle:{color:'#89b4fa'},symbol:'circle',symbolSize:7}
+    ],
+    grid:{left:60,right:60,bottom:40,top:70}
+  });
+});
+</script>
+</body>
+</html>

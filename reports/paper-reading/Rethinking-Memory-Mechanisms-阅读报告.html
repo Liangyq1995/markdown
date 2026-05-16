@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>重思 Foundation Agent 记忆机制 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>重思 Foundation Agent 记忆机制 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Rethinking Memory Mechanisms of Foundation Agents in the Second Half: A Survey · UIC / UIUC / Stanford / Salesforce / Google / Meta 等 27 机构</p>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>Rethinking Memory Mechanisms of Foundation Agents in the Second Half: A Survey</td></tr>
+  <tr><th>机构</th><td>UIC / UIUC / Stanford / Salesforce / Google / Meta 等 27 个机构联合</td></tr>
+  <tr><th>核心问题</th><td>AI 进入"下半场"——从刷基准到真实效用——记忆如何成为填补效用缺口的核心解决方案？</td></tr>
+  <tr><th>资源</th><td>AgentMemoryWorld/Awesome-Agent-Memory</td></tr>
+  <tr><th>"下半场"定义</th><td>真实世界的长时程、动态、用户依赖型任务，需要持续积累、管理、有选择地复用海量信息</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<div class="tech-card yellow">
+<strong>为什么是"下半场"？</strong><br>
+AI "上半场"：以刷基准为目标，单轮/短程任务，性能提升主要来自模型规模扩展。<br>
+AI "下半场"：以真实效用为目标，长时程/动态/用户依赖任务，性能瓶颈从"理解能力"转向"记忆与积累"。2025 年记忆相关论文数量呈指数增长，正是这一需求的直接体现。
+</div>
+
+<hr>
+
+<!-- ═══ 2. 三维分类体系 ═══ -->
+<h2 id="s2">2. 三维统一分类体系</h2>
+
+<pre class="mermaid">
+graph TD
+    MEM["Foundation Agent 记忆系统"]
+    SUB["维度1：记忆基底（Substrate）\n记忆存在于什么地方？"]
+    COG["维度2：认知机制（Cognitive Mechanism）\n记忆发挥什么功能？"]
+    SUB2["维度3：记忆主体（Subject）\n记忆服务于谁？"]
+    MEM --> SUB & COG & SUB2
+    SUB --> EXTERNAL["外部记忆\n向量索引 / 结构存储 / 层次存储"]
+    SUB --> INTERNAL["内部记忆\n模型权重 / 潜在状态 / KV Cache"]
+    COG --> SENSORY["感觉记忆：原始感知输入的短暂缓冲"]
+    COG --> WORKING["工作记忆：当前任务推理的临时状态"]
+    COG --> EPISODIC["情节记忆：跨会话的具体交互经历"]
+    COG --> SEMANTIC["语义记忆：稳定的抽象知识与事实"]
+    COG --> PROCEDURAL["程序记忆：可执行技能、工作流、API"]
+    SUB2 --> USER["用户中心：偏好 / 个性 / 历史"]
+    SUB2 --> AGENT["Agent 中心：知识 / 策略 / 经验"]
+</pre>
+
+<hr>
+
+<!-- ═══ 3. 记忆基底 ═══ -->
+<h2 id="s3">3. 记忆基底详解</h2>
+
+<h3>3.1 外部记忆类型对比</h3>
+
+<table>
+  <tr><th>格式</th><th>代表方案</th><th>适用场景</th><th>挑战</th></tr>
+  <tr><td>向量索引</td><td>RAG / 向量数据库</td><td>语义检索，大规模知识库</td><td>随规模增长检索噪声增加</td></tr>
+  <tr><td>结构存储</td><td>知识图谱 / 关系型数据库</td><td>关系推理，多跳问答</td><td>构建成本高，维护复杂</td></tr>
+  <tr><td>层次存储</td><td>MemGPT / MemOS / HippoRAG</td><td>多级抽象，细粒度访问控制</td><td>设计复杂，跨层检索延迟</td></tr>
+  <tr><td>文本记录</td><td>对话日志 / 摘要</td><td>简单历史保留</td><td>token 成本随时程线性增长</td></tr>
+</table>
+
+<h3>3.2 内部记忆类型</h3>
+
+<table>
+  <tr><th>类型</th><th>机制</th><th>优势</th><th>局限</th></tr>
+  <tr><td>参数化记忆</td><td>知识编入模型权重</td><td>零延迟访问，推理无开销</td><td>更新成本极高，灾难性遗忘风险</td></tr>
+  <tr><td>潜在状态</td><td>隐藏激活 / KV Cache</td><td>快速，会话内连贯</td><td>不跨会话持久化</td></tr>
+</table>
+
+<h3>3.3 基底选择指导</h3>
+
+<pre class="mermaid">
+graph LR
+    STABLE["稳定通用知识"] --> PARAM["参数化内部记忆\n高速访问，无检索延迟"]
+    SESSION["会话内状态"] --> LATENT["潜在状态（KV Cache）\n快速，但会话结束丢失"]
+    GROWING["增长型经验"] --> EXT["外部记忆（向量数据库）\n可扩展，支持灵活编辑"]
+    COMPLEX["复杂真实系统"] --> HYBRID["混合架构\n各基底优势互补"]
+</pre>
+
+<hr>
+
+<!-- ═══ 4. 五类认知机制 ═══ -->
+<h2 id="s4">4. 五类认知记忆机制</h2>
+
+<table>
+  <tr><th>认知类型</th><th>功能角色</th><th>Agent 实现</th><th>代表工作</th></tr>
+  <tr><td><strong>感觉记忆</strong></td><td>感知输入短暂缓冲</td><td>多模态流嵌入队列、感知状态缓冲</td><td>SAM2, ReKV, UBSLLM</td></tr>
+  <tr><td><strong>工作记忆</strong></td><td>当前任务临时状态</td><td>上下文压缩、KV 状态在线维护</td><td>RAP, MemReasoner, MEM1</td></tr>
+  <tr><td><strong>情节记忆</strong></td><td>跨会话的具体经历</td><td>交互轨迹记录、情景事件库</td><td>Synapse, COMEDY, JARVIS-1</td></tr>
+  <tr><td><strong>语义记忆</strong></td><td>稳定的抽象知识</td><td>知识图谱、分层语义结构</td><td>ChatDB, HippoRAG, CAM</td></tr>
+  <tr><td><strong>程序记忆</strong></td><td>可执行技能和工作流</td><td>代码片段、API 调用序列</td><td>MetaGPT, Voyager, COLT</td></tr>
+</table>
+
+<div class="tech-card blue">
+<strong>短期 vs 长期记忆是涌现现象</strong>：短期和长期记忆不是独立的架构模块，而是从<strong>形成、进化、检索三个过程的时序调用模式</strong>中涌现出来的现象——这与认知科学中对记忆的理解一致。
+</div>
+
+<hr>
+
+<!-- ═══ 5. 记忆操作 ═══ -->
+<h2 id="s5">5. 记忆操作机制</h2>
+
+<pre class="mermaid">
+flowchart TD
+    FORM["记忆形成（Formation）\n语义摘要 / 知识蒸馏 / 结构构建 / 潜在表示 / 参数内化"]
+    EVOL["记忆进化（Evolution）\n合并（Consolidate）/ 更新（Update）/ 遗忘（Forget）\n保持记忆库的紧凑、一致、相关"]
+    RET["记忆检索（Retrieval）\n何时检索 / 检索什么 / 如何整合\n向量相似度 + 时效 + 重要性"]
+    FORM --> EVOL --> RET --> AGENT["Agent 决策与执行"]
+    AGENT -->|"反馈驱动"| FORM
+</pre>
+
+<h3>5.1 多 Agent 记忆路由</h3>
+
+<p>多 Agent 设置引入了新挑战：<strong>记忆路由</strong>——哪个 Agent 的记忆应当与哪个 Agent 共享，以及如何在协作中保持记忆一致性。</p>
+
+<table>
+  <tr><th>挑战</th><th>具体问题</th><th>代表解法</th></tr>
+  <tr><td>路由策略</td><td>谁的记忆与谁共享？</td><td>G-Memory 三层图层次路由</td></tr>
+  <tr><td>一致性维护</td><td>多 Agent 记忆冲突如何解决？</td><td>KVCA 共识协议</td></tr>
+  <tr><td>隐私边界</td><td>用户个人记忆不应跨 Agent 泄露</td><td>选择性记忆保留 + 用户可控删除</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 6. 记忆学习 ═══ -->
+<h2 id="s6">6. 记忆学习策略</h2>
+
+<table>
+  <tr><th>策略</th><th>代表方法</th><th>特点</th></tr>
+  <tr><td>提示工程</td><td>少样本示例、指令优化</td><td>无需训练，灵活但受限于上下文</td></tr>
+  <tr><td>微调</td><td>在记忆操作数据上 SFT</td><td>固化记忆管理策略，泛化更强</td></tr>
+  <tr><td style="color:var(--strong)"><strong>强化学习</strong></td><td style="color:var(--strong)">MemAgent（GRPO）, MEM1（PPO）</td><td style="color:var(--strong)">端到端优化，超越 LLM 内置记忆能力</td></tr>
+</table>
+
+<div class="tech-card purple">
+<strong>RL for Memory 的特殊挑战</strong>：记忆决策的效果在多步后才体现（稀疏奖励），需要精心设计奖励形成策略。MemAgent 用 GRPO 直接优化摘要质量，MEM1 用 PPO 优化多轮任务成功率——两者证明了 RL 驱动的记忆管理比启发式规则更优。
+</div>
+
+<hr>
+
+<!-- ═══ 7. 用户中心 vs Agent 中心 ═══ -->
+<h2 id="s7">7. 用户中心 vs Agent 中心记忆</h2>
+
+<table>
+  <tr><th>维度</th><th>用户中心记忆</th><th>Agent 中心记忆</th></tr>
+  <tr><td>内容</td><td>用户偏好、身份、历史承诺</td><td>Agent 策略、知识、过往经验</td></tr>
+  <tr><td>目标</td><td>个性化、对话一致性</td><td>任务执行能力、自我进化</td></tr>
+  <tr><td>挑战</td><td>隐私保护、跨会话漂移</td><td>策略泛化、技能转移</td></tr>
+  <tr><td>典型应用</td><td>个性化助手、推荐系统</td><td>软件工程、科学发现</td></tr>
+</table>
+
+<div class="tech-card orange">
+<strong>隐私风险</strong>：用户记忆模块容易受到针对性提取攻击（adversarial extraction），在多 Agent 协作中风险更复杂——需要选择性记忆保留、安全存储和用户可控删除机制。这是"下半场"记忆研究中最被忽视但最重要的问题之一。
+</div>
+
+<hr>
+
+<!-- ═══ 8. 核心洞见 ═══ -->
+<h2 id="s8">8. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>"下半场"框架的预测力</strong><br>
+论文将 AI 发展划分为"上半场"（刷基准）和"下半场"（真实效用）是一个富有洞察的框架。它解释了为什么 GPT-4 级别的模型在推理基准上表现优异，却在需要长期记忆的真实任务（如长期项目助手、个人知识管理）中仍然薄弱——不是能力不足，而是记忆基础设施不足。
+</div>
+
+<div class="tech-card blue">
+<strong>三维分类的正交性</strong><br>
+基底（在哪里）/ 认知机制（做什么）/ 主体（为谁）三个维度的正交性使得分类体系清晰无交叉。这与传统的"情节/语义/程序"单维分类相比更具操作性——可以直接从三个维度设计系统：选什么存储格式，实现哪种认知功能，服务谁的需求。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于原文 / UIC, UIUC, Stanford, Salesforce 等 27 机构联合</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+</script>
+</body>
+</html>

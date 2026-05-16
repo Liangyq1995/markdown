@@ -29,6 +29,10 @@ ul{margin:.4em 0 .4em 1.2em}li{margin:.2em 0}
 .k{color:var(--y);font-size:.9em;margin:.35em 0}
 img{max-width:100%;display:block;margin:.55em 0;border-radius:4px;border:1px solid var(--b)}
 a{color:var(--a)}
+hr{border:none;border-top:1px solid var(--b);margin:1.1em 0}
+table{border-collapse:collapse;width:100%;font-size:.92em;margin:.6em 0}
+th,td{border:1px solid var(--b);padding:8px 10px;text-align:left}
+th{color:var(--h)}
 </style>
 <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$']],packages:{'[+]':['ams']}},options:{skipHtmlTags:['script','noscript','style','textarea']}};</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
@@ -39,54 +43,78 @@ a{color:var(--a)}
 
 <h1>强化学习 · 学习报告</h1>
 
-<h2 id="r0">〇、阅读主线</h2>
-<p>智能体与环境交互：观测状态、选动作、得奖励；目标是最大化（折扣）累积回报的期望。笔记从马尔可夫过程 \(\rightarrow\) 带回报的 MRP \(\rightarrow\) 含动作的 MDP \(\rightarrow\) 动态规划、时序差分、价值/策略方法，再到 DQN、策略梯度与 PPO。</p>
-<img src="../../picture/37.png" alt="MDP 交互示意（与笔记路径一致）">
+<h2 id="rl0">〇、源文件</h2>
+<p>主体对照 <code>强化学习.md</code>（MDP、动态规划、TD、DQN、策略梯度、PPO）；扩展对照 <code>LLM&RL.md</code>（RLHF 四模型与 PPO 训练流）。插图路径由笔记中绝对路径改为相对 <code>../../picture/</code>、<code>../../pictures/</code>，便于与仓库内资源一致部署。</p>
+<img src="../../picture/37.png" alt="MDP 示意">
 
-<h2 id="r1">一、MDP 基本要素</h2>
-<p>五元组 \(\langle \mathcal{S},\mathcal{A},\mathcal{P},r,\gamma\rangle\)：有限或一般状态空间、动作空间、转移 \(P(s'\mid s,a)\)、奖励 \(r(s,a)\)（或依赖 \(s'\) 的扩展写法）、折扣 \(\gamma\in(0,1]\)。策略 \(\pi(a\mid s)\) 给出在状态 \(s\) 下选动作 \(a\) 的概率（确定性策略为退化分布）。</p>
-
-<h2 id="r2">二、马尔可夫性与回报</h2>
+<h2 id="rl1">一、MDP 五元组与轨迹概率</h2>
+<p>\(\langle\mathcal{S},\mathcal{A},\mathcal{P},r,\gamma\rangle\)，策略 \(\pi(a\mid s)\)，轨迹 \(\tau\) 的概率为初始分布与逐步 \(\pi\) 与转移的乘积（强化学习.md）。</p>
 <div class="mjx">
-$$p(s_{t+1}\mid s_t,\ldots,s_0)=p(s_{t+1}\mid s_t)$$
-$$G_t = R_t + \gamma R_{t+1} + \gamma^2 R_{t+2} + \cdots = \sum_{k=0}^{\infty}\gamma^k R_{t+k}$$
+$$p(\tau)=p(s_0)\prod_{t=0}^{T-1}\pi(a_t\mid s_t)\,P(s_{t+1}\mid s_t,a_t)$$
 </div>
 
-<h2 id="r3">三、MRP 价值与贝尔曼方程</h2>
-<p>状态价值为从该状态出发的期望回报。对 MRP 有标量形式与向量形式（\(\mathcal{V},\mathcal{R},\mathcal{P}\) 与笔记一致）。</p>
+<h2 id="rl2">二、马尔可夫性与折扣回报</h2>
+<div class="mjx">
+$$p(s_{t+1}\mid s_0,a_0,\ldots,s_t,a_t)=p(s_{t+1}\mid s_t,a_t),\qquad
+G_t=\sum_{k=0}^{\infty}\gamma^k R_{t+k}$$
+</div>
+
+<h2 id="rl3">三、MRP 与贝尔曼（无动作）</h2>
+<div class="mjx">
+$$V(s)=r(s)+\gamma\sum_{s'}p(s'\mid s)V(s'),\qquad \mathcal{V}=\mathcal{R}+\gamma\mathcal{P}\mathcal{V}$$
+</div>
+
+<h2 id="rl4">四、\(V^\pi\)、\(Q^\pi\) 与贝尔曼期望方程</h2>
 <div class="mjx">
 $$\begin{aligned}
-V(s) &= \mathbb{E}[G_t\mid S_t=s] = r(s) + \gamma\sum_{s'\in\mathcal{S}} p(s'\mid s)\,V(s') \\[0.4em]
-\mathcal{V} &= \mathcal{R} + \gamma \mathcal{P}\mathcal{V}
+V^{\pi}(s)&=\sum_a\pi(a\mid s)Q^{\pi}(s,a), &
+Q^{\pi}(s,a)&=r(s,a)+\gamma\sum_{s'}P(s'\mid s,a)V^{\pi}(s')
 \end{aligned}$$
 </div>
 
-<h2 id="r4">四、MDP 中的 \(V^\pi\) 与 \(Q^\pi\)</h2>
+<h2 id="rl5">五、贝尔曼最优方程</h2>
 <div class="mjx">
 $$\begin{aligned}
-V^{\pi}(s) &= \mathbb{E}_{\pi}[G_t\mid S_t=s], &
-Q^{\pi}(s,a) &= \mathbb{E}_{\pi}[G_t\mid S_t=s,A_t=a] \\[0.45em]
-V^{\pi}(s) &= \sum_{a\in\mathcal{A}}\pi(a\mid s)\,Q^{\pi}(s,a) \\[0.35em]
-Q^{\pi}(s,a) &= r(s,a) + \gamma\sum_{s'\in\mathcal{S}} P(s'\mid s,a)\,V^{\pi}(s')
+V^*(s)&=\max_a\Bigl(r(s,a)+\gamma\sum_{s'}P(s'\mid s,a)V^*(s')\Bigr),\\
+Q^*(s,a)&=r(s,a)+\gamma\sum_{s'}P(s'\mid s,a)\max_{a'}Q^*(s',a')
 \end{aligned}$$
 </div>
-<p>上式即贝尔曼<strong>期望</strong>方程对 \((V^\pi,Q^\pi)\) 的耦合形式；最优贝尔曼方程将 \(\pi\) 换为关于 \(Q^*\) 的 \(\max_a\)，用于价值迭代与 Q-learning 类算法。</p>
 
-<h2 id="r5">五、Q-learning（异策略 TD 控制）</h2>
-<p>用四元组 \((s,a,r,s')\) 更新，目标策略可为贪心或 \(\arg\max_a Q\)，行为策略可为 \(\epsilon\)-贪婪等，故为典型的 <strong>off-policy</strong>。标量更新与笔记一致：</p>
-<div class="mjx">
-$$Q(s,a)\leftarrow Q(s,a)+\alpha\Bigl(r+\gamma\max_{a'}Q(s',a')-Q(s,a)\Bigr)$$
-</div>
-<p class="k">深度化后为 DQN：经验回放与目标网络缓解相关性与非平稳性。</p>
+<h2 id="rl6">六、动态规划：策略迭代与价值迭代</h2>
+<p>模型已知时：策略评估反复用贝尔曼期望方程迭代至 \(\|V^{k+1}-V^k\|\) 小；策略改进 \(\pi'(s)=\arg\max_a Q^\pi(s,a)\)。价值迭代直接在贝尔曼最优上做同步更新，收敛后从 \(V^*\) 恢复贪心策略（强化学习.md）。</p>
 
-<h2 id="r6">六、PPO-Clip 目标（提要）</h2>
-<p>PPO 在 TRPO 思路上简化实现；PPO-Clip 用比率 \(\rho_t=\pi_\theta(a\mid s)/\pi_{\theta_k}(a\mid s)\) 与裁剪控制策略更新幅度（与笔记公式同构）。</p>
+<h2 id="rl7">七、时序差分：SARSA 与 Q-learning</h2>
+<p>SARSA 在线（on-policy），用五元组 \((s,a,r,s',a')\) 更新。Q-learning 用 \(\max_{a'}Q(s',a')\) 构造目标，典型为 off-policy（行为策略 \(\epsilon\)-贪婪，目标策略贪心）。</p>
 <div class="mjx">
 $$\begin{aligned}
-\mathcal{L}^{\mathrm{CLIP}}(\theta)=\mathbb{E}_{s,a}\Bigl[\min\bigl(\rho_t(\theta)\hat A_t,\ \mathrm{clip}(\rho_t(\theta),1-\epsilon,1+\epsilon)\hat A_t\bigr)\Bigr]
+Q(s,a)&\leftarrow Q(s,a)+\alpha\bigl(r+\gamma Q(s',a')-Q(s,a)\bigr) &&\text{（SARSA）}\\
+Q(s,a)&\leftarrow Q(s,a)+\alpha\bigl(r+\gamma\max_{a'}Q(s',a')-Q(s,a)\bigr) &&\text{（Q-learning）}
 \end{aligned}$$
 </div>
-<p>实践中常配合价值项与熵 bonus；多 epoch 小批次复用同批样本提高利用率。与 LLM 对齐训练（RLHF / GRPO 等）见同目录 `LLM&RL.md` 等扩展笔记。</p>
+
+<h2 id="rl8">八、深度 Q 网络（DQN）</h2>
+<p>用神经网络逼近 \(Q(s,a;\theta)\)；经验回放打破样本相关性；目标网络 \(\theta^-\) 定期同步稳定 TD 目标。损失常为 Huber 或 MSE 作用于 TD 误差（强化学习.md）。</p>
+
+<h2 id="rl9">九、策略梯度与 PPO</h2>
+<p>策略梯度定理将 \(\nabla_\theta J\) 表为优势加权对数策略梯度；引入 baseline 减方差。PPO-Clip 限制重要性比 \(\rho_t=\pi_\theta/\pi_{\theta_{\mathrm{old}}}\) 偏离 1 的幅度；PPO-Penalty 将 KL 作为惩罚项。多 epoch 小批次复用同批轨迹提高样本效率（强化学习.md）。</p>
+<div class="mjx">
+$$\mathcal{L}^{\mathrm{CLIP}}(\theta)=\mathbb{E}_t\Bigl[\min\bigl(\rho_t(\theta)\hat A_t,\ \mathrm{clip}(\rho_t(\theta),1-\epsilon,1+\epsilon)\hat A_t\bigr)\Bigr]$$
+</div>
+
+<h2 id="rl10">十、LLM 中的 RL：对象与 RLHF 流程</h2>
+<p>对照 <code>LLM&RL.md</code>：动作=词表 token；状态=上下文；策略=LM 参数。RLHF 两阶段：偏好数据训练奖励模型；再以 PPO 联合策略、冻结参考模型、奖励模型、价值模型，并用 KL 将策略锚在 SFT 分布附近。</p>
+<img src="../../pictures/230.png" alt="RLHF 两阶段（路径与 md/pictures 一致）">
+<table>
+<thead><tr><th>模型</th><th>输入</th><th>输出（要点）</th></tr></thead>
+<tbody>
+<tr><td>策略 Actor</td><td>Prompt</td><td>生成 token / 对数概率，训练中更新</td></tr>
+<tr><td>参考 Reference</td><td>Prompt + 回答</td><td>对数概率，冻结，用于 KL</td></tr>
+<tr><td>奖励 RM</td><td>Prompt + 回答</td><td>偏好分数（常取末 token）</td></tr>
+<tr><td>价值 Critic</td><td>Prompt + 回答</td><td>状态–动作价值估计 \(V_t\)</td></tr>
+</tbody>
+</table>
+<p class="k">若本地无 <code>md/pictures/*.png</code>，上图可能裂图；可将资源拷入该目录或改为你机器上的实际相对路径。</p>
+<img src="../../pictures/240.png" alt="PPO 经验收集与多轮更新示意">
 
 </main>
 <script>
@@ -94,7 +122,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var list=document.getElementById('toc-list');
   var currentSub=null;
   document.querySelectorAll('main h2,main h3').forEach(function(el,i){
-    if(!el.id)el.id='r'+i;
+    if(!el.id)el.id='rl'+i;
     var label=el.textContent.replace(/\s+/g,' ').trim();
     var a=document.createElement('a');a.href='#'+el.id;a.textContent=label;a.title=label;
     if(el.tagName==='H2'){

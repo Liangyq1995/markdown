@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM 架构演进与核心组件</title>
+  <style>
+    :root { --bg:#1e1e2e; --bg-code:#313244; --bg-nav:#181825; --text:#cdd6f4; --heading:#89b4fa; --link:#89dceb; --border:#45475a; --quote-bar:#fab387; --strong:#a6e3a1; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; line-height:1.8; }
+    #toc { position:fixed; top:0; left:0; width:230px; height:100vh; background:var(--bg-nav); overflow-y:auto; padding:20px 12px; font-size:13px; border-right:1px solid var(--border); }
+    #toc h2 { color:var(--heading); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; }
+    #toc a { display:block; color:var(--text); text-decoration:none; padding:3px 8px; border-radius:4px; margin-bottom:2px; transition:background 0.15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #toc a:hover { background:var(--border); }
+    #toc a.active { background:var(--heading); color:#1e1e2e; font-weight:600; }
+    #toc a.toc-h3 { padding-left:20px; font-size:12px; opacity:0.8; }
+    main { margin-left:250px; max-width:none; padding:40px 48px; }
+    h1 { color:var(--heading); font-size:1.9em; margin-bottom:8px; line-height:1.3; }
+    h2 { color:var(--heading); font-size:1.4em; margin:2em 0 0.6em; border-bottom:1px solid var(--border); padding-bottom:6px; }
+    h3 { color:var(--heading); font-size:1.1em; margin:1.4em 0 0.4em; }
+    h4 { color:#cba6f7; font-size:1em; margin:1em 0 0.3em; }
+    p { margin:0.6em 0; }
+    a { color:var(--link); }
+    strong { color:var(--strong); }
+    ul,ol { margin:0.6em 0 0.6em 1.6em; }
+    li { margin-bottom:0.3em; }
+    blockquote { border-left:3px solid var(--quote-bar); padding:8px 16px; margin:1em 0; background:#2a2a3e; border-radius:0 4px 4px 0; }
+    table { border-collapse:collapse; width:100%; margin:1em 0; font-size:0.93em; }
+    th { background:#2a2a3e; color:var(--heading); padding:8px 12px; text-align:left; border:1px solid var(--border); }
+    td { padding:7px 12px; border:1px solid var(--border); }
+    tr:hover td { background:#2a2a3e; }
+    pre { background:var(--bg-code); border-radius:6px; padding:16px; overflow-x:auto; margin:1em 0; font-size:0.88em; }
+    code { font-family:'JetBrains Mono','Fira Code',monospace; }
+    p code,li code,td code { background:var(--bg-code); padding:2px 5px; border-radius:3px; font-size:0.88em; }
+    figure { margin:1.4em 0; text-align:center; }
+    figure img { max-width:100%; border-radius:6px; border:1px solid var(--border); }
+    figcaption { color:#6c7086; font-size:0.85em; margin-top:6px; }
+    .mermaid { background:#2a2a3e; border-radius:6px; padding:16px; margin:1em 0; text-align:center; }
+    hr { border:none; border-top:1px solid var(--border); margin:2em 0; }
+    .article-source { background:#2a2a3e; border-radius:6px; padding:8px 14px; margin-bottom:1em; font-size:0.85em; color:#6c7086; }
+    .tag { display:inline-block; background:#313244; color:var(--heading); border-radius:4px; padding:1px 7px; font-size:0.8em; margin:0 3px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LLM 架构演进与核心组件</h1>
+<blockquote>
+  来源：<a href="https://magazine.sebastianraschka.com" target="_blank">Ahead of AI — Sebastian Raschka, PhD</a>
+  &nbsp;|&nbsp; 本报告聚合6篇文章：注意力变体、GPT演进、KV缓存、多模态、编解码器、大架构对比
+</blockquote>
+
+<h2>全局架构演进路线图</h2>
+<pre class="mermaid">timeline
+    title LLM 架构关键里程碑
+    2017 : Transformer (Attention Is All You Need)
+         : MHA 多头注意力
+    2018 : GPT-1 / BERT
+         : Encoder-only vs Decoder-only 分化
+    2020 : GPT-2/3 纯解码器路线确立
+    2022 : MQA 多查询注意力 (减少KV Cache)
+    2023 : GQA 分组查询注意力 (Llama 2)
+         : KV Cache 工程优化成熟
+    2024 : MLA 多头潜在注意力 (DeepSeek-V2)
+         : MoE 规模化 (Mixtral)
+         : 多模态 LLM 爆发
+    2025 : Sparse Attention / Hybrid Attention
+         : gpt-oss 开放权重
+         : 线性注意力混合架构
+</pre>
+
+<!-- ============================================================ -->
+<h2>一、注意力机制变体全景图</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/visual-attention-variants" target="_blank">A Visual Guide to Attention Variants in Modern LLMs</a> | 2026</div>
+
+<p>注意力机制是 Transformer 的核心，但原始的多头注意力（MHA）在长序列推理时面临 KV Cache 内存爆炸问题。从 MHA 到 GQA 再到 MLA，本质上是一场"如何在保持建模质量的同时压缩 KV Cache"的工程与算法创新竞赛。</p>
+
+<h3>1.1 多头注意力（MHA）</h3>
+<p><strong>是什么：</strong>原始 Transformer 注意力机制，每个注意力头都有独立的 Q、K、V 投影矩阵。</p>
+<p><strong>为什么：</strong>多头并行让模型能同时关注不同位置、不同语义子空间，增强表达能力。</p>
+<p><strong>问题：</strong>推理时 K/V 矩阵随序列长度线性增长，大模型长上下文下显存占用极高。</p>
+<p><strong>代表架构：</strong><span class="tag">GPT-2</span> <span class="tag">OLMo 2 7B</span> <span class="tag">OLMo 3 7B</span></p>
+
+<h3>1.2 分组查询注意力（GQA）</h3>
+<p><strong>是什么：</strong>将多个 Query 头分组共享同一对 K/V，介于 MHA（每头独立KV）和 MQA（所有头共享一对KV）之间。</p>
+<p><strong>为什么：</strong>显著降低 KV Cache 占用，同时建模性能退化比 MQA 少得多。K/V 组数是可调超参数。</p>
+<p><strong>效果：</strong>在大多数任务上接近 MHA 质量，但推理内存减少 4–8 倍，是目前最主流的注意力方案。</p>
+<p><strong>代表架构：</strong><span class="tag">Llama 2/3</span> <span class="tag">Mistral</span> <span class="tag">Qwen2</span></p>
+
+<pre class="mermaid">graph LR
+  subgraph MHA["多头注意力 MHA"]
+    Q1["Q₁"] --> A1["Attn₁"]
+    K1["K₁"] --> A1
+    V1["V₁"] --> A1
+    Q2["Q₂"] --> A2["Attn₂"]
+    K2["K₂"] --> A2
+    V2["V₂"] --> A2
+  end
+  subgraph GQA["分组查询注意力 GQA"]
+    Qa["Q₁,Q₂"] --> Ab["Attn"]
+    Kb["K (shared)"] --> Ab
+    Vb["V (shared)"] --> Ab
+    Qc["Q₃,Q₄"] --> Ac["Attn"]
+    Kc["K (shared)"] --> Ac
+    Vc["V (shared)"] --> Ac
+  end
+  subgraph MLA["多头潜在注意力 MLA"]
+    Qx["Q"] --> Cx["压缩潜变量 c"]
+    Cx --> Kx["K (解压)"]
+    Cx --> Vx["V (解压)"]
+    Kx --> Ax["Attn"]
+    Vx --> Ax
+  end
+</pre>
+
+<h3>1.3 多头潜在注意力（MLA）</h3>
+<p><strong>是什么：</strong>DeepSeek-V2 提出的创新方案——不共享 K/V，而是将 K/V 联合压缩为一个低维潜向量 $c$，推理时只缓存这个压缩表示，需要时再解压。</p>
+<p><strong>为什么：</strong>GQA 通过"共享"降低内存，MLA 通过"压缩"降低内存。在相同内存压缩比下，MLA 能维持更好的建模性能（DeepSeek-V2 消融实验证实）。</p>
+<p><strong>代价：</strong>实现复杂，serving 栈需要专门适配；对小模型/短上下文优势不明显。</p>
+<p><strong>代表架构：</strong><span class="tag">DeepSeek V3</span> <span class="tag">Kimi K2</span> <span class="tag">GLM-5</span> <span class="tag">Ling 2.5</span> <span class="tag">Mistral Large 3</span></p>
+
+<h3>1.4 滑动窗口注意力与稀疏注意力</h3>
+<p>对于超长上下文，全局注意力的 $O(n^2)$ 复杂度是硬瓶颈。滑动窗口注意力让每个 token 只关注固定大小的局部窗口；稀疏注意力通过学习或固定模式选择性计算。现代架构通常采用<strong>混合策略</strong>——大部分层用局部/稀疏注意力，少数关键层用全局注意力。</p>
+
+<h3>1.5 线性注意力与混合架构（2025趋势）</h3>
+<p>Gated DeltaNet 等线性注意力机制用快权重记忆更新替代 Softmax，实现 $O(n)$ 复杂度。Qwen3.5 将混合架构（Transformer + 线性注意力）纳入旗舰系列，标志着混合策略的成熟。</p>
+
+<table>
+  <thead><tr><th>注意力类型</th><th>KV Cache 大小</th><th>建模质量</th><th>实现复杂度</th><th>代表模型</th></tr></thead>
+  <tbody>
+    <tr><td>MHA</td><td>最大（n_heads × seq_len）</td><td>最高基线</td><td>低</td><td>GPT-2, OLMo</td></tr>
+    <tr><td>MQA</td><td>最小（1 × seq_len）</td><td>略有退化</td><td>低</td><td>早期 Falcon</td></tr>
+    <tr><td>GQA</td><td>中（n_groups × seq_len）</td><td>接近MHA</td><td>低</td><td>Llama3, Qwen2</td></tr>
+    <tr><td>MLA</td><td>小（压缩潜维度）</td><td>优于GQA</td><td>高</td><td>DeepSeek V3</td></tr>
+    <tr><td>滑动窗口</td><td>固定（window × layers）</td><td>局部任务好</td><td>中</td><td>Mistral, Gemma</td></tr>
+    <tr><td>线性注意力</td><td>固定（状态维度）</td><td>长序列好</td><td>高</td><td>Qwen3.5, Mamba混合</td></tr>
+  </tbody>
+</table>
+
+<!-- ============================================================ -->
+<h2>二、从 GPT-2 到 gpt-oss：架构演进分析</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/from-gpt-2-to-gpt-oss-analyzing-the" target="_blank">From GPT-2 to gpt-oss: Analyzing the Architectural Advances</a> | 2025</div>
+
+<p>OpenAI 时隔多年发布 gpt-oss（20B 和 120B）开放权重模型，这是自 GPT-2 以来首次大规模开放权重分享。通过对比两代架构，可以清晰看到 LLM 工程从学术到工业的演进轨迹。</p>
+
+<h3>2.1 架构概览对比</h3>
+<table>
+  <thead><tr><th>特性</th><th>GPT-2 (2019)</th><th>gpt-oss-20B (2025)</th><th>gpt-oss-120B (2025)</th></tr></thead>
+  <tbody>
+    <tr><td>参数量</td><td>1.5B</td><td>20B</td><td>120B</td></tr>
+    <tr><td>注意力</td><td>MHA</td><td>GQA</td><td>GQA</td></tr>
+    <tr><td>量化</td><td>FP32/FP16</td><td>MXFP4（可单GPU运行）</td><td>MXFP4</td></tr>
+    <tr><td>位置编码</td><td>绝对位置</td><td>RoPE</td><td>RoPE</td></tr>
+    <tr><td>归一化</td><td>Post-LN</td><td>Pre-RMSNorm</td><td>Pre-RMSNorm</td></tr>
+    <tr><td>激活函数</td><td>GELU</td><td>SwiGLU</td><td>SwiGLU</td></tr>
+  </tbody>
+</table>
+
+<h3>2.2 关键技术点</h3>
+<p><strong>MXFP4 量化：</strong>gpt-oss 采用 MXFP4（Microscaling Float 4-bit）格式，在大幅压缩模型大小的同时保持推理质量，使 120B 模型在单 GPU 上成为可能。</p>
+<p><strong>宽度 vs 深度权衡：</strong>gpt-oss 相比 Qwen3 选择了更宽（hidden_dim 更大）但更浅（层数更少）的设计，这对推理延迟有正面影响（并行度更高），但对某些需要深度推理的任务可能不如深层架构。</p>
+<p><strong>注意力偏置与注意力 Sink：</strong>gpt-oss 保留了 attention bias，相关研究表明注意力 sink（某些 token 集中获得大量注意力权重）是长上下文稳定性的关键，attention bias 有助于控制这一现象。</p>
+
+<!-- ============================================================ -->
+<h2>三、KV Cache：从原理到从零实现</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/coding-the-kv-cache-in-llms" target="_blank">Understanding and Coding the KV Cache in LLMs from Scratch</a> | Jun 2025</div>
+
+<p>KV Cache 是 LLM 生产推理中最重要的优化技术之一。没有 KV Cache，每生成一个新 token 都需要重新计算所有历史 token 的 K/V，导致推理延迟随序列长度平方增长。</p>
+
+<h3>3.1 为什么需要 KV Cache</h3>
+<p>在自回归生成中，第 $t$ 步生成的 token 的注意力计算需要用到所有前序 token 的 K 和 V。由于这些值不会变化（历史上下文固定），重新计算是纯粹的浪费。KV Cache 将它们缓存起来，每步只计算新 token 的 K/V 并追加到缓存。</p>
+
+<pre class="mermaid">sequenceDiagram
+    participant T as Token生成循环
+    participant M as LLM模型
+    participant C as KV Cache
+
+    Note over T,C: 无KV Cache（低效）
+    T->>M: 输入[t₁,t₂,...,tₙ]
+    M->>M: 计算所有token的K,V,Q (O(n²))
+    M-->>T: 输出 tₙ₊₁
+
+    Note over T,C: 有KV Cache（高效）
+    T->>C: 读取已缓存的K₁..Kₙ, V₁..Vₙ
+    T->>M: 只输入新token tₙ
+    M->>M: 只计算tₙ的K,V,Q (O(1))
+    M->>C: 追加 Kₙ₊₁, Vₙ₊₁
+    M-->>T: 输出 tₙ₊₁
+</pre>
+
+<h3>3.2 PyTorch 核心实现</h3>
+<pre><code class="language-python"># 带 KV Cache 的注意力层（简化版）
+class CachedAttention(nn.Module):
+    def __init__(self, d_model, n_heads):
+        super().__init__()
+        self.W_q = nn.Linear(d_model, d_model)
+        self.W_k = nn.Linear(d_model, d_model)
+        self.W_v = nn.Linear(d_model, d_model)
+        self.cache_k = None  # KV Cache
+        self.cache_v = None
+
+    def forward(self, x, use_cache=True):
+        q = self.W_q(x)   # 只需要当前token的Q
+        k = self.W_k(x)
+        v = self.W_v(x)
+
+        if use_cache and self.cache_k is not None:
+            # 追加到已有缓存
+            k = torch.cat([self.cache_k, k], dim=1)
+            v = torch.cat([self.cache_v, v], dim=1)
+
+        if use_cache:
+            self.cache_k = k  # 更新缓存
+            self.cache_v = v
+
+        # 标准注意力计算（Q只有1个token，K/V有全部历史）
+        attn = torch.softmax(q @ k.transpose(-2,-1) / k.size(-1)**0.5, dim=-1)
+        return attn @ v</code></pre>
+
+<h3>3.3 KV Cache 的内存成本</h3>
+<p>KV Cache 并非免费的午餐——它将时间成本转换为空间成本。对于一个 70B 参数模型，32k 上下文长度的 KV Cache 可能需要超过 100GB 显存，这正是为什么 GQA/MLA 等压缩注意力成为必需品。</p>
+
+<!-- ============================================================ -->
+<h2>四、多模态 LLM：融合视觉与语言</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/understanding-multimodal-llms" target="_blank">Understanding Multimodal LLMs</a></div>
+
+<p>多模态 LLM 让语言模型能够理解图像、音频、视频等非文本模态，是从"语言助手"到"通用助手"的关键跨越。核心挑战是如何将不同模态的信息统一编码并送入 Transformer。</p>
+
+<h3>4.1 两大主流架构方案</h3>
+
+<pre class="mermaid">graph TD
+  subgraph A["方法 A：统一嵌入解码器架构"]
+    ImgA["图像"] --> EncA["视觉编码器<br>（如 SigLIP/ViT）"]
+    EncA --> TokA["图像Token化<br>（patch → token序列）"]
+    TxtA["文本"] --> EmbA["文本嵌入"]
+    TokA --> CatA["拼接为统一序列"]
+    EmbA --> CatA
+    CatA --> LLMA["纯解码器 LLM"]
+  end
+  subgraph B["方法 B：跨模态注意力架构"]
+    ImgB["图像"] --> EncB["视觉编码器"]
+    TxtB["文本序列"] --> DecB["解码器层"]
+    EncB -->|"交叉注意力"| DecB
+  end
+</pre>
+
+<table>
+  <thead><tr><th>方案</th><th>优点</th><th>缺点</th><th>代表模型</th></tr></thead>
+  <tbody>
+    <tr><td>方法A：统一嵌入解码器</td><td>架构简单，训练灵活</td><td>图像token占用大量上下文</td><td>LLaVA, InternVL, Molmo</td></tr>
+    <tr><td>方法B：跨模态注意力</td><td>图像不占用上下文长度</td><td>架构复杂，推理开销高</td><td>Flamingo, MM1.5</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2 典型模型技术亮点</h3>
+<ul>
+  <li><strong>Aria（2024）：</strong>24.9B 参数的多模态原生 MoE 模型，每个文本 token 激活 3.5B 参数，视觉编码器为 SigLIP（438M）。</li>
+  <li><strong>NVLM（NVIDIA）：</strong>在建模性能和响应质量之间做了系统性 ablation，为方法选择提供了实验依据。</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>五、编码器与解码器架构的本质区别</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/understanding-encoder-and-decoder" target="_blank">Understanding Encoder And Decoder LLMs</a></div>
+
+<p>LLM 领域的"架构之争"本质上是三种 Transformer 变体的适用场景之争，理解它们的差异是选择正确工具的基础。</p>
+
+<h3>5.1 三类架构对比</h3>
+<table>
+  <thead><tr><th>架构类型</th><th>预训练任务</th><th>注意力方向</th><th>擅长任务</th><th>代表模型</th></tr></thead>
+  <tbody>
+    <tr><td><strong>纯编码器</strong></td><td>掩码语言模型（MLM）</td><td>双向（看全文）</td><td>分类、NER、句子表示</td><td>BERT, RoBERTa</td></tr>
+    <tr><td><strong>纯解码器</strong></td><td>下一词预测（CLM）</td><td>因果单向（只看左侧）</td><td>文本生成、对话、代码</td><td>GPT系列, Llama, Qwen</td></tr>
+    <tr><td><strong>编解码器</strong></td><td>序列到序列</td><td>编码器双向+解码器单向</td><td>翻译、摘要</td><td>T5, BART, mT5</td></tr>
+  </tbody>
+</table>
+
+<h3>5.2 为什么解码器架构主导了大模型时代</h3>
+<ul>
+  <li><strong>涌现能力：</strong>仅通过下一词预测，大参数解码器模型展现出摘要、翻译、推理等未被显式训练的能力。</li>
+  <li><strong>In-context 学习：</strong>无需更新参数，通过示例即可完成新任务，这在双向编码器中不自然。</li>
+  <li><strong>统一框架：</strong>生成范式可以表达几乎所有 NLP 任务（分类→生成标签字符串，翻译→直接生成译文）。</li>
+</ul>
+
+<h3>5.3 MLM vs CLM 预训练对比</h3>
+<pre><code class="language-text">MLM（BERT式）：
+输入: "The [MASK] sat on the [MASK]"
+目标: 预测 "cat" 和 "mat"
+优势: 能看到完整上下文，表示质量高
+
+CLM（GPT式）：
+输入: "The cat sat on the"
+目标: 预测下一词 "mat"
+优势: 自然支持生成，可扩展到任意长度</code></pre>
+
+<!-- ============================================================ -->
+<h2>六、大 LLM 架构横向对比（The Big Comparison）</h2>
+<div class="article-source">原文：<a href="https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison" target="_blank">The Big LLM Architecture Comparison</a> | 2025</div>
+
+<p>这篇持续更新的文章（从 DeepSeek-V3 追踪到 Kimi K2）是目前最全面的现代 LLM 架构横向对比资源之一，核心关注点是注意力机制、MoE 设计、位置编码三大维度。</p>
+
+<h3>6.1 现代解码器 LLM 标准组件</h3>
+<pre class="mermaid">graph TD
+  Input["输入 Token"] --> Embed["Token 嵌入"]
+  Embed --> Pos["RoPE 位置编码（旋转）"]
+  Pos --> Block["N × Transformer Block"]
+  Block --> Norm["RMSNorm（代替LayerNorm）"]
+  Norm --> Attn["注意力层<br>GQA / MLA / Sparse"]
+  Attn --> FF["前馈层<br>SwiGLU / MoE"]
+  FF --> Out["输出 logits"]
+</pre>
+
+<h3>6.2 关键架构组件演进</h3>
+<table>
+  <thead><tr><th>组件</th><th>旧方案</th><th>新方案</th><th>改进原因</th></tr></thead>
+  <tbody>
+    <tr><td>归一化</td><td>Post-LayerNorm</td><td>Pre-RMSNorm</td><td>训练稳定性更好，计算更快</td></tr>
+    <tr><td>位置编码</td><td>绝对位置嵌入</td><td>RoPE（旋转位置编码）</td><td>外推到更长上下文</td></tr>
+    <tr><td>激活函数</td><td>GELU</td><td>SwiGLU</td><td>门控机制提升表达力</td></tr>
+    <tr><td>注意力</td><td>MHA</td><td>GQA/MLA</td><td>减少KV Cache内存</td></tr>
+    <tr><td>FFN</td><td>Dense FFN</td><td>MoE（稀疏激活）</td><td>参数量↑但计算量不变</td></tr>
+    <tr><td>QK处理</td><td>无</td><td>QK-Norm</td><td>防止注意力分数数值不稳定</td></tr>
+  </tbody>
+</table>
+
+<div id="chart-arch" style="height:320px; margin:1em 0; border-radius:6px; overflow:hidden;"></div>
+<script>
+echarts.init(document.getElementById('chart-arch')).setOption({
+  backgroundColor:'#2a2a3e',
+  title:{text:'现代LLM架构特性采用率（示意）',textStyle:{color:'#89b4fa'},left:'center'},
+  tooltip:{trigger:'axis'},
+  legend:{data:['2023年模型','2025年模型'],textStyle:{color:'#cdd6f4'},top:30},
+  grid:{left:'3%',right:'4%',bottom:'8%',top:70,containLabel:true},
+  xAxis:{type:'category',data:['GQA/MLA','RoPE','RMSNorm','SwiGLU','MoE','QK-Norm'],axisLabel:{color:'#cdd6f4'},axisLine:{lineStyle:{color:'#45475a'}}},
+  yAxis:{type:'value',name:'采用率%',max:100,axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#313244'}}},
+  series:[
+    {name:'2023年模型',type:'bar',data:[30,60,50,55,15,10],itemStyle:{color:'#89b4fa'}},
+    {name:'2025年模型',type:'bar',data:[90,98,95,92,45,70],itemStyle:{color:'#a6e3a1'}}
+  ]
+});
+</script>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+    if(!h.id)h.id='s'+i;
+    const a=document.createElement('a');
+    a.href='#'+h.id; a.textContent=h.textContent;
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(e=>e.forEach(x=>{
+    const l=toc.querySelector(`a[href="#${x.target.id}"]`);
+    if(l)l.classList.toggle('active',x.isIntersecting);
+  }),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DDPG 与 SAC · 动手学强化学习 第13-14章</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --bg-card: #24243a;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --accent: #cba6f7;
+      --warn: #f38ba8;
+      --teal: #94e2d5;
+      --yellow: #f9e2af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      line-height: 1.85;
+    }
+
+    /* ── TOC ── */
+    #toc {
+      position: fixed; top: 0; left: 0;
+      width: 230px; height: 100vh;
+      background: var(--bg-nav);
+      overflow-y: auto; padding: 20px 12px;
+      font-size: 12.5px;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+    #toc h2 {
+      color: var(--heading); font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 14px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    #toc a {
+      display: block; color: var(--text);
+      text-decoration: none; padding: 3px 8px;
+      border-radius: 4px; margin-bottom: 2px;
+      transition: background 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 700; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 11.5px; opacity: 0.78; }
+    #toc a.toc-h4 { padding-left: 32px; font-size: 11px; opacity: 0.65; }
+
+    /* ── Main ── */
+    main { margin-left: 248px; max-width: none; padding: 40px 48px 80px; }
+
+    h1 { color: var(--heading); font-size: 2em; margin-bottom: 10px; line-height: 1.3; }
+    .subtitle { color: var(--accent); font-size: 1em; margin-bottom: 24px; }
+    h2 {
+      color: var(--heading); font-size: 1.45em;
+      margin: 2.4em 0 0.7em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+    h3 { color: var(--teal); font-size: 1.12em; margin: 1.6em 0 0.5em; }
+    h4 { color: var(--yellow); font-size: 1em; margin: 1.2em 0 0.4em; }
+    p { margin: 0.65em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    em { color: var(--yellow); font-style: normal; }
+    ul, ol { padding-left: 1.6em; margin: 0.5em 0; }
+    li { margin: 0.3em 0; }
+
+    blockquote {
+      border-left: 3px solid var(--quote-bar);
+      padding: 10px 16px; margin: 1.2em 0;
+      background: #2a2a3e; border-radius: 0 6px 6px 0;
+    }
+
+    table { border-collapse: collapse; width: 100%; margin: 1.2em 0; font-size: 0.92em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 9px 13px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 8px 13px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #2a2a3e; }
+
+    pre {
+      background: var(--bg-code); border-radius: 8px;
+      padding: 16px; overflow-x: auto; margin: 1em 0;
+      font-size: 0.87em; line-height: 1.6;
+    }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    p code, li code {
+      background: var(--bg-code); padding: 2px 6px;
+      border-radius: 3px; font-size: 0.87em;
+    }
+
+    /* ── Tech Card ── */
+    .tech-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--heading);
+      border-radius: 8px;
+      padding: 18px 22px;
+      margin: 1.2em 0;
+    }
+    .tech-card.green { border-left-color: var(--strong); }
+    .tech-card.purple { border-left-color: var(--accent); }
+    .tech-card.orange { border-left-color: var(--quote-bar); }
+    .tech-card.red { border-left-color: var(--warn); }
+    .tech-card.teal { border-left-color: var(--teal); }
+    .tech-card h4 { margin-top: 0; }
+
+    /* ── Step Derivation ── */
+    .step-box {
+      background: #1a1a2e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0;
+      margin: 1.2em 0;
+      overflow: hidden;
+    }
+    .step-box .step-header {
+      background: #2a2a3e;
+      padding: 10px 18px;
+      font-weight: 700;
+      color: var(--heading);
+      font-size: 0.95em;
+      border-bottom: 1px solid var(--border);
+    }
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 12px 18px;
+      border-bottom: 1px solid #2a2a3e;
+      gap: 14px;
+    }
+    .step-item:last-child { border-bottom: none; }
+    .step-num {
+      background: var(--heading);
+      color: #1e1e2e;
+      border-radius: 50%;
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8em; font-weight: 800;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .step-content { flex: 1; }
+    .step-label { color: var(--yellow); font-size: 0.85em; font-weight: 600; margin-bottom: 4px; }
+
+    /* ── Symbol Table ── */
+    .symbol-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+      margin: 1em 0;
+    }
+    .symbol-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .symbol-key {
+      color: var(--accent);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95em;
+      font-weight: 700;
+      min-width: 70px;
+    }
+    .symbol-desc { color: var(--text); font-size: 0.88em; }
+
+    /* ── Comparison Cards ── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 1.2em 0;
+    }
+    .compare-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .compare-card h4 {
+      margin-top: 0; margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .compare-card.ddpg h4 { color: var(--quote-bar); }
+    .compare-card.sac h4 { color: var(--strong); }
+
+    /* ── Mermaid ── */
+    .mermaid {
+      background: #23233a;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 1.2em 0;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    /* ── ECharts ── */
+    .echarts-container {
+      margin: 1.2em 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Formula highlight ── */
+    .formula-block {
+      background: #1a1a2e;
+      border: 1px solid #3d3d5c;
+      border-radius: 6px;
+      padding: 14px 20px;
+      margin: 0.8em 0;
+      text-align: center;
+    }
+
+    /* ── Update badge ── */
+    .badge {
+      display: inline-block;
+      background: var(--heading);
+      color: #1e1e2e;
+      font-size: 0.75em;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .badge.green { background: var(--strong); }
+    .badge.purple { background: var(--accent); }
+    .badge.orange { background: var(--quote-bar); }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.5em 0; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-nav); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$']],
+        displayMath: [['$$','$$']],
+        tags: 'ams',
+        packages: {'[+]': ['ams']}
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<nav id="toc"><h2>目录导航</h2></nav>
+
+<main>
+
+<!-- ════════════════════════════════════════════
+     TITLE
+════════════════════════════════════════════ -->
+<h1>DDPG 与 SAC · 技术解析</h1>
+<p class="subtitle">动手学强化学习 第 13–14 章 · 连续动作空间深度强化学习</p>
+
+<blockquote>
+  <strong>覆盖内容：</strong>确定性策略梯度定理完整证明 · DDPG 四大组件 · OU 探索噪声 · 最大熵强化学习框架 · 软贝尔曼方程推导 · 重参数化技巧 · SAC 双 Critic · 温度自适应调整
+</blockquote>
+
+<!-- ════════════════════════════════════════════
+     符号总表
+════════════════════════════════════════════ -->
+<h2 id="symbols">符号总表</h2>
+
+<p>本文统一使用如下符号约定，贯穿 DDPG 和 SAC 两章：</p>
+
+<div class="symbol-grid">
+  <div class="symbol-item">
+    <span class="symbol-key">$\mu_\theta$</span>
+    <span class="symbol-desc">确定性策略网络（Actor），参数为 $\theta$</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$\pi_\theta$</span>
+    <span class="symbol-desc">随机策略网络（SAC Actor），输出动作分布</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$Q_\phi$</span>
+    <span class="symbol-desc">Q 值网络（Critic），参数为 $\phi$</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$\theta^-,\phi^-$</span>
+    <span class="symbol-desc">目标网络参数（慢速跟踪主网络）</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$\tau$</span>
+    <span class="symbol-desc">软更新系数，典型值 $\tau \approx 0.005$</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$\alpha$</span>
+    <span class="symbol-desc">温度参数（SAC），控制熵正则化强度</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$\mathcal{H}$</span>
+    <span class="symbol-desc">策略熵 $\mathcal{H}(\pi(\cdot|s)) = -\mathbb{E}_{a\sim\pi}[\log\pi(a|s)]$</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$\rho^\mu$</span>
+    <span class="symbol-desc">策略 $\mu$ 诱导的状态访问分布</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$\mathcal{D}$</span>
+    <span class="symbol-desc">经验回放缓冲区（Replay Buffer）</span>
+  </div>
+  <div class="symbol-item">
+    <span class="symbol-key">$\gamma$</span>
+    <span class="symbol-desc">折扣因子，$\gamma \in [0,1)$</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     第 13 章 DDPG
+════════════════════════════════════════════ -->
+<hr>
+<h2 id="ch13">第 13 章 · DDPG 算法</h2>
+
+<p>DDPG（Deep Deterministic Policy Gradient）由 Lillicrap 等人于 2016 年提出，是将 DQN 的深度学习技巧与确定性策略梯度（DPG）理论相结合的 Actor-Critic 算法，专门针对<strong>连续动作空间</strong>设计。</p>
+
+<!-- 13.1 -->
+<h3 id="ch13-1">13.1 连续动作空间的挑战</h3>
+
+<p>经典的 Q-learning 和 DQN 在动作选择时需要求解：</p>
+
+<div class="formula-block">
+  <p>$$a^* = \arg\max_{a \in \mathcal{A}} Q(s, a)$$</p>
+</div>
+
+<p>当动作空间为<strong>离散有限集合</strong>时，枚举所有动作即可求解。但在连续动作空间（如机器人关节角度、力矩控制）中，$\mathcal{A} \subseteq \mathbb{R}^d$，无法枚举，直接优化也代价极高。</p>
+
+<div class="tech-card orange">
+  <h4>为什么不用 DQN 处理连续动作？</h4>
+  <ul>
+    <li><strong>离散化精度损失</strong>：将连续动作离散化会损失精度，且维度爆炸（$d$ 维各离散 $k$ 格 → $k^d$ 个动作）</li>
+    <li><strong>max 操作不可微</strong>：无法对连续动作做梯度优化</li>
+    <li><strong>DPG 解决方案</strong>：用策略网络 $\mu_\theta(s)$ 直接输出连续动作 $a = \mu_\theta(s)$，将 $\arg\max$ 替换为神经网络前向传播</li>
+  </ul>
+</div>
+
+<!-- 13.2 -->
+<h3 id="ch13-2">13.2 确定性策略梯度定理（完整证明）</h3>
+
+<p>确定性策略梯度（DPG）定理是 DDPG 的数学基础，由 Silver et al. (2014) 提出。下面给出完整的五步推导。</p>
+
+<h4>目标函数定义</h4>
+
+<p>对于确定性策略 $\mu_\theta : \mathcal{S} \to \mathcal{A}$，性能目标为：</p>
+
+<div class="formula-block">
+  <p>$$J(\theta) = \int_{\mathcal{S}} \rho^{\mu}(s)\, Q^{\mu}(s,\, \mu_\theta(s))\, ds = \mathbb{E}_{s \sim \rho^{\mu}}\bigl[Q^{\mu}(s,\, \mu_\theta(s))\bigr]$$</p>
+</div>
+
+<p>其中 $\rho^{\mu}(s)$ 是在策略 $\mu$ 下的（折扣）状态访问分布。</p>
+
+<div class="step-box">
+  <div class="step-header">DPG 定理推导 · 5 步</div>
+
+  <div class="step-item">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <div class="step-label">展开梯度积分</div>
+      <p>对目标函数取梯度，积分与梯度可交换（Leibniz 法则）：</p>
+      <p>$$\nabla_\theta J(\theta) = \int_{\mathcal{S}} \rho^{\mu}(s)\, \nabla_\theta Q^{\mu}(s,\, \mu_\theta(s))\, ds$$</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <div class="step-label">链式法则展开（关键步骤）</div>
+      <p>$Q^{\mu}(s, \mu_\theta(s))$ 对 $\theta$ 的梯度通过链式法则分解为两项：</p>
+      <p>$$\nabla_\theta Q^{\mu}(s,\, \mu_\theta(s)) = \underbrace{\nabla_a Q^{\mu}(s,a)\big|_{a=\mu_\theta(s)}}_{\text{Q 对动作的梯度}} \cdot \underbrace{\nabla_\theta \mu_\theta(s)}_{\text{策略对参数的梯度}}$$</p>
+      <p>注意这里 $\nabla_\theta Q^{\mu}$ 还有一个隐式项（通过 $\rho^\mu$ 对 $\theta$ 的依赖），处理见步骤 3。</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <div class="step-label">递归展开 $\nabla_\theta Q^{\mu}(s,a)$</div>
+      <p>将 $Q^{\mu}$ 用贝尔曼方程展开：</p>
+      <p>$$Q^{\mu}(s,a) = r(s,a) + \gamma \int_{\mathcal{S}} p(s'|s,a)\, V^{\mu}(s')\, ds'$$</p>
+      <p>其中 $V^{\mu}(s') = Q^{\mu}(s', \mu_\theta(s'))$。对 $\theta$ 求梯度后再次应用链式法则，得到递归结构：</p>
+      <p>$$\nabla_\theta Q^{\mu}(s,a) = \gamma \int_{\mathcal{S}} p(s'|s,a) \nabla_\theta Q^{\mu}(s', \mu_\theta(s'))\, ds' + \gamma \int_{\mathcal{S}} p(s'|s,a) \nabla_a Q^{\mu}(s',a)\big|_{a=\mu_\theta(s')} \nabla_\theta \mu_\theta(s')\, ds'$$</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <div class="step-label">反复迭代展开（无穷展开求和）</div>
+      <p>将步骤 3 的递归反复代入，每次展开引入一个新的折扣状态转移，最终得到：</p>
+      <p>$$\nabla_\theta Q^{\mu}(s,a) = \sum_{t=0}^{\infty} \gamma^t \mathbb{E}_{s_t \sim p(s_t|s,a,\mu)}\Bigl[\nabla_a Q^{\mu}(s_t, a)\big|_{a=\mu_\theta(s_t)} \cdot \nabla_\theta \mu_\theta(s_t)\Bigr]$$</p>
+      <p>将此代入步骤 1 的积分，并利用 $\rho^{\mu}(s) = \sum_{t=0}^{\infty} \gamma^t p(s_t = s)$ 的定义，求和可合并。</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <div class="step-label">最终结果：DPG 定理</div>
+      <p>化简后得到优雅的确定性策略梯度定理：</p>
+      <p>$$\boxed{\nabla_\theta J(\theta) = \mathbb{E}_{s \sim \rho^{\mu}}\Bigl[\nabla_\theta \mu_\theta(s) \cdot \nabla_a Q_\phi(s,a)\big|_{a=\mu_\theta(s)}\Bigr]}$$</p>
+      <p>实践中用参数化 Critic $Q_\phi$ 替代真实 $Q^{\mu}$，并从经验回放采样估计期望。</p>
+    </div>
+  </div>
+</div>
+
+<div class="tech-card green">
+  <h4>DPG 与随机策略梯度（SPG）的对比</h4>
+  <p>随机策略梯度定理：$\nabla_\theta J(\theta) = \mathbb{E}_{s,a \sim \rho^\pi}\bigl[Q^\pi(s,a)\, \nabla_\theta \log \pi_\theta(a|s)\bigr]$</p>
+  <p>DPG 定理：$\nabla_\theta J(\theta) = \mathbb{E}_{s \sim \rho^\mu}\bigl[\nabla_\theta \mu_\theta(s) \cdot \nabla_a Q_\phi(s,a)\bigr]$</p>
+  <p><strong>关键区别</strong>：DPG 不需要对动作空间积分，计算量更小；但确定性策略本身不探索，需额外加噪声。</p>
+</div>
+
+<!-- 13.3 -->
+<h3 id="ch13-3">13.3 DDPG 的四大组件</h3>
+
+<p>DDPG 在 DPG 理论基础上，借鉴 DQN 的工程技巧，构建了四个核心模块：</p>
+
+<div class="tech-card">
+  <h4><span class="badge">1</span> Actor（确定性策略网络）</h4>
+  <p>输出确定性动作 $a = \mu_\theta(s)$，通常为多层全连接网络，最后一层用 $\tanh$ 激活将动作限制在 $[-1, 1]^d$。</p>
+  <p>更新方向：最大化 $Q_\phi(s, \mu_\theta(s))$，即 DPG 梯度方向。</p>
+</div>
+
+<div class="tech-card green">
+  <h4><span class="badge green">2</span> Critic（Q 值网络）</h4>
+  <p>$Q_\phi(s, a)$ 同时接收状态 $s$ 和动作 $a$ 作为输入（与 DQN 不同，DQN 只输入状态输出所有动作的 Q 值）。</p>
+  <p>通常将状态先经过一层全连接，再与动作拼接后继续前向传播。</p>
+  <p>更新方向：最小化 TD 误差（Bellman 残差）。</p>
+</div>
+
+<div class="tech-card purple">
+  <h4><span class="badge purple">3</span> 目标网络（Target Networks）</h4>
+  <p>为 Actor 和 Critic 各维护一个目标网络 $\mu_{\theta^-}$ 和 $Q_{\phi^-}$，用于计算 TD 目标值，避免自举（bootstrapping）不稳定。</p>
+  <p>使用<strong>软更新</strong>而非 DQN 的硬更新（见 13.4 节）。</p>
+</div>
+
+<div class="tech-card orange">
+  <h4><span class="badge orange">4</span> 经验回放（Replay Buffer）</h4>
+  <p>存储转移元组 $(s, a, r, s', \text{done})$，随机采样小批量打破时序相关性，与 DQN 相同。</p>
+  <p>容量通常为 $10^5 \sim 10^6$，采样批量 $N = 64 \sim 256$。</p>
+</div>
+
+<!-- 13.4 -->
+<h3 id="ch13-4">13.4 软更新 vs 硬更新</h3>
+
+<div class="compare-grid">
+  <div class="compare-card ddpg">
+    <h4>硬更新（DQN）</h4>
+    <p>每隔 $C$ 步直接复制主网络参数：</p>
+    <p>$$\theta^- \leftarrow \theta$$</p>
+    <ul>
+      <li>目标值在 $C$ 步内固定，之后突变</li>
+      <li>$C$ 过小：目标变化快，不稳定</li>
+      <li>$C$ 过大：目标过时，学习慢</li>
+    </ul>
+  </div>
+  <div class="compare-card sac">
+    <h4>软更新（DDPG）</h4>
+    <p>每步以小步长 $\tau$ 移动：</p>
+    <p>$$\theta^- \leftarrow \tau\theta + (1-\tau)\theta^-$$</p>
+    <ul>
+      <li>$\tau \approx 0.005$，目标平滑缓慢跟踪</li>
+      <li>避免目标突变，训练更稳定</li>
+      <li>类似指数移动平均（EMA）</li>
+    </ul>
+  </div>
+</div>
+
+<p>软更新的直观理解：目标网络是主网络的"慢动作版本"，提供稳定的学习目标。$\tau = 1$ 退化为硬更新，$\tau = 0$ 目标网络永不更新。</p>
+
+<!-- 13.5 -->
+<h3 id="ch13-5">13.5 完整更新公式</h3>
+
+<div class="tech-card">
+  <h4>Critic 损失（TD 误差最小化）</h4>
+  <p>$$\mathcal{L}(\phi) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}}\Bigl[\bigl(r + \gamma Q_{\phi^-}(s',\, \mu_{\theta^-}(s')) - Q_\phi(s,a)\bigr)^2\Bigr]$$</p>
+  <p>TD 目标 $y = r + \gamma Q_{\phi^-}(s', \mu_{\theta^-}(s'))$ 用目标网络计算，在反向传播时视为常数（stop gradient）。</p>
+</div>
+
+<div class="tech-card green">
+  <h4>Actor 更新（策略梯度上升）</h4>
+  <p>$$\nabla_\theta J \approx \frac{1}{N}\sum_{i=1}^{N} \nabla_\theta \mu_\theta(s_i) \cdot \nabla_a Q_\phi(s_i, a)\big|_{a=\mu_\theta(s_i)}$$</p>
+  <p>实现时：先计算 $a_i = \mu_\theta(s_i)$，再对 $-Q_\phi(s_i, a_i)$ 关于 $\theta$ 反向传播（最大化 Q 等价于最小化 $-Q$）。</p>
+</div>
+
+<div class="tech-card purple">
+  <h4>目标网络软更新</h4>
+  <p>$$\theta^- \leftarrow \tau\theta + (1-\tau)\theta^-, \qquad \phi^- \leftarrow \tau\phi + (1-\tau)\phi^-$$</p>
+</div>
+
+<div class="tech-card orange">
+  <h4>探索策略</h4>
+  <p>$$a_{\text{explore}} = \mu_\theta(s) + \mathcal{N}$$</p>
+  <p>其中 $\mathcal{N}$ 为探索噪声（高斯噪声或 OU 过程，见 13.6 节），训练时加入，评估时去掉。</p>
+</div>
+
+<!-- 13.6 -->
+<h3 id="ch13-6">13.6 OU 过程（Ornstein-Uhlenbeck）</h3>
+
+<p>Ornstein-Uhlenbeck（OU）过程是一种<strong>均值回归</strong>的随机过程，其随机微分方程为：</p>
+
+<div class="formula-block">
+  <p>$$d\mathcal{N}_t = \theta_{\text{OU}}(\mu_{\text{OU}} - \mathcal{N}_t)\,dt + \sigma\,dW_t$$</p>
+</div>
+
+<div class="tech-card teal">
+  <h4>OU 过程参数含义</h4>
+  <table>
+    <tr><th>参数</th><th>含义</th><th>典型值</th></tr>
+    <tr><td>$\theta_{\text{OU}}$</td><td>回归速率，越大越快回到均值</td><td>0.15</td></tr>
+    <tr><td>$\mu_{\text{OU}}$</td><td>长期均值（通常为 0）</td><td>0</td></tr>
+    <tr><td>$\sigma$</td><td>扩散系数（噪声强度）</td><td>0.2</td></tr>
+    <tr><td>$dW_t$</td><td>维纳过程增量（白噪声）</td><td>—</td></tr>
+  </table>
+</div>
+
+<p><strong>为什么用 OU 而不是简单高斯噪声？</strong> OU 过程具有时间相关性（自相关），生成的噪声序列平滑、有惯性，更适合物理控制系统（如机械臂）——连续时间步的动作变化不会太剧烈，符合物理约束。</p>
+
+<p>离散化实现（Euler-Maruyama 方法）：</p>
+
+<pre><code class="language-python"># OU 过程离散化实现
+class OUNoise:
+    def __init__(self, size, mu=0.0, theta=0.15, sigma=0.2):
+        self.mu = mu * np.ones(size)
+        self.theta = theta
+        self.sigma = sigma
+        self.state = np.copy(self.mu)
+
+    def reset(self):
+        self.state = np.copy(self.mu)
+
+    def sample(self):
+        dx = self.theta * (self.mu - self.state) + \
+             self.sigma * np.random.randn(len(self.state))
+        self.state += dx
+        return self.state
+</code></pre>
+
+<!-- ════════════════════════════════════════════
+     第 14 章 SAC
+════════════════════════════════════════════ -->
+<hr>
+<h2 id="ch14">第 14 章 · SAC 算法</h2>
+
+<p>SAC（Soft Actor-Critic）由 Haarnoja 等人于 2018 年提出，是目前最流行的连续控制算法之一。其核心思想是将<strong>最大熵框架</strong>引入 Actor-Critic，同时优化累积奖励和策略熵，实现更好的探索与鲁棒性。</p>
+
+<!-- 14.1 -->
+<h3 id="ch14-1">14.1 最大熵强化学习框架</h3>
+
+<h4>标准 RL 目标 vs 最大熵目标</h4>
+
+<div class="compare-grid">
+  <div class="compare-card ddpg">
+    <h4>标准 RL 目标</h4>
+    <p>$$\max_\pi \mathbb{E}\left[\sum_{t=0}^{\infty} \gamma^t r_t\right]$$</p>
+    <p>只最大化累积奖励，策略可能收敛到确定性策略，缺乏探索。</p>
+  </div>
+  <div class="compare-card sac">
+    <h4>最大熵 RL 目标</h4>
+    <p>$$\max_\pi \mathbb{E}\left[\sum_{t=0}^{\infty} \gamma^t \bigl(r_t + \alpha \cdot \mathcal{H}(\pi(\cdot|s_t))\bigr)\right]$$</p>
+    <p>同时最大化奖励和策略熵，$\alpha$ 控制两者权衡。</p>
+  </div>
+</div>
+
+<p>策略熵的定义：</p>
+
+<div class="formula-block">
+  <p>$$\mathcal{H}(\pi(\cdot|s)) = -\sum_a \pi(a|s)\log\pi(a|s) = \mathbb{E}_{a \sim \pi}[-\log\pi(a|s)]$$</p>
+</div>
+
+<div class="tech-card green">
+  <h4>最大熵框架的三大优势</h4>
+  <ol>
+    <li><strong>更好的探索</strong>：熵正则化鼓励策略保持随机性，避免过早收敛到局部最优</li>
+    <li><strong>鲁棒性</strong>：高熵策略对环境扰动和建模误差更鲁棒，因为它保留了多种行为模式</li>
+    <li><strong>样本效率</strong>：在 off-policy 设置下，随机策略覆盖更广的状态-动作空间，经验回放利用率高</li>
+  </ol>
+  <p><strong>边界条件</strong>：$\alpha \to 0$ 时退化为标准 RL；$\alpha \to \infty$ 时策略趋向均匀分布（纯探索）。</p>
+</div>
+
+<!-- 14.2 -->
+<h3 id="ch14-2">14.2 软贝尔曼方程（完整推导）</h3>
+
+<p>最大熵框架引入了"软"版本的价值函数，需要重新推导贝尔曼方程。</p>
+
+<div class="step-box">
+  <div class="step-header">软贝尔曼方程推导 · 4 步</div>
+
+  <div class="step-item">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <div class="step-label">定义软状态价值函数 $V^\pi$</div>
+      <p>在最大熵框架下，状态价值函数包含熵奖励：</p>
+      <p>$$V^\pi(s) = \mathbb{E}_{a \sim \pi}\bigl[Q^\pi(s,a) - \alpha\log\pi(a|s)\bigr]$$</p>
+      <p>等价地：$V^\pi(s) = \mathbb{E}_{a \sim \pi}[Q^\pi(s,a)] + \alpha\,\mathcal{H}(\pi(\cdot|s))$</p>
+      <p>即：状态价值 = 期望 Q 值 + $\alpha$ × 策略熵</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <div class="step-label">定义软 Q 函数</div>
+      <p>软 Q 函数满足标准贝尔曼方程结构（但 $V^\pi$ 含熵）：</p>
+      <p>$$Q^\pi(s,a) = r(s,a) + \gamma\,\mathbb{E}_{s' \sim p}\bigl[V^\pi(s')\bigr]$$</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <div class="step-label">将步骤 1 代入步骤 2</div>
+      <p>将 $V^\pi(s') = \mathbb{E}_{a' \sim \pi}[Q^\pi(s',a') - \alpha\log\pi(a'|s')]$ 代入：</p>
+      <p>$$Q^\pi(s,a) = r(s,a) + \gamma\,\mathbb{E}_{s'}\Bigl[\mathbb{E}_{a' \sim \pi}\bigl[Q^\pi(s',a') - \alpha\log\pi(a'|s')\bigr]\Bigr]$$</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <div class="step-label">最终：软贝尔曼期望方程</div>
+      <p>$$\boxed{Q^\pi(s,a) = r(s,a) + \gamma\,\mathbb{E}_{s', a' \sim \pi}\bigl[Q^\pi(s',a') - \alpha\log\pi(a'|s')\bigr]}$$</p>
+      <p><strong>物理含义</strong>：相比标准贝尔曼方程，每一步的"奖励"额外加入了 $-\alpha\log\pi(a'|s')$（即熵奖励），将熵正则化嵌入 Q 值定义中。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 14.3 -->
+<h3 id="ch14-3">14.3 SAC 的三个网络</h3>
+
+<div class="tech-card">
+  <h4><span class="badge">1</span> Actor（随机策略网络）$\pi_\theta(a|s)$</h4>
+  <p>输出动作分布而非确定性动作。通常建模为<strong>对角高斯分布</strong>：</p>
+  <p>$$\pi_\theta(a|s) = \mathcal{N}\bigl(\mu_\theta(s),\, \text{diag}(\sigma_\theta^2(s))\bigr)$$</p>
+  <p>网络同时输出均值 $\mu_\theta(s)$ 和对数标准差 $\log\sigma_\theta(s)$，通过重参数化技巧采样（见 14.5 节）。</p>
+</div>
+
+<div class="tech-card green">
+  <h4><span class="badge green">2</span> 双 Critic：$Q_{\phi_1}(s,a)$ 和 $Q_{\phi_2}(s,a)$</h4>
+  <p>SAC 维护<strong>两个独立的 Q 网络</strong>，计算 TD 目标时取最小值：</p>
+  <p>$$\tilde{Q}(s,a) = \min_{j=1,2} Q_{\phi_j}(s,a)$$</p>
+  <p><strong>为什么取 min？</strong> 单 Q 网络倾向于高估 Q 值（函数逼近误差 + 最大化偏差），取 min 是保守估计，抑制高估，来自 TD3 的技巧（Clipped Double Q-learning）。</p>
+</div>
+
+<div class="tech-card purple">
+  <h4><span class="badge purple">3</span> 目标网络（Target Networks）</h4>
+  <p>为两个 Critic 各维护目标网络 $Q_{\phi_1^-}$、$Q_{\phi_2^-}$，同样使用软更新。</p>
+  <p>注：SAC 原始论文还有目标价值网络 $V_{\psi^-}(s)$，后续版本简化为只用目标 Q 网络。</p>
+</div>
+
+<!-- 14.4 -->
+<h3 id="ch14-4">14.4 SAC 完整更新公式</h3>
+
+<div class="tech-card">
+  <h4>Critic 更新（软贝尔曼残差最小化）</h4>
+  <p>首先计算 TD 目标（用目标网络和当前策略采样 $a'$）：</p>
+  <p>$$y = r + \gamma\Bigl(\min_{j=1,2} Q_{\phi_j^-}(s', a') - \alpha\log\pi_\theta(a'|s')\Bigr), \quad a' \sim \pi_\theta(\cdot|s')$$</p>
+  <p>对两个 Critic 分别最小化 MSE 损失：</p>
+  <p>$$\mathcal{L}(\phi_i) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}}\Bigl[\bigl(Q_{\phi_i}(s,a) - y\bigr)^2\Bigr], \quad i = 1, 2$$</p>
+</div>
+
+<div class="tech-card green">
+  <h4>Actor 更新（最大化期望软值）</h4>
+  <p>Actor 目标：最小化 KL 散度等价于最大化期望软 Q 值减去熵惩罚：</p>
+  <p>$$\mathcal{L}(\theta) = \mathbb{E}_{s \sim \mathcal{D},\, a \sim \pi_\theta(\cdot|s)}\Bigl[\alpha\log\pi_\theta(a|s) - \min_{j=1,2} Q_{\phi_j}(s,a)\Bigr]$$</p>
+  <p>使用<strong>重参数化技巧</strong>（见 14.5 节）使梯度可传播：$a = f_\theta(\varepsilon, s)$，$\varepsilon \sim \mathcal{N}(0, I)$。</p>
+</div>
+
+<div class="tech-card purple">
+  <h4>温度 $\alpha$ 自动调整（可选但推荐）</h4>
+  <p>将目标熵 $\bar{\mathcal{H}}$ 设为超参数（如 $\bar{\mathcal{H}} = -\dim(\mathcal{A})$），自动调整 $\alpha$：</p>
+  <p>$$\mathcal{L}(\alpha) = \mathbb{E}_{a \sim \pi_\theta}\bigl[-\alpha\log\pi_\theta(a|s) - \alpha\bar{\mathcal{H}}\bigr]$$</p>
+  <p>等价地：$\mathcal{L}(\alpha) = \mathbb{E}_{a \sim \pi_\theta}\bigl[\alpha(\mathcal{H}(\pi(\cdot|s)) - \bar{\mathcal{H}})\bigr]$</p>
+  <p><strong>直觉</strong>：若当前熵 $> \bar{\mathcal{H}}$，增大 $\alpha$ 鼓励更多探索；若熵 $< \bar{\mathcal{H}}$，减小 $\alpha$ 让策略更确定。</p>
+</div>
+
+<!-- 14.5 -->
+<h3 id="ch14-5">14.5 重参数化技巧（Reparameterization Trick）</h3>
+
+<p>Actor 更新需要对采样动作 $a \sim \pi_\theta(\cdot|s)$ 求关于 $\theta$ 的梯度，但直接采样是不可微的（离散梯度问题）。</p>
+
+<div class="step-box">
+  <div class="step-header">重参数化推导</div>
+
+  <div class="step-item">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <div class="step-label">问题：直接采样不可微</div>
+      <p>若 $a \sim \pi_\theta(\cdot|s)$，则 $\nabla_\theta \mathbb{E}_{a \sim \pi_\theta}[f(a)]$ 无法直接用反向传播计算（采样操作无梯度）。</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <div class="step-label">重参数化：将随机性分离</div>
+      <p>将动作改写为确定性函数 + 独立噪声：</p>
+      <p>$$z = \mu_\theta(s) + \sigma_\theta(s) \cdot \varepsilon, \quad \varepsilon \sim \mathcal{N}(0, I)$$</p>
+      <p>$$a = \tanh(z) \in (-1, 1)^d$$</p>
+      <p>$\varepsilon$ 与 $\theta$ 无关，梯度可通过 $\mu_\theta$ 和 $\sigma_\theta$ 正常反向传播。</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <div class="step-label">log 概率的变量替换公式</div>
+      <p>由于 $a = \tanh(z)$ 是非线性变换，需用变量替换定理修正 log 概率：</p>
+      <p>$$\log\pi_\theta(a|s) = \log\mathcal{N}(z;\, \mu_\theta(s),\, \sigma_\theta^2(s)) - \sum_{i=1}^{d}\log\bigl(1 - \tanh^2(z_i)\bigr)$$</p>
+      <p>其中第二项 $\log(1 - \tanh^2(z_i)) = \log\bigl|\frac{\partial a_i}{\partial z_i}\bigr|$ 是 Jacobian 修正项（对数行列式）。</p>
+      <p>利用恒等式 $1 - \tanh^2(z) = \text{sech}^2(z)$，可数值稳定地计算为：</p>
+      <p>$$-\sum_i \log(1 - a_i^2 + \epsilon)$$</p>
+    </div>
+  </div>
+
+  <div class="step-item">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <div class="step-label">最终梯度形式</div>
+      <p>$$\nabla_\theta \mathcal{L}(\theta) = \nabla_\theta \Bigl[\alpha\log\pi_\theta(f_\theta(\varepsilon, s)|s) - \min_{j=1,2} Q_{\phi_j}(s, f_\theta(\varepsilon, s))\Bigr]$$</p>
+      <p>其中 $f_\theta(\varepsilon, s) = \tanh(\mu_\theta(s) + \sigma_\theta(s)\cdot\varepsilon)$，$\varepsilon$ 在计算梯度时视为常数。</p>
+    </div>
+  </div>
+</div>
+
+<pre><code class="language-python"># SAC Actor 采样与 log 概率计算（关键部分）
+def sample(self, state):
+    mean, log_std = self.forward(state)
+    std = log_std.exp()
+
+    # 重参数化采样
+    normal = Normal(mean, std)
+    z = normal.rsample()          # rsample() 支持梯度传播
+    action = torch.tanh(z)
+
+    # log 概率（含 Jacobian 修正）
+    log_prob = normal.log_prob(z)
+    log_prob -= torch.log(1 - action.pow(2) + 1e-6)
+    log_prob = log_prob.sum(dim=-1, keepdim=True)
+
+    return action, log_prob
+</code></pre>
+
+<!-- 14.6 -->
+<h3 id="ch14-6">14.6 DDPG vs SAC 全面对比</h3>
+
+<table>
+  <tr>
+    <th>维度</th>
+    <th>DDPG</th>
+    <th>SAC</th>
+  </tr>
+  <tr>
+    <td><strong>策略类型</strong></td>
+    <td>确定性策略 $\mu_\theta(s)$</td>
+    <td>随机策略 $\pi_\theta(a|s)$（高斯分布）</td>
+  </tr>
+  <tr>
+    <td><strong>动作空间</strong></td>
+    <td>连续（仅）</td>
+    <td>连续（主要）；离散版本也存在</td>
+  </tr>
+  <tr>
+    <td><strong>探索方式</strong></td>
+    <td>外部噪声（OU/高斯），需手动调整</td>
+    <td>内置随机性（熵正则化），自动探索</td>
+  </tr>
+  <tr>
+    <td><strong>Critic 数量</strong></td>
+    <td>1 个 Q 网络</td>
+    <td>2 个 Q 网络（取 min，抑制高估）</td>
+  </tr>
+  <tr>
+    <td><strong>目标函数</strong></td>
+    <td>最大化 $\mathbb{E}[\sum \gamma^t r_t]$</td>
+    <td>最大化 $\mathbb{E}[\sum \gamma^t(r_t + \alpha\mathcal{H})]$</td>
+  </tr>
+  <tr>
+    <td><strong>温度参数</strong></td>
+    <td>无</td>
+    <td>$\alpha$（可自动调整）</td>
+  </tr>
+  <tr>
+    <td><strong>训练稳定性</strong></td>
+    <td>中等（对超参数敏感）</td>
+    <td>较高（熵正则化提供隐式正则）</td>
+  </tr>
+  <tr>
+    <td><strong>样本效率</strong></td>
+    <td>中等</td>
+    <td>高（off-policy + 随机策略）</td>
+  </tr>
+  <tr>
+    <td><strong>超参数敏感性</strong></td>
+    <td>高（学习率、噪声参数）</td>
+    <td>中（$\alpha$ 可自适应）</td>
+  </tr>
+  <tr>
+    <td><strong>典型应用</strong></td>
+    <td>早期连续控制基准</td>
+    <td>MuJoCo、机器人控制、工业控制</td>
+  </tr>
+</table>
+
+<!-- ════════════════════════════════════════════
+     小结
+════════════════════════════════════════════ -->
+<hr>
+<h2 id="summary">小结</h2>
+
+<p>DDPG 和 SAC 代表了连续动作空间深度强化学习的两个重要里程碑。DDPG 将深度学习与确定性策略梯度结合，奠定了 Actor-Critic 连续控制的基础范式；SAC 引入最大熵框架，通过熵正则化同时提升了探索能力和训练稳定性，成为当前最广泛使用的连续控制算法之一。</p>
+
+<h3 id="algo-evolution">连续动作空间算法演进</h3>
+
+<pre class="mermaid">
+flowchart LR
+    DPG["DPG\n(Silver 2014)\n确定性策略梯度定理"]
+    DDPG["DDPG\n(Lillicrap 2016)\nDPG + DQN技巧\n经验回放 + 目标网络"]
+    TD3["TD3\n(Fujimoto 2018)\n双Critic + 延迟更新\n目标策略平滑"]
+    SAC["SAC\n(Haarnoja 2018)\n最大熵框架\n自动温度调整"]
+
+    DPG -->|"深度神经网络\n+软更新"| DDPG
+    DDPG -->|"解决高估问题\n+稳定性改进"| TD3
+    DDPG -->|"引入熵正则化\n随机策略"| SAC
+    TD3 -->|"双Critic技巧\n被SAC采纳"| SAC
+
+    style DPG fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    style DDPG fill:#313244,stroke:#fab387,color:#cdd6f4
+    style TD3 fill:#313244,stroke:#cba6f7,color:#cdd6f4
+    style SAC fill:#313244,stroke:#a6e3a1,color:#cdd6f4
+</pre>
+
+<h3 id="perf-chart">DDPG vs SAC 性能对比（示意）</h3>
+
+<div id="chart-convergence" class="echarts-container" style="height:360px"></div>
+
+<h3 id="stability-chart">训练稳定性对比（多次运行方差）</h3>
+
+<div id="chart-stability" class="echarts-container" style="height:320px"></div>
+
+<h3 id="radar-chart">综合能力雷达图</h3>
+
+<div id="chart-radar" class="echarts-container" style="height:380px"></div>
+
+<h3>核心公式速查</h3>
+
+<table>
+  <tr>
+    <th>算法</th>
+    <th>公式</th>
+    <th>说明</th>
+  </tr>
+  <tr>
+    <td>DPG</td>
+    <td>$\nabla_\theta J = \mathbb{E}[\nabla_\theta\mu_\theta \cdot \nabla_a Q_\phi|_{a=\mu_\theta}]$</td>
+    <td>确定性策略梯度定理</td>
+  </tr>
+  <tr>
+    <td>DDPG Critic</td>
+    <td>$\mathcal{L}(\phi) = \mathbb{E}[(r + \gamma Q_{\phi^-}(s', \mu_{\theta^-}(s')) - Q_\phi(s,a))^2]$</td>
+    <td>TD 误差最小化</td>
+  </tr>
+  <tr>
+    <td>软更新</td>
+    <td>$\theta^- \leftarrow \tau\theta + (1-\tau)\theta^-$</td>
+    <td>$\tau \approx 0.005$</td>
+  </tr>
+  <tr>
+    <td>SAC 软贝尔曼</td>
+    <td>$Q^\pi(s,a) = r + \gamma\mathbb{E}_{s',a'}[Q^\pi(s',a') - \alpha\log\pi(a'|s')]$</td>
+    <td>熵嵌入 Q 值</td>
+  </tr>
+  <tr>
+    <td>SAC Actor</td>
+    <td>$\mathcal{L}(\theta) = \mathbb{E}[\alpha\log\pi_\theta(a|s) - \min_j Q_{\phi_j}(s,a)]$</td>
+    <td>最大化软值</td>
+  </tr>
+  <tr>
+    <td>重参数化</td>
+    <td>$a = \tanh(\mu_\theta(s) + \sigma_\theta(s)\cdot\varepsilon)$，$\varepsilon \sim \mathcal{N}(0,I)$</td>
+    <td>使梯度可传播</td>
+  </tr>
+</table>
+
+<blockquote>
+  <strong>学习建议：</strong>理解 DDPG 的关键是 DPG 定理的链式法则推导；理解 SAC 的关键是最大熵目标如何自然导出软贝尔曼方程，以及重参数化技巧如何解决随机策略的梯度估计问题。两者都是 off-policy 算法，可高效利用经验回放。
+</blockquote>
+
+</main>
+
+<!-- ════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════ -->
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+</script>
+
+<script>
+  // ── EChart 1: 收敛速度对比 ──
+  (function() {
+    var dom = document.getElementById('chart-convergence');
+    var chart = echarts.init(dom, null, { renderer: 'canvas' });
+
+    var episodes = [];
+    for (var i = 0; i <= 100; i++) episodes.push(i * 10);
+
+    // DDPG: 较快初期上升但波动大，后期高原
+    function ddpgReward(ep) {
+      var base = 200 * (1 - Math.exp(-ep / 300));
+      var noise = (Math.random() - 0.5) * 60 * Math.exp(-ep / 400);
+      return Math.max(-50, base + noise - 50);
+    }
+
+    // SAC: 稳定上升，样本效率高
+    function sacReward(ep) {
+      var base = 280 * (1 - Math.exp(-ep / 250));
+      var noise = (Math.random() - 0.5) * 25 * Math.exp(-ep / 500);
+      return Math.max(-30, base + noise - 20);
+    }
+
+    // 生成平滑数据
+    var ddpgData = [], sacData = [];
+    var ddpgSmooth = -50, sacSmooth = -20;
+    for (var i = 0; i < episodes.length; i++) {
+      var ep = episodes[i];
+      ddpgSmooth = ddpgSmooth * 0.85 + ddpgReward(ep) * 0.15;
+      sacSmooth = sacSmooth * 0.85 + sacReward(ep) * 0.15;
+      ddpgData.push(parseFloat(ddpgSmooth.toFixed(1)));
+      sacData.push(parseFloat(sacSmooth.toFixed(1)));
+    }
+
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'DDPG vs SAC · 平均回报收敛曲线（示意）', left: 'center', top: 12,
+               textStyle: { color: '#cdd6f4', fontSize: 14 } },
+      tooltip: { trigger: 'axis', backgroundColor: '#313244', borderColor: '#45475a',
+                 textStyle: { color: '#cdd6f4' } },
+      legend: { data: ['DDPG', 'SAC'], bottom: 10, textStyle: { color: '#cdd6f4' } },
+      grid: { left: 60, right: 30, top: 55, bottom: 50 },
+      xAxis: { type: 'category', data: episodes, name: '训练回合数 (×10)',
+               nameLocation: 'end', nameTextStyle: { color: '#6c7086' },
+               axisLine: { lineStyle: { color: '#45475a' } },
+               axisLabel: { color: '#6c7086' } },
+      yAxis: { type: 'value', name: '平均回报', nameTextStyle: { color: '#6c7086' },
+               axisLine: { lineStyle: { color: '#45475a' } },
+               axisLabel: { color: '#6c7086' },
+               splitLine: { lineStyle: { color: '#313244' } } },
+      series: [
+        { name: 'DDPG', type: 'line', data: ddpgData, smooth: true,
+          lineStyle: { color: '#fab387', width: 2.5 },
+          itemStyle: { color: '#fab387' }, showSymbol: false,
+          areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [{ offset: 0, color: 'rgba(250,179,135,0.2)' },
+                         { offset: 1, color: 'rgba(250,179,135,0.02)' }] } } },
+        { name: 'SAC', type: 'line', data: sacData, smooth: true,
+          lineStyle: { color: '#a6e3a1', width: 2.5 },
+          itemStyle: { color: '#a6e3a1' }, showSymbol: false,
+          areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [{ offset: 0, color: 'rgba(166,227,161,0.2)' },
+                         { offset: 1, color: 'rgba(166,227,161,0.02)' }] } } }
+      ]
+    });
+  })();
+
+  // ── EChart 2: 稳定性对比（箱线图模拟 → 误差棒柱状图）──
+  (function() {
+    var dom = document.getElementById('chart-stability');
+    var chart = echarts.init(dom, null, { renderer: 'canvas' });
+
+    var envs = ['HalfCheetah', 'Ant', 'Humanoid', 'Walker2d', 'Hopper'];
+    var ddpgMean = [5200, 3800, 1200, 3500, 2800];
+    var ddpgStd  = [1200, 900,  600,  800,  700];
+    var sacMean  = [8500, 5200, 3800, 5100, 3600];
+    var sacStd   = [400,  350,  280,  320,  250];
+
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'DDPG vs SAC · MuJoCo 最终性能（均值 ± 标准差，示意）',
+               left: 'center', top: 12, textStyle: { color: '#cdd6f4', fontSize: 13 } },
+      tooltip: { trigger: 'axis', backgroundColor: '#313244', borderColor: '#45475a',
+                 textStyle: { color: '#cdd6f4' },
+                 formatter: function(params) {
+                   var s = params[0].name + '<br>';
+                   params.forEach(function(p) {
+                     s += p.marker + p.seriesName + ': ' + p.value + '<br>';
+                   });
+                   return s;
+                 }},
+      legend: { data: ['DDPG', 'SAC'], bottom: 8, textStyle: { color: '#cdd6f4' } },
+      grid: { left: 60, right: 30, top: 55, bottom: 45 },
+      xAxis: { type: 'category', data: envs,
+               axisLine: { lineStyle: { color: '#45475a' } },
+               axisLabel: { color: '#6c7086', rotate: 15 } },
+      yAxis: { type: 'value', name: '最终回报',
+               nameTextStyle: { color: '#6c7086' },
+               axisLine: { lineStyle: { color: '#45475a' } },
+               axisLabel: { color: '#6c7086' },
+               splitLine: { lineStyle: { color: '#313244' } } },
+      series: [
+        { name: 'DDPG', type: 'bar', data: ddpgMean, barGap: '10%',
+          itemStyle: { color: '#fab387', borderRadius: [3,3,0,0] } },
+        { name: 'SAC', type: 'bar', data: sacMean,
+          itemStyle: { color: '#a6e3a1', borderRadius: [3,3,0,0] } }
+      ]
+    });
+  })();
+
+  // ── EChart 3: 雷达图 ──
+  (function() {
+    var dom = document.getElementById('chart-radar');
+    var chart = echarts.init(dom, null, { renderer: 'canvas' });
+
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'DDPG vs SAC · 综合能力雷达图', left: 'center', top: 12,
+               textStyle: { color: '#cdd6f4', fontSize: 13 } },
+      tooltip: { backgroundColor: '#313244', borderColor: '#45475a',
+                 textStyle: { color: '#cdd6f4' } },
+      legend: { data: ['DDPG', 'SAC'], bottom: 8, textStyle: { color: '#cdd6f4' } },
+      radar: {
+        indicator: [
+          { name: '样本效率', max: 10 },
+          { name: '训练稳定性', max: 10 },
+          { name: '超参数鲁棒性', max: 10 },
+          { name: '探索能力', max: 10 },
+          { name: '峰值性能', max: 10 },
+          { name: '实现简洁性', max: 10 }
+        ],
+        center: ['50%', '52%'],
+        radius: '62%',
+        axisName: { color: '#cdd6f4', fontSize: 12 },
+        splitLine: { lineStyle: { color: '#45475a' } },
+        splitArea: { areaStyle: { color: ['#23233a', '#2a2a3e'] } },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      series: [{
+        type: 'radar',
+        data: [
+          { name: 'DDPG',
+            value: [5.5, 5.0, 4.5, 4.0, 6.5, 7.5],
+            lineStyle: { color: '#fab387', width: 2 },
+            itemStyle: { color: '#fab387' },
+            areaStyle: { color: 'rgba(250,179,135,0.15)' } },
+          { name: 'SAC',
+            value: [8.0, 8.5, 7.5, 8.5, 9.0, 6.5],
+            lineStyle: { color: '#a6e3a1', width: 2 },
+            itemStyle: { color: '#a6e3a1' },
+            areaStyle: { color: 'rgba(166,227,161,0.15)' } }
+        ]
+      }]
+    });
+  })();
+</script>
+
+<script>
+  // ── TOC 自动生成 ──
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  // ── 滚动高亮 ──
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-8% 0px -82% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+
+</body>
+</html>

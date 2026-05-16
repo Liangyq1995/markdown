@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reward Models in DRL 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.algo-box .kw{color:#cba6f7;font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:#94e2d5;}
+.algo-box .fn{color:#a6e3a1;}
+.algo-box .num{color:#f9e2af;}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Reward Models in Deep RL 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Reward Models in Deep Reinforcement Learning: A Survey · 南京大学 LAMDA 实验室 · 2025</p>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>Reward Models in Deep Reinforcement Learning: A Survey</td></tr>
+  <tr><th>机构</th><td>南京大学 LAMDA 实验室（Rui Yu, Shenghua Wan, Zongzhang Zhang, De-Chuan Zhan 等）</td></tr>
+  <tr><th>核心问题</th><td>深度强化学习中奖励模型的来源、机制与学习范式的系统性综述——填补文献中系统性综述的空白</td></tr>
+  <tr><th>分类框架</th><td>三维分类：来源（人类/AI）× 机制（外在/内在）× 学习范式（演示/目标/偏好）</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题与动机 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 强化学习与奖励模型的基础</h3>
+
+<p>强化学习（RL）建立在马尔可夫决策过程（MDP）$\langle \mathcal{S}, \mathcal{A}, T, R, \gamma \rangle$ 上，智能体的目标是最大化期望折扣累积奖励：</p>
+
+<div class="math-block">
+$$J(\pi) = \mathbb{E}_{\pi, T}\!\left[\sum_{t=0}^{\infty} \gamma^t R(s_t, a_t)\right]$$
+</div>
+
+<p>其中 $T(\cdot|s,a)$ 为转移函数，$R(s,a)$ 为奖励模型，$\gamma \in [0,1)$ 为折扣因子。</p>
+
+<div class="tech-card yellow">
+<strong>核心难题</strong>：状态空间 $\mathcal{S}$、动作空间 $\mathcal{A}$ 和转移模型 $T$ 由环境内在决定，但<strong>奖励模型 $R$ 必须由任务设计者精心构造</strong>。在真实应用中，往往只有描述性目标可用，需要将其转化为统计奖励模型——这一过程称为"奖励建模（Reward Modeling）"。
+</div>
+
+<h3>1.2 为什么奖励建模很难</h3>
+
+<pre class="mermaid">
+flowchart TD
+    REAL["真实世界应用\n无明确奖励函数"]
+    RH["奖励黑客（Reward Hacking）\n智能体钻空子，形式上最大化奖励\n但违背真实意图"]
+    SPARSE["稀疏奖励问题\n只有任务完成才有奖励\n中间探索无引导信号"]
+    COSTLY["人工标注成本\n偏好收集耗时耗力\n标注者之间分歧难处理"]
+    MISALIGN["奖励误对齐\n代理目标与真实目标偏差\n导致不可预期行为"]
+    REAL --> RH & SPARSE & COSTLY & MISALIGN
+</pre>
+
+<hr>
+
+<!-- ═══ 2. 分类框架 ═══ -->
+<h2 id="s2">2. 三维分类框架</h2>
+
+<pre class="mermaid">
+graph TD
+    RM["奖励模型 Reward Model"]
+    subgraph SRC["维度1：来源 Sources"]
+        HUM["人类提供\n手工设计 / 演示 / 目标 / 偏好"]
+        AI["AI 生成\nLLM 设计奖励函数\nVLM 视觉反馈 / RLAIF"]
+    end
+    subgraph MECH["维度2：机制 Mechanisms"]
+        EXT["外在奖励 Extrinsic\n来自外部，与任务目标直接相关"]
+        INT["内在动机 Intrinsic\n好奇心 / 探索 / 新颖性 / 赋权"]
+    end
+    subgraph PARA["维度3：学习范式 Learning Paradigms"]
+        DEMO["从演示学习\n逆强化学习 IRL / MaxEnt-IRL"]
+        GOAL["从目标学习\n目标条件 RL（GCRL）"]
+        PREF["从偏好学习\nPbRL / RLHF / RLAIF"]
+    end
+    RM --> SRC & MECH & PARA
+</pre>
+
+<hr>
+
+<!-- ═══ 3. 奖励来源 ═══ -->
+<h2 id="s3">3. 奖励来源</h2>
+
+<h3>3.1 人类提供的奖励</h3>
+
+<table>
+  <tr><th>方式</th><th>描述</th><th>优点</th><th>缺点</th></tr>
+  <tr><td>手工奖励工程</td><td>人类专家直接设计奖励函数（如 MuJoCo walker）</td><td>精确、直接</td><td>耗时、易奖励黑客</td></tr>
+  <tr><td>演示（Demonstrations）</td><td>专家轨迹，用 IRL 推断奖励</td><td>无需显式标注</td><td>病态问题，多解</td></tr>
+  <tr><td>目标（Goals）</td><td>指定目标状态，奖励基于达成</td><td>自然直观</td><td>稀疏奖励问题</td></tr>
+  <tr><td>偏好（Preferences）</td><td>标注者比较两条轨迹，选择更好的</td><td>相对判断更容易</td><td>标注成本高</td></tr>
+</table>
+
+<h3>3.2 AI 生成的奖励</h3>
+
+<p>基础模型（LLM/VLM）可以解释人类意图，自主定义奖励模型：</p>
+
+<pre class="mermaid">
+flowchart LR
+    LLM["大语言模型 / VLM\n训练于海量人类数据"] --> WAYS
+    subgraph WAYS["AI奖励生成方式"]
+        W1["设计奖励函数代码\nXie et al. 2023"]
+        W2["文本反馈驱动奖励\nKlissarov 2023 / MOTIF"]
+        W3["视觉相似度奖励\nVLM 计算状态-描述语义相似度"]
+        W4["RLAIF 偏好生成\nBai 2022 / Lee 2024"]
+    end
+    WAYS --> AGENT["RL 智能体"]
+</pre>
+
+<hr>
+
+<!-- ═══ 4. 奖励机制 ═══ -->
+<h2 id="s4">4. 奖励机制</h2>
+
+<h3>4.1 外在奖励与内在奖励的结合</h3>
+
+<p>统一内在和外在奖励的标准公式：</p>
+
+<div class="math-block">
+$$r = \lambda r_\mathrm{int} + (1-\lambda) r_\mathrm{ext}, \quad 0 \leq \lambda \leq 1$$
+</div>
+
+<h3>4.2 内在动机的三大类型</h3>
+
+<table>
+  <tr><th>类型</th><th>代表方法</th><th>奖励信号来源</th><th>适用场景</th></tr>
+  <tr><td><strong>探索型</strong></td><td>ICM（Pathak 2017）、RND（Burda 2018）</td><td>状态转移预测误差 / 蒸馏误差</td><td>稀疏奖励环境</td></tr>
+  <tr><td><strong>计数型</strong></td><td>UCB、伪计数（Bellemare 2016）</td><td>状态访问频率（少访问 → 高奖励）</td><td>离散/连续状态空间</td></tr>
+  <tr><td><strong>赋权型</strong></td><td>DIAYN（Eysenbach 2018）、Mazzaglia 2022</td><td>最大化状态-技能互信息 $I(\tau; z)$</td><td>无监督技能学习</td></tr>
+</table>
+
+<p><strong>DIAYN（多样性即技能）</strong>的内在奖励：</p>
+
+<div class="math-block">
+$$r_\mathrm{int}(s, z) = \log q_\phi(z \mid s) - \log p(z)$$
+</div>
+
+<p>其中 $z$ 为技能变量，$q_\phi(z|s)$ 为技能判别器，鼓励不同技能产生可区分的状态访问分布。</p>
+
+<hr>
+
+<!-- ═══ 5. 学习范式 ═══ -->
+<h2 id="s5">5. 三大学习范式（含完整公式）</h2>
+
+<h3>5.1 从演示学习：逆强化学习（IRL）</h3>
+
+<p><strong>MaxEnt-IRL</strong>（Ziebart et al., 2008）：假设专家以正比于奖励的 Boltzmann 分布生成轨迹：</p>
+
+<div class="math-block">
+$$p(\tau \mid \theta) \propto \exp\!\left(R_\theta(\tau)\right) = \exp\!\left(\sum_{(s,a)\in\tau} R_\theta(s,a)\right)$$
+</div>
+
+<p>最大化专家演示的对数似然，同时用最大熵正则化防止过拟合：</p>
+
+<div class="math-block">
+$$\max_\theta \mathbb{E}_{\tau \sim D_e}\!\left[R_\theta(\tau)\right] - \log Z(\theta), \quad Z(\theta) = \sum_\tau \exp\!\left(R_\theta(\tau)\right)$$
+</div>
+
+<p><strong>AIRL</strong>（Fu et al., 2017）：用对抗训练框架，在状态-动作级别分解：</p>
+
+<div class="math-block">
+$$D_\theta(s,a,s') = \frac{\exp(f_\theta(s,a,s'))}{\exp(f_\theta(s,a,s')) + \pi(a|s)}, \quad f_\theta = R_\theta(s,a) + \gamma V_\theta(s') - V_\theta(s)$$
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm: MaxEnt-IRL 训练流程</div>
+  <p><span class="kw">Input:</span> 专家演示 $D_e = \{\tau_e^{(i)}\}$，环境，参数 $\theta$</p>
+  <p><span class="kw">repeat</span></p>
+  <p style="padding-left:1.5em">1. 用当前 $R_\theta$ 运行软值迭代，得到 $\pi_\theta$</p>
+  <p style="padding-left:1.5em">2. 从 $\pi_\theta$ 采样轨迹 $D_\pi = \{\tau^{(i)}\}$</p>
+  <p style="padding-left:1.5em">3. 梯度更新：$\theta \leftarrow \theta + \alpha \left(\mathbb{E}_{D_e}[\nabla_\theta R_\theta] - \mathbb{E}_{D_\pi}[\nabla_\theta R_\theta]\right)$</p>
+  <p><span class="kw">until</span> 收敛</p>
+</div>
+
+<h3>5.2 从目标学习（GCRL）</h3>
+
+<p>两类奖励设计：</p>
+
+<div class="math-block">
+$$\text{二值奖励（稀疏）：} R(s,g) = \mathbf{1}[s \text{ 达到目标 } g]$$
+$$\text{距离奖励（密集）：} R(s,g) = -d(\phi(s),\, \psi(g))$$
+</div>
+
+<p>时间距离（Temporal Distance）相比空间距离更适合非欧几里得状态空间，估计策略从 $s$ 到 $g$ 所需步数：</p>
+
+<div class="math-block">
+$$d_T(s,g) = \min_\pi \mathbb{E}_\pi\!\left[\sum_{t=0}^{\infty} \mathbf{1}[s_t \neq g] \,\Big|\, s_0 = s\right]$$
+</div>
+
+<h3>5.3 从偏好学习（PbRL / RLHF）</h3>
+
+<p><strong>Bradley-Terry 偏好模型</strong>——RLHF 的理论基础：</p>
+
+<div class="math-block">
+$$P(\tau^0 \succ \tau^1;\, \theta) = \frac{\exp\!\left(\sum_{(s,a)\in\tau^0} R_\theta(s,a)\right)}{\sum_{j\in\{0,1\}} \exp\!\left(\sum_{(s,a)\in\tau^j} R_\theta(s,a)\right)}$$
+</div>
+
+<p>奖励模型训练目标（最大化观测偏好的对数似然）：</p>
+
+<div class="math-block">
+$$\mathcal{L}(\theta) = -\mathbb{E}_{(\tau^0, \tau^1, y)\sim D}\!\left[y \log P(\tau^0 \succ \tau^1) + (1-y)\log P(\tau^1 \succ \tau^0)\right]$$
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm: RLHF 三阶段训练流程</div>
+  <p><span class="kw">阶段1 — SFT：</span></p>
+  <p style="padding-left:1.5em">用人类演示数据监督微调预训练 LLM → $\pi_\mathrm{SFT}$</p>
+  <p><span class="kw">阶段2 — 奖励模型训练：</span></p>
+  <p style="padding-left:1.5em">收集偏好数据集 $D = \{(\tau^0, \tau^1, y)\}$（人类比较两个回答）</p>
+  <p style="padding-left:1.5em">最小化 $\mathcal{L}(\theta)$ → 训练 $R_\theta$</p>
+  <p><span class="kw">阶段3 — PPO RL 微调：</span></p>
+  <p style="padding-left:1.5em">最大化 $\mathbb{E}[R_\theta(s,a)] - \beta \cdot D_\mathrm{KL}(\pi_\theta \| \pi_\mathrm{SFT})$</p>
+  <p style="padding-left:1.5em"><span class="cm">// KL 惩罚防止策略偏离 SFT 基准太远</span></p>
+</div>
+
+<p><strong>BT 模型的改进方向</strong>：</p>
+
+<table>
+  <tr><th>方法</th><th>核心改进</th><th>解决的问题</th></tr>
+  <tr><td>Preference Transformer</td><td>注意力权重，关键状态-动作贡献更大</td><td>均匀权重忽视关键时刻</td></tr>
+  <tr><td>Regret-based 模型</td><td>用最优优势之和建模偏好，而非累计奖励</td><td>奖励与优势混淆</td></tr>
+  <tr><td>序数反馈扩展</td><td>多级评分（1-5分）代替二值偏好</td><td>二值标注丢失程度信息</td></tr>
+  <tr><td>RLAIF（AI 反馈）</td><td>LLM 直接生成偏好标签</td><td>人工标注成本高</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 6. 应用与评估 ═══ -->
+<h2 id="s6">6. 应用领域与评估方法</h2>
+
+<h3>6.1 主要应用领域</h3>
+
+<div id="chart-apps" class="echarts-box" style="height:300px"></div>
+
+<h3>6.2 奖励模型评估三类方法</h3>
+
+<pre class="mermaid">
+flowchart TD
+    EVAL["奖励模型评估"]
+    PP["策略性能评估\n用学到的奖励训练策略\n度量真实任务奖励/成功率\n优：直观 缺：受优化算法影响"]
+    DM["距离度量评估\nEPIC规范化奖励消除歧义性\nPearson 相关系数\n优：不依赖策略训练"]
+    FS["功能相似性评估\n直接评估诱导策略行为的相似性\n更接近真实意图"]
+    EVAL --> PP & DM & FS
+</pre>
+
+<p><strong>EPIC 距离</strong>（规范化奖励等价性）：对两个奖励函数 $R_1, R_2$，在潜势函数变换下计算等价性：</p>
+
+<div class="math-block">
+$$d_\mathrm{EPIC}(R_1, R_2) = \mathbb{E}\!\left[\left(\tilde{R}_1(s,a,s') - \tilde{R}_2(s,a,s')\right)^2\right]^{1/2}$$
+</div>
+
+<p>其中 $\tilde{R}$ 为规范化后的奖励（消除潜势函数模糊性），使得等价的奖励函数 EPIC 距离为 0。</p>
+
+<hr>
+
+<!-- ═══ 7. 奖励 Hacking ═══ -->
+<h2 id="s7">7. 奖励 Hacking 与过度优化</h2>
+
+<div class="tech-card red">
+<strong>Goodhart 定律的 RL 版本</strong>：一旦某个度量成为目标，它就不再是好的度量。当智能体过度优化代理奖励模型时，真实性能反而下降——这是 RLHF 面临的核心挑战之一。
+</div>
+
+<p>奖励 Hacking 的两类来源：</p>
+<ul>
+  <li><strong>奖励误设计</strong>：奖励函数不能精确反映任务目标（如 boat racing 中倒退碰撞反而得高分）</li>
+  <li><strong>奖励模型过拟合</strong>：RLHF 中策略不断优化有限的人类偏好数据训练的奖励模型，最终"欺骗"奖励模型</li>
+</ul>
+
+<p>KL 惩罚是当前最常用的缓解手段：</p>
+
+<div class="math-block">
+$$\max_\pi \mathbb{E}[R_\theta(s,a)] - \beta \cdot D_\mathrm{KL}\!\left(\pi \| \pi_\mathrm{ref}\right)$$
+</div>
+
+<hr>
+
+<!-- ═══ 8. 核心洞见 ═══ -->
+<h2 id="s8">8. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>奖励建模是 AI 对齐的核心问题</strong><br>
+从 InstructGPT 到 DeepSeek-R1，奖励模型始终是连接人类意图与智能体行为的关键桥梁。这篇综述揭示了一个深刻事实：奖励模型的质量上限决定了 RL 训练的性能上限——你无法从一个错误的奖励信号中学到正确的行为。
+</div>
+
+<div class="tech-card blue">
+<strong>三维分类框架的价值</strong><br>
+论文将奖励建模从"来源/机制/范式"三个正交维度分类，这比传统的"RLHF vs IRL vs GCRL"分类更具系统性。尤其是将 AI 生成奖励（RLAIF、LLM 设计奖励函数）单独列为一个来源类别，预示了基础模型在 RL 奖励工程中日益重要的角色。
+</div>
+
+<div class="tech-card yellow">
+<strong>过程奖励模型（PRM）的崛起</strong><br>
+ORM（Outcome Reward Model）只在轨迹末尾给信号，而 PRM 对每个推理步骤单独评分。论文中提到的 Preference Transformer 和 Regret-based 模型都是向 PRM 方向的步骤——这与 FIPO（Future-KL）等近期工作的核心思路高度一致：密集信用分配比稀疏结果奖励更有效。
+</div>
+
+<div class="tech-card purple">
+<strong>开放问题：奖励模型的可靠性边界</strong><br>
+目前奖励模型训练依赖有限的人类偏好数据，而智能体可能会找到超出人类标注分布的"漏洞"。如何在不增加标注成本的情况下提高奖励模型的可靠性（如通过集成方法、保守奖励估计、或 Constitutional AI 原则）是该领域最核心的开放问题之一。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于原文 arXiv:2506.XXXXX / 南京大学 LAMDA 2025</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  const c=echarts.init(document.getElementById('chart-apps'));
+  c.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'奖励模型应用领域分布',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'item',formatter:'{b}: {c} 篇代表性工作'},
+    series:[{type:'pie',radius:['35%','65%'],
+      data:[
+        {value:28,name:'LLM 对齐\n(RLHF/RLAIF)',itemStyle:{color:'#89b4fa'}},
+        {value:18,name:'机器人操控',itemStyle:{color:'#a6e3a1'}},
+        {value:15,name:'游戏/棋类',itemStyle:{color:'#cba6f7'}},
+        {value:12,name:'自动驾驶',itemStyle:{color:'#fab387'}},
+        {value:8,name:'推荐系统',itemStyle:{color:'#f9e2af'}},
+        {value:6,name:'医疗/科学',itemStyle:{color:'#94e2d5'}}
+      ],
+      label:{color:'#cdd6f4',fontSize:11}
+    }],
+    legend:{orient:'vertical',right:10,top:'center',textStyle:{color:'#cdd6f4',fontSize:11}}
+  });
+});
+</script>
+</body>
+</html>

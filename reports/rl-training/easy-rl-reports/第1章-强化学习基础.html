@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>第1章 强化学习基础</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; width: calc(100% - 240px); padding: 40px 48px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.5em; }
+    li { margin: 0.3em 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>第1章 强化学习基础</h1>
+    <blockquote>
+      <strong>来源</strong>：蘑菇书 EasyRL &nbsp;|&nbsp;
+      <strong>原文</strong>：<a href="https://datawhalechina.github.io/easy-rl/#/chapter1/chapter1">datawhalechina.github.io/easy-rl</a>
+    </blockquote>
+
+    <h2>概述</h2>
+    <p>强化学习是机器学习的一个重要分支，研究智能体如何在不确定的环境中通过试错与反馈来学习最优决策策略。与监督学习不同，强化学习没有即时的正确标签，智能体需要在与环境的持续交互中最大化累积奖励。本章系统介绍强化学习的基本概念体系，包括智能体-环境交互框架、序列决策、核心组成成分，以及探索与利用这一核心矛盾。</p>
+
+    <h2>系统架构总览</h2>
+    <pre class="mermaid">graph TD
+    A["智能体 Agent"] -->|"动作 a_t"| B["环境 Environment"]
+    B -->|"状态 s_t+1<br>奖励 r_t"| A
+    A --> C{"组成成分"}
+    C --> D["策略 Policy π(a|s)"]
+    C --> E["价值函数 V(s) / Q(s,a)"]
+    C --> F["环境模型 Model"]
+    D --> G["随机性策略"]
+    D --> H["确定性策略"]
+    F --> I["有模型 Model-Based"]
+    F --> J["免模型 Model-Free"]
+    E --> K["基于价值 Value-Based"]
+    D --> L["基于策略 Policy-Based"]
+    K --> M["演员-评论员 Actor-Critic"]
+    L --> M
+</pre>
+
+    <h2>1. 强化学习概述</h2>
+    <p>强化学习研究智能体如何在不确定环境中通过与环境交互来学习最优策略。智能体观察环境状态，输出动作，环境返回下一状态与奖励信号。这一过程不断循环，智能体的目标是最大化长期累积奖励。</p>
+
+    <h3>与监督学习的核心区别</h3>
+    <p>强化学习与监督学习在本质上有三大不同：</p>
+    <ul>
+      <li><strong>数据时序相关</strong>：输入是时序相关数据，非独立同分布，不满足监督学习的基本假设</li>
+      <li><strong>无即时标签</strong>：无法立即获得正确的动作标签，需要通过试错来探索</li>
+      <li><strong>延迟奖励</strong>：当前动作的奖励可能在未来很久才能体现，难以进行即时的信用分配</li>
+    </ul>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch1/1.2.png" alt="监督学习示意">
+      <figcaption>图：监督学习与强化学习的对比（来源：原文）</figcaption>
+    </figure>
+
+    <h3>强化学习的历史与应用</h3>
+    <p>强化学习起源于心理学的行为主义理论，后与动态规划、神经网络等技术融合，在游戏AI（Atari、围棋、星际争霸）、机器人控制、自动驾驶、推荐系统等领域取得突破。深度强化学习（DRL）将深度神经网络用于函数近似，是当前的主流方向。</p>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch1/1.1.png" alt="强化学习示意图">
+      <figcaption>图：强化学习基本框架（来源：原文）</figcaption>
+    </figure>
+
+    <h2>2. 序列决策</h2>
+    <p>序列决策是强化学习的核心问题——智能体在时间序列中做出一系列动作，每个动作都影响后续状态和奖励。理解历史、状态与可观测性之间的关系，是建立数学模型的基础。</p>
+
+    <h3>历史与状态</h3>
+    <p>智能体的历史是所有观测、动作、奖励的序列：</p>
+    <p>$$H_t = o_1, a_1, r_1, \ldots, o_t, a_t, r_t$$</p>
+    <p>状态是历史的函数，用于决策：$S_t = f(H_t)$。关键区分：</p>
+    <ul>
+      <li><strong>环境状态</strong> $s_t^e$：环境内部维护，智能体通常无法完全访问</li>
+      <li><strong>智能体状态</strong> $s_t^a$：智能体基于历史信息构建的内部表示</li>
+    </ul>
+
+    <h3>完全可观测与部分可观测</h3>
+    <table>
+      <tr><th>类型</th><th>条件</th><th>模型</th><th>示例</th></tr>
+      <tr><td>完全可观测</td><td>$o_t = s_t^e = s_t^a$</td><td>MDP（马尔可夫决策过程）</td><td>棋盘游戏</td></tr>
+      <tr><td>部分可观测</td><td>$o_t \neq s_t^e$</td><td>POMDP（部分可观测MDP）</td><td>扑克牌、机器人感知</td></tr>
+    </table>
+    <p>POMDP是七元组 $(S, A, T, R, \Omega, O, \gamma)$，智能体需通过历史信息推断环境状态。</p>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch1/1.18.png" alt="智能体和环境">
+      <figcaption>图：智能体和环境的交互示意（来源：原文）</figcaption>
+    </figure>
+
+    <h2>3. 动作空间</h2>
+    <p>动作空间的类型决定了算法的选择，是强化学习问题的重要属性。</p>
+    <table>
+      <tr><th>类型</th><th>描述</th><th>示例</th><th>典型算法</th></tr>
+      <tr><td>离散动作空间</td><td>有限个动作，可枚举</td><td>围棋落子、雅达利游戏按键</td><td>DQN、Q-Learning</td></tr>
+      <tr><td>连续动作空间</td><td>实值向量，不可枚举</td><td>机器人关节角度、驾驶转向角</td><td>DDPG、PPO、SAC</td></tr>
+    </table>
+
+    <h2>4. 强化学习智能体的组成成分</h2>
+    <p>一个完整的强化学习智能体可能包含三个核心组成部分：策略、价值函数和模型。并非所有智能体都拥有全部三个组成部分，这也构成了不同智能体类型的划分基础。</p>
+
+    <h3>策略（Policy）</h3>
+    <p>策略定义了智能体的行为方式，是从状态到动作的映射：</p>
+    <ul>
+      <li><strong>随机性策略</strong>：$\pi(a|s) = p(a_t=a \mid s_t=s)$，输出动作的概率分布</li>
+      <li><strong>确定性策略</strong>：$a^* = \arg\max_a \pi(a \mid s)$，输出确定的最优动作</li>
+    </ul>
+
+    <h3>价值函数（Value Function）</h3>
+    <p>价值函数量化了状态或状态-动作对的长期收益期望，是评估策略好坏的核心工具：</p>
+    <p>$$V_\pi(s) \doteq \mathbb{E}_\pi\left[\sum_{k=0}^{\infty} \gamma^k r_{t+k+1} \mid s_t=s\right]$$</p>
+    <p>Q函数（动作价值函数）进一步考虑了动作的选择：</p>
+    <p>$$Q_\pi(s,a) \doteq \mathbb{E}_\pi\left[\sum_{k=0}^{\infty} \gamma^k r_{t+k+1} \mid s_t=s, a_t=a\right]$$</p>
+    <p>折扣因子 $\gamma \in [0,1]$ 控制对未来奖励的重视程度：$\gamma=0$ 只看即时奖励，$\gamma \to 1$ 等权考虑长远未来。</p>
+
+    <h3>模型（Model）</h3>
+    <p>模型描述环境的动态特性，包含两个部分：</p>
+    <ul>
+      <li><strong>状态转移模型</strong>：$p_{ss'}^a = p(s_{t+1}=s' \mid s_t=s, a_t=a)$</li>
+      <li><strong>奖励模型</strong>：$R(s,a) = \mathbb{E}[r_{t+1} \mid s_t=s, a_t=a]$</li>
+    </ul>
+
+    <h3>智能体类型</h3>
+
+    <div id="chart-agent-types" class="echarts-container" style="height:320px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-agent-types'), 'dark').setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '强化学习智能体类型对比', textStyle: { color: '#89b4fa' } },
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['有策略', '有价值函数', '有模型'], textStyle: { color: '#cdd6f4' } },
+        xAxis: { type: 'category', data: ['基于价值', '基于策略', '演员-评论员', '有模型', '免模型'], axisLabel: { color: '#cdd6f4' } },
+        yAxis: { type: 'value', max: 1, axisLabel: { color: '#cdd6f4' } },
+        series: [
+          { name: '有策略', type: 'bar', data: [0, 1, 1, 1, 1], itemStyle: { color: '#89b4fa' } },
+          { name: '有价值函数', type: 'bar', data: [1, 0, 1, 1, 1], itemStyle: { color: '#a6e3a1' } },
+          { name: '有模型', type: 'bar', data: [0, 0, 0, 1, 0], itemStyle: { color: '#fab387' } }
+        ]
+      });
+    </script>
+
+    <table>
+      <tr><th>类型</th><th>特征</th><th>代表算法</th></tr>
+      <tr><td>基于价值（Value-Based）</td><td>显式学习价值函数，隐式策略（贪心）</td><td>Q-Learning、DQN</td></tr>
+      <tr><td>基于策略（Policy-Based）</td><td>直接参数化并优化策略</td><td>REINFORCE</td></tr>
+      <tr><td>演员-评论员（Actor-Critic）</td><td>同时学习策略与价值函数</td><td>A2C、PPO、SAC</td></tr>
+      <tr><td>有模型（Model-Based）</td><td>学习环境转移模型，用于规划</td><td>Dyna-Q、AlphaZero</td></tr>
+      <tr><td>免模型（Model-Free）</td><td>直接与真实环境交互，无需建模</td><td>大多数深度RL算法</td></tr>
+    </table>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch1/1.36.png" alt="强化学习智能体的类型">
+      <figcaption>图：强化学习智能体类型划分（来源：原文）</figcaption>
+    </figure>
+
+    <h2>5. 学习与规划</h2>
+    <p>强化学习中两种根本不同的改进策略的方式：</p>
+
+    <pre class="mermaid">graph LR
+    subgraph 学习 Learning
+      A1["环境未知"] --> B1["与真实环境交互"]
+      B1 --> C1["收集数据"]
+      C1 --> D1["更新策略"]
+    end
+    subgraph 规划 Planning
+      A2["环境已知/学到模型"] --> B2["模型内部模拟"]
+      B2 --> C2["推演最优解"]
+      C2 --> D2["更新策略"]
+    end
+</pre>
+
+    <ul>
+      <li><strong>学习</strong>：环境动态未知，智能体通过与真实环境交互逐步改进策略，Atari游戏即典型学习场景</li>
+      <li><strong>规划</strong>：已知或学到环境模型后，利用模型内部推演优化策略，如AlphaGo的蒙特卡洛树搜索</li>
+    </ul>
+    <p>两者可以结合，先学习模型再利用模型规划，这正是有模型强化学习的思路。</p>
+
+    <h2>6. 探索与利用</h2>
+    <p>探索（Exploration）与利用（Exploitation）是强化学习中最核心的矛盾之一。利用是指选择当前已知的最优动作，探索是指尝试新动作以发现可能更优的选择。</p>
+
+    <blockquote>
+      "探索和利用是强化学习里面非常核心的问题。"
+    </blockquote>
+
+    <h3>K-臂赌博机模型</h3>
+    <p>K-臂赌博机（K-armed bandit）是研究探索-利用权衡的经典模型：K个摇臂各有未知奖励概率，智能体每次选择一个臂并获得奖励，目标是最大化累积奖励。</p>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch1/1.39.png" alt="K-臂赌博机">
+      <figcaption>图：K-臂赌博机示意（来源：原文）</figcaption>
+    </figure>
+
+    <table>
+      <tr><th>策略</th><th>描述</th><th>缺陷</th></tr>
+      <tr><td>仅探索</td><td>均匀尝试所有臂</td><td>不充分利用已有知识</td></tr>
+      <tr><td>仅利用</td><td>始终选当前最优臂</td><td>可能错过全局最优</td></tr>
+      <tr><td>ε-贪心</td><td>以ε概率探索，1-ε概率利用</td><td>探索随机，效率低</td></tr>
+      <tr><td>UCB</td><td>基于置信上界选择</td><td>计算依赖模型假设</td></tr>
+    </table>
+
+    <h2>7. 强化学习实验：OpenAI Gym</h2>
+    <p>Gym是OpenAI开发的标准强化学习实验环境库，提供统一的接口规范，使研究者可以方便地测试和对比算法。</p>
+
+    <h3>基本接口</h3>
+    <pre><code class="language-python">import gym
+env = gym.make("CartPole-v0")
+observation = env.reset()
+
+for _ in range(1000):
+    env.render()
+    action = env.action_space.sample()  # 随机采样动作
+    observation, reward, done, info = env.step(action)
+    if done:
+        observation = env.reset()
+
+env.close()
+</code></pre>
+
+    <h3>MountainCar-v0 示例</h3>
+    <p>MountainCar 是经典连续控制问题：小车需通过左右摆动积累动能爬上山顶。</p>
+    <ul>
+      <li><strong>观测空间</strong>：<code>Box([-1.2, -0.07], [0.6, 0.07])</code>，即位置和速度</li>
+      <li><strong>动作空间</strong>：<code>Discrete(3)</code>，向左/不动/向右</li>
+      <li><strong>成功标准</strong>：连续100回合平均奖励 > -110，SimpleAgent 实测约 -106.63</li>
+    </ul>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/datawhalechina/easy-rl/master/docs/img/ch1/1.44.png" alt="OpenAI Gym">
+      <figcaption>图：OpenAI Gym库界面（来源：原文）</figcaption>
+    </figure>
+
+    <h2>关键概念汇总</h2>
+    <table>
+      <tr><th>概念</th><th>符号</th><th>含义</th></tr>
+      <tr><td>轨迹</td><td>$\tau = (s_0, a_0, s_1, a_1, \ldots)$</td><td>状态-动作序列</td></tr>
+      <tr><td>历史</td><td>$H_t = o_1, a_1, r_1, \ldots, o_t$</td><td>完整交互历史</td></tr>
+      <tr><td>状态价值函数</td><td>$V_\pi(s)$</td><td>从状态s出发遵循π的期望累积奖励</td></tr>
+      <tr><td>Q函数</td><td>$Q_\pi(s,a)$</td><td>在s执行a后遵循π的期望累积奖励</td></tr>
+      <tr><td>折扣因子</td><td>$\gamma \in [0,1]$</td><td>对未来奖励的权重衰减</td></tr>
+      <tr><td>策略</td><td>$\pi(a|s)$</td><td>状态到动作的映射（概率或确定）</td></tr>
+    </table>
+
+    <h2>总结与启发</h2>
+    <p>强化学习提供了一套完整的序列决策数学框架。从智能体-环境交互的基本循环，到策略、价值函数、模型三大组件的组合，再到MDP/POMDP的形式化描述，这些基础概念构成了后续所有复杂算法的理论基石。</p>
+    <p>探索与利用的矛盾贯穿强化学习始终——如何在已知信息和新探索之间取得平衡，是区分不同算法设计哲学的核心维度。理解这一矛盾，是深入学习后续章节的关键前提。</p>
+
+    <h2>参考文献</h2>
+    <ul>
+      <li>Sutton, R.S. & Barto, A.G. <em>Reinforcement Learning: An Introduction</em>（第二版）</li>
+      <li>周博磊，<em>Intro to Reinforcement Learning</em></li>
+      <li>OpenAI Gym: <a href="https://gym.openai.com">gym.openai.com</a></li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

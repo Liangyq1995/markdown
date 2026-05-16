@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LORE 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+.timeline-wrap{overflow-x:auto;margin:1em 0;}
+.timeline{display:flex;gap:0;min-width:700px;}
+.tl-col{flex:1;display:flex;flex-direction:column;}
+.tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;font-size:.95em;border-radius:6px 6px 0 0;}
+.tl-body{flex:1;padding:10px 8px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px;}
+.tl-item{background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em;line-height:1.5;}
+.tl-tag{display:inline-block;font-size:.75em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:4px;background:var(--heading);color:#1e1e2e;}
+.tl-tag.green{background:var(--strong);}
+.tl-tag.orange{background:var(--orange);}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LORE 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">A Large Generative Model for Search Relevance · 阿里妈妈（阿里巴巴）搜索广告团队 · 2025-11</p>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>LORE: A Large Generative Model for Search Relevance（技术报告）</td></tr>
+  <tr><th>机构</th><td>Search Advertising Team, Alimama（Alibaba Group）</td></tr>
+  <tr><th>核心问题</th><td>电商搜索相关性判断是复杂的组合推理问题，如何系统性地为 LLM 注入相关性判断的全部能力并对齐人类偏好？</td></tr>
+  <tr><th>核心成果</th><td>线上 GoodRate 指标<strong>累计提升 +27%</strong>，历经三年三轮完整迭代</td></tr>
+  <tr><th>评测基准</th><td>RAIR（Relevance AI benchmark in Real e-commerce），63,601 样本，14 个行业</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 现有方法的盲点</h3>
+
+<pre class="mermaid">
+flowchart TD
+    ELLM["ELLM（一代）\n属性抽取 + 匹配\n缺陷：缺乏规则意识\n例：湖蓝上衣 ≠ 天蓝上衣（细粒度颜色规则漏判）"]
+    LREF["LREF / TaoSR1（二代）\n增加规则跟随 CoT\n缺陷：依赖单一推理视角\n无法覆盖知识+多模态+规则的全局能力"]
+    LORE["LORE（三代）\n任务解构 → 能力识别 → 分维度训练\n三大核心能力：知识推理 + 多模态 + 规则遵从\n两阶段范式：SFT注入能力 + RL对齐偏好"]
+    ELLM --> LREF --> LORE
+</pre>
+
+<div class="tech-card yellow">
+<strong>核心洞见</strong>：复杂相关性判断不是单一推理问题，而是多种能力的<strong>组合</strong>。现有方法在任务解构上存在盲点——它们改进了特定的推理视角，但没有系统性地识别和训练所有必要的能力子集。LORE 的贡献是提出了一个"先解构任务，再针对性训练"的方法论。
+</div>
+
+<h3>1.2 相关性判断的四级体系</h3>
+
+<table>
+  <tr><th>等级</th><th>含义</th><th>典型场景</th></tr>
+  <tr><td><strong>L4</strong></td><td>完全相关（Perfect Relevant）</td><td>搜索"蓝色连衣裙"，返回蓝色连衣裙</td></tr>
+  <tr><td><strong>L3</strong></td><td>弱相关（Weakly Relevant）</td><td>搜索"正品耐克"，返回耐克联名款（质疑真实性）</td></tr>
+  <tr><td><strong>L2</strong></td><td>不相关（Irrelevant）</td><td>搜索"女款运动鞋"，返回男款</td></tr>
+  <tr><td><strong>L1</strong></td><td>严重不相关</td><td>搜索"婴儿奶粉"，返回咖啡粉</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 2. 理论框架 ═══ -->
+<h2 id="s2">2. 理论框架：相关性建模三大组件</h2>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph IU["商品理解（Item Understanding）"]
+        IA["固有属性：类目/品牌/规格\n直接可观测，简单匹配"]
+        DA["派生属性：风格/受众/功能感受\n需推理，具主观性"]
+        MM["多模态：文本 + 图像联合"]
+    end
+    subgraph QU["查询理解（Query Understanding）"]
+        ENT["实体识别\n领域知识 / 拼写纠错 / 别名对齐"]
+        INT["意图识别\n目标实体 + 限定词 + 隐式需求"]
+    end
+    subgraph PATH["路径建模（Query → Item）"]
+        PC["路径构建\n查询意图 → 属性空间映射"]
+        PF["路径跟随\n多模态特征提取 + 约束验证"]
+    end
+    IU & QU --> PATH
+</pre>
+
+<table>
+  <tr><th>三大核心能力</th><th>对应组件</th><th>典型挑战</th></tr>
+  <tr><td><strong>知识与推理</strong></td><td>查询理解 + 路径构建</td><td>"给妈妈的礼物" → 需推断中年女性偏好；行业专业术语识别</td></tr>
+  <tr><td><strong>多模态匹配</strong></td><td>商品理解 + 路径跟随</td><td>颜色/风格需图像验证；文本无描述时依赖图像判断</td></tr>
+  <tr><td><strong>复杂规则遵从</strong></td><td>商品理解 + 路径跟随</td><td>搜索"正品"返回二手应判 L3；类目不匹配直接 L1</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 3. 训练方法 ═══ -->
+<h2 id="s3">3. 训练方法（两阶段范式）</h2>
+
+<h3>3.1 整体两阶段框架</h3>
+
+<pre class="mermaid">
+flowchart TD
+    BASE["基础模型（Qwen3 系列）"]
+    subgraph SFT["阶段1：SFT — 注入全面推理能力"]
+        FEAT["特征构建\nCPV 三元组 + SKU 信息\nLLM 过滤冗余属性（8轮自洽）"]
+        CLEAN["数据清洗\n16次采样无一与标注一致 → 过滤\n规则模糊样本 → 注入规则文档重标注"]
+        COT["多维 CoT 合成\n三步渐进合成策略"]
+    end
+    subgraph RL["阶段2：RL — 对齐人类偏好"]
+        HARD["难样本挖掘\n8轮采样分布呈 J 形\n保留 pass@8 小于 5 的样本"]
+        RLVR["KL-free GRPO\n去除 KL 约束，释放探索空间"]
+        OPT["训练策略优化\n课程学习 + 动态采样 + Clip-higher"]
+    end
+    BASE --> SFT --> RL
+</pre>
+
+<h3>3.2 多维 CoT 合成（三步渐进策略）</h3>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant T as Teacher LLM（Qwen3-235B）
+    participant V as Teacher VLM（Qwen2.5-72B-VL）
+    participant S as 学生模型
+
+    Note over T,V: Step 1 — 知识与推理维度
+    T->>T: 结合电商知识库 + 查询 + 商品文本信息<br/>生成语义理解推理链 CoT_step1
+
+    Note over T,V: Step 2 — 多模态维度
+    V->>V: 分析商品主图，生成图像描述 caption
+    T->>T: 结合 CoT_step1 + enhanced caption<br/>生成深层语义推理 CoT_step2
+
+    Note over T,V: Step 3 — 规则感知维度
+    T->>T: 注入行业规则集 R + 真实标注 L<br/>反向工程规则感知推理链 CoT_step3
+
+    T->>S: CoT_step3 作为 SFT 训练数据（蒸馏）
+</pre>
+
+<p><strong>输出格式约束</strong>：</p>
+<pre><code>&lt;think&gt;推理过程&lt;/think&gt;&lt;answer&gt;(L1|L2|L3|L4)&lt;/answer&gt;</code></pre>
+
+<h3>3.3 RL 奖励设计</h3>
+
+<div class="math-block">
+$$r = r_\mathrm{format} + r_\mathrm{result}$$
+$$r_\mathrm{format} = \begin{cases} +0.1 & \text{符合 think/answer 格式} \\ -0.1 & \text{否则} \end{cases}$$
+</div>
+
+<p>结果奖励的渐进式设计（缓解稀疏奖励问题）：</p>
+
+<table>
+  <tr><th>情况</th><th>奖励</th><th>设计意图</th></tr>
+  <tr><td>预测与标注完全一致</td><td>+1.0</td><td>全正确</td></tr>
+  <tr><td>方向正确，细粒度错误，在预定义不匹配类型内</td><td>+0.3</td><td>缓解稀疏奖励，允许部分正确</td></tr>
+  <tr><td>方向正确但不匹配类型未在预定义集中</td><td>−0.5</td><td>约束规则边界</td></tr>
+  <tr><td>方向错误</td><td>−1.0</td><td>严格惩罚方向性错误</td></tr>
+  <tr><td>输出不可解析</td><td>−1.0</td><td>格式合规</td></tr>
+</table>
+
+<h3>3.4 三种探索策略对比</h3>
+
+<table>
+  <tr><th>策略</th><th>机制</th><th>效果</th></tr>
+  <tr><td>On-Policy</td><td>每批数据仅一次梯度更新，立即丢弃</td><td>探索强，计算效率低</td></tr>
+  <tr><td>熵正则化</td><td>显式熵损失 $\alpha \cdot \mathbb{E}[-\log\pi_\theta(o|x)]$</td><td>需大量超参调整，有时崩溃</td></tr>
+  <tr><td style="color:var(--strong)"><strong>Clip-higher（最优）</strong></td><td style="color:var(--strong)">非对称裁剪 $[1-\varepsilon,\, 1+\varepsilon_\mathrm{high}]$，$\varepsilon_\mathrm{high} \gt \varepsilon$</td><td style="color:var(--strong)">适度延缓熵衰减，最优平衡</td></tr>
+</table>
+
+<div class="tech-card orange">
+<strong>关键发现：熵坍缩速率决定性能上限</strong><br>
+训练早期模型快速牺牲熵（探索能力）换取性能提升。当熵降至某阈值后，探索能力受限，后续改进空间急剧减小。Clip-higher 通过扩大正样本的信任域，适度延缓这一衰减过程，在探索与利用之间找到最优平衡。
+</div>
+
+<h3>3.5 课程学习方案</h3>
+
+<p>基于 8 轮采样正确率 $k(x)$ 分三个难度等级：</p>
+
+<div class="math-block">
+$$\text{Difficulty}(x) = \begin{cases} \text{Easy} & k(x) \in \{6,7\} \\ \text{Medium} & k(x) \in \{3,4,5\} \\ \text{Hard} & k(x) \in \{0,1,2\} \end{cases}$$
+</div>
+
+<table>
+  <tr><th>阶段</th><th>Easy</th><th>Medium</th><th>Hard</th></tr>
+  <tr><td>Stage 1（热身）</td><td>0%</td><td>50%</td><td>20%</td></tr>
+  <tr><td>Stage 2（均衡）</td><td>20%</td><td>30%</td><td>30%</td></tr>
+  <tr><td>Stage 3（难样本强化）</td><td>20%</td><td>20%</td><td>50%</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 4. 评估 ═══ -->
+<h2 id="s4">4. RAIR 评估基准</h2>
+
+<pre class="mermaid">
+graph TD
+    RAIR["RAIR 基准（63,601 样本，14 个行业）"]
+    GEN["通用子集\n真实用户查询分布\n覆盖全行业常见样本"]
+    HARD["长尾难样本子集\n多属性显式需求 46.4%\n知识依赖 20.0%\n推理依赖 22.3%\n否定意图 9.8%"]
+    VIS["视觉显著子集\n关键属性仅存在于图像中\n无法通过文本判断"]
+    RAIR --> GEN & HARD & VIS
+</pre>
+
+<hr>
+
+<!-- ═══ 5. 实验结果 ═══ -->
+<h2 id="s5">5. 实验结果</h2>
+
+<div id="chart-results" class="echarts-box" style="height:340px"></div>
+
+<h3>5.1 通用集与长尾难样本</h3>
+
+<table>
+  <tr><th>模型</th><th>通用 acc@4</th><th>难样本 acc@4</th><th>通用 macro-F1</th></tr>
+  <tr><td>Qwen3-235B-Instruct（零样本）</td><td>0.676</td><td>0.381</td><td>0.417</td></tr>
+  <tr><td>GPT-5（零样本）</td><td>0.714</td><td>0.435</td><td>0.433</td></tr>
+  <tr><td>Vanilla SFT</td><td>0.891</td><td>0.542</td><td>0.722</td></tr>
+  <tr><td style="color:var(--strong)"><strong>LORE</strong></td><td style="color:var(--strong)"><strong>0.897</strong></td><td style="color:var(--strong)"><strong>0.582</strong></td><td style="color:var(--strong)"><strong>0.724</strong></td></tr>
+</table>
+
+<h3>5.2 视觉显著子集</h3>
+
+<table>
+  <tr><th>模型</th><th>acc@2</th><th>acc@4</th><th>macro-F1</th></tr>
+  <tr><td>Qwen2.5-VL-72B-Instruct</td><td>0.608</td><td>0.420</td><td>0.267</td></tr>
+  <tr><td>GPT-5</td><td>0.682</td><td>0.508</td><td>0.369</td></tr>
+  <tr><td>Vanilla SFT</td><td>0.638</td><td>0.574</td><td>0.378</td></tr>
+  <tr><td style="color:var(--strong)"><strong>LORE</strong></td><td style="color:var(--strong)"><strong>0.698</strong></td><td style="color:var(--strong)"><strong>0.627</strong></td><td style="color:var(--strong)"><strong>0.426</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 6. 三代演进 ═══ -->
+<h2 id="s6">6. 三代版本演进时间线</h2>
+
+<div class="timeline-wrap">
+<div class="timeline">
+  <div class="tl-col">
+    <div class="tl-period">LORE 1.0</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">基础</span><br>分类 SFT 基线建立</div>
+      <div class="tl-item"><span class="tl-tag">工程</span><br>特征工程探索（CPV 三元组）</div>
+      <div class="tl-item"><span class="tl-tag">能力</span><br>核心相关性判断能力奠基</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">LORE 2.0</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag green">推理</span><br>引入 CoT 推理框架</div>
+      <div class="tl-item"><span class="tl-tag green">数据</span><br>多维 CoT 合成框架建立</div>
+      <div class="tl-item"><span class="tl-tag green">训练</span><br>RL 后训练首次引入</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">LORE 3.0</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag orange">规则</span><br>规则遵从 + 多模态统一</div>
+      <div class="tl-item"><span class="tl-tag orange">策略</span><br>课程学习 + Clip-higher</div>
+      <div class="tl-item"><span class="tl-tag orange">线上</span><br>累计 +27% GoodRate</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<hr>
+
+<!-- ═══ 7. 关键发现 ═══ -->
+<h2 id="s7">7. 关键发现与讨论</h2>
+
+<table>
+  <tr><th>发现</th><th>说明</th></tr>
+  <tr><td>朴素教师 CoT 蒸馏产生<strong>负效果</strong></td><td>通用 CoT 不适合领域任务；必须使用任务解构驱动的多维 CoT</td></tr>
+  <tr><td>长 CoT 对性能提升不必要</td><td>RL 过程中未观察到输出长度显著增加；长 CoT 是能力提升的副产品而非条件</td></tr>
+  <tr><td>两阶段 LLM 优于端到端 VLM</td><td>多模态任务中，LLM + 专用图像描述增强优于端到端视觉语言模型</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 8. 核心洞见 ═══ -->
+<h2 id="s8">8. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>"先解构，再训练"的方法论价值</strong><br>
+LORE 最重要的贡献不是某个具体技术，而是一套<strong>方法论</strong>：不要直接从"如何改进 LLM"出发，而要先问"这个任务到底需要哪些能力"。相关性判断不是一个推理问题，而是三种能力（知识推理 + 多模态 + 规则遵从）的组合——明确这一点后，后续的数据构建、模型训练和评估设计都变得有据可依。
+</div>
+
+<div class="tech-card blue">
+<strong>电商场景的特殊性与普适性</strong><br>
+LORE 的挑战比通用 NLP 任务更难：规则复杂（行业规范、历史惯例）、多模态必要（颜色/风格不能只靠文字）、隐式意图普遍（"给妈妈的礼物"需要年龄/性别/场合推理）。这些挑战在其他垂直行业（医疗、法律、金融搜索）同样存在，LORE 的框架具有跨领域参考价值。
+</div>
+
+<div class="tech-card yellow">
+<strong>熵坍缩：RLHF 领域的系统性问题</strong><br>
+LORE 观察到的"熵坍缩速率决定性能上限"与 FIPO 中的"长度停滞"是同一现象的不同表现——RL 训练过早收敛到局部最优，探索能力退化。Clip-higher 和 FIPO 的 Future-KL 调制都是在尝试延缓这一过程，只是从不同角度切入。这说明"维持健康的策略多样性"是当前 RLVR 训练的核心工程挑战。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于 LORE Technical Report / Alimama, Alibaba Group 2025-11</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  const c=echarts.init(document.getElementById('chart-results'));
+  c.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'RAIR 基准主要结果对比',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['难样本 acc@4','通用 acc@4'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['Qwen3-235B\n零样本','GPT-5\n零样本','Vanilla SFT','LORE'],axisLabel:{color:'#cdd6f4',fontSize:11}},
+    yAxis:{type:'value',name:'准确率',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4',formatter:'{value}'},min:0.3,max:1.0},
+    series:[
+      {name:'难样本 acc@4',type:'bar',data:[
+        {value:0.381,itemStyle:{color:'#45475a'}},
+        {value:0.435,itemStyle:{color:'#fab387'}},
+        {value:0.542,itemStyle:{color:'#89b4fa'}},
+        {value:0.582,itemStyle:{color:'#a6e3a1'}}
+      ],barMaxWidth:35,label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}'}},
+      {name:'通用 acc@4',type:'bar',data:[
+        {value:0.676,itemStyle:{color:'rgba(69,71,90,0.7)'}},
+        {value:0.714,itemStyle:{color:'rgba(250,179,135,0.7)'}},
+        {value:0.891,itemStyle:{color:'rgba(137,180,250,0.7)'}},
+        {value:0.897,itemStyle:{color:'rgba(166,227,161,0.7)'}}
+      ],barMaxWidth:35,label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}'}}
+    ],
+    grid:{left:60,right:20,bottom:60,top:70}
+  });
+});
+</script>
+</body>
+</html>

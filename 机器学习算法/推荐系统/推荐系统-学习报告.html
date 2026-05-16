@@ -27,7 +27,10 @@ ul{margin:.4em 0 .4em 1.2em}li{margin:.2em 0}
 .mjx{margin:.65em 0;padding:16px 18px;background:#1a1a28;border:1px solid var(--b);border-radius:6px;overflow-x:auto;font-size:.9em;text-align:center;line-height:1.55}
 .mjx mjx-container{display:inline-block!important;text-align:left;max-width:100%}
 .k{color:var(--y);font-size:.9em;margin:.35em 0}
+img{max-width:100%;display:block;margin:.55em 0;border-radius:4px;border:1px solid var(--b)}
 a{color:var(--a)}
+hr{border:none;border-top:1px solid var(--b);margin:1.1em 0}
+code{font-size:.9em;background:#1a1a28;padding:2px 6px;border-radius:4px;border:1px solid var(--b)}
 </style>
 <script>window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$']],packages:{'[+]':['ams']}},options:{skipHtmlTags:['script','noscript','style','textarea']}};</script>
 <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
@@ -38,45 +41,60 @@ a{color:var(--a)}
 
 <h1>推荐系统 · 学习报告</h1>
 
-<h2 id="r0">〇、笔记地图</h2>
-<p>素材覆盖《推荐算法基础》《协同过滤》《传统模型》《01/02/03/04/05 CTR 与深度匹配》《冷启动》等。本报告按「评测 → 准确度指标 → 覆盖率与多样性 → 经典召回/排序 → 深度 CTR 脉络」组织，与 <code>.md</code> 文件名主题对应。</p>
+<h2 id="r0">〇、源 <code>.md</code> 地图</h2>
+<p>对照：<code>推荐算法基础.md</code>（实验与指标）、<code>协同过滤.md</code>、<code>传统模型.md</code>、<code>01传统CTR预估模型.md</code>、<code>02神经网络CTR预估模型.md</code>、<code>02神经网络CTR预估模型2.md</code>、<code>03传统推荐算法.md</code>、<code>04神经网络推荐算法.md</code>、<code>CTR预估神经网络.md</code>、<code>深度匹配模型.md</code>、<code>05推荐系统冷启动.md</code>、<code>code.md</code>。本页按「实验方法论 \(\rightarrow\) 评分/Top-N 指标 \(\rightarrow\) 长尾与多样性 \(\rightarrow\) 邻域与隐语义 \(\rightarrow\) CTR 损失与特征交叉 \(\rightarrow\) 深度排序与匹配 \(\rightarrow\) 冷启动」组织。</p>
 
-<h2 id="r1">一、三类实验：离线、用户调查、在线 AB</h2>
+<h2 id="r1">一、离线、用户调查与在线 AB</h2>
 <ul>
-<li><strong>离线</strong>：日志构数据集 → 划分训练/测试 → 训练与预测 → 离线指标；快但不等于商业指标。</li>
-<li><strong>用户调查</strong>：主观感受强、成本高、样本量受限，需双盲与人群代表性。</li>
-<li><strong>在线 AB</strong>：真实点击/转化；周期长，流量正交分层避免多实验互相污染。</li>
+<li><strong>离线</strong>：日志 \(\rightarrow\) 标准数据集 \(\rightarrow\) 训练/测试划分 \(\rightarrow\) 离线指标；快但与点击率、转化率等商业指标存在 gap。</li>
+<li><strong>用户调查</strong>：双盲、人群分布对齐真实用户；成本高、样本小则统计意义弱。</li>
+<li><strong>在线 AB</strong>：流量<strong>正交切分</strong>，避免「推荐算法层」与「前端 UI 层」实验互相混淆（推荐算法基础.md）。</li>
 </ul>
 
-<h2 id="r2">二、预测准确度：评分与 Top-N</h2>
-<p>评分预测常用 RMSE、MAE；Top-N 列表用准确率、召回率。记号与《推荐算法基础》一致：\(R(u)\) 为推荐列表，\(T(u)\) 为测试集上用户真实行为集合。</p>
+<h2 id="r2">二、评分预测与 Top-N 准确度</h2>
+<p>\(R(u)\)：算法在训练行为上给出的推荐列表；\(T(u)\)：测试行为集合（推荐算法基础.md）。</p>
+<h3 id="r2a">RMSE 与 MAE（与笔记印刷式对齐）</h3>
 <div class="mjx">
 $$\begin{aligned}
-\mathrm{RMSE}&=\frac{1}{|T|}\sqrt{\sum_{(u,i)\in T}(r_{ui}-\hat r_{ui})^2}, &
-\mathrm{MAE}&=\frac{1}{|T|}\sum_{(u,i)\in T}\bigl|r_{ui}-\hat r_{ui}\bigr| \\[0.5em]
-\mathrm{Recall}&=\frac{\sum_{u\in U}\bigl|R(u)\cap T(u)\bigr|}{\sum_{u\in U}\bigl|T(u)\bigr|}, &
-\mathrm{Precision}&=\frac{\sum_{u\in U}\bigl|R(u)\cap T(u)\bigr|}{\sum_{u\in U}\bigl|R(u)\bigr|}
+\mathrm{RMSE}&=\frac{\sqrt{\sum_{(u,i)\in T}(r_{ui}-\hat r_{ui})^2}}{|T|}, &
+\mathrm{MAE}&=\frac{1}{|T|}\sum_{(u,i)\in T}\bigl|r_{ui}-\hat r_{ui}\bigr|
 \end{aligned}$$
 </div>
-<p class="k">说明：若与个别笔记印刷式「根号在分母外」写法不同，此处 RMSE 采用常见归一化形式 \(\frac{1}{|T|}\sqrt{\sum(\cdot)^2}\)；请以你笔记推导为准核对。</p>
+<p class="k">亦常见写法 \(\mathrm{RMSE}=\sqrt{\frac{1}{|T|}\sum(r_{ui}-\hat r_{ui})^2}\)；与 \(\frac{\sqrt{\sum}}{|T|}\) 差一个 \(\sqrt{|T|}\) 因子，读论文/报表时注意定义。</p>
+<h3 id="r2b">召回率与准确率</h3>
+<div class="mjx">
+$$\mathrm{Recall}=\frac{\sum_{u\in U}\bigl|R(u)\cap T(u)\bigr|}{\sum_{u\in U}\bigl|T(u)\bigr|},\qquad
+\mathrm{Precision}=\frac{\sum_{u\in U}\bigl|R(u)\cap T(u)\bigr|}{\sum_{u\in U}\bigl|R(u)\bigr|}$$
+</div>
 
 <h2 id="r3">三、覆盖率、熵与基尼</h2>
-<p>覆盖率衡量长尾被推荐的程度；可用物品在推荐列表中出现分布的熵或基尼刻画「是否过于集中」。</p>
+<p>覆盖率反映长尾物品是否被推荐；熵与基尼刻画推荐分布是否过度集中于少数头部物品（推荐算法基础.md）。</p>
 <div class="mjx">
-$$\mathrm{Coverage}=\frac{\bigl|\bigcup_{u\in U}R(u)\bigr|}{|I|},\qquad H=-\sum_{i=1}^n p(i)\log p(i)$$
+$$\mathrm{Coverage}=\frac{\bigl|\bigcup_{u\in U}R(u)\bigr|}{|I|},\qquad H=-\sum_{i=1}^{n}p(i)\log p(i)$$
 </div>
 
-<h2 id="r4">四、协同过滤与矩阵分解（思想）</h2>
-<p>基于用户/基于物品的邻域方法利用行为相似性；隐语义模型将用户–物品交互分解为低秩因子矩阵，预测 \(\hat r_{ui}\approx \mathbf{p}_u^\top\mathbf{q}_i\)，与《协同过滤》《传统模型》笔记对应。</p>
-
-<h2 id="r5">五、CTR 预估：从线性到深度</h2>
-<p>《01传统CTR预估模型》《02/02神经网络CTR》《CTR预估神经网络》《深度匹配模型》：特征交叉（FM、FFM）、宽深结构、DIN 类注意力、双塔匹配等，主线是把「稀疏高维特征工程 + 非线交互」搬进可微网络，损失常为 LogLoss（点击二分类）。</p>
+<h2 id="r4">四、协同过滤与矩阵分解</h2>
+<p>User-based / Item-based：余弦或 Pearson 相似度在评分向量或行为向量上；隐语义模型用 \(\mathbf{p}_u,\mathbf{q}_i\in\mathbb{R}^K\) 逼近交互（协同过滤.md、传统模型.md）。</p>
 <div class="mjx">
-$$\mathcal{L}=-\frac{1}{N}\sum_{i}\Bigl[y_i\log\hat p_i+(1-y_i)\log(1-\hat p_i)\Bigr]$$
+$$\hat r_{ui}=\mu+b_u+b_i+\mathbf{p}_u^\top\mathbf{q}_i,\qquad
+\min_{\mathbf{p},\mathbf{q},b}\sum_{(u,i)\in\mathcal{O}}\bigl(r_{ui}-\hat r_{ui}\bigr)^2+\lambda\bigl(\|\mathbf{p}_u\|^2+\|\mathbf{q}_i\|^2\bigr)$$
 </div>
 
-<h2 id="r6">六、冷启动与多样性</h2>
-<p>《05推荐系统冷启动》：新用户/新物品/新系统三类策略（热门、内容、迁移、探索等）。《推荐算法基础》中多样性、新颖性、惊喜度与准确率往往权衡，需在目标函数或重排序阶段显式约束。</p>
+<h2 id="r5">五、CTR 预估：LogLoss 与二阶交叉（FM）</h2>
+<p>《01传统CTR预估模型》等：点击 \(y\in\{0,1\}\)，特征常极高维稀疏；FM 对二阶交互用隐向量内积参数化，参数量 \(O(nK)\) 而非朴素交叉的 \(O(n^2)\)。</p>
+<div class="mjx">
+$$\mathcal{L}=-\frac{1}{N}\sum_{i}\Bigl[y_i\log\hat p_i+(1-y_i)\log(1-\hat p_i)\Bigr],\qquad
+\hat y(\mathbf{x})=w_0+\sum_{j=1}^n w_j x_j+\sum_{j<k}\langle\mathbf{v}_j,\mathbf{v}_k\rangle x_j x_k$$
+</div>
+
+<h2 id="r6">六、深度 CTR 与兴趣网络（提要）</h2>
+<p>《02/02神经网络CTR》《CTR预估神经网络》：Embedding + MLP；DIN 等对候选物品用用户历史行为做注意力加权；双塔结构用于大规模召回+内积检索（深度匹配模型.md）。损失仍以 LogLoss / 校准为主，工程上叠加校准层与多任务（时长、转化）权重。</p>
+
+<h2 id="r7">七、冷启动、多样性与新颖性</h2>
+<p>《05推荐系统冷启动》：新用户（热门、人口统计、迁移学习）、新物品（内容特征、众包）、新系统（专家规则+探索）。多样性常与准确率冲突，可在重排序用 MMR、行列式点过程等折中（推荐算法基础.md）。</p>
+
+<h2 id="r8">八、实现线索</h2>
+<p><code>code.md</code> 中工程实现与上述指标、数据管道衔接；离线特征一致性与线上 serving 对齐是常见故障源。</p>
 
 </main>
 <script>

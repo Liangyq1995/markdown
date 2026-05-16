@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第5章 模型架构 | 大语言模型</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+a{color:var(--link);}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}
+tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.badge{display:inline-block;font-size:.75em;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:4px;}
+.badge-blue{background:var(--heading);color:#1e1e2e;}
+.badge-green{background:var(--strong);color:#1e1e2e;}
+.badge-yellow{background:var(--yellow);color:#1e1e2e;}
+.badge-purple{background:var(--purple);color:#1e1e2e;}
+.badge-orange{background:#fab387;color:#1e1e2e;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第5章 模型架构</h1>
+<p style="color:#6c7086;font-size:.9em;">大语言模型教材 · 第95–125页</p>
+<hr>
+
+<!-- ============================================================ -->
+<h2 id="overview">章节概述</h2>
+<p>本章围绕大语言模型的模型架构展开，涵盖五大主题：Transformer 基础组件（§5.1）、详细配置（§5.2）、三大主流架构范式（§5.3）、长上下文扩展技术（§5.4）以及新型模型架构（§5.5）。当前主流大语言模型几乎全部基于 Transformer 构建，并以<strong>因果解码器（Causal Decoder）</strong>为核心架构。</p>
+
+<!-- ============================================================ -->
+<h2 id="sec51">5.1 Transformer 基础组件</h2>
+
+<h3 id="sec511">5.1.1 输入编码</h3>
+<p>输入词元序列 $\mathbf{u} = [u_1, u_2, \ldots, u_T]$ 经过输入嵌入模块转化为词向量序列，每个词元 $u_t$ 映射为可学习的固定维度词向量 $\mathbf{v}_t \in \mathbb{R}^H$。位置编码 $\mathbf{p}_t \in \mathbb{R}^H$ 引入序列顺序信息，两者直接相加得到最终输入嵌入：</p>
+<div class="formula-box">
+$$\mathbf{x}_t = \mathbf{v}_t + \mathbf{p}_t \tag{5.1}$$
+</div>
+<p>由于不同词元的位置编码仅由其位置唯一决定，这种方式称为<strong>绝对位置编码</strong>。其局限性在于无法建模训练数据中未出现过的位置，极大限制了处理长文本的能力。</p>
+
+<h3 id="sec512">5.1.2 多头自注意力机制（MHA）</h3>
+<p>多头自注意力（Multi-Head Self-Attention, MHA）是 Transformer 的核心创新。给定输入序列，将其映射为查询 $\mathbf{Q}$、键 $\mathbf{K}$、值 $\mathbf{V}$ 三个矩阵：</p>
+<div class="formula-box">
+$$\mathbf{Q} = \mathbf{X}\mathbf{W}^Q, \quad \mathbf{K} = \mathbf{X}\mathbf{W}^K, \quad \mathbf{V} = \mathbf{X}\mathbf{W}^V \tag{5.2–5.4}$$
+$$\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{softmax}\!\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{D}}\right)\mathbf{V} \tag{5.5}$$
+</div>
+<p>其中 $D$ 是键对应的向量维度，除以 $\sqrt{D}$ 防止点积过大导致梯度消失。多头注意力使用 $H$ 组独立参数的注意力头，最终拼接并线性映射：</p>
+<div class="formula-box">
+$$\text{MHA} = \text{Concat}(\text{head}_1, \ldots, \text{head}_N)\mathbf{W}^O \tag{5.6}$$
+$$\text{head}_n = \text{Attention}(\mathbf{X}\mathbf{W}^Q_n, \mathbf{X}\mathbf{W}^K_n, \mathbf{X}\mathbf{W}^V_n) \tag{5.7}$$
+</div>
+
+<h3 id="sec513">5.1.3 前馈网络层（FFN）</h3>
+<p>前馈网络层（Feed-Forward Network, FFN）对每个位置的隐藏状态进行非线性变换：</p>
+<div class="formula-box">
+$$\text{FFN}(\mathbf{X}) = \sigma(\mathbf{X}\mathbf{W}^U + \mathbf{b}_1)\mathbf{W}^D + \mathbf{b}_2 \tag{5.8}$$
+</div>
+<p>其中 $\mathbf{W}^U \in \mathbb{R}^{H \times H'}$，$\mathbf{W}^D \in \mathbb{R}^{H' \times H}$，$\sigma$ 为激活函数（原始 Transformer 使用 ReLU）。</p>
+
+<h3 id="sec514">5.1.4 编码器</h3>
+<p>编码器由多个相同层堆叠，每层包含多头自注意力 + 前馈网络，并使用层归一化和残差连接。第 $l$ 层的计算过程（Post-Norm 风格）：</p>
+<div class="formula-box">
+$$\mathbf{X}'_l = \text{LayerNorm}(\text{MHA}(\mathbf{X}_{l-1}) + \mathbf{X}_{l-1})$$
+$$\mathbf{X}_l = \text{LayerNorm}(\text{FFN}(\mathbf{X}'_l) + \mathbf{X}'_l) \tag{5.9}$$
+</div>
+<p>编码器采用<strong>双向注意力</strong>，每个位置可以看到全部上下文。</p>
+
+<h3 id="sec515">5.1.5 解码器</h3>
+<p>解码器在编码器基础上增加了<strong>掩码自注意力</strong>（防止看到未来词元）和<strong>交叉注意力</strong>（关注编码器输出）。第 $l$ 层的计算：</p>
+<div class="formula-box">
+$$\mathbf{Y}'_l = \text{LayerNorm}(\text{MaskedMHA}(\mathbf{Y}_{l-1}) + \mathbf{Y}_{l-1})$$
+$$\mathbf{Y}''_l = \text{LayerNorm}(\text{CrossMHA}(\mathbf{Y}'_l, \mathbf{X}_L) + \mathbf{Y}'_l)$$
+$$\mathbf{Y}_l = \text{LayerNorm}(\text{FFN}(\mathbf{Y}''_l) + \mathbf{Y}''_l) \tag{5.10}$$
+</div>
+<p>最终输出层将隐状态映射到词表概率分布：</p>
+<div class="formula-box">
+$$\mathbf{O} = \text{softmax}(\mathbf{W}^L \mathbf{Y}_L), \quad \mathbf{O} \in \mathbb{R}^{H \times V} \tag{5.11}$$
+</div>
+
+<!-- ============================================================ -->
+<h2 id="sec52">5.2 详细配置</h2>
+
+<h3 id="sec521">5.2.1 归一化方法</h3>
+
+<h4>LayerNorm（层归一化）</h4>
+<p>针对每一层所有激活值计算均值 $\boldsymbol{\mu}$ 和方差 $\boldsymbol{\sigma}$，重新调整中心和缩放：</p>
+<div class="formula-box">
+$$\text{LayerNorm}(\mathbf{x}) = \frac{\mathbf{x} - \boldsymbol{\mu}}{\boldsymbol{\sigma}} \cdot \boldsymbol{\gamma} + \boldsymbol{\beta} \tag{5.12}$$
+$$\boldsymbol{\mu} = \frac{1}{H}\sum_{i=1}^{H} x_i, \quad \boldsymbol{\sigma} = \sqrt{\frac{1}{H}\sum_{i=1}^{H}(x_i - \boldsymbol{\mu})^2} \tag{5.13}$$
+</div>
+
+<h4>RMSNorm（均方根层归一化）</h4>
+<p>仅利用激活值的均方根 $\text{RMS}(\mathbf{x})$ 进行重新缩放，训练速度更快：</p>
+<div class="formula-box">
+$$\text{RMSNorm}(\mathbf{x}) = \frac{\mathbf{x}}{\text{RMS}(\mathbf{x})} \cdot \gamma \tag{5.14}$$
+$$\text{RMS}(\mathbf{x}) = \sqrt{\frac{1}{H}\sum_{i=1}^{H} x_i^2} \tag{5.15}$$
+</div>
+<p>代表模型：Gopher、Chinchilla、LLaMA-2、Mistral 等。</p>
+
+<h4>DeepNorm</h4>
+<p>在 LayerNorm 基础上，在残差连接中对之前激活值按比例 $\alpha$ 进行放缩，可将 Transformer 层数成功扩展至 1000 层：</p>
+<div class="formula-box">
+$$\text{DeepNorm}(\mathbf{x}) = \text{LayerNorm}(\alpha \cdot \mathbf{x} + \text{Sublayer}(\mathbf{x})) \tag{5.16}$$
+</div>
+<p>代表模型：GLM-130B。</p>
+
+<h3 id="sec522">5.2.2 归一化位置（Post/Pre/Sandwich）</h3>
+<div class="formula-box">
+<p><strong>Post-Norm</strong>（原始 Transformer）：归一化在残差计算之后</p>
+$$\text{Post-Norm}(\mathbf{x}) = \text{Norm}(\mathbf{x} + \text{Sublayer}(\mathbf{x})) \tag{5.17}$$
+<p style="margin-top:12px"><strong>Pre-Norm</strong>（主流大模型）：归一化在每个子层之前，训练更稳定</p>
+$$\text{Pre-Norm}(\mathbf{x}) = \mathbf{x} + \text{Sublayer}(\text{Norm}(\mathbf{x})) \tag{5.18}$$
+<p style="margin-top:12px"><strong>Sandwich-Norm</strong>：Pre-Norm 与 Post-Norm 的组合</p>
+$$\text{Sandwich-Norm}(\mathbf{x}) = \mathbf{x} + \text{Norm}(\text{Sublayer}(\text{Norm}(\mathbf{x}))) \tag{5.19}$$
+</div>
+
+<table>
+<thead><tr><th>归一化位置</th><th>训练稳定性</th><th>模型性能</th><th>代表模型</th></tr></thead>
+<tbody>
+<tr><td>Post-Norm</td><td>较差（梯度爆炸风险）</td><td>较好</td><td>原始 Transformer、GLM-130B（配合 DeepNorm）</td></tr>
+<tr><td><strong>Pre-Norm</strong></td><td><strong>好</strong></td><td>略逊于 Post-Norm</td><td>GPT-3、LLaMA、Mistral 等大多数主流模型</td></tr>
+<tr><td>Sandwich-Norm</td><td>有时仍会崩溃</td><td>理论更灵活</td><td>部分实验性模型</td></tr>
+</tbody>
+</table>
+
+<h3 id="sec523">5.2.3 激活函数</h3>
+<div class="formula-box">
+<p><strong>ReLU</strong>（原始 Transformer）：</p>
+$$\text{ReLU}(x) = \max(x, 0) \tag{5.20}$$
+<p style="margin-top:12px"><strong>Swish</strong>：</p>
+$$\text{Swish}(x) = x \cdot \text{sigmoid}(x) \tag{5.21}$$
+<p style="margin-top:12px"><strong>GELU</strong>（Gaussian Error Linear Unit）：</p>
+$$\text{GELU}(x) = 0.5x \cdot \left[1 + \text{erf}\!\left(\frac{x}{\sqrt{2}}\right)\right], \quad \text{erf}(x) = \frac{2}{\sqrt{\pi}}\int_0^x e^{-t^2}dt \tag{5.22}$$
+<p style="margin-top:12px"><strong>SwiGLU</strong>（PaLM、LLaMA 等主流模型）：</p>
+$$\text{SwiGLU}(\mathbf{x}) = \text{Swish}(\mathbf{W}^G \mathbf{x}) \odot (\mathbf{W}^U \mathbf{x}) \tag{5.23}$$
+<p style="margin-top:12px"><strong>GeGLU</strong>（LaMDA）：</p>
+$$\text{GeGLU}(\mathbf{x}) = \text{GELU}(\mathbf{W}^G \mathbf{x}) \odot (\mathbf{W}^U \mathbf{x}) \tag{5.24}$$
+</div>
+<p>GLU 变体（SwiGLU/GeGLU）引入两个线性层，其中一个输出经激活函数后与另一个逐元素相乘，通常带来更佳性能。</p>
+
+<div id="chart-activation" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-activation')).setOption({
+  backgroundColor:'#2a2a3e',
+  title:{text:'常见激活函数对比',textStyle:{color:'#cdd6f4'},left:'center'},
+  tooltip:{trigger:'axis'},
+  legend:{data:['ReLU','GELU','Swish'],textStyle:{color:'#cdd6f4'},top:30},
+  xAxis:{type:'value',min:-4,max:4,name:'x',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#45475a'}}},
+  yAxis:{type:'value',min:-1,max:5,name:'f(x)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#45475a'}}},
+  series:[
+    {name:'ReLU',type:'line',smooth:false,data:(()=>{let d=[];for(let x=-4;x<=4;x+=0.1)d.push([+x.toFixed(1),Math.max(x,0)]);return d;})(),lineStyle:{color:'#89b4fa'},showSymbol:false},
+    {name:'GELU',type:'line',smooth:true,data:(()=>{let d=[];for(let x=-4;x<=4;x+=0.1){let v=0.5*x*(1+Math.tanh(Math.sqrt(2/Math.PI)*(x+0.044715*x*x*x)));d.push([+x.toFixed(1),+v.toFixed(4)]);}return d;})(),lineStyle:{color:'#a6e3a1'},showSymbol:false},
+    {name:'Swish',type:'line',smooth:true,data:(()=>{let d=[];for(let x=-4;x<=4;x+=0.1){let v=x/(1+Math.exp(-x));d.push([+x.toFixed(1),+v.toFixed(4)]);}return d;})(),lineStyle:{color:'#fab387'},showSymbol:false}
+  ]
+});
+</script>
+
+<h3 id="sec524">5.2.4 位置编码</h3>
+
+<h4>绝对位置编码（正余弦）</h4>
+<div class="formula-box">
+$$p_{t,i} = \begin{cases} \sin\!\left(\dfrac{t}{10000^{(i-2)/H}}\right) & i \bmod 2 = 0 \\ \cos\!\left(\dfrac{t}{10000^{(i-1)/H}}\right) & i \bmod 2 = 1 \end{cases} \tag{5.26}$$
+</div>
+
+<h4>相对位置编码（Transformer-XL）</h4>
+<p>将绝对位置编码分解，用相对位置 $\mathbf{r}_{i-j}$ 替换绝对位置：</p>
+<div class="formula-box">
+$$A_{ij} = \mathbf{x}_i\mathbf{W}^Q\mathbf{W}^{K\top}\mathbf{x}_j^\top + \mathbf{x}_i\mathbf{W}^Q\mathbf{W}^{R\top}\mathbf{r}_{i-j}^\top + \mathbf{u}\mathbf{W}^{K\top}\mathbf{x}_j^\top + \mathbf{v}\mathbf{W}^{R\top}\mathbf{r}_{i-j}^\top \tag{5.28}$$
+</div>
+
+<h4>T5 相对位置编码</h4>
+<div class="formula-box">
+$$A_{ij} = \mathbf{x}_i\mathbf{W}^Q\mathbf{W}^{K\top}\mathbf{x}_j^\top + r_{i-j} \tag{5.29}$$
+</div>
+<p>其中 $r_{i-j}$ 是基于查询和键偏移的可学习标量。</p>
+
+<h4>旋转位置编码（RoPE）</h4>
+<p>RoPE 使用旋转矩阵将绝对位置信息转化为相对位置信息。位置索引为 $t$ 的旋转矩阵：</p>
+<div class="formula-box">
+$$\mathbf{R}_{\boldsymbol{\theta},t} = \begin{pmatrix} \cos t\theta_1 & -\sin t\theta_1 & 0 & 0 & \cdots \\ \sin t\theta_1 & \cos t\theta_1 & 0 & 0 & \cdots \\ 0 & 0 & \cos t\theta_2 & -\sin t\theta_2 & \cdots \\ 0 & 0 & \sin t\theta_2 & \cos t\theta_2 & \cdots \\ \vdots & \vdots & \vdots & \vdots & \ddots \end{pmatrix} \tag{5.30}$$
+</div>
+<p>关键性质：$\mathbf{R}_{\theta,i}\mathbf{R}_{\theta,j}^\top = \mathbf{R}_{\theta,i-j}$，注意力分数自然融入相对位置：</p>
+<div class="formula-box">
+$$\mathbf{q}_i = \mathbf{x}_i\mathbf{W}^Q\mathbf{R}_{\theta,i}, \quad \mathbf{k}_j = \mathbf{x}_j\mathbf{W}^K\mathbf{R}_{\theta,j}$$
+$$A_{ij} = (\mathbf{x}_i\mathbf{W}^Q\mathbf{R}_{\theta,i})(\mathbf{x}_j\mathbf{W}^K\mathbf{R}_{\theta,j})^\top = \mathbf{x}_i\mathbf{W}^Q\mathbf{R}_{\theta,i-j}\mathbf{W}^{K\top}\mathbf{x}_j^\top \tag{5.31}$$
+</div>
+<p>旋转基的定义（底数 $b=10000$）：</p>
+<div class="formula-box">
+$$\Theta = \left\{\theta_i = b^{-2(i-1)/H} \;\middle|\; i \in \{1,2,\ldots,H/2\}\right\} \tag{5.32}$$
+$$\lambda_i = 2\pi b^{2(i-1)/H} = 2\pi/\theta_i \tag{5.33}$$
+</div>
+
+<h4>ALiBi 位置编码</h4>
+<p>通过对注意力分数施加距离相关的惩罚项来增强外推能力：</p>
+<div class="formula-box">
+$$A_{ij} = \mathbf{x}_i\mathbf{W}^Q\mathbf{W}^{K\top}\mathbf{x}_j^\top - m(i-j) \tag{5.34}$$
+</div>
+<p>其中 $m$ 是每个注意力头独有的预设惩罚系数，无需额外可训练参数。代表模型：BLOOM、Baichuan-2、MPT。</p>
+
+<table>
+<thead><tr><th>位置编码</th><th>类型</th><th>外推能力</th><th>代表模型</th></tr></thead>
+<tbody>
+<tr><td>正余弦绝对编码</td><td>绝对</td><td>差</td><td>原始 Transformer</td></tr>
+<tr><td>可学习绝对编码</td><td>绝对</td><td>差</td><td>GPT-3、BERT、OPT</td></tr>
+<tr><td>Transformer-XL 相对编码</td><td>相对</td><td>中</td><td>Gopher、Chinchilla</td></tr>
+<tr><td>T5 相对编码</td><td>相对</td><td>中</td><td>T5、FLAN-T5</td></tr>
+<tr><td><strong>RoPE</strong></td><td>旋转相对</td><td>中（需修改才能外推）</td><td>PaLM、LLaMA-2、Mistral、Qwen</td></tr>
+<tr><td><strong>ALiBi</strong></td><td>相对惩罚</td><td><strong>好</strong></td><td>BLOOM、Baichuan-2、MPT</td></tr>
+</tbody>
+</table>
+
+<h3 id="sec525">5.2.5 注意力机制变体</h3>
+
+<pre class="mermaid">
+graph TD
+  A["注意力机制"] --> B["完整自注意力 MHA<br>O(T²) 复杂度"]
+  A --> C["稀疏注意力 SWA<br>O(wT) 复杂度"]
+  A --> D["多查询注意力 MQA<br>共享 K/V，加速解码"]
+  A --> E["分组查询注意力 GQA<br>分组共享 K/V"]
+  A --> F["硬件优化<br>FlashAttention / PagedAttention"]
+  B --> G["每个头独立 Q/K/V<br>代表：GPT-3、BERT"]
+  D --> H["所有头共享同一 K/V<br>代表：PaLM、StarCoder"]
+  E --> I["同组头共享 K/V<br>代表：LLaMA-2、Mistral"]
+</pre>
+
+<h4>MHA / MQA / GQA 对比</h4>
+<pre class="mermaid">
+graph LR
+  subgraph MHA["多头注意力 MHA"]
+    Q1["Q1"] --> A1["Attn"]
+    K1["K1"] --> A1
+    V1["V1"] --> A1
+    Q2["Q2"] --> A2["Attn"]
+    K2["K2"] --> A2
+    V2["V2"] --> A2
+    Q3["Q3"] --> A3["Attn"]
+    K3["K3"] --> A3
+    V3["V3"] --> A3
+    Q4["Q4"] --> A4["Attn"]
+    K4["K4"] --> A4
+    V4["V4"] --> A4
+  end
+  subgraph GQA["分组查询注意力 GQA"]
+    GQ1["Q1"] --> GA1["Attn"]
+    GQ2["Q2"] --> GA1
+    GKV1["K1/V1"] --> GA1
+    GQ3["Q3"] --> GA2["Attn"]
+    GQ4["Q4"] --> GA2
+    GKV2["K2/V2"] --> GA2
+  end
+  subgraph MQA["多查询注意力 MQA"]
+    MQ1["Q1"] --> MA["Attn"]
+    MQ2["Q2"] --> MA
+    MQ3["Q3"] --> MA
+    MQ4["Q4"] --> MA
+    MKV["K/V (共享)"] --> MA
+  end
+</pre>
+
+<table>
+<thead><tr><th>注意力类型</th><th>K/V 头数</th><th>内存占用</th><th>解码速度</th><th>性能</th><th>代表模型</th></tr></thead>
+<tbody>
+<tr><td>MHA</td><td>= Q 头数</td><td>最高</td><td>最慢</td><td>最好</td><td>GPT-3、BERT</td></tr>
+<tr><td>GQA</td><td>Q 头数的 1/G</td><td>中</td><td>快</td><td>接近 MHA</td><td>LLaMA-2 (70B)、Mistral</td></tr>
+<tr><td>MQA</td><td>1</td><td>最低</td><td>最快</td><td>略低于 MHA</td><td>PaLM、StarCoder</td></tr>
+</tbody>
+</table>
+
+<h4>滑动窗口注意力（SWA）</h4>
+<p>设置窗口大小 $w$，每个词元 $u_t$ 只对 $[u_{t-w+1}, \ldots, u_t]$ 计算注意力，将复杂度从 $O(T^2)$ 降低至 $O(wT)$。通过逐层信息传递实现线性增长的感受野。代表模型：Mistral（使用 SWA 处理长序列）。</p>
+
+<h4>FlashAttention</h4>
+<p>FlashAttention 通过<strong>矩阵分块计算</strong>和减少内存读写次数来提升注意力计算效率：</p>
+<table>
+<thead><tr><th>实现方式</th><th>HBM 读写复杂度</th><th>SRAM 使用</th><th>数值精度</th></tr></thead>
+<tbody>
+<tr><td>标准注意力</td><td>$O(T^2 d)$（需要存储完整注意力矩阵）</td><td>低</td><td>精确</td></tr>
+<tr><td><strong>FlashAttention</strong></td><td><strong>$O(T^2 d^2 / M)$（M 为 SRAM 大小，实际减少数倍）</strong></td><td><strong>高（分块利用）</strong></td><td><strong>精确（在线 softmax）</strong></td></tr>
+</tbody>
+</table>
+<p>FlashAttention 的核心思想：将 $\mathbf{Q}$、$\mathbf{K}$、$\mathbf{V}$ 矩阵分块加载到 SRAM，利用在线 softmax 算法避免将完整注意力矩阵写回 HBM，大幅减少 I/O 开销，在序列长度增大时优势更明显。</p>
+
+<h3 id="sec526">5.2.6 混合专家模型（MoE）</h3>
+<p>混合专家架构（Mixture-of-Experts, MoE）在不显著提升计算成本的同时实现参数扩展。每个 MoE 层包含 $K$ 个专家 $[E_1, E_2, \ldots, E_K]$，每个专家是一个 FFN。</p>
+<p><strong>门控函数</strong>（路由网络）：</p>
+<div class="formula-box">
+$$G(\mathbf{x}_t) = \text{softmax}(\text{topk}(\mathbf{x}_t \cdot \mathbf{W}^G)) \tag{5.35}$$
+</div>
+<p><strong>MoE 层输出</strong>（加权求和被选中的专家输出）：</p>
+<div class="formula-box">
+$$\mathbf{o}_t = \text{MoELayer}(\mathbf{x}_t) = \sum_{i=1}^{K} G(\mathbf{x}_t)_i \cdot E_i(\mathbf{x}_t) \tag{5.36}$$
+</div>
+
+<pre class="mermaid">
+flowchart LR
+  X["输入词元 x_t"] --> G["路由网络<br>W_G 线性层"]
+  G --> topk["Top-k 选择<br>选出 k 个专家"]
+  topk --> SM["Softmax<br>计算权重"]
+  SM --> E1["专家 E1<br>(FFN)"]
+  SM --> E2["专家 E2<br>(FFN)"]
+  SM --> Ek["专家 Ek<br>(FFN)"]
+  E1 --> WS["加权求和"]
+  E2 --> WS
+  Ek --> WS
+  WS --> O["输出 o_t"]
+</pre>
+
+<div class="tech-card yellow">
+<strong>Mixtral (8×7B) 案例</strong>：每层 8 个专家（每个 7B 参数），每个词元选择 2 个专家激活。每次推理激活参数仅 13B，但性能超越 LLaMA-2 (70B)，验证了 MoE 的高效性。
+</div>
+
+<h3 id="sec527">5.2.7 LLaMA 推荐配置</h3>
+<div class="tech-card green">
+<ul>
+<li><strong>归一化</strong>：Pre-RMSNorm（训练稳定 + 速度快）</li>
+<li><strong>激活函数</strong>：SwiGLU 或 GeGLU（性能更优）</li>
+<li><strong>位置编码</strong>：RoPE 或 ALiBi（长序列建模能力强）</li>
+<li><strong>注意力</strong>：GQA（70B 模型）/ MHA（小模型）</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="sec53">5.3 三大主流架构范式</h2>
+
+<table>
+<thead>
+<tr>
+<th>架构</th>
+<th>注意力机制</th>
+<th>参数共享</th>
+<th>适用任务</th>
+<th>代表模型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>编码器-解码器</strong><br>Encoder-Decoder</td>
+<td>编码器：双向注意力<br>解码器：掩码自注意力 + 交叉注意力</td>
+<td>编码器/解码器独立参数</td>
+<td>机器翻译、摘要生成等 seq2seq 任务</td>
+<td>T5、FLAN-T5</td>
+</tr>
+<tr>
+<td><strong>因果解码器</strong><br>Causal Decoder</td>
+<td>单向掩码注意力（只看前序词元）</td>
+<td>仅解码器，无交叉注意力</td>
+<td>文本生成、对话、代码生成</td>
+<td>GPT-3、LLaMA、Mistral、BLOOM、Falcon</td>
+</tr>
+<tr>
+<td><strong>前缀解码器</strong><br>Prefix Decoder</td>
+<td>前缀（输入）：双向注意力<br>输出：单向掩码注意力</td>
+<td>编码/解码共享参数</td>
+<td>理解 + 生成混合任务</td>
+<td>GLM-130B、U-PaLM</td>
+</tr>
+</tbody>
+</table>
+
+<pre class="mermaid">
+graph LR
+  subgraph ENC_DEC["编码器-解码器"]
+    ED_E["编码器<br>双向注意力"] --> ED_D["解码器<br>掩码注意力<br>+ 交叉注意力"]
+  end
+  subgraph CAUSAL["因果解码器（主流）"]
+    CD["解码器<br>单向掩码注意力<br>前序词元可见"]
+  end
+  subgraph PREFIX["前缀解码器"]
+    PD_P["前缀部分<br>双向注意力"] --> PD_G["生成部分<br>单向掩码注意力"]
+  end
+</pre>
+
+<blockquote>
+<strong>为何因果解码器成为主流？</strong> GPT 系列证明了纯解码器架构在大规模预训练下的强大能力，且自回归生成范式统一了理解和生成任务，无需区分输入/输出边界，训练目标简单（预测下一个词元），易于扩展。
+</blockquote>
+
+<!-- ============================================================ -->
+<h2 id="sec-models">主流模型架构参数对比</h2>
+<p>下表汇总了书中表 5.1 的主要大语言模型配置（L=层数，N=注意力头数，H=隐藏维度）：</p>
+
+<table>
+<thead>
+<tr><th>模型</th><th>类别</th><th>参数量</th><th>归一化</th><th>位置编码</th><th>激活函数</th><th>L</th><th>N</th><th>H</th></tr>
+</thead>
+<tbody>
+<tr><td>GPT-3</td><td>因果</td><td>175B</td><td>Pre Layer</td><td>Learned</td><td>GELU</td><td>96</td><td>96</td><td>12288</td></tr>
+<tr><td>PaLM</td><td>因果</td><td>540B</td><td>Pre Layer</td><td>RoPE</td><td>SwiGLU</td><td>118</td><td>48</td><td>18432</td></tr>
+<tr><td>BLOOM</td><td>因果</td><td>176B</td><td>Pre Layer</td><td>ALiBi</td><td>GELU</td><td>70</td><td>112</td><td>14336</td></tr>
+<tr><td>Gopher</td><td>因果</td><td>280B</td><td>Pre RMS</td><td>Relative</td><td>—</td><td>80</td><td>128</td><td>16384</td></tr>
+<tr><td>Chinchilla</td><td>因果</td><td>70B</td><td>Pre RMS</td><td>Relative</td><td>—</td><td>80</td><td>64</td><td>8192</td></tr>
+<tr><td><strong>LLaMA-2</strong></td><td>因果</td><td>70B</td><td><strong>Pre RMS</strong></td><td><strong>RoPE</strong></td><td><strong>SwiGLU</strong></td><td>80</td><td>64</td><td>8192</td></tr>
+<tr><td>Mistral</td><td>因果</td><td>7B</td><td>Pre RMS</td><td>RoPE</td><td>SwiGLU</td><td>32</td><td>32</td><td>4096</td></tr>
+<tr><td>Qwen-1.5</td><td>因果</td><td>72B</td><td>Pre RMS</td><td>RoPE</td><td>SwiGLU</td><td>80</td><td>64</td><td>8192</td></tr>
+<tr><td>Baichuan-2</td><td>因果</td><td>13B</td><td>Pre RMS</td><td>ALiBi</td><td>SwiGLU</td><td>40</td><td>40</td><td>5120</td></tr>
+<tr><td>InternLM-2</td><td>因果</td><td>20B</td><td>Pre RMS</td><td>RoPE</td><td>SwiGLU</td><td>48</td><td>48</td><td>6144</td></tr>
+<tr><td>Falcon</td><td>因果</td><td>180B</td><td>Pre Layer</td><td>RoPE</td><td>GELU</td><td>80</td><td>232</td><td>14848</td></tr>
+<tr><td>DeepSeek</td><td>因果</td><td>67B</td><td>Pre RMS</td><td>RoPE</td><td>SwiGLU</td><td>95</td><td>64</td><td>8192</td></tr>
+<tr><td>GLM-130B</td><td>前缀</td><td>130B</td><td>Post Deep</td><td>RoPE</td><td>GeGLU</td><td>70</td><td>96</td><td>12288</td></tr>
+<tr><td>T5</td><td>编-解</td><td>11B</td><td>Pre RMS</td><td>Relative</td><td>ReLU</td><td>24</td><td>128</td><td>1024</td></tr>
+</tbody>
+</table>
+
+<div id="chart-models" class="echarts-container" style="height:380px"></div>
+<script>
+echarts.init(document.getElementById('chart-models')).setOption({
+  backgroundColor:'#2a2a3e',
+  title:{text:'主流模型隐藏维度 H 对比',textStyle:{color:'#cdd6f4'},left:'center'},
+  tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+  xAxis:{type:'category',data:['GPT-3','PaLM','BLOOM','LLaMA-2','Mistral','Falcon','DeepSeek','Qwen-1.5','GLM-130B'],axisLabel:{color:'#cdd6f4',rotate:20},axisLine:{lineStyle:{color:'#45475a'}}},
+  yAxis:{type:'value',name:'H（隐藏维度）',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#45475a'}}},
+  series:[{type:'bar',data:[12288,18432,14336,8192,4096,14848,8192,8192,12288],itemStyle:{color:(p)=>['#89b4fa','#cba6f7','#a6e3a1','#f9e2af','#fab387','#89dceb','#f38ba8','#94e2d5','#b4befe'][p.dataIndex]}}]
+});
+</script>
+
+<!-- ============================================================ -->
+<h2 id="sec54">5.4 长上下文模型</h2>
+<p>实际应用中（长文档分析、多轮对话、故事创作），文本长度常超出预定义上下文窗口。例如 LLaMA-2 上下文窗口限制为 4,096 词元，而 GPT-4 Turbo 支持 128K，Claude-2.1 支持 200K。</p>
+<p>增强长文本建模能力的两大方向：<strong>扩展位置编码</strong>（§5.4.1）和<strong>调整上下文窗口</strong>（§5.4.2）。</p>
+
+<h3 id="sec541">5.4.1 扩展位置编码</h3>
+<p>对于原始上下文窗口 $T_\text{max}$ 的模型，目标是扩展到 $T'_\text{max}$（$T'_\text{max} > T_\text{max}$）。新的旋转角度可分解为：</p>
+<div class="formula-box">
+$$f(t, i) = g(t) \cdot h(i) \tag{5.37}$$
+</div>
+
+<h4>位置内插（Position Interpolation）</h4>
+<p>对位置索引进行比例缩放，保证旋转角度不超过原始上下文窗口最大值：</p>
+<div class="formula-box">
+$$g(t) = \frac{T_\text{max}}{T'_\text{max}} \cdot t \tag{5.39}$$
+</div>
+<p>仅需约 1000 步微调即可将 LLaMA (33B) 上下文从 2,048 扩展到 8,192 词元。</p>
+
+<h4>位置截断（ReRoPE / LeakyReRoPE）</h4>
+<p>设窗口大小 $w \leq T_\text{max}$，窗口内保留原始索引，窗口外截断或插值：</p>
+<div class="formula-box">
+$$g(t) = \begin{cases} t & t \leq w \\ w & t > w \text{（ReRoPE）} \\ w + \dfrac{(T_\text{max}-w)(t-w)}{T'_\text{max}-w} & t > w \text{（LeakyReRoPE）} \end{cases} \tag{5.40}$$
+</div>
+
+<h4>底数调整（NTK-RoPE / Dynamic-NTK）</h4>
+<p>通过增大底数 $b$ 来缩小旋转基，使模型无需额外训练即可处理更长上下文：</p>
+<div class="formula-box">
+$$h(i) = (\alpha \cdot b)^{-(i-1)/H} \tag{5.42}$$
+</div>
+<ul>
+<li><strong>NTK-RoPE</strong>：$\alpha = (T'_\text{max}/T_\text{max})^{H/(H-2)}$</li>
+<li><strong>Dynamic-NTK-RoPE</strong>：$\alpha = \max(1, T/T_\text{max})$（动态调整）</li>
+</ul>
+
+<h4>基截断</h4>
+<div class="formula-box">
+$$h(i) = \begin{cases} \theta_i & \theta_i \geq c \\ \beta & a \leq \theta_i < c \\ 0 & \theta_i \leq a \end{cases} \tag{5.43}$$
+</div>
+
+<table>
+<thead><tr><th>方法</th><th>是否需要微调</th><th>短文本影响</th><th>计算开销</th><th>特点</th></tr></thead>
+<tbody>
+<tr><td>直接微调</td><td>是（大量数据）</td><td>无</td><td>高</td><td>效果好但成本高</td></tr>
+<tr><td>位置内插</td><td>是（少量）</td><td>轻微下降</td><td>低</td><td>简单有效，1000步即可</td></tr>
+<tr><td>位置截断（ReRoPE）</td><td>否</td><td>无影响</td><td>中（二次注意力计算）</td><td>无需训练但增加开销</td></tr>
+<tr><td>底数调整（NTK）</td><td>否（或少量）</td><td>无影响</td><td>低</td><td>主流方法，实践效果好</td></tr>
+</tbody>
+</table>
+
+<h3 id="sec542">5.4.2 调整上下文窗口</h3>
+
+<pre class="mermaid">
+graph TD
+  A["调整上下文窗口方法"] --> B["并行上下文窗口<br>分段独立编码<br>共享位置编码"]
+  A --> C["Λ形上下文窗口<br>StreamingLLM<br>关注起始词元+近邻词元"]
+  A --> D["词元选择<br>选出最相关的 k 个词元"]
+  D --> D1["查询-词元相似度<br>kNN 搜索外部存储"]
+  D --> D2["查询-分块相似度<br>分块压缩后 kNN 选择"]
+</pre>
+
+<h3 id="sec543">5.4.3 长文本数据</h3>
+<div class="tech-card blue">
+<ul>
+<li><strong>数据量</strong>：约 1B 词元 + 数百步训练，即可将 7B/13B LLaMA 上下文扩展至 100K+</li>
+<li><strong>领域多样性</strong>：书籍、论文、代码等长文本领域，需与预训练数据分布保持相似</li>
+<li><strong>数据类型</strong>（LongWanjuan 分类）：整体型（完整长文）&gt; 聚合型（多篇相关文本）&gt; 杂乱型（需去除）</li>
+</ul>
+</div>
+
+<!-- ============================================================ -->
+<h2 id="sec55">5.5 新型模型架构</h2>
+<p>Transformer 自注意力的计算和存储复杂度随序列长度<strong>平方级</strong>增长。为此，研究人员基于<strong>参数化状态空间模型（SSM）</strong>设计了新型架构。</p>
+
+<h3 id="sec551">5.5.1 参数化状态空间模型（SSM）</h3>
+<p>SSM 可看作 RNN 和 CNN 的结合体，同时支持并行化训练和高效循环解码：</p>
+<div class="formula-box">
+$$\mathbf{S}_t = \mathbf{A} \otimes \mathbf{S}_{t-1} + \mathbf{B} \otimes \mathbf{x}_t$$
+$$\mathbf{y}_t = \mathbf{C} \otimes \mathbf{S}_t \tag{5.44}$$
+</div>
+<p>其中 $\mathbf{A} \in \mathbb{R}^{H \times N \times N}$，$\mathbf{B} \in \mathbb{R}^{H \times N \times 1}$，$\mathbf{C} \in \mathbb{R}^{H \times 1 \times N}$ 为可学习参数，$\otimes$ 表示批量矩阵乘法。</p>
+<p>通过展开递推关系，输出可等价表示为卷积：</p>
+<div class="formula-box">
+$$\mathbf{K} = (\mathbf{C} \otimes \mathbf{B},\; \mathbf{C} \otimes \mathbf{A} \otimes \mathbf{B},\; \ldots,\; \mathbf{C} \otimes \mathbf{A}^{t-1} \otimes \mathbf{B},\; \ldots)$$
+$$\mathbf{y} = \mathbf{x} * \mathbf{K} \tag{5.46}$$
+</div>
+<p>利用快速傅里叶变换（FFT）加速卷积，训练复杂度 $O(TH\log T + THN^2 + TH^2)$；循环解码复杂度 $O(N^2H + H^2)$。</p>
+
+<h3 id="sec552">5.5.2 状态空间模型变种</h3>
+
+<table>
+<thead>
+<tr><th>模型</th><th>可并行训练</th><th>解码复杂度</th><th>训练复杂度</th><th>核心创新</th></tr>
+</thead>
+<tbody>
+<tr><td>Transformer</td><td>✓</td><td>$O(TH + H^2)$</td><td>$O(T^2H + TH^2)$</td><td>全局注意力</td></tr>
+<tr><td>标准 SSM</td><td>✓</td><td>$O(N^2H + H^2)$</td><td>$O(TH\log T + THN^2 + TH^2)$</td><td>卷积 + 循环双模式</td></tr>
+<tr><td><strong>Mamba</strong></td><td>✗</td><td>$O(N^2H + H^2)$</td><td>$O(TN^2H + TH^2)$</td><td>输入相关的选择机制</td></tr>
+<tr><td><strong>RWKV</strong></td><td>✗</td><td>$O(H^2)$</td><td>$O(TH^2)$</td><td>词元偏移 + 时间/频道混合</td></tr>
+<tr><td><strong>RetNet</strong></td><td>✓</td><td>$O(H^2)$</td><td>$O(TH^2)$</td><td>多尺度保留机制</td></tr>
+<tr><td><strong>Hyena</strong></td><td>✓</td><td>$O(TMH + MH^2)$</td><td>$O(TMH\log T + TMH^2)$</td><td>长卷积替代注意力</td></tr>
+</tbody>
+</table>
+
+<h4>Mamba</h4>
+<p>在标准 SSM 基础上引入<strong>输入相关的选择机制</strong>：将参数矩阵 $(\mathbf{A}, \mathbf{B}, \mathbf{C})$ 表示为当前输入 $\mathbf{x}_t$ 的非线性函数，使模型能自适应地过滤历史状态和当前输入中的信息。代价是无法使用 FFT 加速。</p>
+
+<h4>RWKV</h4>
+<p>将 Transformer 多头注意力替换为<strong>时间混合（Time-mixing）</strong>模块，前馈网络替换为<strong>频道混合（Channel-mixing）</strong>模块。引入词元偏移（Token Shift）：用相邻词元 $\mathbf{x}_t$ 和 $\mathbf{x}_{t-1}$ 的线性插值替代 $\mathbf{x}_t$。训练阶段缺乏并行能力。</p>
+
+<h4>RetNet</h4>
+<p>使用<strong>多尺度保留（Multi-scale Retention, MSR）</strong>机制替代多头注意力：</p>
+<div class="formula-box">
+$$\mathbf{S}_t = \mathbf{A}\mathbf{S}_{t-1} + \mathbf{k}_t^\top \mathbf{v}_t, \quad \mathbf{o}_t = \mathbf{q}_t \mathbf{S}_t$$
+</div>
+<p>同时支持循环计算（高效解码）和并行矩阵乘法（高效训练），兼顾两种计算模式。</p>
+
+<h4>Hyena</h4>
+<p>用<strong>长卷积模块</strong>替换注意力，每层包含 $M$ 个滤波器组成卷积核 $\mathbf{K} = (\mathbf{h}(1), \ldots, \mathbf{h}(T))$，利用门控函数 $\mathbf{g}(t)$ 对中间表示加权。训练复杂度 $O(TMH\log T + TMH^2)$，但解码时需对所有前序词元卷积，复杂度 $O(TMH + MH^2)$。</p>
+
+<div id="chart-ssm" class="echarts-container" style="height:350px"></div>
+<script>
+echarts.init(document.getElementById('chart-ssm')).setOption({
+  backgroundColor:'#2a2a3e',
+  title:{text:'新型架构训练复杂度对比（示意，T=序列长度）',textStyle:{color:'#cdd6f4'},left:'center'},
+  tooltip:{trigger:'axis'},
+  legend:{data:['Transformer O(T²)','SSM/Mamba O(T)','RWKV/RetNet O(T)'],textStyle:{color:'#cdd6f4'},top:30},
+  xAxis:{type:'category',data:['T=512','T=1K','T=2K','T=4K','T=8K','T=16K','T=32K'],axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#45475a'}}},
+  yAxis:{type:'value',name:'相对计算量',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#45475a'}}},
+  series:[
+    {name:'Transformer O(T²)',type:'line',data:[1,4,16,64,256,1024,4096],lineStyle:{color:'#f38ba8'},showSymbol:true},
+    {name:'SSM/Mamba O(T)',type:'line',data:[1,2,4,8,16,32,64],lineStyle:{color:'#a6e3a1'},showSymbol:true},
+    {name:'RWKV/RetNet O(T)',type:'line',data:[0.8,1.6,3.2,6.4,12.8,25.6,51.2],lineStyle:{color:'#89b4fa'},showSymbol:true}
+  ]
+});
+</script>
+
+<!-- ============================================================ -->
+<h2 id="summary">章节总结</h2>
+
+<pre class="mermaid">
+mindmap
+  root["第5章 模型架构"]
+    Transformer基础
+      输入编码 词向量+位置编码
+      多头自注意力 MHA
+      前馈网络 FFN
+      编码器 双向注意力
+      解码器 掩码+交叉注意力
+    详细配置
+      归一化 LayerNorm/RMSNorm/DeepNorm
+      归一化位置 Post/Pre/Sandwich
+      激活函数 ReLU/GELU/SwiGLU
+      位置编码 绝对/相对/RoPE/ALiBi
+      注意力变体 MHA/MQA/GQA/SWA
+      MoE混合专家
+    主流架构
+      编码器-解码器 T5
+      因果解码器 GPT/LLaMA
+      前缀解码器 GLM-130B
+    长上下文
+      扩展位置编码 内插/截断/NTK
+      调整上下文窗口 并行/Λ形/词元选择
+      长文本数据准备
+    新型架构
+      SSM状态空间模型
+      Mamba 选择机制
+      RWKV 时间混合
+      RetNet 多尺度保留
+      Hyena 长卷积
+</pre>
+
+<table>
+<thead><tr><th>技术选择</th><th>主流方案</th><th>原因</th></tr></thead>
+<tbody>
+<tr><td>归一化方法</td><td>RMSNorm</td><td>速度快，性能与 LayerNorm 相当</td></tr>
+<tr><td>归一化位置</td><td>Pre-Norm</td><td>训练稳定，防止梯度爆炸</td></tr>
+<tr><td>激活函数</td><td>SwiGLU</td><td>性能最优，被 PaLM/LLaMA 等验证</td></tr>
+<tr><td>位置编码</td><td>RoPE</td><td>长期衰减特性好，支持扩展</td></tr>
+<tr><td>注意力机制</td><td>GQA（大模型）</td><td>平衡性能与解码效率</td></tr>
+<tr><td>架构类型</td><td>因果解码器</td><td>GPT 系列验证，统一生成范式</td></tr>
+</tbody>
+</table>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);
+});
+const obs=new IntersectionObserver(entries=>{entries.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);});},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

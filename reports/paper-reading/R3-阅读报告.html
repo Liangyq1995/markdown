@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R3 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.red{border-left:4px solid var(--red);}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.algo-box .kw{color:#cba6f7;font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:#94e2d5;}
+.algo-box .fn{color:#a6e3a1;}
+.algo-box .num{color:#f9e2af;}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>R3 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Stabilizing MoE RL by Aligning Training and Inference Routers · ICLR 2026 投稿（双盲审）</p>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>Stabilizing MoE Reinforcement Learning by Aligning Training and Inference Routers</td></tr>
+  <tr><th>投稿</th><td>ICLR 2026（双盲审阶段）</td></tr>
+  <tr><th>核心问题</th><td>MoE 模型 RL 训练崩溃的根本原因是推理引擎与训练引擎的路由行为不一致，R3 通过缓存重放推理路由来解决</td></tr>
+  <tr><th>方法名</th><td>R3：Rollout Routing Replay</td></tr>
+  <tr><th>关键结果</th><td>Qwen3-30B-A3B AIME24：GRPO 32.8%（崩溃）→ GRPO+R3 57.9%（稳定）</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 MoE RL 的独特崩溃问题</h3>
+
+<p>现代 RL 框架使用独立引擎分离推理和训练（如 SGLang 做 rollout，Megatron 做梯度计算）。对 Dense 模型这问题可控，但对 MoE 模型，路由机制的<strong>离散化选择</strong>会放大微小的浮点不确定性：</p>
+
+<pre class="mermaid">
+flowchart TD
+    FP["浮点非确定性\n操作顺序 / kernel 选择 / 动态批次位置变化"]
+    FP --> RD["路由分数出现微小差异\nMoE Top-K 离散选择放大差异"]
+    RD --> DIFF["推理引擎选专家组 {1,4}\n训练引擎选专家组 {2,3}\n同一token，完全不同计算路径"]
+    DIFF --> INSTAB["梯度分配给未被推理使用的专家\n等效严重 off-policy 偏差"]
+    INSTAB --> CRASH["RL 训练崩溃（如 Step 120）"]
+</pre>
+
+<h3>1.2 问题的量化严重程度</h3>
+
+<table>
+  <tr><th>指标</th><th>Dense 模型</th><th>MoE 模型（Qwen3-30B-A3B）</th><th>倍数</th></tr>
+  <tr><td>训练-推理 KL 散度</td><td>$6.4 \times 10^{-4}$</td><td>$1.535 \times 10^{-3}$</td><td>2.4×</td></tr>
+  <tr><td>至少1层路由不一致的 token 比例</td><td>低</td><td><strong>94%</strong></td><td>—</td></tr>
+  <tr><td>平均路由差异层数/token</td><td>—</td><td><strong>6 层</strong></td><td>—</td></tr>
+</table>
+
+<div class="tech-card red">
+<strong>94% 的 token 路由不一致</strong>意味着：训练引擎的梯度几乎全部基于错误的计算路径——等同于用完全不同的模型计算的 log-prob 做 importance sampling，off-policy 偏差极端。
+</div>
+
+<hr>
+
+<!-- ═══ 2. 背景 ═══ -->
+<h2 id="s2">2. 背景：浮点非确定性的来源</h2>
+
+<h3>2.1 浮点加法的非结合性</h3>
+
+<p>浮点加法满足 $a + (b + c) \neq (a + b) + c$（精度有限导致舍入误差）。在并行计算中，操作顺序由硬件调度决定，导致：</p>
+
+<div class="math-block">
+$$\text{torch.scatter\_add}(a, b, c) \neq \text{torch.scatter\_add}(a, b', c) \quad \text{（当 } b \neq b' \text{ 时)}$$
+</div>
+
+<h3>2.2 动态批次不变性违反</h3>
+
+<p>推理时动态批次中样本位置随序列长度变化而移动，导致相同输入的中间状态可以不同，进而影响路由分数的最终值。</p>
+
+<h3>2.3 现有缓解方案的局限</h3>
+
+<table>
+  <tr><th>方案</th><th>方法</th><th>局限</th></tr>
+  <tr><td>GSPO（Zhao et al., 2025）</td><td>重要性采样比修正 loss</td><td>只调整 loss，路由错误导致的梯度分配问题未修复</td></tr>
+  <tr><td>TIS（He &amp; Lab, 2025）</td><td>专用 kernel 减少非确定性</td><td>无法完全消除所有来源的非确定性</td></tr>
+  <tr><td>FP16 精度提升</td><td>更高精度减少舍入误差</td><td>仍存在 kernel 选择和批次位置差异</td></tr>
+  <tr><td style="color:var(--strong)"><strong>R3（本文）</strong></td><td style="color:var(--strong)"><strong>直接重放推理路由</strong></td><td style="color:var(--strong)"><strong>从根本上消除路由不一致，不依赖精度或 loss 修正</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 3. 方法 ═══ -->
+<h2 id="s3">3. R3 方法：完整推导</h2>
+
+<h3>3.1 核心思路</h3>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant IE as 推理引擎（SGLang）
+    participant CE as 路由缓存
+    participant TE as 训练引擎（Megatron）
+    IE->>IE: 正常前向传播，Top-K 选出路由掩码 I_infer
+    IE->>CE: 缓存每层每token的 I_infer
+    CE->>TE: 训练前向传播时注入 I_infer
+    TE->>TE: 用 I_infer 选择专家（而非重新计算的 I_train）
+    Note over TE: 仍用训练 logit 计算 softmax 权重<br/>保留梯度流，不阻断反传
+</pre>
+
+<h3>3.2 完整数学形式化</h3>
+
+<p><strong>传统 MoE 前向传播</strong>（训练引擎独立路由）：</p>
+
+<div class="math-block">
+$$I_\mathrm{train} = \mathrm{TopKMask}(s_\mathrm{train},\, K), \quad y_\mathrm{train} = \sum_{i=1}^{M} g_{\mathrm{train},i} \cdot E_i(x)$$
+$$g_{\mathrm{train},i} = \frac{I_{\mathrm{train},i} \cdot \exp(s_{\mathrm{train},i})}{\sum_j I_{\mathrm{train},j} \cdot \exp(s_{\mathrm{train},j})}$$
+</div>
+
+<p><strong>R3 替换路由，保留梯度</strong>：</p>
+
+<div class="math-block">
+$$g_{\mathrm{replay},i} = \frac{I_{\mathrm{infer},i} \cdot \exp(s_{\mathrm{train},i})}{\sum_j I_{\mathrm{infer},j} \cdot \exp(s_{\mathrm{train},j})}$$
+$$y_\mathrm{replay} = \sum_{i=1}^{M} g_{\mathrm{replay},i} \cdot E_i(x_\mathrm{train})$$
+</div>
+
+<div class="tech-card blue">
+<strong>两个关键设计点</strong>：
+<ol>
+<li><strong>路由对齐</strong>：使用 $I_\mathrm{infer}$（推理引擎的实际路由选择），确保训练和推理激活完全相同的专家集合</li>
+<li><strong>梯度保留</strong>：softmax 仍在训练 logit $s_\mathrm{train}$ 上计算，路由权重 $g_\mathrm{replay}$ 对参数有梯度，反传不被截断</li>
+</ol>
+</div>
+
+<h3>3.3 KV Cache 复用</h3>
+
+<p>在多轮 Agent RL 任务中，R3 可复用已缓存的路由掩码，无需重新 prefill 前轮对话：</p>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant T1 as 第1轮对话
+    participant CACHE as KV+路由缓存
+    participant T2 as 第2轮对话
+    T1->>CACHE: 缓存 KV 向量 + 路由掩码 I_infer
+    T2->>CACHE: 读取前轮缓存，继续生成
+    Note over T2: 无需重新计算前轮路由<br/>降低推理+缓存开销
+</pre>
+
+<hr>
+
+<!-- ═══ 4. 实验结果 ═══ -->
+<h2 id="s4">4. 实验结果</h2>
+
+<h3>4.1 主要结果：Qwen3-30B-A3B（SFT 基座，8 mini-step）</h3>
+
+<div id="chart-main" class="echarts-box" style="height:360px"></div>
+
+<table>
+  <tr><th>方法</th><th>AIME24</th><th>AIME25</th><th>AMC23</th><th>MATH500 Lv5</th><th>平均</th><th>是否崩溃</th></tr>
+  <tr><td>GRPO</td><td>32.8%</td><td>20.7%</td><td>74.8%</td><td>71.8%</td><td>48.8%</td><td style="color:var(--red)"><strong>崩溃 @Step 120</strong></td></tr>
+  <tr><td>GSPO</td><td>55.5%</td><td>38.2%</td><td>90.2%</td><td>86.4%</td><td>66.8%</td><td style="color:var(--strong)">稳定</td></tr>
+  <tr><td style="color:var(--strong)"><strong>GRPO+R3</strong></td><td style="color:var(--strong)"><strong>57.9%</strong></td><td style="color:var(--strong)"><strong>38.0%</strong></td><td style="color:var(--strong)"><strong>90.2%</strong></td><td style="color:var(--strong)"><strong>88.6%</strong></td><td style="color:var(--strong)"><strong>68.1%</strong></td><td style="color:var(--strong)">稳定</td></tr>
+  <tr><td style="color:var(--strong)"><strong>GSPO+R3</strong></td><td style="color:var(--strong)"><strong>58.4%</strong></td><td style="color:var(--strong)"><strong>39.2%</strong></td><td style="color:var(--strong)"><strong>92.5%</strong></td><td style="color:var(--strong)"><strong>87.9%</strong></td><td style="color:var(--strong)"><strong>69.0%</strong></td><td style="color:var(--strong)">稳定</td></tr>
+</table>
+
+<h3>4.2 最严苛设置：Base 模型 + 单 mini-step</h3>
+
+<table>
+  <tr><th>方法</th><th>AIME24</th><th>平均</th><th>崩溃</th></tr>
+  <tr><td>GRPO</td><td>50.6%</td><td>61.7%</td><td style="color:var(--red)">@Step 105</td></tr>
+  <tr><td>GRPO+TIS</td><td>56.8%</td><td>69.2%</td><td style="color:var(--strong)">稳定</td></tr>
+  <tr><td style="color:var(--strong)"><strong>GRPO+R3</strong></td><td style="color:var(--strong)"><strong>60.9%</strong></td><td style="color:var(--strong)"><strong>70.7%</strong></td><td style="color:var(--strong)">稳定</td></tr>
+  <tr><td>GRPO+TIS+R3</td><td>56.7%</td><td>69.2%</td><td style="color:var(--strong)">稳定</td></tr>
+</table>
+
+<p><strong>R3 单独使用即超越 GRPO+TIS 的组合</strong>，且 TIS+R3 的组合不优于单独 R3，说明两者解决的是同类问题，R3 更彻底。</p>
+
+<hr>
+
+<!-- ═══ 5. 训练动态改善 ═══ -->
+<h2 id="s5">5. R3 对训练动态的改善</h2>
+
+<table>
+  <tr><th>指标</th><th>GRPO（无R3）</th><th>GRPO+R3</th><th>改善</th></tr>
+  <tr><td>训练-推理 KL 散度</td><td>$1.535 \times 10^{-3}$</td><td>$\sim 7.5 \times 10^{-4}$</td><td>降低 51%，接近 Dense 水平</td></tr>
+  <tr><td>极端偏差 token 频率</td><td>基准</td><td>降低约一个数量级</td><td>~10× 减少</td></tr>
+  <tr><td>梯度范数稳定性</td><td>频繁尖峰，崩溃前急剧上升</td><td>低且平稳</td><td>优化更稳健</td></tr>
+  <tr><td>响应长度增长</td><td>不规律，崩溃前突降</td><td>平滑递增</td><td>推理能力持续提升</td></tr>
+  <tr><td>策略熵</td><td>振荡，崩溃后骤降</td><td>稳定，探索健康</td><td>不陷入局部最优</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 6. 局限性 ═══ -->
+<h2 id="s6">6. 局限性</h2>
+
+<ul>
+  <li><strong>存储开销</strong>：每个 token 每层需缓存 $K$ 个专家 ID，超长序列（&gt;100K tokens）下缓存量受限</li>
+  <li><strong>多 mini-step 衰减</strong>：多次梯度更新后，缓存的路由掩码与当前策略渐渐偏离，重放有效性递减</li>
+  <li><strong>单向对齐</strong>：R3 确保训练与推理路由一致，但无法解决两个引擎间其他来源的 off-policy 偏差（如批次归一化差异）</li>
+</ul>
+
+<hr>
+
+<!-- ═══ 7. 核心洞见 ═══ -->
+<h2 id="s7">7. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>根因修复优于症状缓解</strong><br>
+GSPO/TIS 通过 importance sampling 或更高精度来"减轻"路由不一致的影响。R3 直接消除不一致的来源——用缓存的推理路由替换训练路由。这是"从根本上修复"和"打补丁"的典型对比。实验数据也证明：R3 单独使用超越了打补丁方案的组合（GRPO+TIS+R3 ≈ GRPO+R3）。
+</div>
+
+<div class="tech-card blue">
+<strong>为什么 MoE 比 Dense 更脆弱</strong><br>
+Dense 模型对浮点非确定性不敏感，因为所有参数对每个 token 都参与计算。MoE 的 Top-K 路由引入了<strong>离散化阶跃</strong>——微小分数差异 $\epsilon$ 可以使路由从 {1,4} 变为 {2,3}，触发截然不同的计算路径。这个离散跃变在路由分数分布较为平坦时（即不确定性高的 token）尤为严重——而这恰恰是训练初期和能力边界处最常见的情形。
+</div>
+
+<div class="tech-card yellow">
+<strong>实践价值：MoE RL 的必备稳定化组件</strong><br>
+随着 MoE 成为大规模 LLM 的主流架构（DeepSeek-V3/R1、Qwen3-30B-A3B、Mixtral 等），并且 RLVR 成为推理能力提升的核心路径，R3 解决的问题将从"罕见崩溃"变成"系统性工程挑战"。这篇论文可能成为 MoE RL 训练的基础稳定化技术之一。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于 ICLR 2026 投稿版本（双盲审）</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  const c=echarts.init(document.getElementById('chart-main'));
+  c.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'R3 vs 基线方法 AIME24 成功率',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    xAxis:{type:'category',data:['GRPO','GSPO','GRPO+R3','GSPO+R3'],axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',name:'AIME24 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4',formatter:'{value}%'},min:0,max:70},
+    series:[{type:'bar',data:[
+      {value:32.8,itemStyle:{color:'#f38ba8'},label:{show:true,position:'top',color:'#f38ba8',formatter:'32.8%\n(崩溃)'}},
+      {value:55.5,itemStyle:{color:'#fab387'},label:{show:true,position:'top',color:'#cdd6f4',formatter:'55.5%'}},
+      {value:57.9,itemStyle:{color:'#89b4fa'},label:{show:true,position:'top',color:'#89b4fa',formatter:'57.9%'}},
+      {value:58.4,itemStyle:{color:'#a6e3a1'},label:{show:true,position:'top',color:'#a6e3a1',formatter:'58.4%'}}
+    ],barMaxWidth:50}],
+    grid:{left:60,right:20,bottom:40,top:60}
+  });
+});
+</script>
+</body>
+</html>

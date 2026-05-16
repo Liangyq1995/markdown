@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FIPO 深度阅读报告</title>
+<style>
+:root{
+  --bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;
+  --text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;
+  --quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;
+  --purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC','Hiragino Sans GB',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.45;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+#toc a.toc-h3.active{border-left-color:#1e1e2e;}
+main{margin-left:260px;padding:40px 64px 80px;max-width:none;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;letter-spacing:-.01em;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+h4{color:var(--yellow);font-size:.97em;margin:1.2em 0 .4em;}
+p{margin:.65em 0;}
+ul,ol{margin:.5em 0 .5em 1.4em;}
+li{margin:.3em 0;}
+a{color:var(--link);}
+strong{color:var(--strong);}
+em{color:#f5c2e7;}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+
+/* 公式块 */
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:.55em 0!important;}
+
+/* 卡片 */
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.red{border-left:4px solid var(--red);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+
+/* 对比格 */
+.diff-box{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:1.2em 0;}
+.diff-wrong{background:#3a1e28;border:1px solid var(--red);border-radius:6px;padding:16px;}
+.diff-right{background:#1e3a28;border:1px solid var(--strong);border-radius:6px;padding:16px;}
+.diff-label{font-size:.8em;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;}
+.diff-label.wrong{color:var(--red);}
+.diff-label.right{color:var(--strong);}
+
+/* 步骤 */
+.step-row{display:flex;align-items:flex-start;margin:.8em 0;}
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--heading);color:#1e1e2e;font-weight:700;font-size:.85em;margin-right:10px;flex-shrink:0;margin-top:2px;}
+.step-content{flex:1;}
+
+/* 标签 */
+.tag{display:inline-block;padding:2px 10px;border-radius:12px;font-size:.78em;font-weight:700;margin:0 4px 4px 0;vertical-align:middle;}
+.tag.key{background:#2a1e3a;color:var(--purple);border:1px solid var(--purple);}
+.tag.new{background:#1e2a3a;color:var(--heading);border:1px solid var(--heading);}
+.tag.warn{background:#3a2a1e;color:var(--yellow);border:1px solid var(--yellow);}
+.tag.good{background:#1e3a28;color:var(--strong);border:1px solid var(--strong);}
+.tag.bad{background:#3a1e28;color:var(--red);border:1px solid var(--red);}
+
+/* 徽章 */
+.badge{display:inline-block;background:var(--heading);color:#1e1e2e;font-size:.75em;font-weight:700;padding:1px 8px;border-radius:10px;margin-right:6px;vertical-align:middle;}
+
+/* ECharts */
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+
+/* 算法伪代码 */
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;font-size:1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.algo-box .algo-line{padding-left:calc(var(--indent, 0) * 1.5em);}
+.algo-box .kw{color:var(--purple);font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:var(--teal);}
+.algo-box .num{color:var(--yellow);}
+.algo-box .fn{color:var(--strong);}
+
+#toc::-webkit-scrollbar{width:4px;}
+#toc::-webkit-scrollbar-track{background:transparent;}
+#toc::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>
+window.MathJax={tex:{inlineMath:[['$','$'],['\\(','\\)']],displayMath:[['$$','$$']],packages:{'[+]':['ams']}},options:{skipHtmlTags:['script','noscript','style','textarea']},chtml:{displayAlign:'left',displayIndent:'0'}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>FIPO 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Future-KL Influenced Policy Optimization · Qwen Pilot Team, Alibaba Group · 2026-04-01</p>
+
+<table>
+  <tr><th style="width:140px">标题</th><td>FIPO: Eliciting Deep Reasoning with Future-KL Influenced Policy Optimization</td></tr>
+  <tr><th>机构</th><td>Qwen Pilot Team, Alibaba Group（Dartmouth / PKU / UofT / USC 合作）</td></tr>
+  <tr><th>核心贡献</th><td>将折扣Future-KL散度引入策略更新，实现无Critic的token级密集信用分配，突破GRPO的长度停滞瓶颈</td></tr>
+  <tr><th>主要结果</th><td>Qwen2.5-32B-Base：AIME 2024 Pass@1 从 50.0% → 58.0%（峰值），CoT长度从 4K → 10K+ tokens</td></tr>
+  <tr><th>开源</th><td>基于 verl 框架，完整训练代码已开源</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════ 1. 核心问题 ═══════════════════════════ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 GRPO的根本缺陷</h3>
+
+<p>以 DeepSeek-R1、DAPO 为代表的 GRPO 风格训练依赖<strong>结果奖励（ORM）</strong>：在轨迹末尾给出 0/1 奖励，然后将这个标量<strong>均匀广播</strong>到序列中的每一个 token。这导致：</p>
+
+<pre class="mermaid">
+flowchart TD
+    ORM["结果奖励（ORM）\n轨迹末尾的 0/1 信号"] --> BROAD["均匀广播到全部 token\n∀t: Â_t = (R−μ)/σ"]
+    BROAD --> EQ["关键逻辑节点 ≡ 无意义填充词\n信用分配完全粗粒度"]
+    EQ --> PLATEAU["推理链长度停滞\nDAP0: ~4000 tokens → 平台"]
+    PLATEAU --> CEIL["性能天花板\nAIME 2024 ≈ 50%"]
+</pre>
+
+<div class="tech-card yellow">
+<strong>前期实证依据（论文 §3.4）</strong>：Meng et al. (2025) 的细粒度分析表明，RL 训练中 <strong>超过98%的生成步骤</strong>输出分布保持不变——RL 仅在极少数关键 token 处介入，维持模型的推理方向。Huang et al. (2025) 进一步证明，通过追踪有符号对数概率差，可以精确定位这些稀疏变化，甚至仅靠放大关键 token 即可提升推理准确率，无需额外训练。
+</div>
+
+<h3>1.2 现有解决方案的不足</h3>
+
+<table>
+  <tr><th>方案</th><th>代表工作</th><th>缺陷</th></tr>
+  <tr><td>引入 Critic 网络</td><td>PPO、VC-PPO、VAPO、T-PPO</td><td>需要与策略同规模的 value model，通常需要 SFT over Long-CoT 预训练，引入外部知识先验，干扰评估</td></tr>
+  <tr><td>继续 GRPO 框架</td><td>DAPO、Open-Reasoner-Zero</td><td>均匀奖励无法区分关键 token，性能受限于粗粒度信用分配</td></tr>
+  <tr><td><strong>FIPO（本文）</strong></td><td>—</td><td><strong>无 Critic，在 GRPO 框架内实现 token 级密集信号</strong></td></tr>
+</table>
+
+<blockquote>
+FIPO 的目标：以 GRPO 的计算开销，实现接近 PPO 的信用分配密度。
+</blockquote>
+
+<hr>
+
+<!-- ═══════════════════════════ 2. 相关工作 ═══════════════════════════ -->
+<h2 id="s2">2. 背景与相关工作</h2>
+
+<h3>2.1 PPO——密集但昂贵</h3>
+
+<p>PPO（Schulman et al., 2017）通过裁剪代理目标约束策略更新幅度：</p>
+
+<div class="math-block">
+$$J_\mathrm{PPO}(\theta) = \mathbb{E}_{(q,o)\sim\mathcal{D},\,o\sim\pi_{\theta_\mathrm{old}}}\Bigl[\min\bigl(r_t(\theta)\hat{A}_t,\;\mathrm{clip}(r_t(\theta),1{-}\epsilon,1{+}\epsilon)\hat{A}_t\bigr)\Bigr]$$
+</div>
+
+<p>其中 $r_t(\theta) = \frac{\pi_\theta(o_t|q,o_{\lt t})}{\pi_{\theta_\mathrm{old}}(o_t|q,o_{\lt t})}$ 为 token 级概率比。关键是通过 <strong>GAE（Schulman et al., 2015）</strong>为每个 token 计算独立的 $\hat{A}_t$，提供密集时序信用分配。但代价是需要一个与策略同等规模的 value 网络。</p>
+
+<h3>2.2 GRPO——高效但稀疏</h3>
+
+<p>GRPO（Shao et al., 2024）通过组内采样消除 value 网络：对问题 $q$，采样 $G$ 条轨迹 $\{o_i\}_{i=1}^G$，组内归一化得到序列级优势：</p>
+
+<div class="math-block">
+$$\hat{A}_i = \frac{R_i - \mu}{\sigma}, \quad R_i = \mathbf{1}[\mathrm{Verify}(o_i, a)]$$
+</div>
+
+<p>目标函数（含 per-token KL 惩罚）：</p>
+
+<div class="math-block">
+$$J_\mathrm{GRPO}(\theta) = \mathbb{E}\left[\frac{1}{G}\sum_{i=1}^G\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\Bigl(\min\bigl(\rho_{i,t}\hat{A}_i,\,\mathrm{clip}(\rho_{i,t},1{-}\epsilon,1{+}\epsilon)\hat{A}_i\bigr) - \beta D_\mathrm{KL}(\pi_\theta\|\pi_\mathrm{ref})\Bigr)\right]$$
+</div>
+
+<p><strong>致命问题</strong>：$\hat{A}_i$ 是序列级标量，对所有 token 均匀设置 $\hat{A}_{i,t} = \hat{A}_i$。</p>
+
+<h3>2.3 DAPO——GRPO的工程改进</h3>
+
+<p>DAPO（Yu et al., 2025）在 GRPO 基础上：</p>
+<ul>
+  <li>去除显式 KL 惩罚，改用非对称裁剪 $(1-\epsilon_\mathrm{low}, 1+\epsilon_\mathrm{high})$ 防止熵崩塌</li>
+  <li>token 级策略梯度损失归一化</li>
+  <li>动态采样保证每组正负样本均存在</li>
+</ul>
+<p>FIPO 以 DAPO 为主要基线，采用完全相同的数据集（DAPO-17K）和训练框架。</p>
+
+<hr>
+
+<!-- ═══════════════════════════ 3. FIPO方法 ═══════════════════════════ -->
+<h2 id="s3">3. FIPO 核心方法</h2>
+
+<h3>3.1 概率偏移：$\Delta\log p$</h3>
+
+<p>定义 token $t$ 的瞬时策略漂移：</p>
+
+<div class="math-block">
+$$\Delta\log p_t = \log\pi_\theta(o_t\mid q,o_{\lt t}) - \log\pi_{\theta_\mathrm{old}}(o_t\mid q,o_{\lt t}) \tag{3}$$
+</div>
+
+<p>解读：</p>
+<ul>
+  <li>$\Delta\log p_t > 0$：当前策略<strong>提升</strong>了该 token 的概率 → 训练目标正在强化这一推理步骤</li>
+  <li>$\Delta\log p_t < 0$：当前策略<strong>抑制</strong>了该 token → 模型正在降低该 token 的权重</li>
+</ul>
+
+<div class="tech-card blue">
+<strong>与 KL 惩罚的区别</strong>：传统 KL 惩罚将 $\Delta\log p$ 视为需要最小化的正则化成本；FIPO 将其解释为行为调整的<strong>方向信号</strong>，从而将优化目标与生成动力学明确耦合。
+</div>
+
+<h3>3.2 Future-KL：前向因果影响度量</h3>
+
+<p>仅有瞬时漂移不足，因为推理是序列过程——token $t$ 的真实重要性取决于它启动的整条后续轨迹。定义 <strong>Future-KL</strong> 为从 $t$ 到序列末尾 $T$ 的累积有符号概率偏移：</p>
+
+<div class="math-block">
+$$\mathrm{FutureKL}_t = \sum_{k=t}^{T} \Delta\log p_k \tag{4}$$
+</div>
+
+<p>这等价于后续序列 $o_{t:T}$ 联合概率分布的对数似然比，是限定在未来视野内的样本 KL 散度估计。</p>
+
+<div class="diff-box">
+  <div class="diff-right">
+    <div class="diff-label right">FutureKL_t &gt; 0（强化后续轨迹）</div>
+    <p>更新后策略总体增强了由 $t$ 启动的后续轨迹</p>
+    <p>→ $t$ 是推理链的稳定锚点</p>
+  </div>
+  <div class="diff-wrong">
+    <div class="diff-label wrong">FutureKL_t &lt; 0（抑制后续轨迹）</div>
+    <p>更新后策略总体压制了后续 token 的生成</p>
+    <p>→ $t$ 启动的路径正被遗弃</p>
+  </div>
+</div>
+
+<h3>3.3 稳定性修正：极值过滤</h3>
+
+<p>直接使用公式 (4) 会导致训练崩溃（Step 70 附近出现低裁剪比例急剧上升 → 策略 KL 散度突然发散 → 梯度爆炸 → 响应长度崩塌）。原因：重要性比超过 Dual-Clip 阈值的 "有害" token 的梯度本已被裁剪，但其极端 $\Delta\log p$ 仍累积进 FutureKL，引入严重方差。</p>
+
+<p>解决方案——引入二值过滤掩码 $M_k$：</p>
+
+<div class="math-block">
+$$\mathrm{FutureKL}_t = \sum_{k=t}^{T} M_k \cdot \Delta\log p_k, \quad M_k = \mathbf{1}\!\left[\frac{\pi_\theta(o_k|o_{\lt t})}{\pi_\mathrm{old}(o_k|o_{\lt t})} \leq c\right] \tag{5}$$
+</div>
+
+<p>其中 $c$（通常 $\geq 10$）为 Dual-Clip 阈值。触发硬约束的 token 被排除在 FutureKL 的递归求和之外。</p>
+
+<h3>3.4 软衰减窗口（Soft Decay Window）</h3>
+
+<p>token $o_t$ 与远期 token $o_k$ 的因果依赖随距离增大而衰减，引入折扣因子 $\gamma \in (0,1]$：</p>
+
+<div class="math-block">
+$$\mathrm{FutureKL}_t = \sum_{k=t}^{T} M_k \cdot \gamma^{k-t} \cdot \Delta\log p_k \tag{6}$$
+</div>
+
+<p>参数化为 $\gamma = 2^{-1/\tau}$，其中 $\tau$ 为"半衰期"超参数——FutureKL 信号在距离 $\tau$ 处衰减一半。论文对 32B 模型设置 $\tau = 32$。</p>
+
+<div class="tech-card purple">
+<strong>与硬截断的区别</strong>：指数衰减创建连续滑动窗口，在距离 $\tau$ 处信号减半，比硬截断更自然、无边界伪影。有效视野聚焦于近端推理链，平滑过滤远期噪声。
+</div>
+
+<h3>3.5 影响权重与目标函数</h3>
+
+<p>将 FutureKL 映射为乘性调制系数 $f_t$，再用 $f_t$ 修正标准优势估计 $\hat{A}_t$：</p>
+
+<div class="math-block">
+$$f_t = \mathrm{clip}\!\left(\exp(\mathrm{FutureKL}_t),\;1-\epsilon_\mathrm{flow},\;1+\epsilon_\mathrm{fhigh}\right), \quad \tilde{A}_t = \hat{A}_t \cdot f_t \tag{7}$$
+</div>
+
+<p>两个关键操作：</p>
+<ol>
+  <li><strong>指数映射</strong>：将 log 域信号转为乘法域重要性权重，未裁剪项数学上等价于衰减加权的似然比乘积</li>
+  <li><strong>影响权重裁剪</strong>：将 $f_t$ 约束在 $[1-\epsilon_\mathrm{flow},\,1+\epsilon_\mathrm{fhigh}]$，防止指数项引入过度方差</li>
+</ol>
+<p>此外，对于<strong>负优势</strong>（$\hat{A}_t < 0$）且重要性比过大的 token，重置 $f_t = 1$ 以防止过度惩罚。</p>
+
+<p><strong>FIPO 目标函数</strong>（基于 DAPO token 级公式）：</p>
+
+<div class="math-block">
+$$J_\mathrm{FIPO}(\theta) = \mathbb{E}_{(q,a)\sim\mathcal{D},\,\{o_i\}\sim\pi_{\theta_\mathrm{old}}}\left[\frac{1}{\sum_i|o_i|}\sum_{i=1}^G\sum_{t=1}^{|o_i|}\min\!\left(r_{i,t}f_{i,t}\hat{A}_{i,t},\;\mathrm{clip}(r_{i,t},1{-}\epsilon,1{+}\epsilon)f_{i,t}\hat{A}_{i,t}\right)\right] \tag{8}$$
+</div>
+
+<h3>3.6 四种调制效果</h3>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph POS["FutureKL > 0 → f_t > 1（放大）"]
+        P1["正优势 token\n梯度放大\n→ 鼓励作为推理锚点"]
+        P2["负优势 token\n惩罚加重\n→ 严格纠正启动错误路径的 token"]
+    end
+    subgraph NEG["FutureKL < 0 → f_t < 1（衰减）"]
+        N1["正优势 token\n梯度衰减\n→ 弱化陷入失败序列的偶然正确 token"]
+        N2["负优势 token\n惩罚减轻\n→ 宽容失败序列中的良好 token"]
+    end
+</pre>
+
+<hr>
+
+<!-- ═══════════════════════════ 4. 算法伪代码 ═══════════════════════════ -->
+<h2 id="s4">4. 算法与实现</h2>
+
+<h3>4.1 FIPO 训练算法</h3>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: FIPO Training Loop</div>
+  <p class="algo-line" style="--indent:0"><span class="kw">Input:</span> <span class="var">base model</span> $\pi_{\theta_0}$, dataset $\mathcal{D}$, group size $G$, decay rate $\tau$, clip ratios $\epsilon, \epsilon_\mathrm{flow}, \epsilon_\mathrm{fhigh}$, safety threshold $c$</p>
+  <p class="algo-line" style="--indent:0"><span class="kw">for each</span> training iteration <span class="kw">do</span></p>
+  <p class="algo-line" style="--indent:1"><span class="cm">// 1. 采样轨迹</span></p>
+  <p class="algo-line" style="--indent:1"><span class="kw">for each</span> prompt $q \in$ mini-batch <span class="kw">do</span></p>
+  <p class="algo-line" style="--indent:2">Sample $G$ outputs $\{o_i\}_{i=1}^G \sim \pi_{\theta_\mathrm{old}}(\cdot|q)$</p>
+  <p class="algo-line" style="--indent:2">Compute rewards $R_i = \mathbf{1}[\mathrm{Verify}(o_i, a)]$</p>
+  <p class="algo-line" style="--indent:2">Compute group-relative advantage: $\hat{A}_i = (R_i - \mu)/\sigma$</p>
+  <p class="algo-line" style="--indent:1"><span class="kw">end for</span></p>
+  <p class="algo-line" style="--indent:1"><span class="cm">// 2. 计算 Future-KL 权重（分块实现，见 Listing 1）</span></p>
+  <p class="algo-line" style="--indent:1"><span class="kw">for each</span> trajectory $o_i$, token $t$ <span class="kw">do</span></p>
+  <p class="algo-line" style="--indent:2">$\Delta\log p_t \leftarrow \log\pi_\theta(o_t|o_{\lt t}) - \log\pi_{\theta_\mathrm{old}}(o_t|o_{\lt t})$</p>
+  <p class="algo-line" style="--indent:2">$M_t \leftarrow \mathbf{1}[\mathrm{IS\_ratio}_t \leq c]$ &nbsp;<span class="cm">// 过滤极端 IS 比</span></p>
+  <p class="algo-line" style="--indent:2">$\mathrm{FutureKL}_t \leftarrow \sum_{k=t}^{T} M_k \cdot 2^{-(k-t)/\tau} \cdot \Delta\log p_k$&nbsp;<span class="cm">// 分块计算</span></p>
+  <p class="algo-line" style="--indent:2">$f_t \leftarrow \mathrm{clip}(\exp(\mathrm{FutureKL}_t),\;1-\epsilon_\mathrm{flow},\;1+\epsilon_\mathrm{fhigh})$</p>
+  <p class="algo-line" style="--indent:2"><span class="kw">if</span> $\hat{A}_t < 0$ <span class="kw">and</span> $f_t$ is too large: $f_t \leftarrow 1$ &nbsp;<span class="cm">// 防止过度惩罚</span></p>
+  <p class="algo-line" style="--indent:2">$\tilde{A}_t \leftarrow \hat{A}_t \cdot f_t$</p>
+  <p class="algo-line" style="--indent:1"><span class="kw">end for</span></p>
+  <p class="algo-line" style="--indent:1"><span class="cm">// 3. 策略更新</span></p>
+  <p class="algo-line" style="--indent:1">Optimize $J_\mathrm{FIPO}(\theta)$ using mini-batch gradient ascent</p>
+  <p class="algo-line" style="--indent:1">$\theta_\mathrm{old} \leftarrow \theta$</p>
+  <p class="algo-line" style="--indent:0"><span class="kw">end for</span></p>
+</div>
+
+<h3>4.2 内存高效的分块 FutureKL 计算</h3>
+
+<p>朴素实现需要 $(L, L)$ 的时序衰减矩阵，内存复杂度 $O(L^2)$，在长序列推理训练中会触发 OOM。FIPO 采用<strong>分块矩阵乘法</strong>：</p>
+
+<pre><code>def compute_future_kl_chunked(D, M, K, tau):
+    gamma = 2 ** (-1 / tau)
+    D = D * M                      # 掩码过滤
+    F = torch.zeros_like(D)
+    L = D.shape[1]
+    i = torch.arange(L).unsqueeze(1)   # (L, 1) 查询位置
+    for j_start in range(0, L, K):
+        j_end = min(j_start + K, L)
+        j = torch.arange(j_start, j_end).unsqueeze(0)  # (1, K)
+        Delta = j - i                  # (L, K) 距离矩阵
+        W = (gamma ** torch.clamp(Delta, min=0)) * (Delta >= 0).float()
+        V = D[:, j_start:j_end]        # (B, K) 当前块 KL 值
+        F += torch.matmul(V, W.T)      # 并行矩阵乘
+    return F</code></pre>
+
+<p>峰值内存复杂度：$O(B \cdot L + L \cdot K)$，时间复杂度仍为 $O(B \cdot L^2)$ 但高度向量化，GPU 上实际开销边际。</p>
+
+<hr>
+
+<!-- ═══════════════════════════ 5. 实验 ═══════════════════════════ -->
+<h2 id="s5">5. 实验设置与主要结果</h2>
+
+<h3>5.1 实验设置</h3>
+
+<table>
+  <tr><th>配置项</th><th>DAPO（基线）</th><th>FIPO（本文）</th></tr>
+  <tr><td>基座模型</td><td colspan="2">Qwen2.5-32B-Base（未接触 Long-CoT 合成数据）</td></tr>
+  <tr><td>训练数据</td><td colspan="2">DAPO-17K 公开数据集（严格对照）</td></tr>
+  <tr><td>全局 Batch Size</td><td colspan="2">512</td></tr>
+  <tr><td>每 prompt 采样数 G</td><td colspan="2">16</td></tr>
+  <tr><td>学习率</td><td colspan="2">1e-6</td></tr>
+  <tr><td>Mini-Batch Size</td><td>32</td><td><strong>64</strong>（更稳定，IS 方差更小）</td></tr>
+  <tr><td>损失函数</td><td>DAPO</td><td><strong>Future-KL 加权</strong></td></tr>
+  <tr><td>Future-KL 衰减率 $\tau$</td><td>—</td><td>32</td></tr>
+  <tr><td>影响权重裁剪范围</td><td>—</td><td>[1.0, 1.2]</td></tr>
+  <tr><td>安全阈值 $c$</td><td>—</td><td>10.0</td></tr>
+  <tr><td>最大响应长度</td><td colspan="2">20,480 tokens（超长惩罚 buffer: 4096）</td></tr>
+  <tr><td>异步裁剪范围</td><td colspan="2">[0.2, 0.28]</td></tr>
+</table>
+
+<h3>5.2 主要结果（AIME 2024 / 2025）</h3>
+
+<table>
+  <tr><th>方法</th><th>AIME 2024 Avg@32</th><th>AIME 2024 Cons@32</th><th>AIME 2024 Pass@32</th><th>AIME 2025 Avg@32</th><th>AIME 2025 Cons@32</th><th>AIME 2025 Pass@32</th></tr>
+  <tr><td>DAPO（基线）</td><td>50.0%</td><td>60.0%</td><td>80.0%</td><td>38.0%</td><td>47.0%</td><td>63.0%</td></tr>
+  <tr><td style="color:var(--strong)"><strong>FIPO（本文）</strong></td><td style="color:var(--strong)"><strong>56.0%</strong></td><td style="color:var(--strong)"><strong>73.0%</strong></td><td style="color:var(--strong)"><strong>83.0%</strong></td><td style="color:var(--strong)"><strong>43.0%</strong></td><td style="color:var(--strong)"><strong>50.0%</strong></td><td style="color:var(--strong)"><strong>67.0%</strong></td></tr>
+  <tr><td>DeepSeek-R1-Zero-Qwen-32B</td><td>~47.0%</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+  <tr><td>o1-mini</td><td>~56.0%</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+</table>
+
+<div id="chart-main" class="echarts-box" style="height:320px"></div>
+
+<h3>5.3 Qwen2.5-7B-Math 验证</h3>
+
+<table>
+  <tr><th>方法</th><th>AIME 2024 Avg@32</th><th>AIME 2025 Avg@32</th></tr>
+  <tr><td>GRPO（Guo et al., 2025）</td><td>22.0%</td><td>18.0%</td></tr>
+  <tr><td>DAPO</td><td>36.0%</td><td>18.0%</td></tr>
+  <tr><td style="color:var(--strong)"><strong>FIPO（本文）</strong></td><td style="color:var(--strong)"><strong>40.0%</strong></td><td style="color:var(--strong)"><strong>19.0%</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════ 6. 训练动力学分析 ═══════════════════════════ -->
+<h2 id="s6">6. 训练动力学分析</h2>
+
+<h3>6.1 响应长度演化：4阶段进化</h3>
+
+<p>FIPO 训练的响应长度演化分为四个阶段（对应推理行为的定性转变）：</p>
+
+<pre class="mermaid">
+timeline
+    title FIPO 推理行为四阶段演化
+    Stage 1 初始步 : 浅层规划
+             : 生成模板式大纲，无实际推导
+             : 幻觉式结论
+    Stage 2 DAPO收敛 / FIPO早期 : 线性执行
+             : 标准 CoT 单遍推理
+             : 找到结果即停止，约 2000 tokens
+    Stage 3 FIPO中期 : 涌现自我反思
+             : 模型开始主动验证
+             : 探索多种方法交叉验证
+             : 约 5000-8000 tokens
+    Stage 4 FIPO晚期 : 系统性深度推理
+             : 多遍符号重推导
+             : 细粒度算术验证
+             : 10000+ tokens
+</pre>
+
+<div id="chart-length" class="echarts-box" style="height:320px"></div>
+
+<h3>6.2 奖励与优势的悖论</h3>
+
+<div class="tech-card orange">
+<strong>关键发现</strong>：DAPO 始终维持比 FIPO 更高的平均训练奖励——但这是一个<strong>数值假象</strong>。因为奖励函数包含超长惩罚，FIPO 构建复杂推理链会触发惩罚，压低平均奖励。DAPO 生成更短的响应来最大化即时奖励，实际上陷入了<strong>受限搜索空间的局部最优</strong>。
+<p style="margin-top:8px">真正能区分二者的指标是<strong>响应长度加权平均优势</strong>（$\bar{A} = \frac{\sum_i\sum_t A_{i,t}}{\sum_i L_i}$）：FIPO 持续上升（正样本变得越来越充实），DAPO 持续下降（增加长度不再带来正优势，推理增长陷入停滞）。</p>
+</div>
+
+<h3>6.3 策略漂移与稳定性</h3>
+
+<table>
+  <tr><th>指标</th><th>FIPO</th><th>DAPO</th></tr>
+  <tr><td>Policy KL 散度</td><td>稳定、持续上升（有序策略进化）</td><td>波动，频繁剧烈抖动</td></tr>
+  <tr><td>梯度范数</td><td>低且稳定（细粒度更新）</td><td>高度不稳定，频繁尖峰</td></tr>
+  <tr><td>策略熵</td><td>平滑持续上升（持续探索）</td><td>嘈杂振荡</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══════════════════════════ 7. 消融实验 ═══════════════════════════ -->
+<h2 id="s7">7. 消融实验</h2>
+
+<h3>7.1 衰减率半衰期 $\tau$ 的影响</h3>
+
+<table>
+  <tr><th>$\tau$</th><th>AIME 2024 Avg@32</th><th>AIME 2025 Avg@32</th><th>行为描述</th></tr>
+  <tr><td>8</td><td>40.0%</td><td>17.0%</td><td>影响权重接近1，Future-KL信息利用不足，策略过早低熵坍缩</td></tr>
+  <tr><td><strong>32（默认）</strong></td><td><strong>40.0%</strong></td><td><strong>19.0%</strong></td><td><strong>最优平衡：既避免长程信号过度波动，又不陷入短视指导</strong></td></tr>
+  <tr><td>128</td><td>39.0%</td><td>21.0%</td><td>权重波动增大，引入更多不稳定性</td></tr>
+  <tr><td>256</td><td>42.0%</td><td>16.0%</td><td>均值偏差最大，长程噪声使7B模型难以处理</td></tr>
+</table>
+
+<h3>7.2 影响权重裁剪范围的影响（7B 模型）</h3>
+
+<table>
+  <tr><th>裁剪范围 $[\epsilon_\mathrm{flow}, \epsilon_\mathrm{fhigh}]$</th><th>AIME 2024</th><th>AIME 2025</th><th>特点</th></tr>
+  <tr><td>[1.0, 1.2]（单侧放大）</td><td>36.0%</td><td>19.0%</td><td>持续熵增长，7B模型过度探索反而有害</td></tr>
+  <tr><td><strong>[0.8, 1.2]（双侧平衡）</strong></td><td><strong>40.0%</strong></td><td><strong>19.0%</strong></td><td><strong>正样本中后续负面行为的 token 受到额外减弱，更精细控制</strong></td></tr>
+</table>
+
+<div class="tech-card purple">
+<strong>规模差异（Scaling Behavior）</strong>：32B 模型受益于宽泛探索（熵增长），适用 [1.0, 1.2]；7B 模型容量有限，倾向于高置信推理路径收敛，高熵状态带来有害噪声，适用 [0.8, 1.2]。这是 7B 和 32B 间<strong>基本缩放行为差异</strong>的体现。
+</div>
+
+<hr>
+
+<!-- ═══════════════════════════ 8. 对比定位 ═══════════════════════════ -->
+<h2 id="s8">8. 与相关方法的对比定位</h2>
+
+<table>
+  <tr><th>方法</th><th>优势估计来源</th><th>计算复杂度</th><th>信用分配密度</th><th>是否需要 SFT Long-CoT 预热</th></tr>
+  <tr><td>PPO + GAE</td><td>Critic（策略同规模）</td><td>高（2× 内存）</td><td>密集（每 token 独立）</td><td>通常需要</td></tr>
+  <tr><td>GRPO</td><td>组内奖励均值归一化</td><td>低</td><td>粗粒度（全序列共享）</td><td>不需要</td></tr>
+  <tr><td>DAPO</td><td>同 GRPO + 动态采样</td><td>低</td><td>粗粒度</td><td>不需要</td></tr>
+  <tr><td style="color:var(--strong)"><strong>FIPO（本文）</strong></td><td style="color:var(--strong)"><strong>Future-KL 调制（无 Critic）</strong></td><td style="color:var(--strong)"><strong>低（仅额外 Δlog p 差）</strong></td><td style="color:var(--strong)"><strong>密集（token 级加权）</strong></td><td style="color:var(--strong)"><strong>不需要</strong></td></tr>
+</table>
+
+<blockquote>FIPO 实现了"PPO 密度，GRPO 开销"的核心目标，同时不依赖任何预训练的 value model 或 Long-CoT 先验。</blockquote>
+
+<hr>
+
+<!-- ═══════════════════════════ 9. 局限性 ═══════════════════════════ -->
+<h2 id="s9">9. 局限性与未来工作</h2>
+
+<ul>
+  <li><strong>计算成本</strong>：CoT 长度扩展至 10K+ tokens 后，训练和推理开销显著增加。论文认为"先涌现长推理，再压缩效率"是正确路线，效率优化留待后续工作。</li>
+  <li><strong>任务泛化</strong>：仅在数学推理域验证（AIME），未扩展到代码/科学/非结构化推理域。</li>
+  <li><strong>数据规模</strong>：严格对照 DAPO-17K，未探索更大或更高质量数据集下的缩放性质。</li>
+  <li><strong>模型范围</strong>：仅测试 Qwen2.5-32B-Base 和 7B-Math，不涉及已做 Long-CoT SFT 的模型（其训练动力学根本不同）。</li>
+  <li><strong>与蒸馏的差距</strong>：基于 RL 的自我进化天然不如大教师模型直接蒸馏高效，存在持续的性能差距。</li>
+</ul>
+
+<hr>
+
+<!-- ═══════════════════════════ 10. 个人评注 ═══════════════════════════ -->
+<h2 id="s10">10. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>关键创新的本质</strong>：FIPO 的核心思路是：把"这个 token 之后的整条推理链发生了多少变化"作为衡量"这个 token 有多重要"的信号。这把 PPO 中 Critic 做的事（估计未来回报）用一种轻量的自参照方式（比较新旧策略在未来序列上的对数概率差）替代了，既不需要额外网络，又避免了 GRPO 的均匀广播问题。
+</div>
+
+<div class="tech-card yellow">
+<strong>为什么 Mini-batch=64 是工程关键</strong>：论文附录 E 详述了 mini-batch=32 的不稳定性——更小的 mini-batch 导致更高的 IS 权重方差，使更多 token 被裁剪，梯度传播被截断，Future-KL 的长程信号无法有效反向传播。Mini-batch=64 接近 on-policy，自然降低 IS 方差，让 Future-KL 的前向信号能够"顺畅地"通过梯度流传递，才是 FIPO 成功的工程前提。
+</div>
+
+<div class="tech-card blue">
+<strong>对"推理=探索"假设的验证</strong>：FIPO 的实验表明，响应长度增长与准确率提升呈强正相关（$R^2 \geq 0.78$，全4个训练阶段）。这支持了"更长的推理链 = 更多思考空间 = 更高正确率"的假设——前提是这些额外的 token 是真实的验证和推理，而不是冗余重复（FIPO 通过 FutureKL 的正向强化机制自然筛选了这一点）。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于原文 arXiv:2503.XXXXX / Qwen Pilot Team 2026-04-01</p>
+
+</main>
+
+<script>
+// TOC生成
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.getElementById('toc');
+  const headings = document.querySelectorAll('main h2, main h3');
+  headings.forEach(h => {
+    if (!h.id) return;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent.replace(/\s+/g,' ').trim();
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  // 滚动高亮
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const a = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (a) a.classList.toggle('active', e.isIntersecting);
+    });
+  }, {threshold: 0.3});
+  headings.forEach(h => h.id && obs.observe(h));
+});
+
+// Mermaid
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+
+// ECharts - 主结果对比
+window.addEventListener('load', () => {
+  // 主结果柱状图
+  const c1 = echarts.init(document.getElementById('chart-main'));
+  c1.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'AIME 2024 性能对比 (Pass@1 Avg@32)',textStyle:{color:'#89b4fa',fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{data:['Avg@32'],textStyle:{color:'#cdd6f4'}},
+    xAxis:{type:'category',data:['GRPO (7B)','DAPO (7B)','FIPO 7B','DAPO 32B','DeepSeek-R1-Zero 32B','o1-mini','FIPO 32B (收敛)','FIPO 32B (峰值)'],axisLabel:{color:'#cdd6f4',rotate:15,fontSize:11}},
+    yAxis:{type:'value',name:'Avg@32 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4',formatter:'{value}%'},min:0,max:65},
+    series:[{
+      name:'Avg@32',type:'bar',
+      data:[
+        {value:22,itemStyle:{color:'#45475a'}},
+        {value:36,itemStyle:{color:'#45475a'}},
+        {value:40,itemStyle:{color:'#89b4fa'}},
+        {value:50,itemStyle:{color:'#45475a'}},
+        {value:47,itemStyle:{color:'#45475a'}},
+        {value:56,itemStyle:{color:'#fab387'}},
+        {value:56,itemStyle:{color:'#a6e3a1'}},
+        {value:58,itemStyle:{color:'#a6e3a1'}}
+      ],
+      label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}%'}
+    }],
+    grid:{left:60,right:20,bottom:80}
+  });
+
+  // 响应长度演化
+  const c2 = echarts.init(document.getElementById('chart-length'));
+  c2.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'平均响应长度演化（训练步数 vs tokens）',textStyle:{color:'#89b4fa',fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{data:['FIPO','DAPO'],textStyle:{color:'#cdd6f4'}},
+    xAxis:{type:'category',data:['0步','50步','100步','150步','200步','250步','300步','350步','400步','500步'],axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',name:'平均长度（tokens）',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:0,max:12000},
+    series:[
+      {name:'FIPO',type:'line',smooth:true,symbol:'circle',symbolSize:5,
+       data:[1500,2200,3500,4800,6500,8200,9200,10000,10500,10800],
+       lineStyle:{color:'#a6e3a1',width:2.5},itemStyle:{color:'#a6e3a1'},
+       areaStyle:{color:'rgba(166,227,161,0.08)'}},
+      {name:'DAPO',type:'line',smooth:true,symbol:'circle',symbolSize:5,
+       data:[1500,1800,2300,3000,3800,4000,4100,4050,4100,4000],
+       lineStyle:{color:'#45475a',width:2.5},itemStyle:{color:'#45475a'},
+       areaStyle:{color:'rgba(69,71,90,0.08)'}}
+    ],
+    grid:{left:70,right:20,bottom:40}
+  });
+});
+</script>
+</body>
+</html>
