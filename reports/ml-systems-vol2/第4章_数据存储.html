@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第4章 数据存储 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第4章 数据存储</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>I/O 墙：加速器内部 TB/s vs NVMe GB/s；ML 负载颠覆 DB 假设（顺序流+突发写+无局部性）；多层存储金字塔 + 管道方程 + 预取深度 + GDS 旁路 CPU</td></tr>
+  <tr><th>学习目标</th><td>用管道方程 sizing 带宽；算 data stall %；设计检查点分级落盘；理解 RAG 向量索引的存储剖面</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、ML 存储如何颠覆数据库 假设</h2>
+
+<p>训练 epoch 均匀扫完全集——无 80/20 热数据，LRU 命中率趋近 <strong>0%</strong>。访问模式是大块顺序读（256 MB–4 GB shard），非 4 KB 随机 IOPS。写模式是周期性巨型检查点突发，非持续小事务。按 IOPS 采购是预算浪费；按持续顺序 GB/s 与突发吸收能力采购才是正解。</p>
+
+<p>175B 运行例：1.5T token ≈ 6 TB token ID/epoch；检查点含 Adam 状态约 <strong>1,750 GB</strong>（350 GB 权重 + 1,400 GB 优化器），每 10 分钟一次。30 天 × 256 节点 → 训练读 6 TB/epoch、检查点写累计 <strong>7.6 PB</strong>。检查点写峰值可达训练读的 ~1000× 强度——「燃料线」与「保险丝」是两种带宽剖面。</p>
+
+<div class="tech-card yellow">
+  <h4>Thundering Herd · 分片碰撞概率</h4>
+  <p>1000 shard、32 worker 随机起始：</p>
+  <div class="math-block">$$P(\text{碰撞}) \approx 1 - e^{-n^2/(2k)} = 1 - e^{-32^2/2000} \approx 40\%$$</div>
+  <p>应用全局确定性分片分配 + epoch 级 shuffle，避免多卡同秒打同一 OSS。</p>
+</div>
+
+<p>2016–2024：GPU 峰值算力 ~236×，NVMe 顺序带宽 ~4×——<strong>I/O 墙持续变陡</strong>。单 NVMe ~14 GB/s vs H100 HBM 3.35 TB/s，单盘喂不饱一张卡，必须层级+并行流+本地 staging。</p>
+
+<h2 id="s2">二、ML 存储层级金字塔</h2>
+
+<pre class="mermaid">
+graph BT
+  HBM["Tier0 HBM\n80GB · 3.35TB/s"]
+  DRAM["Tier1 主机 DRAM\n512GB-2TB · ~200GB/s"]
+  NVMe["Tier2 本地 NVMe\n4-30TB · 7-25GB/s"]
+  PFS["Tier3 并行文件系统\n100PB+ · 1TB/s 聚合"]
+  OBJ["Tier4 对象存储\n极大容量 · ~100GB/s 聚合"]
+  HBM --> DRAM --> NVMe --> PFS --> OBJ
+  style HBM fill:#313244,stroke:#a6e3a1
+  style OBJ fill:#313244,stroke:#6c7086
+</pre>
+
+<table>
+  <tr><th>层级</th><th>容量</th><th>带宽</th><th>延迟</th><th>$/GB</th></tr>
+  <tr><td>GPU HBM</td><td>80 GB</td><td>3.35 TB/s</td><td>~100 ns</td><td>~15</td></tr>
+  <tr><td>主机 DRAM</td><td>512 GB–2 TB</td><td>~200 GB/s</td><td>~100 ns</td><td>~3</td></tr>
+  <tr><td>本地 NVMe</td><td>4–30 TB</td><td>7–25 GB/s</td><td>~100 μs</td><td>~0.10</td></tr>
+  <tr><td>Lustre/GPFS</td><td>100+ PB</td><td>1+ TB/s 聚合</td><td>~1 ms</td><td>~0.03</td></tr>
+  <tr><td>对象存储</td><td>极大</td><td>~100 GB/s 聚合</td><td>~50 ms</td><td>~0.02</td></tr>
+</table>
+
+<p>相邻 tier 带宽落差 7–17×：HBM 50 ms 可抽空，但 DRAM 回填需 400 ms——<strong>下一 batch 必须提前在 HBM</strong>，每层都是上一层的预取缓冲。256 节点各需 4–40 GB/s → 集群 1–10 TB/s 需求，常迫使本地 NVMe 暖缓存减负 PFS。</p>
+
+<h2 id="s3">三、数据管道方程与预取</h2>
+
+<div class="math-block">$$\text{BW}_{\text{required}} = N_{\text{GPU}} \times \eta_{\text{target}} \times \frac{D_{\text{vol,batch}}}{T_{\text{iteration}}}$$</div>
+
+<p><strong>算例 — 1024 GPU 图像训练</strong>：每卡 batch 128 张 × 150 KB，$T_{\text{iter}}=150$ ms，$\eta=0.9$：</p>
+<div class="math-block">$$\text{BW} = 1024 \times 0.9 \times \frac{128 \times 150\ \text{KB}}{0.15\ \text{s}} \approx 118\ \text{GB/s}$$</div>
+<p>需 Lustre 级聚合；纯 NVMe  per-node 不够，必须多 worker 并行 + 本地 RAID。</p>
+
+<p>对比文本预训练：2048 GPU × 4096 token × 4 B / 0.2 s ≈ <strong>168 MB/s</strong> 聚合——单 NAS 即可，瓶颈转向 epoch 总容量与检查点。</p>
+
+<h3 id="s3-1">3.1 Data Stall 比率</h3>
+
+<div class="math-block">$$\text{Data Stall \%} = \frac{T_{\text{step}} - T_{\text{compute}}}{T_{\text{step}}} \times 100$$</div>
+
+<p>GPU 计算 200 ms，存储 250 ms/ batch，无 pipeline：</p>
+<div class="math-block">$$T_{\text{step}} = 450\ \text{ms},\quad \text{Stall} = 250/450 = 55.6\%$$</div>
+<p>有 pipeline（overlap）：$T_{\text{step}} = \max(200,250)=250$ ms，Stall = <strong>20%</strong>。要归零，须 $T_{\text{I/O}} \leq 200$ ms 或加深预取。</p>
+
+<p>预取深度（抗 P99 抖动，非 sustained 带宽不足）：</p>
+<div class="math-block">$$Q_{\text{prefetch,min}} = \left\lceil \frac{T_{\text{I/O,p99}}}{T_{\text{compute}}} \right\rceil$$</div>
+<p>$T_{\text{I/O,p99}}=500$ ms，$T_{\text{compute}}=200$ ms → $\lceil 2.5 \rceil = 3$，工程加 margin 取 5。每 batch 40 MB → 5 深度占 200 MB/GPU，8 卡节点 1.6 GB DRAM。</p>
+
+<h2 id="s4">四、GPUDirect Storage 与 CPU 旁路</h2>
+
+<p>传统路径：NVMe → 主机 DRAM（PCIe）→ GPU HBM（再一趟 PCIe），有效带宽常被内核与 bounce buffer 压在 <strong>3–4 GB/s/盘</strong>。GPUDirect Storage（GDS）建立 NVMe→GPU 直接 DMA，单盘可达 <strong>5–7 GB/s</strong>，四盘 RAID 节点聚合 <strong>20–28 GB/s</strong> 入 HBM，CPU 专注 decode/augment。</p>
+
+<div class="tech-card blue">
+  <h4>GDS 启用要点（CUDA 12+ / cuFile）</h4>
+  <ul>
+    <li>NVMe 需支持 O_DIRECT 对齐；挂载 <code>noatime</code> 减元数据</li>
+    <li><code>cuFileDriverOpen()</code> + 注册 GPU buffer；与 GDS 兼容的文件系统（ext4/xfs，部分分布式 FS 受限）</li>
+    <li>与 GPUDirect RDMA 分工：GDS 管<strong>存储→GPU</strong>；RDMA 管<strong>GPU→GPU 跨节点</strong></li>
+    <li>仍须主机侧 JPEG/tokenize 时 DRAM staging 不可完全消除</li>
+  </ul>
+</div>
+
+<p>元数据税：每文件 <code>stat()</code> 在万 worker 下可打爆 MDS——作业启动预计算 manifest，热路径零 per-file 元数据。</p>
+
+<h2 id="s5">五、检查点与检索基础设施</h2>
+
+<h3 id="s5-1">5.1 检查点分级与 sizing</h3>
+
+<p>最优路径：<strong>同步写本地 NVMe</strong>（满盘带宽，最小 pause）→ 异步复制 PFS/S3 耐久层。175B 检查点 1,750 GB / 10 min → 平均写带宽需求：</p>
+<div class="math-block">$$\text{BW}_{\text{ckpt,avg}} = \frac{1750\ \text{GB}}{600\ \text{s}} \approx 2.9\ \text{GB/s per job}$$</div>
+<p>256 节点各写 ~6.8 GB 分片，若 30 s 内完成 → 每节点 ~227 MB/s，可本地 NVMe；但 <strong>128 节点同时写 PFS → 1.8 TB 突发</strong> 需独立写 tier，不能与训练读争用。</p>
+
+<p>检查点频率权衡：集群 MTBF ↓ 则 ↑ 频率，但 ↑ 写放大与 SSD DWPD。企业 NVMe 1 DWPD × 7.68 TB ≈ 7.68 TB/天可写；每 10 min 4 GB 分片 ≈ 576 GB/天，通常安全，但与数据缓存共盘须累加。</p>
+
+<h3 id="s5-2">5.2 RAG 向量索引存储剖面</h3>
+
+<p>推理侧存储挑战从「流式训练读」变为<strong>低延迟相似检索</strong>。十亿向量 × 768 dim FP16 ≈ 1.5 TB 纯向量；加 HNSW/IVF 图索引常 1.5–2× 开销。热集放 DRAM/NVMe 供 ms 级 p99；冷集对象存储，查询前异步 warm。</p>
+
+<div class="tech-card green">
+  <h4>向量索引 · 可执行 sizing</h4>
+  <p>1B 向量、768 维、FP16：</p>
+  <div class="math-block">$$\text{向量体积} = 10^9 \times 768 \times 2\ \text{B} \approx 1.44\ \text{TB}$$</div>
+  <p>HNSW（M=32, efConstruction=200）索引额外 ~50–100% → 规划 <strong>2.5–3 TB</strong> 节点本地或分片 replica。QPS 1000、p99 &lt;50 ms 时，单查询 batch 64、efSearch=128，需 GPU/AVX 批量距离 + 内存带宽 &gt;200 GB/s 或分片到 4× 副本。与训练不同：<strong>IOPS+延迟+一致性</strong>（索引版本与模型权重 rollout 同步）主导采购。</p>
+</div>
+
+<h2 id="s6">六、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>存储工程动作</h4>
+  <ol>
+    <li>用方程 (1) sizing；GPU 翻倍则 BW_required 线性翻倍（非 DP 分片减负）</li>
+    <li>shard 大文件（256 MB+）；禁止百万小文件 metadata 瓶颈</li>
+    <li>预取按 P99 定深度；stall &gt;10% 即红灯</li>
+    <li>检查点：本地 NVMe 同步 + PFS 异步；单独写带宽 tier</li>
+    <li>版本化：哈希 manifest + shuffle seed，否则 30 天训练不可复现调试</li>
+    <li>RAG：向量+图索引体积常 2–3× 裸向量；rollout 是 fan-out 读突发</li>
+  </ol>
+</div>
+
+<blockquote>存储章论点是 C³ 中的「燃料线」：<strong>加速器是引擎，存储 hierarchy 决定引擎是否一直饿着</strong>。</blockquote>
+
+<p><strong>下一章预告：</strong>燃料与织物就绪后，第 5 章讨论如何把优化循环切分到千卡并保持数学等价——Fleet Law、DP/TP/PP 与混合并行的通信表。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告基于《Machine Learning Systems at Scale》Vol.2 第4章整理。来源：<a href="https://mlsysbook.ai/vol2/data_storage/data_storage.html">mlsysbook.ai</a> · 生成日期：2026-07-04</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

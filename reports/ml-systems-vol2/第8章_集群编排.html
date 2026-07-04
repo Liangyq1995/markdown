@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第8章 集群编排 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第8章 集群编排（Fleet Orchestration）</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>Gang 调度 + 拓扑放置 → Slurm / K8s / 混合 / ML 定制调度器 → Goodput 分解 → 弹性与 spot 经济</td></tr>
+  <tr><th>学习目标</th><td>为同步训练选择编排范式；设计 topology-aware 放置；用 Goodput 诊断利用率损失</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、调度问题：硬件充足仍空转</h2>
+
+<p>10,000 GPU × \$2/GPU·h = \$480k/天。利用率 50%→80% 等价于<strong>白买 3,000 GPU·当量</strong>，年省 \$52M 量级。ML 调度区别于普通云：同步 AllReduce 要求 <strong>gang scheduling</strong>——1024 GPU 任务拿到 900 块仍 100% 浪费（~\$1,800/h 空烧），因缺 rank 无法迭代。</p>
+
+<div class="tech-card red">
+  <h4>War Story：OpenAI K8s gang 死锁（2021）</h4>
+  <p>7,500 节点 K8s 上两个实验各要整集群；调度器各放一半 pod → 两个 job 都无法 AllReduce → 集群「很忙」但<strong>零 useful step</strong>。教训：分布式 ML 必须把 gang 语义编进调度器（PodGroup / Volcano / Kueue），「部分 pod 已调度」≠ 部分进度。</p>
+</div>
+
+<pre class="mermaid">
+graph TD
+  G["Gang: 全有或全无"] --> T["Topology: NVLink/rack/rail"]
+  T --> P["Paradigm: Slurm / K8s / Hybrid"]
+  P --> M["ML Scheduler: Tiresias…Pollux"]
+  M --> Y["Goodput = η_prog × η_run × η_sched"]
+  style G fill:#313244,stroke:#f38ba8
+</pre>
+
+<h2 id="s2">二、编排范式：Slurm vs Kubernetes vs 定制</h2>
+
+<table>
+  <tr><th>维度</th><th>Slurm（HPC）</th><th>Kubernetes（云原生）</th><th>定制 ML 调度器</th></tr>
+  <tr><td>模型</td><td>命令式：sbatch 精确要资源</td><td>声明式：期望状态 + 控制环 reconcile</td><td>读训练循环内部信号</td></tr>
+  <tr><td>CAP 类比</td><td>分区时阻塞新分配保一致</td><td>分区时仍响应，事后 reconcile</td><td>可接受有界不一致换吞吐</td></tr>
+  <tr><td>训练强项</td><td>gang、fair-share、MPI 成熟</td><td>需 Volcano/Kueue/PyTorchJob</td><td>Tiresias/Pollux 等 goodput 优化</td></tr>
+  <tr><td>服务强项</td><td>无原生 long-running service</td><td>Deployment HPA、自愈 pod</td><td>Ray 统一 actor/serving</td></tr>
+  <tr><td>典型配置</td><td>按 GPU 代际 partition；prolog 查 NVLink/ECC</td><td>Device Plugin + taint 隔离 GPU</td><td>插件进 Slurm/K8s，非替换</td></tr>
+</table>
+
+<h3 id="s2-1">2.1 Slurm ML 扩展</h3>
+<ul>
+  <li><code>--array=0-99</code>：超参 sweep 一次提交，scheduler 可 backfill 小 trial</li>
+  <li><strong>异构 job</strong>：8 GPU 节点训练 + CPU 节点 tokenization（<code>hetjob</code>）</li>
+  <li><strong>PreemptMode + GraceTime</strong>：SIGTERM → 60–300 s 写 checkpoint → SIGKILL（依赖第 7 章 checkpoint）</li>
+  <li><strong>TRES 加权</strong>：H100 GPU·h 与 V100 不同价，fair-share 按经济成本而非核数</li>
+</ul>
+
+<h3 id="s2-2">2.2 Kubernetes 与混合架构</h3>
+<p>K8s 控制环：Deployment 保副本数、node 失效自动换 pod——适合推理。分布式训练需 <strong>PyTorchJob/MPIJob + PodGroup</strong> 保证 gang。常见混合：<strong>K8s 管 CI/CD/RBAC/推理，Slurm partition 跑大 pretrain</strong>；或 K8s Operator 把 TrainingJob CRD 翻译成 sbatch。</p>
+
+<pre><code># TorchElastic：声明弹性范围，供调度器 resize
+torchrun --nnodes=4:16 --nproc_per_node=8 \
+  --rdzv_backend=c10d --max_restarts=3 train.py</code></pre>
+<p><code>4:16</code> 节点 = 32–128 GPU，调度器可在负载低时扩、高优先级到达时缩，避免「等 8 h 凑齐 gang 再开跑」。</p>
+
+<h2 id="s3">三、拓扑感知放置</h2>
+
+<p>64 GPU 随机散列 vs 同 leaf 打包：1 GB AllReduce 延迟 <strong>120 ms → 25 ms（4.8×）</strong>。端到端训练因 overlap 通常损失 15–30% 吞吐，仍值得优化。</p>
+
+<div class="math-block">$$\text{Cost}_{\text{locality}} = \sum_{i<j} w\bigl(d(g_i,g_j)\bigr)$$</div>
+<p>$d=0$ 同节点（NVLink，$w=0$）；$d=1$ 同 rack（$w=1$）；$d=2$ 跨 rack（$w=10$）。</p>
+
+<div class="tech-card blue">
+  <h4>3D 并行放置规则（256 GPU：TP=8, PP=4, DP=8）</h4>
+  <ol>
+    <li><strong>TP</strong>：每组 8 GPU 锁在同一 NVLink 节点（900 GB/s）</li>
+    <li><strong>PP</strong>：相邻 stage 放同 rack leaf（~50 GB/s，1 hop）</li>
+    <li><strong>DP</strong>：副本跨 rack；<strong>rail-aligned</strong>——各节点 GPU $r$ 连同一 rail，AllReduce 不跨 rail 争用</li>
+  </ol>
+  <p>反例：TP 跨两节点 → 1 GB 激活 2.2 ms（NVLink）变 20 ms（IB），约 9× 慢，80 层 transformer 每层都付税。</p>
+</div>
+
+<p>静态 <code>topology.conf</code> 不够——「limping switch」CRC 高仍显示 up。需 NCCL 实测带宽 + switch counter；劣化 rack <strong>taints/drain</strong>，必要时 checkpoint 迁移（10–15 min）若 &gt;20% 降速且 run 还剩数周。</p>
+
+<h2 id="s4">四、Goodput 与 ML 定制调度器</h2>
+
+<div class="tech-card yellow">
+  <h4>Google ML Productivity Goodput（C³ 生产度量）</h4>
+  <div class="math-block">$$\text{Goodput} = \eta_{\text{program}} \times \eta_{\text{runtime}} \times \eta_{\text{scheduling}}$$</div>
+  <ul>
+    <li>$\eta_{\text{program}}$（Compute）：代码是否喂满硬件（MFU、有效 FLOPs）</li>
+    <li>$\eta_{\text{runtime}}$（Communication）：通信 stall、故障恢复、straggler</li>
+    <li>$\eta_{\text{scheduling}}$（Coordination）：排队、抢占、重配置、fragmentation</li>
+  </ul>
+  <p>三者<strong>相乘</strong>：92% hardware utilization + 30% MFU 说明 GPU「忙」在 bubble/重算/同步——应看 MFU 与 Goodput，而非 SM 占用 alone。</p>
+</div>
+
+<table>
+  <tr><th>调度器</th><th>信号</th><th>优化目标</th><th>生产风险</th></tr>
+  <tr><td>Tiresias</td><td>已消耗 GPU·h（attained service）</td><td>平均 JCT −40~60%</td><td>低；错假设退化为 fair-share</td></tr>
+  <tr><td>Gandiva</td><td>iteration 边界（数据加载空窗）</td><td>oversubscribe 提利用率</td><td>profiling 错 → 干扰 jitter</td></tr>
+  <tr><td>Themis</td><td>完成度 / 沉没成本</td><td>finish-time fairness</td><td>长跑 pretrain 可能饥饿</td></tr>
+  <tr><td>Pollux</td><td>goodput（统计效率×系统吞吐）</td><td>联调 GPU 数 + batch size</td><td>模型错 → 伤害收敛；需框架深度集成</td></tr>
+</table>
+
+<p>175B 稳态：Pollux 式动态改 worker 数 → 每次 checkpoint-restart 数 TB，resize 太频则 I/O 吃掉增益；实践是<strong>早期 elastic + warmup 后锁拓扑静态分配</strong>。</p>
+
+<h2 id="s5">五、Spot、弹性与成本</h2>
+
+<div class="math-block">$$C_{\text{effective}} = C_{\text{spot}} \times \frac{T_{\text{total}}}{T_{\text{productive}}}$$</div>
+<p>512 GPU × 14 天 70B：按需 \$344k；spot 65% 折扣 + checkpoint/重启开销 → ~\$162k（53% 省）但 wall-clock +34%。<strong>容错基础设施双回报</strong>：抗硬件故障 + 使 spot 经济可行（AWS 2 min / GCP 30 s 抢占通知 + panic checkpoint）。</p>
+
+<h2 id="s6">六、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>决策要点</h4>
+  <ol>
+    <li>同步训练：<strong>gang + topology</strong> 优先于 bin-packing 利用率</li>
+    <li>大 pretrain 选 Slurm/混合；推理与平台统一选 K8s；探索 Ray 但自担可靠性</li>
+    <li>用 Goodput 三因子定位损失：代码、通信、调度</li>
+    <li>定制调度器从 Tiresias 类低侵入开始，Pollux 级需证明 ROI &gt; checkpoint 税</li>
+  </ol>
+</div>
+
+<blockquote>编排是故意支付的 coordination tax：用一致性、放置约束和公平策略，换 fleet 不因死锁与碎片化把百万美元算力变成队列里的 heat。</blockquote>
+
+<p><strong>下一章预告：</strong>工作落到正确 GPU 上之后，内核仍可能 memory-bound。第 9 章用 Roofline、prefill/decode 与 70B serving playbook 把本地执行推近硬件上限。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告基于《Machine Learning Systems at Scale》Vol.2 第8章整理。来源：<a href="https://mlsysbook.ai/vol2/fleet_orchestration/fleet_orchestration.html">mlsysbook.ai</a> · 生成日期：2026-07-04</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第10章 规模化推理 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第10章 规模化推理（Inference at Scale）</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>推理经济学 → 服务架构维度 → 连续批处理/KV → 分片与路由 → 多租户与全球 autoscaling</td></tr>
+  <tr><th>学习目标</th><td>在 Prefill/Decode 双阶段 physics 下做容量规划；将 Vol.1 Llama3 单卡算例扩展到多副本舰队</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、推理经济学</h2>
+
+<p>训练是一次性 CapEx；推理是<strong>持续性 OpEx</strong>——Facebook 2018 量级：每日数十万亿次推理。LLM API 价格竞争使 $/token 成为产品 KPI。Vol.1 单 H100 Llama3 8B AWQ：Prefill 瓶颈 10 req/s → ~$0.066/M tokens（$3/hr 云租）。舰队级须乘上：副本数、利用率 headroom、跨 AZ 网络、冷启动浪费。</p>
+
+<div class="tech-card yellow">
+  <h4>成本分解</h4>
+  <p>$/token ≈ (GPU·hr 单价 × 副本数) / (有效 tok/s × 3600)。若 p99 SLO 强制 $\rho &lt; 60\%$，账单 ×1.67。若 30% 副本冷启动空转，再 ×1.43。</p>
+</div>
+
+<h2 id="s2">二、服务架构维度</h2>
+
+<table>
+  <tr><th>维度</th><th>选项</th><th>权衡</th></tr>
+  <tr><td>部署</td><td>集中 / 边缘 / 混合</td><td>延迟 vs 规模经济</td></tr>
+  <tr><td>状态</td><td>无状态 / KV 有状态</td><td>LLM 必须 sticky routing 或共享 KV 层</td></tr>
+  <tr><td>精度</td><td>FP16 / INT8 / INT4</td><td>带宽地板 ∝ 权重大小</td></tr>
+  <tr><td>并行</td><td>TP / PP / DP 推理</td><td>TP 限 NVLink 域；跨 AZ PP 延迟高</td></tr>
+</table>
+
+<h2 id="s3">三、批处理：Continuous Batching</h2>
+
+<p>Static batch 等最长序列 → GPU 空泡。Continuous batching（vLLM/TGI）在<strong>iteration 级</strong>插入/移除序列，Prefill 与 Decode 可异构混批。</p>
+
+<div class="math-block">$$L_{\text{total}} \approx T_{\text{prefill}}(\text{prompt}) + N_{\text{out}} \times \text{TPOT}$$</div>
+
+<p>舰队吞吐上限常由<strong>Prefill 算力</strong>或<strong>KV 驻留容量</strong>二选一绑定（Vol.1 Llama3：10 req/s vs 1749 并发槽）。</p>
+
+<h2 id="s4">四、KV 与 Decode 内存</h2>
+
+<p>70B GQA FP16：KV ≈ 0.31 MB/token/序列。32 序列 × 8K context ≈ 80 GB 仅 KV——超过单卡 HBM，须 PagedAttention 分页 + 跨卡 TP 或 KV offload（PCIe 下限 ~32 GB/s → TPOT 下限抬升）。</p>
+
+<div class="tech-card blue">
+  <h4>PagedAttention 工程点</h4>
+  <p>块大小（如 16 token/block）影响碎片率：40–50% → 90%+ 利用率，等效并发从 ~700 提至 ~1700（同 80 GB 卡）。</p>
+</div>
+
+<h2 id="s5">五、负载均衡与路由</h2>
+
+<ul>
+  <li><strong>最短队列 / 加权轮询：</strong>忽略 KV 亲和则 Prefill 重复计算</li>
+  <li><strong>Session affinity：</strong>同会话粘滞 GPU，利于 prefix cache</li>
+  <li><strong>Prefill-Decode 分离（PD disaggregation）：</strong>算力型 Prefill 池 + 带宽型 Decode 池，各自 autoscale</li>
+</ul>
+
+<h2 id="s6">六、Autoscaling 与多租户</h2>
+
+<p>K8s HPA 基于 CPU 对 GPU LLM 失效——应用指标：TTFT p99、TPOT、队列深度。多租户须 GPU 时间片或 MIG 隔离；INT4 租户 A 与 FP16 租户 B 混部需内存配额防 OOM 连坐。</p>
+
+<h2 id="s7">七、章节总结</h2>
+
+<div class="tech-card green">
+  <ol>
+    <li>推理舰队优化 $/token 与 SLO，非峰值 TFLOP/s</li>
+    <li>Prefill（compute-bound）与 Decode（memory-bound）须分池度量与扩容</li>
+    <li>Continuous batching + PagedAttention 是 LLM 舰队利用率核心</li>
+    <li>路由与 PD 分离决定 Prefill 重复劳动与 KV 局部性</li>
+    <li>Vol.1 单卡算例的瓶颈项（Prefill 10 req/s）在舰队中变为调度问题</li>
+  </ol>
+</div>
+
+<p><strong>下一章预告：</strong>第 11 章将推理推到网络边缘——FedAvg、差分隐私与 mW 级预算下的 opposite physics。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">来源：<a href="https://mlsysbook.ai/vol2/inference_at_scale/inference_at_scale.html">mlsysbook.ai</a> · 2026-07-04</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

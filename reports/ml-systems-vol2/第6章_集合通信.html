@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第6章 集合通信 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第6章 集合通信（Collective Communication）</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>并行策略决定通信原语 → α-β/LogP 成本模型 → Ring/Tree/分层 AllReduce → 拓扑感知路由 → 压缩与计算-通信重叠</td></tr>
+  <tr><th>学习目标</th><td>用定量模型估算集体通信耗时，为 DP/TP/PP/MoE 选择正确原语与算法，并识别 NCCL 实测与理论模型的差距</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、从并行到通信：梯度同步</h2>
+
+<p>10,000 GPU 同步 SGD 时，计算随 GPU 数线性扩展，但<strong>协调是全局的</strong>——梯度、激活、参数必须跨物理链路移动。C³ 视角下，集合通信是 fleet 的「指令集」：AllReduce、AllGather、ReduceScatter、AllToAll 决定铁律中的通信项是否成为瓶颈。</p>
+
+<div class="tech-card blue">
+  <h4>定义：梯度同步（Gradient Synchronization）</h4>
+  <p>同步数据并行中，每个 worker 贡献本地梯度，经全局归约（通常求和）后，所有副本收到相同结果并执行一致更新。若不同步，各 GPU 模型副本发散，不再近似全局 SGD。</p>
+</div>
+
+<h3 id="s1-1">1.1 70B 梯度体量与 Ring AllReduce 速算</h3>
+
+<p>BF16 下每参数 2 字节，70B 模型每 GPU 每步梯度：</p>
+<div class="math-block">$$M = 7 \times 10^{10} \times 2\ \text{B} = 140\ \text{GB}$$</div>
+
+<p>Ring AllReduce 带宽项（每节点发送量近似恒定）：</p>
+<div class="math-block">$$T_{\text{bandwidth}} = 2 \cdot \frac{N-1}{N} \cdot \frac{M}{\beta}, \quad T_{\text{latency}} = 2(N-1)\alpha$$</div>
+
+<p><strong>代入：</strong>64 GPU、InfiniBand NDR $\beta=50$ GB/s、$\alpha=1.5\,\mu\text{s}$：</p>
+<ul>
+  <li>$T_{\text{bandwidth}} \approx 1.97 \times 140/50 \approx 5.51$ s</li>
+  <li>$T_{\text{latency}} = 126 \times 1.5\,\mu\text{s} \approx 0.2$ ms → 纯带宽主导</li>
+</ul>
+<p>用户速算 $2 \times 140/50 \approx 5.6$ s 即此场景的一阶近似。单步 AllReduce 占 5+ 秒时，必须<strong>与 backward 重叠</strong>或采用分层/压缩，否则 GPU 空等。</p>
+
+<h3 id="s1-2">1.2 规模放大：通信占比 25% → 80%</h3>
+
+<table>
+  <tr><th>规模</th><th>互联</th><th>通信+同步占步时</th><th>有效计算</th></tr>
+  <tr><td>8 GPU（单节点）</td><td>NVLink ~900 GB/s</td><td>~25%</td><td>~75%</td></tr>
+  <tr><td>64 GPU（8 节点）</td><td>IB NDR 50 GB/s</td><td>~55%</td><td>~45%</td></tr>
+  <tr><td>4,096 GPU</td><td>跨 pod IB + 屏障</td><td>~80%</td><td>~20%</td></tr>
+</table>
+
+<p>8→4096 GPU 的跃迁不是「加机器就线性加速」：同一 70B Ring AllReduce 在跨 pod 时暴露 IB 带宽悬崖，同步屏障叠加后通信+同步可吞掉 80% 步时。</p>
+
+<pre class="mermaid">
+graph LR
+  DP["数据并行\nAllReduce 大梯度"] --> TP["张量并行\n节点内 AllReduce"]
+  TP --> PP["流水线\nP2P 微批"]
+  PP --> MoE["专家并行\nAllToAll 路由"]
+  style DP fill:#313244,stroke:#a6e3a1
+  style MoE fill:#313244,stroke:#f38ba8
+</pre>
+
+<h2 id="s2">二、α-β 模型与临界消息大小</h2>
+
+<div class="math-block">$$T(n) = \alpha + \frac{n}{\beta}, \quad n^* = \alpha \cdot \beta$$</div>
+
+<div class="tech-card yellow">
+  <h4>手算：InfiniBand NDR 临界大小</h4>
+  <p>$\alpha=2\,\mu\text{s}$，$\beta=50$ GB/s → $n^* = 2\times10^{-6} \times 5\times10^{10} = 100$ KB。</p>
+  <ul>
+    <li><strong>4 KB MoE 路由包</strong>（$n \ll n^*$）：96% 时间是启动税 → 融合 100 个包为 400 KB：$100\alpha=200\,\mu\text{s}$ → $\alpha+n/\beta\approx10\,\mu\text{s}$，约 20× 改善</li>
+    <li><strong>140 GB 梯度</strong>（$n \gg n^*$）：带宽主导 → 压缩 payload、分层 AllReduce 有效；仅降 $\alpha$ 几乎无效</li>
+  </ul>
+</div>
+
+<table>
+  <tr><th>互联</th><th>$\alpha$</th><th>$\beta$（单向）</th><th>$n^*$</th></tr>
+  <tr><td>NVLink 4.0</td><td>1–2 μs</td><td>450 GB/s</td><td>~0.7 MB</td></tr>
+  <tr><td>IB NDR 400G</td><td>1–3 μs</td><td>50 GB/s</td><td>~100 KB</td></tr>
+  <tr><td>PCIe Gen5</td><td>2–5 μs</td><td>64 GB/s</td><td>~224 KB</td></tr>
+</table>
+
+<h3 id="s2-1">2.1 分层 AllReduce：128 GPU / 16 节点</h3>
+<p>平坦 Ring 跨 IB 传完整 140 GB → ~5,557 ms。分层：节点内 NVLink ReduceScatter + 跨节点传 $M/16$ shard + 节点内 AllGather → ~1,201 ms，约 <strong>4.6×</strong>。工程含义：先吃满快链路，再让慢链路只搬归约后的分片。</p>
+
+<h3 id="s2-2">2.2 LogP 与重叠</h3>
+<p>AllReduce 网络延迟 $L_{\text{lat}}=100\,\mu\text{s}$ 可与 500 μs backward 重叠；但发起/接收开销 $2o=100\,\mu\text{s}$ <strong>不可隐藏</strong>。优化 GPUDirect、降 $o$ 往往比盲目加 $\beta$ 更有效。</p>
+
+<h2 id="s3">三、集体原语与算法选择</h2>
+
+<table>
+  <tr><th>原语</th><th>并行策略</th><th>瓶颈</th><th>Ring 代价（大消息）</th></tr>
+  <tr><td>AllReduce</td><td>数据并行</td><td>带宽</td><td>$2(N-1)M/(N\beta)$，延迟 $\mathcal{O}(N)$</td></tr>
+  <tr><td>AllGather / ReduceScatter</td><td>FSDP/ZeRO-3</td><td>带宽+频率</td><td>每层一次，峰值内存升 $N$ 倍</td></tr>
+  <tr><td>AllToAll</td><td>MoE / DLRM</td><td>延迟+争用</td><td>逻辑 $\mathcal{O}(N^2)$ 连接，易撞 bisection 墙</td></tr>
+  <tr><td>P2P Send/Recv</td><td>流水线</td><td>延迟</td><td>微批 handoff</td></tr>
+</table>
+
+<div class="tech-card green">
+  <h4>MoE AllToAll 手算（8 GPU，4096 token）</h4>
+  <p>BF16 hidden 2048 → 4.096 KB/token。每 GPU 512 token，均匀路由 64 专家（8/GPU）：向其余 7 GPU 各发 64 token → $64 \times 4.096 = 262$ KB/链路，共发 1.84 MB。</p>
+  <p>$\alpha=3\,\mu\text{s}$，$T \approx 3+5=8\,\mu\text{s}$/链路；7 链路并行 ≈ 8 μs。但每层<strong>两次</strong> AllToAll，且热门 expert 造成热点——MoE 瓶颈常在 $\alpha$ 与负载均衡，而非 raw $\beta$。</p>
+</div>
+
+<h3 id="s3-1">3.1 Ring vs Tree</h3>
+<p>大梯度：Ring 带宽最优。小消息（TP 片、MoE gate）：Tree 延迟 $\mathcal{O}(\log N)$ 更优。NCCL 实测：1 KB 消息有效 $\alpha$ 比裸线高 7–8×（注册+协议）；1 GB 消息仅慢 7–15%——<strong>小消息必须用实测 $\alpha$ 选型</strong>。</p>
+
+<h3 id="s3-2">3.2 压缩、稀疏与重叠</h3>
+<ul>
+  <li><strong>梯度压缩</strong>：140 GB→1.4 GB 仍远大于 $n^*$，仍带宽界；需 error feedback 防收敛劣化</li>
+  <li><strong>Bucket 融合</strong>：合并小 AllReduce，降 $\alpha$ 摊销</li>
+  <li><strong>层间重叠</strong>：early layer 梯度 AllReduce 与 late layer backward 并行；Horovod/DDP bucket_size 即此</li>
+</ul>
+
+<h2 id="s4">四、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>工程决策清单</h4>
+  <ol>
+    <li>先算 $M=2P$ 字节与 $T \approx 2M/\beta$，判断通信是否占步时主导</li>
+    <li>用 $n^*$ 区分 latency-bound（融合、拓扑）vs bandwidth-bound（压缩、分层、多 rail）</li>
+    <li>3D 并行：TP 锁 NVLink 域，PP 同 rack，DP 跨 rack 且可重叠</li>
+    <li>MoE/DLRM 优先 AllToAll 争用与 $\alpha$，不是盲目加带宽</li>
+    <li>在目标集群 benchmark 小/大消息 AllReduce，校准有效 $\alpha,\beta$</li>
+  </ol>
+</div>
+
+<blockquote>集合通信的守恒律：每加一块 GPU，本地算力 +1，但全局协调的路径长度、启动次数或 bisection 流量不一定 +1。算法与拓扑是训练「可扩展性」的一等公民。</blockquote>
+
+<p><strong>下一章预告：</strong>通信把 fleet 绑成同步整体——单点失效即全员等待。第 7 章用 MTBF 算术与 checkpoint 最优间隔，把「故障从例外变常态」量化成工程约束。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告基于《Machine Learning Systems at Scale》Vol.2 第6章整理。来源：<a href="https://mlsysbook.ai/vol2/collective_communication/collective_communication.html">mlsysbook.ai</a> · 生成日期：2026-07-04</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

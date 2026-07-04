@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第12章 基准测试 | Machine Learning Systems Vol.1</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第12章 基准测试</h1>
+<p class="meta">《Introduction to Machine Learning Systems》Vijay Janapa Reddi · MIT Press · Vol.1 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>三维框架（系统/模型/数据）→ 粒度选择 → MLPerf 训练 vs 推理 → 功耗测量 → 最佳实践与 benchmark-production gap</td></tr>
+  <tr><th>学习目标</th><td>设计可复现 ML 基准协议，区分峰值与 sustained 性能，理解 MLPerf 场景与 Goodhart 陷阱</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、开篇：为何需要 ML 基准测试</h2>
+
+<p>剪枝模型在 A 加速器上 2× 更快，在 B 上无改善；增大 batch 提升利用率却违反延迟 SLO。每项优化都带承诺——基准测试是<strong>将理论主张转化为可验证工程知识</strong>的纪律，量化 peak 与 sustained 性能之间、实验室与生产之间的鸿沟。</p>
+
+<div class="tech-card blue">
+  <h4>定义：ML 基准测试</h4>
+  <p>在代表性 ML 工作负载上<strong>端到端</strong>测量系统性能，将厂商峰值规格与 realistic 条件下可持续的吞吐/延迟解耦。A100 峰值 312 TFLOP/s，生产 Transformer 训练 MFU 通常 30–50%（93.6–156 TFLOP/s）——$\eta_{\text{hw}}$ 鸿沟须由基准量化。</p>
+</div>
+
+<h3 id="s1-1">1.1 三维评估框架</h3>
+
+<pre class="mermaid">
+graph TD
+  S["系统基准\n硬件/软件栈"] --- M["模型基准\n精度/校准/压缩"]
+  M --- D["数据基准\n覆盖/质量/漂移"]
+  S --- D
+  style S fill:#313244,stroke:#fab387
+  style M fill:#313244,stroke:#89b4fa
+  style D fill:#313244,stroke:#a6e3a1
+</pre>
+
+<ul>
+  <li><strong>系统基准：</strong>硬件是否在 realistic 负载下兑现承诺（带宽饱和、dispatch 开销）</li>
+  <li><strong>模型基准：</strong>优化是否在全输入分布上保留质量（非仅测试集）</li>
+  <li><strong>数据基准：</strong>模型是否泛化到含噪声/偏移的真实数据</li>
+</ul>
+
+<div class="tech-card yellow">
+  <h4>三条原则</h4>
+  <ol>
+    <li><strong>基准是代理，非真理</strong>——Offline 10K QPS vs Server 模式可能差一个数量级</li>
+    <li><strong>Goodhart 定律：</strong>指标成为目标即失效（BLEU 刷榜 vs 用户延迟）</li>
+    <li><strong>端到端 &gt; 组件指标：</strong>推理 5 ms→10 ms 模型阶段在 50 ms 流水线中仅 ~1.2× 端到端改善</li>
+  </ol>
+</div>
+
+<h2 id="s2">二、历史演进与 MLPerf</h2>
+
+<table>
+  <tr><th>基准</th><th>年份</th><th>焦点</th><th>对 ML 的教训</th></tr>
+  <tr><td>Whetstone</td><td>1976</td><td>合成浮点</td><td>编译器 gaming 破坏有效性</td></tr>
+  <tr><td>LINPACK</td><td>1979</td><td>矩阵求解</td><td>孤立操作 miss 系统瓶颈</td></tr>
+  <tr><td>SPEC CPU</td><td>1989</td><td>真实应用</td><td>代表性工作负载揭示真实性能</td></tr>
+  <tr><td>SPEC Power / Green500</td><td>2007</td><td>能效</td><td>多负载级评估，非仅峰值</td></tr>
+  <tr><td>MLPerf</td><td>2018</td><td>ML 训练+推理</td><td>综合：代表性+多目标+全栈</td></tr>
+</table>
+
+<h3 id="s2-1">2.1 MLPerf 套件变体</h3>
+
+<table>
+  <tr><th>变体</th><th>目标域</th><th>关键约束</th><th>主要指标</th></tr>
+  <tr><td>MLPerf Training</td><td>数据中心</td><td>多节点扩展、互联带宽</td><td>Time-to-quality、samples/s</td></tr>
+  <tr><td>MLPerf Inference</td><td>Server/Edge</td><td>延迟 SLO、吞吐</td><td>QPS、延迟分位数、精度</td></tr>
+  <tr><td>MLPerf Tiny</td><td>MCU/IoT</td><td>超低功耗、KB 级内存</td><td>延迟、精度、每推理能耗</td></tr>
+  <tr><td>MLPerf Power</td><td>跨场景</td><td>能耗预算、热约束</td><td>Performance/W、每 query 焦耳</td></tr>
+</table>
+
+<h2 id="s3">三、基准粒度</h2>
+
+<table>
+  <tr><th>粒度</th><th>测量对象</th><th>优势</th><th>局限</th></tr>
+  <tr><td>Micro</td><td>单 kernel（GEMM）</td><td>隔离硬件能力</td><td>miss 系统交互</td></tr>
+  <tr><td>Macro</td><td>单层/单模型 forward</td><td>模型级 profiling</td><td>无数据管道开销</td></tr>
+  <tr><td>End-to-end</td><td>完整 pipeline</td><td>最接近生产</td><td>难归因瓶颈</td></tr>
+</table>
+
+<p>工程决策决定粒度：采购 GPU 看 macro+scaling；SLO 验证必须 end-to-end（含预处理、队列、后处理）。MobileNetV2 灯塔示例：INT8 3.5 MB + EdgeTPU 2 ms 推理，仍需验证<strong>低光 edge case 精度</strong>与<strong>真实手机图像分布</strong>——系统/模型/数据三维缺一不可。</p>
+
+<h3 id="s3-1">3.1 DR 验收基准</h3>
+<p>野生动物相机 DR 案例的验收基准（衔接第 3、10 章）：</p>
+<table>
+  <tr><th>维度</th><th>指标</th><th>阈值</th><th>测量条件</th></tr>
+  <tr><td>模型</td><td>农村子群灵敏度</td><td>≥ 0.90</td><td>held-out 500 张</td></tr>
+  <tr><td>系统</td><td>p99 端到端延迟</td><td>&lt; 2000 ms</td><td>Jetson batch=1，含 JPEG 解码</td></tr>
+  <tr><td>数据</td><td>PSI（部署后）</td><td>&lt; 0.20</td><td>月度 4-bin 分布对比</td></tr>
+</table>
+<p>仅报「INT8 3.5 MB、FLOPs 降 4×」而不测农村子群 = 违反模型基准维度；仅测 GPU forward 不测 JPEG 预处理 = 违反端到端原则。</p>
+
+<h2 id="s4">四、训练 vs 推理基准</h2>
+
+<p>同一加速器在训练与推理中<strong>相反方式失败</strong>：训练 waste 天数于梯度同步；推理 miss SLO 于 tail latency 尖峰。故 MLPerf Training 与 Inference 分离。</p>
+
+<table>
+  <tr><th>维度</th><th>Training</th><th>Inference</th></tr>
+  <tr><td>计算方向</td><td>Forward + Backward</td><td>Forward only</td></tr>
+  <tr><td>内存</td><td>参数+梯度+优化器+激活（3–4× 推理）</td><td>权重+激活+KV cache</td></tr>
+  <tr><td>优化目标</td><td>Time-to-accuracy、scaling</td><td>Latency 分位数、QPS</td></tr>
+  <tr><td>绑定约束</td><td>小 scale 算力；大 scale 通信 BW</td><td>延迟、tail、冷启动</td></tr>
+  <tr><td>能耗模式</td><td>一次性摊销（GPT-3 ~1287 MWh）</td><td>每 query 累积（$E = P \times T$）</td></tr>
+</table>
+
+<h2 id="s5">五、训练基准</h2>
+
+<div class="math-block">$$T_{\text{train}} = \operatorname{arg\,min}_{t}\big\{\text{Accuracy}(t) \geq \text{target accuracy}\big\}$$</div>
+
+<div class="math-block">$$\text{Throughput} = \frac{N_{\text{samples}}}{T_{\text{train}}}$$</div>
+
+<p>吞吐 alone 无意义——MLPerf ResNet-50 须达 75.9% top-1 才有效。未达目标的"快"不算数。</p>
+
+<h3 id="s5-1">5.1 扩展效率</h3>
+
+<div class="math-block">$$\text{Eff}_{\text{scaling}} = \frac{T(1)}{N_{\text{GPU}} \times T(N_{\text{GPU}})} \times 100\%$$</div>
+
+<p>例：单卡 24 h，8 卡 4 h → $\text{Eff} = 24/(8 \times 4) = 75\%$。丢失 25% 来自 AllReduce（10–15%）、CPU↔GPU 拷贝（3–5%）、负载不均（2–5%）。</p>
+
+<h3 id="s5-2">5.2 MFU（Model FLOPs Utilization）手算</h3>
+<div class="math-block">$$\text{MFU} = \frac{\text{Achieved FLOP/s}}{\text{Peak FLOP/s}} = \frac{6 \times N \times D \times H \times L \times T / T_{\text{step}}}{R_{\text{peak}}}$$</div>
+<p>例：GPT-2 117M，batch=32，seq=1024，A100 FP16 峰值 312 TFLOP/s，实测 step 120 ms：</p>
+<ul>
+  <li>每 step FLOPs ≈ $6 \times 32 \times 1024 \times 768 \times 12 \approx 1.8 \times 10^{12}$</li>
+  <li>Achieved = $1.8 \times 10^{12} / 0.12 \approx 15$ TFLOP/s</li>
+  <li>MFU = $15/312 \approx 4.8\%$（小模型 GPU 利用率极低——CPU/Python 开销主导）</li>
+</ul>
+<p>LLM 7B+ scale MFU 30–50% 常见；<strong>MFU 低 ≠ 浪费</strong>，小 scale 通信/launch 占比高是物理现实。</p>
+
+<table>
+  <tr><th>训练维度</th><th>关键指标</th><th>示例用途</th></tr>
+  <tr><td>时间与吞吐</td><td>Time-to-accuracy、samples/s</td><td>GPU 架构对比</td></tr>
+  <tr><td>扩展性</td><td>Scaling efficiency、通信开销</td><td>分布式训练规划</td></tr>
+  <tr><td>资源利用</td><td>GPU 利用率、内存 BW、I/O</td><td>数据管道优化</td></tr>
+  <tr><td>能效成本</td><td>MWh/run、FLOP/s/W</td><td>可持续训练</td></tr>
+  <tr><td>容错</td><td>Checkpoint 开销、恢复率</td><td>云训练可靠性</td></tr>
+  <tr><td>可复现</td><td>跨 run 方差、框架一致性</td><td>公平比较</td></tr>
+</table>
+
+<h2 id="s6">六、推理基准与 MLPerf Inference</h2>
+
+<h3 id="s6-1">6.1 推理指标</h3>
+
+<ul>
+  <li><strong>Latency：</strong>单请求延迟；生产关注 p95/p99 而非均值</li>
+  <li><strong>Throughput：</strong>满足 SLO 的有效 QPS——违反 SLO 的请求不计入</li>
+  <li><strong>Tail latency：</strong>多组件 fan-out 时 tail 放大（Tail at Scale）</li>
+</ul>
+
+<h3 id="s6-2">6.2 MLPerf 执行场景</h3>
+
+<table>
+  <tr><th>场景</th><th>负载模式</th><th>优化目标</th></tr>
+  <tr><td>SingleStream</td><td>逐条顺序</td><td>最低延迟</td></tr>
+  <tr><td>MultiStream</td><td>多流并行</td><td>多传感器/多摄像头</td></tr>
+  <tr><td>Server</td><td>Poisson 到达、SLO 约束</td><td>延迟约束下最大 QPS</td></tr>
+  <tr><td>Offline</td><td>批量全可用</td><td>最大吞吐</td></tr>
+</table>
+
+<div class="tech-card purple">
+  <h4>Server 场景要点</h4>
+  <p>10,000 QPS 但 5% 违反 99%ile SLO → 报告有效 QPS 9,500。Server 模式模拟真实 serving：请求随机到达、batch 与队列竞争同一延迟预算。</p>
+</div>
+
+<h3 id="s6-3">6.3 有效 QPS 手算</h3>
+<div class="math-block">$$\text{QPS}_{\text{valid}} = \text{QPS}_{\text{raw}} \times (1 - p_{\text{SLO violation}})$$</div>
+<p>例：ResNet-50 Server 模式测得 raw 12,000 QPS，p99 目标 15 ms，实测 8% 请求 p99 &gt; 15 ms → 有效 QPS = $12000 \times 0.92 = 11040$。若只报 12K 则 overstate 产能 7.3%。</p>
+
+<h3 id="s6-4">6.4 Offline vs Server 鸿沟</h3>
+<table>
+  <tr><th>场景</th><th>ResNet-50 V100</th><th>说明</th></tr>
+  <tr><td>Offline batch=128</td><td>~45,000 img/s</td><td>最大吞吐，无 SLO</td></tr>
+  <tr><td>Server p99&lt;15 ms</td><td>~8,500 img/s</td><td>Poisson 到达 + 动态 batch</td></tr>
+  <tr><td>SingleStream</td><td>~117 img/s (8.5 ms)</td><td>最低延迟</td></tr>
+</table>
+<p>Offline 数字比 Server 高 5× 常见——用 Offline 规划 Server 容量将严重 under-provision。</p>
+
+<h2 id="s7">七、功耗测量</h2>
+
+<p>SPEC Power（2007）在 0–100% 共 11 档负载测 ssj_ops/W——ML serving 很少 100% 满载，部分负载效率决定真实电费。Green500 按 FLOP/s/W 排名，教训是<strong>最快集群 ≠ 最经济集群</strong>。</p>
+
+<div class="math-block">$$E_{\text{total}} = \text{Power} \times T$$</div>
+
+<p>300 W 加速器、10 ms 推理 → $300 \times 0.01 = 3$ J（~0.0008 Wh）。MLPerf Power 标准化测量边界：加速器 alone vs 整机 vs 机架级——边界选择可差 2–3×。</p>
+
+<table>
+  <tr><th>测量边界</th><th>包含</th><th>适用</th></tr>
+  <tr><td>Component</td><td>GPU/TPU 芯片</td><td>硬件能效对比</td></tr>
+  <tr><td>Node</td><td>CPU+GPU+内存+风扇</td><td>单节点部署规划</td></tr>
+  <tr><td>Rack/Cluster</td><td>网络、存储、冷却</td><td>TCO 与碳排放</td></tr>
+</table>
+
+<div class="tech-card green">
+  <h4>算法能效 vs 硬件功耗</h4>
+  <p>压缩（INT8 量化）通过减少<strong>工作量</strong>降能耗，非仅换更省电硬件。MobileNet 深度可分离卷积 + INT8 可在算法与数值两层同时攻击 $D_{\text{vol}}$ 与 $O$ 项。</p>
+</div>
+
+<h2 id="s8">八、最佳实践与陷阱</h2>
+
+<ul>
+  <li><strong>统计 rigor：</strong>多次 run、报告分布而非单次 best；GPU boost/thermal throttling 可淹没小增益</li>
+  <li><strong>Benchmark-production gap（2–10×）：</strong>漂移、节流、动态负载、静默退化——再精密的仪器 alone 无法消除</li>
+  <li><strong>Benchmark gaming：</strong>test-set 调参、kernel 特化——MLPerf 多工作负载缓解</li>
+  <li><strong>模型评估盲区：</strong>高准确率 ≠ 校准良好；须测子群指标（DR 农村 0.88 vs 全局 0.95 → 拒绝部署）与分布外性能</li>
+</ul>
+
+<div class="tech-card red">
+  <h4>移动/边缘 omitted 条件</h4>
+  <p>厂商 burst 推理数字若未测<strong> sustained 热节流</strong>，steady-state 性能可远低于峰值——智能手机 类部署最常被误导的 omitted 条件。</p>
+</div>
+
+<h2 id="s9">九、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>核心要点</h4>
+  <ol>
+    <li>基准是 D·A·M 协同设计的<strong>问责机制</strong>——验证 Data/Algorithm/Machine 是否真正匹配</li>
+    <li>系统/模型/数据三维 + micro/macro/e2e 粒度，按决策问题选择</li>
+    <li>训练看 time-to-accuracy 与 scaling efficiency；推理看 SLO 约束下的 QPS 与 tail</li>
+    <li>MLPerf 四场景（Single/Multi/Server/Offline）反映不同部署 physics</li>
+    <li>功耗须定义测量边界；算法压缩与硬件能效互补</li>
+    <li>Goodhart + benchmark-production gap：设计 for benchmark = 对 shifting reality 过拟合</li>
+  </ol>
+</div>
+
+<blockquote>Measured 什么，就 improved 什么——MLPerf Training 版本间进步持续超越 Moore 定律，正因标准化测量创造 competitive pressure 驱动全栈优化。</blockquote>
+
+<p><strong>下一章预告：</strong>基准验证过的模型，最终要在<strong>生产请求流</strong>中运行。第 13 章 Model Serving 将翻转训练优先级——从吞吐到延迟、排队论、LLM serving 与吞吐优化。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告基于《Introduction to Machine Learning Systems》Vol.1 第12章整理。来源：<a href="https://mlsysbook.ai/vol1/benchmarking/benchmarking.html">mlsysbook.ai</a> · 生成日期：2026-07-04</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

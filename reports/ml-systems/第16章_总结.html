@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第16章 总结 | Machine Learning Systems Vol.1</title>
+<style>
+:root{--bg:#1e1e2e;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--border:#45475a;--strong:#a6e3a1;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;max-width:900px;margin:0 auto;padding:40px 64px;}
+h1,h2{color:var(--heading);}h2{font-size:1.3em;margin:1.8em 0 .5em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+table{border-collapse:collapse;width:100%;margin:1em 0;}th,td{padding:8px 12px;border:1px solid var(--border);}th{background:#2a2a3e;}
+.meta{color:#6c7086;margin-bottom:1.4em;}
+ul{margin:.6em 0 .6em 1.6em;}strong{color:var(--strong);}
+</style>
+</head>
+<body>
+
+<h1>第16章 总结</h1>
+<p class="meta">Vol.1 全书回顾 · 2026-07-04</p>
+
+<h2>Vol.1 核心统一式</h2>
+<div class="math-block" style="background:#2a2a3e;padding:16px;border-radius:6px;">
+$$T = \frac{D_{\text{vol}}}{BW} + \frac{O}{R_{\text{peak}}\cdot\eta_{\text{hw}}} + L_{\text{lat}}$$
+</div>
+<p>优化必须打<strong>当前 dominant term</strong>；降 $O$ 可能增 $D_{\text{vol}}$（剪枝不规则访问）。Silicon Contract：架构先押注算力/带宽/容量。</p>
+
+<h2>四部分回顾</h2>
+<table>
+  <tr><th>Part</th><th>章</th><th>一句话</th></tr>
+  <tr><td>I 基础</td><td>1–4</td><td>D·A·M、四范式、workflow、数据=源码</td></tr>
+  <tr><td>II 构建</td><td>5–8</td><td>神经算子、架构、框架、分布式训练</td></tr>
+  <tr><td>III 优化</td><td>9–12</td><td>选数据、压缩、硬件、基准</td></tr>
+  <tr><td>IV 部署</td><td>13–15</td><td>服务、MLOps、负责任工程</td></tr>
+</table>
+
+<h2>贯穿案例：DR 筛查</h2>
+<ul>
+  <li>512 MB / 2 s / 灵敏度 90% 从 Day 1 约束架构（MobileNetV2 INT8）</li>
+  <li>Lab-to-field、PSI、Canary 95/5、Feature Store 一致性</li>
+</ul>
+
+<h2>Vol.1 → Vol.2</h2>
+<p>单节点 regime（1–8 卡、memory wall）→ 舰队 regime（数千节点、bisection bandwidth、故障域）。铁律形式不变，dominant term 切换。</p>
+
+<h2>工程师心法</h2>
+<ol>
+  <li>先 profile 再优化（铁律 + roofline）</li>
+  <li>数据错误静默；先查 pipeline 再查 model</li>
+  <li>Workflow 是闭环，部署是起点</li>
+  <li>约束从问题定义向后传播，勿 Day 153</li>
+</ol>
+
+<hr>
+<p class="meta">来源：<a href="https://mlsysbook.ai/vol1/contents/vol1/conclusion/conclusion.html">mlsysbook.ai — Conclusion</a></p>
+<p class="meta"><a href="index.html">← 返回章节索引</a></p>
+
+</body>
+</html>

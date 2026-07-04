@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>第14章 ML运维 | Machine Learning Systems Vol.1</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--border:#45475a;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;}
+main{margin-left:260px;padding:40px 64px;}
+h1,h2{color:var(--heading);}h2{font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+table{border-collapse:collapse;width:100%;margin:1em 0;}th,td{padding:8px 12px;border:1px solid var(--border);}th{background:#2a2a3e;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px;margin:1em 0;border-left:4px solid var(--heading);}
+.meta{color:#6c7086;}pre{background:var(--bg-code);padding:16px;border-radius:6px;font-size:.88em;}
+pre code{font-family:Consolas,monospace;color:var(--text);}
+</style>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第14章 ML 运维</h1>
+<p class="meta">Vol.1 · Part IV 部署 · 2026-07-04</p>
+
+<p>第 3 章 workflow 的「监控→重训」在 production 落地：四维监控、告警分级、自动化重训、ML CI/CD。</p>
+
+<h2 id="s1">一、四维监控</h2>
+<table>
+  <tr><th>层</th><th>指标示例</th><th>告警</th></tr>
+  <tr><td>基础设施</td><td>GPU util、p99 &lt;200 ms</td><td>QPS=0 5 min</td></tr>
+  <tr><td>模型</td><td>AUC 滑动 7d</td><td>降 &gt;3 pt</td></tr>
+  <tr><td>数据</td><td>PSI&gt;0.25</td><td>48h 内重训工单</td></tr>
+  <tr><td>业务</td><td>DR 转诊率</td><td>周环比 ±20%</td></tr>
+</table>
+
+<h2 id="s2">二、重训触发</h2>
+<pre><code>if psi(feature_x) &gt; 0.25 for 3 consecutive days:
+    trigger_retrain(pipeline_id="dr_v7", data_version="latest")</code></pre>
+<p>非日历重训：freshness debt（第 4 章）&gt;90 天 warning，&gt;365 天 critical。</p>
+
+<h2 id="s3">三、ML CI/CD</h2>
+<ul>
+  <li><strong>CI：</strong>数据 GX 断言 + 单元测试 + 小 subset 训练 smoke（&lt;10 min）</li>
+  <li><strong>CD：</strong>Registry Staging → Canary 95/5（第 3 章）→ 晋升 Production</li>
+  <li><strong>回滚：</strong>保留 v{N-1} artifact + <code>kubectl rollout undo</code></li>
+</ul>
+
+<h2 id="s4">四、与第 3–4 章衔接</h2>
+<p>Lineage：PSI 告警 → <code>data.dvc_rev</code> → <code>mlflow.run_id</code> → 根因。Sculley CACE：改学习率可能改数据采样——变更须过接口契约审查。</p>
+
+<h2 id="s5">五、总结</h2>
+<p>MLOps = 让 workflow 闭环可自动化、可审计。下一章：公平/隐私/合规（第 15 章）。</p>
+<hr>
+<p class="meta">来源：<a href="https://mlsysbook.ai/vol1/contents/vol1/ml_ops/ml_ops.html">mlsysbook.ai</a></p>
+</main>
+<script>
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2').forEach((h,i)=>{h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;toc.appendChild(a);});
+</script>
+</body>
+</html>

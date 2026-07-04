@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第4章 数据工程 | Machine Learning Systems Vol.1</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第4章 数据工程</h1>
+<p class="meta">《Introduction to Machine Learning Systems》Vijay Janapa Reddi · MIT Press · Vol.1 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>数据即源码 → 数据物理 → 四支柱 → KWS 贯穿 → 采集/管道/处理/存储/运维健康</td></tr>
+  <tr><th>学习目标</th><td>将 79% 工程师时间花在的数据工作，从「清洗」提升为可版本化、可监控的 Dataset Compilation</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、开篇：数据是真正的源码</h2>
+
+<p>传统软件：程序员写逻辑。ML：程序员写优化过程，<strong>从数据中提取行为逻辑</strong>。改数据 = 改系统行为，无需改一行传统代码——且数据会随世界漂移，模型静默退化。</p>
+
+<div class="tech-card blue">
+  <h4>Definition 4.1：Data Engineering</h4>
+  <p>管理数据从源到模型的生命周期：采集、转换、存储、治理。在铁律中治理 $D_{\text{vol}}$（字节移动）；在 D·A·M 中是 <strong>data-machine 协同设计</strong>——算法再快，也学不快于机器能喂入的数据。</p>
+  <p>误区：「数据工程 = 数据清洗」。正解：<strong>Dataset Compilation</strong>——像编译器把源码变成二进制，管道把原始观测变成模型消费的训练张量。</p>
+</div>
+
+<h3 id="s1-1">1.1 编译器类比</h3>
+
+<table>
+  <tr><th>编译器阶段</th><th>数据管道阶段</th><th>作用</th></tr>
+  <tr><td>Dead code elimination</td><td>过滤损坏/离群/无关特征</td><td>去掉不贡献梯度的质量</td></tr>
+  <tr><td>Loop unrolling</td><td>数据增强（旋转、加噪）</td><td>无新采集暴露更多模式变体</td></tr>
+  <tr><td>Common subexpr elimination</td><td>去重</td><td>防重复样本偏置梯度</td></tr>
+  <tr><td>Type checker</td><td>Schema 校验</td><td>拒 malformed 输入</td></tr>
+</table>
+
+<p>数据集须 <strong>git 式版本化</strong>、单元测试（质量断言）、调试。删一行训练数据 ≈ 删一行源码；重训 ≈ 重新编译。train/val/test 是信任边界——泄漏（同用户跨 split、增强副本跨 split）会让评估虚高。</p>
+
+<h2 id="s2">二、数据的物理：Gravity、Entropy、Feeding Tax</h2>
+
+<h3 id="s2-1">2.1 数据引力（Data Gravity）</h3>
+
+<div class="math-block">
+$$T_{\text{move}} = \frac{D_{\text{vol}}}{BW} \quad \text{例：} \frac{1\,\text{PB}}{12.5\,\text{GB/s}} \approx 80{,}000\,\text{s} \approx 22\,\text{h}$$
+</div>
+
+<p>AWS  egress 约 $0.09/GB → 1 PB 迁出 ≈ <strong>$90,000</strong>。若训练 &lt; 22 h 且算力 &lt; $90k，<strong>代码迁到数据</strong>（Lakehouse：Spark 直接在存储节点算）比搬数据划算。经验法则：PB 级算到数据；GB 级算到代码。</p>
+
+<h3 id="s2-2">2.2 信息熵与选择增益</h3>
+
+<div class="math-block">
+$$\text{Data Selection Gain} \propto \frac{\text{Information Entropy}}{\text{Data Gravity}}$$
+</div>
+
+<p>100 万张相同图片：高引力、零熵。1 万条 diverse 边缘案例：低引力、高熵。去重减质量不减熵 → 提升比率；主动学习加高熵样本同理。</p>
+
+<h3 id="s2-3">2.3 Feeding Tax（喂料税）</h3>
+
+<p>ResNet 类图像训练：GPU 可达 ~1843 img/s，存储管道仅 ~250 MB/s → 加速器空闲。Feeding tax 可超 <strong>77.5%</strong>——$\eta_{\text{hw}}$ 被 I/O 吃掉。饱和需 ~1.1 GB/s 传输；JPEG 解码在 CPU 上常比 GPU 前向更慢 → DataLoader 8+ worker、pin memory 是铁律 $D/BW$ 项的具体体现。</p>
+
+<div class="tech-card yellow">
+  <h4>能量-移动不变量（Table 4.1 摘要）</h4>
+  <table>
+    <tr><th>操作</th><th>能量</th><th>相对 32-bit MAC</th></tr>
+    <tr><td>FP32 MAC</td><td>3.7 pJ</td><td>1×</td></tr>
+    <tr><td>DRAM 访问</td><td>640 pJ</td><td>173×</td></tr>
+    <tr><td>本地 SSD</td><td>4,000 pJ</td><td>1,081×</td></tr>
+    <tr><td>网络传输</td><td>40,000 pJ</td><td>10,811×</td></tr>
+  </table>
+  <p>剪枝 50% 训练数据不只是省磁盘——Eliminate 最耗能的数据移动阶段。</p>
+</div>
+
+<h2 id="s3">三、四支柱框架与 KWS 案例</h2>
+
+<h3 id="s3-1">3.1 Data Cascade</h3>
+
+<div class="tech-card red">
+  <h4>War Story：Pipeline Jungle（zip_code）</h4>
+  <p>上游把 <code>zip_code</code> 从 int 改为 string（国际邮编）。管道静默 cast <code>"02139"</code> → <code>2139</code>，前导零丢失。模型把 <code>2139</code> 当未知类别 → 整区申请人拒贷。</p>
+  <p><strong>防御：</strong>版本化 Data Contract（schema、单位、语义、允许范围）在 ingestion 接口强制执行。</p>
+</div>
+
+<h3 id="s3-2">3.2 四支柱</h3>
+
+<table>
+  <tr><th>支柱</th><th>问什么</th><th>KWS 实例</th></tr>
+  <tr><td>Quality</td><td>正确性 vs 覆盖率</td><td>SNR &gt; 20 dB、唤醒词 500–800 ms</td></tr>
+  <tr><td>Reliability</td><td>弱网下仍可用？</td><td>本地缓冲、重录、离线 enrollment</td></tr>
+  <tr><td>Scalability</td><td>百万用户仍可行？</td><td>750K 实标 + 2M 合成，$150K 预算</td></tr>
+  <tr><td>Governance</td><td>合规可审计？</td><td>声纹本地存、GDPR 同意记录</td></tr>
+</table>
+
+<h3 id="s3-3">3.3 KWS Napkin Math：假阳性目标</h3>
+
+<p>目标：每月最多 1 次误唤醒。1 s 窗口 × 24 h × 30 天 = <strong>2,592,000 窗口/月</strong>。</p>
+<div class="math-block">
+$$\text{FPR}_{\text{window}} = \frac{1}{2{,}592{,}000} \approx 3.9 \times 10^{-7} \quad \Rightarrow \quad \text{非关键词拒绝率需 } 99.99996\%$$
+</div>
+<p>「99% 准确率」在此无意义——须用 <strong>FA/Hr（False Accepts per Hour）</strong>。模型须 &lt;64 KB（SoC always-on island 含权重+预处理）。</p>
+
+<h3 id="s3-4">3.4 KWS 设计空间（Table 4.3 精选）</h3>
+
+<table>
+  <tr><th>选择</th><th>质量</th><th>成本/内存</th></tr>
+  <tr><td>16 kHz vs 8 kHz</td><td>+2–4% acc</td><td>2× 存储与算力</td></tr>
+  <tr><td>13 vs 40 MFCC</td><td>+3–5% acc</td><td>3× 特征内存（64 KB 限 → 13）</td></tr>
+  <tr><td>750K 实 + 2M 合成</td><td>≈97–99% acc</td><td>$90K 标注 @ $0.12/条含 review</td></tr>
+</table>
+
+<h2 id="s4">四、数据采集</h2>
+
+<h3 id="s4-1">4.1 成本常数（须内化）</h3>
+
+<table>
+  <tr><th>操作</th><th>成本</th><th>备注</th></tr>
+  <tr><td>众包图像标签</td><td>$0.01–0.05/张</td><td>简单分类</td></tr>
+  <tr><td>专家医学标注</td><td>$50–200/研究</td><td>放射科</td></tr>
+  <tr><td>S3 Standard</td><td>$23/TB/月</td><td>热存储</td></tr>
+  <tr><td>8× A100 训 ResNet-50</td><td>4–6 h，$64–192/次</td><td>spot</td></tr>
+  <tr><td>标注 100 万图</td><td>2–4 周</td><td>人类是 wall-clock 瓶颈</td></tr>
+</table>
+
+<p>$100K 标注 vs 单次 $192 训练 → 比值 <strong>520×–1562×</strong>。80% 标注 effort 在 20% 长尾（边缘类别、质量例外）。ImageNet：1420 万图、4.9 万 MTurk 工人——复用价值高，但 Recht et al. 显示 ImageNet 过拟合致分布偏移测试崩盘。</p>
+
+<h3 id="s4-2">4.2 多源策略</h3>
+<ul>
+  <li><strong>既有语料：</strong>Speech Commands、MSWC——测覆盖缺口</li>
+  <li><strong>爬虫：</strong>ImageNet/OpenImages 规模，须防 1914 交通灯历史图等噪声</li>
+  <li><strong>众包：</strong>MTurk 扩口音/环境，须 SNR、时长 acoustic 门控</li>
+  <li><strong>合成：</strong>pitch shift、加噪、房间脉冲——KWS 需 2340 万样本量级</li>
+</ul>
+
+<h2 id="s5">五、管道架构</h2>
+
+<pre class="mermaid">
+flowchart LR
+  SRC["Raw Sources"] --> ING["Ingestion"]
+  ING --> STO["Storage"]
+  STO --> PROC["Processing/Label"]
+  PROC --> TRN["Training"]
+  GOV["Governance 横切"] -.-> ING
+  GOV -.-> PROC
+</pre>
+
+<h3 id="s5-1">5.1 质量监控：K-S 检验算例</h3>
+
+<p>监控 <code>session_duration</code>：训练 baseline $P_0$ vs 当前 serving $P_t$，$n_0=n_t=1000$。</p>
+<div class="math-block">
+$$D_{\text{KS}} = \max_x |F_{P_0}(x) - F_{P_t}(x)| \quad D_{\text{crit}} \approx 1.36\sqrt{\frac{n_0+n_t}{n_0 n_t}} \approx 0.061 \text{（}\alpha=0.05\text{）}$$
+</div>
+<p>若观测 $D_{\text{KS}}=0.08 &gt; 0.061$ → 拒绝「同分布」假设，触发调查/重训工单（不是只上 dashboard）。分类特征用 PSI（第 3 章手算例），非 K-S。</p>
+
+<h3 id="s5-2">5.2 Data Quality as Code</h3>
+
+<pre><code>suite.add_expectation(
+  gx.expectations.ExpectColumnValuesToBeBetween(
+    column="age", min_value=0, max_value=120))
+suite.add_expectation(
+  gx.expectations.ExpectColumnDistinctValuesToBeInSet(
+    column="country_code",
+    value_set=["US", "CA", "UK", "DE", "FR"]))
+if not validation_definition.run().success:
+    raise ValueError("Data quality check failed")</code></pre>
+<p>Great Expectations / Pandera 在 CI 阻断坏数据；行业经验约 catch <strong>60%</strong> 问题，其余靠运行时统计监控。</p>
+
+<h3 id="s5-3">5.3 漂移 taxonomy</h3>
+
+<table>
+  <tr><th>类型</th><th>变化</th><th>检测</th></tr>
+  <tr><td>Covariate shift</td><td>$p(x)$ 变，$p(y|x)$ 不变</td><td>PSI/KL 于输入特征</td></tr>
+  <tr><td>Label shift</td><td>$p(y)$ 变，$p(x|y)$ 不变</td><td>预测分布变化</td></tr>
+  <tr><td>Concept drift</td><td>$p(y|x)$ 变</td><td>需 ground truth</td></tr>
+  <tr><td>Label quality drift</td><td>标注可靠性降</td><td>Cohen's $\kappa$ 下滑</td></tr>
+</table>
+
+<div class="math-block">
+$$\kappa = \frac{p_o - p_e}{1 - p_e} \quad \text{例：基线 } \kappa=0.85 \to 6\text{ 月后 } 0.72 \Rightarrow \text{新标注员缺培训}$$
+</div>
+
+<h3 id="s5-4">5.4 可靠性：Circuit Breaker</h3>
+<p>特征服务连续失败 → breaker <strong>open</strong>，serving 回退 stale cache 或默认特征，而非 cascade timeout。Dead Letter Queue 存失败记录——欺诈 DLQ 曾发现新支付类型，驱动定向采集而非仅 log。</p>
+
+<h3 id="s5-5">5.5 Batch vs Stream / ETL vs ELT</h3>
+<p>Batch：容忍 staleness 换效率。Stream：Kafka 等，freshness 换运维复杂度。ELT：先 raw load 到 Lakehouse 再 transform——配合 Delta 直接在存储层算特征，减 PB 级 copy 的 $D_{\text{vol}}/BW$ 成本。</p>
+
+<h3 id="s5-6">5.6 War Story：Microsoft Tay (2016)</h3>
+<div class="tech-card red">
+  <p>Twitter 公开输入 = 实时训练信号。24 h 内协调攻击 → 数据投毒 → 种族歧视输出。教训：UGC 管道无 adversarial 控制 = 安全面，不是 plumbing。</p>
+</div>
+
+<h3 id="s5-7">5.7 DataLoader 瓶颈（Napkin Math）</h3>
+
+<p>A100 训 ResNet-50：单卡 forward+backward ~2 ms/image → 理论 ~500 img/s。实测常仅 ~120 img/s，因 JPEG decode 在 CPU ~6 ms/张。加 worker 至 8：decode 并行 → ~480 img/s，GPU 利用率从 ~24% 升到 ~96%。</p>
+<div class="math-block">
+$$T_{\text{step}} = \max(T_{\text{compute}}, T_{\text{io}}) \quad T_{\text{io}} \approx \frac{N_{\text{workers}}}{T_{\text{decode}}} \text{ 饱和前由 decode 主导}$$
+</div>
+<p>Investment 顺序：先 profile 哪项绑定 → 再加 GPU。这与第 3 章「迭代税」同构：快实验循环依赖 feed 管道，非裸算力。</p>
+
+<h3 id="s5-8">5.8 DLRM 灯塔：Scalability 的另一面</h3>
+
+<table>
+  <tr><th>属性</th><th>ResNet 视觉</th><th>DLRM 推荐</th></tr>
+  <tr><td>瓶颈</td><td>算力 FLOPS</td><td>Embedding 表 TB 级 + 稀疏随机 lookup</td></tr>
+  <tr><td>数据工程重点</td><td>增强、decode</td><td>表分片、跨机 lookup 带宽</td></tr>
+  <tr><td>用户/物品规模</td><td>N/A</td><td>10⁹ 级 ID → 必须 partition</td></tr>
+</table>
+
+<h2 id="s6">六、系统化数据处理</h2>
+
+<h3 id="s6-1">6.1 Training-Serving Skew（一致性铁律）</h3>
+
+<div class="tech-card red">
+  <h4>Materialized View 陷阱</h4>
+  <p>训练：batch 用 weekly refresh 物化视图算 7 日滚动均值。Serving：实时 join 重算。逻辑「相同」→ 值不同 → <strong>准确率静默降 10–15%</strong>，无报错。</p>
+  <p>解：共享代码库（非复制粘贴）；归一化 mean/std 与模型 artifact 一起 persist；Feature Store 双接口读<strong>同一预计算值</strong>。</p>
+</div>
+
+<h3 id="s6-2">6.2 KWS 音频：MFCC 参数必须一致</h3>
+<p>25 ms 窗、16 kHz、13 MFCC——训练与 always-on island 上预处理参数差 5 ms STFT 窗 → 特征 skew → 性能崩溃。SNR &gt; 20 dB、唤醒词时长 500–800 ms 为质量门。</p>
+
+<h3 id="s6-3">6.3 幂等变换</h3>
+<p>重试/重跑须产出相同输出。类别编码：训练集 vocabulary 持久化，serving 未知类映射 <code>UNK</code>。Outlier：mean/std 只用训练集统计量，serving 复用。</p>
+
+<h2 id="s7">七、标注与存储</h2>
+
+<h3 id="s7-1">7.1 标注经济学</h3>
+<p>KWS $150K 预算：~60% 标注（$90K ÷ $0.12/条 ≈ 750K 条，含 20% review）。多标注员投票提质量但 3× 成本；$\kappa &lt; 0.4$ 时训练数据噪声模型必继承（Landis &amp; Koch）。</p>
+
+<h3 id="s7-2">7.2 存储层次与格式</h3>
+<table>
+  <tr><th>层</th><th>带宽/延迟</th><th>ML 用途</th></tr>
+  <tr><td>对象存储 S3</td><td>高延迟，100–200 MB/s 磁盘</td><td>归档 raw</td></tr>
+  <tr><td>Parquet 列存</td><td>谓词下推、压缩</td><td>训练 batch 读</td></tr>
+  <tr><td>RAM</td><td>50–200 GB/s</td><td>Feature cache、在线 serving</td></tr>
+</table>
+
+<h3 id="s7-3">7.3 Delta Lake Time Travel（数据集版本）</h3>
+<p>训练 run 须绑定数据 snapshot。Delta 事务日志支持按版本/时间点查询：</p>
+<pre><code>DESCRIBE HISTORY fundus_features;
+SELECT * FROM fundus_features VERSION AS OF 5238;
+SELECT * FROM fundus_features TIMESTAMP AS OF '2026-03-15 08:00:00';
+RESTORE TABLE fundus_features TO VERSION AS OF 5238;</code></pre>
+<p>与 DVC hash、MLflow tag <code>data.dvc_rev</code> 链式：复现 = checkout 同一 VERSION + 同一预处理 commit。</p>
+
+<h3 id="s7-4">7.4 Feature Store</h3>
+<p>Uber Michelangelo 模式：batch 训练与 online serving 读<strong>同一 feature table</strong>。无 Feature Store 时 batch 7 日滚动 vs stream 实时窗口 → 典型 <strong>5–15% 线上 acc 损失</strong>。lookup 延迟目标 1–10 ms（Table 4.6）。</p>
+
+<h3 id="s7-5">7.5 Parquet 列裁剪算例</h3>
+
+<p>1 TB CSV 全表读入训练：$D_{\text{vol}}=1$ TB。Parquet 列存 + 只读 12/200 列：有效读 ~60 GB（假设均匀列宽）→ 铁律 $D/BW$ 项降 ~16×。配合 predicate pushdown（<code>WHERE date &gt;= '2026-01-01'</code>）进一步减 scan。</p>
+
+<h3 id="s7-6">7.6 文件格式选型</h3>
+
+<table>
+  <tr><th>格式</th><th>训练</th><th>在线</th></tr>
+  <tr><td>CSV/JSON</td><td>解析慢、无 schema</td><td>不推荐</td></tr>
+  <tr><td>Parquet</td><td>列裁剪、压缩、schema</td><td>批量导出</td></tr>
+  <tr><td>TFRecord/Arrow</td><td>框架原生、prefetch 友好</td><td>—</td></tr>
+  <tr><td>Redis/Feature Store</td><td>—</td><td>&lt;10 ms lookup</td></tr>
+</table>
+
+<h2 id="s8">八、运维数据健康</h2>
+
+<p>LiDAR 标注 15% 框偏 10–20 cm 持续 3 月——schema 全 valid，仅统计监控 label-sensor 对齐分布才发现。推荐系统 50k events/s：吞吐 &lt;40k/10 min 告警；<code>user_age</code> null 从 &lt;1% 升到 &gt;5% 告警；p95 管道延迟 &gt;30 s（SLA 10 s）须定位 ingestion/transform/validation 哪段。</p>
+
+<p>漂移响应占 MLOps effort 约 <strong>30–40%</strong>。PSI &gt; 0.2 或 KL 超阈 → 分级告警 → 第 14 章编排重训。区分：均值 8→12 min/6 月是 drift（重训）；突降到 3 min 是采集 bug（修源系统）。</p>
+
+<h2 id="s9">九、谬误与陷阱</h2>
+
+<table>
+  <tr><th>谬误</th><th>现实</th></tr>
+  <tr><td>「更多数据总是更好」</td><td>1M 相同图 &lt; 10K diverse；看 Selection Gain</td></tr>
+  <tr><td>「清洗完就完事」</td><td>机械正确 ≠ 语义正确（全员 age=25 默认值）</td></tr>
+  <tr><td>「训练 serving 逻辑一样就行」</td><td>须同一代码+同一数据源+同一 timestamp 语义</td></tr>
+  <tr><td>「benchmark SOTA 即可上线」</td><td>ImageNet 复用 ≠ 部署分布；须测 gap</td></tr>
+  <tr><td>「加 GPU 加速训练」</td><td>DataLoader 饥饿 → 零加速；先 profile $T_{\text{step}}=\max(T_{\text{compute}},T_{\text{io}})$</td></tr>
+</table>
+
+<h2 id="s10">十、章节总结</h2>
+
+<div class="tech-card green">
+  <ul>
+    <li><strong>数据 = 源码：</strong>Dataset Compilation，非事后清洗</li>
+    <li><strong>物理约束：</strong>Gravity（22 h/$90k PB 迁移）、Feeding tax（77.5%）、能量 173×–10⁴×</li>
+    <li><strong>四支柱 + KWS：</strong>FPR $3.9\times10^{-7}$/窗、64 KB、$150K 预算配置</li>
+    <li><strong>管道：</strong>K-S $D_{\text{crit}}=0.061$、GX 断言、漂移四类、Tay 投毒</li>
+    <li><strong>一致性：</strong>Feature Store / 共享代码；Delta VERSION AS OF 绑训练</li>
+  </ul>
+</div>
+
+<p><strong>下一章预告（第 5 章 神经计算）：</strong>编译好的张量如何进入前向/反向传播——从逻辑门到 USPS 手写数字，完成 D·A·M 中 Algorithm 轴的基础。</p>
+
+<hr>
+<p class="meta">来源：<a href="https://mlsysbook.ai/vol1/contents/vol1/data_engineering/data_engineering.html">mlsysbook.ai — Data Engineering</a></p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{primaryColor:'#313244',primaryTextColor:'#cdd6f4',lineColor:'#89b4fa'}});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

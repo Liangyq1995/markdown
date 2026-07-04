@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第9章 性能工程 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第9章 性能工程（Performance Engineering）</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>内存墙 / Roofline 诊断 → prefill vs decode 体制 → 融合 / FP8 / 编译 → 70B serving 三轮优化 → 瓶颈迁移（waterbed）</td></tr>
+  <tr><th>学习目标</th><td>先 profile 再优化；为 LLM serving 选择精度、融合与算法组合；理解 speedup 不可简单相乘</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、内存墙与 Roofline</h2>
+
+<p>H100：FP16 峰值 ~989 TFLOP/s，HBM 带宽 3.35 TB/s → <strong>ridge point</strong>（FP16）：</p>
+<div class="math-block">$$I_{\text{ridge,FP16}} = \frac{989 \times 10^{12}}{3.35 \times 10^{12}} \approx 295\ \text{FLOP/byte}$$</div>
+<p>FP8 算力 ~1979 TFLOP/s → $I_{\text{ridge,FP8}} \approx 591$ FLOP/byte。算术强度低于 ridge → <strong>memory-bound</strong>；高于 → compute-bound。</p>
+
+<div class="tech-card blue">
+  <h4>batch-1 decode 为何 MFU 个位数仍「正常」</h4>
+  <p>自回归 decode 算术强度 ~1 FLOP/byte，远低于 295——GPU 在等 HBM 搬权重，不是 Tensor Core 不够快。比 GPU 应看<strong>带宽 + 容量</strong>，不是峰值 TFLOP/s  alone。</p>
+</div>
+
+<table>
+  <tr><th>操作（H100 FP16）</th><th>算术强度</th><th>体制</th></tr>
+  <tr><td>batch-1 decode GEMM</td><td>~1 FLOP/byte</td><td>memory-bound</td></tr>
+  <tr><td>LayerNorm</td><td>~5 FLOP/byte</td><td>memory-bound</td></tr>
+  <tr><td>prefill GEMM（S=1024）</td><td>~1024 FLOP/byte</td><td>compute-bound</td></tr>
+  <tr><td>大 batch GEMM</td><td>数百+ FLOP/byte</td><td>compute-bound</td></tr>
+</table>
+
+<pre class="mermaid">
+graph TD
+  P["Baseline 测量"] --> R["Roofline 分类"]
+  R --> B["选瓶颈类: mem/compute/overhead"]
+  B --> O["最高杠杆优化 + 复测"]
+  O --> P
+  style P fill:#313244,stroke:#89b4fa
+</pre>
+
+<h2 id="s2">二、Prefill / Decode 双体制</h2>
+
+<h3 id="s2-1">2.1 Prefill（提示处理）</h3>
+<p>一次 forward 并行处理 $S$ 个 token，GEMM 形状含 batch=$S$。$S=1024$ 时 $I \approx 2S/2 = 1024$ FLOP/byte（FP16 权重）→ <strong>Tensor Core 吞吐</strong>限制。FlashAttention 对 prefill 收益最大（消 $S^2$ 中间矩阵）。</p>
+
+<h3 id="s2-2">2.2 Decode（逐 token 生成）</h3>
+<div class="math-block">$$I_{\text{decode}}(B) = \frac{2PB}{P s_{\text{param}} + B d_{\text{model}} s_{\text{elem}}}$$</div>
+<p>$B=1$ 时 deeply memory-bound；增大 $B$ 线性提高 $I$，但 KV cache 占满 HBM——70B FP16 140 GB 权重占 8×H100 后，每卡约 62.5 GB 给 KV。</p>
+
+<table>
+  <tr><th>配置</th><th>目标</th><th>典型手段</th></tr>
+  <tr><td>实时聊天</td><td>TTFT &lt;200 ms，ITL &lt;50 ms</td><td>低精度权重、spec decode</td></tr>
+  <tr><td>批处理摘要</td><td>吞吐 / 成本</td><td>大 batch、INT4/FP8</td></tr>
+</table>
+
+<h2 id="s3">三、融合、FP8 与编译</h2>
+
+<h3 id="s3-1">3.1 算子融合</h3>
+<p>Conv-BN-ReLU 未融合：3 次 launch、6 次 HBM 往返。Transformer 层 bias-GELU-dropout 融合可省 67 MB/层 × 80 层 ≈ 5.4 GB/forward 流量。</p>
+
+<div class="tech-card purple">
+  <h4>FlashAttention（IO-aware）</h4>
+  <p>$S=8192$，64 head，$d=128$，FP16：朴素 attention HBM 驻留 ~34.9 GB/层；FlashAttention 持久状态 ~537 MB/层 → <strong>~65×</strong> 材料化状态削减（online softmax 在 SRAM 分块）。</p>
+  <p>decode 阶段收益较小（瓶颈是 KV 读而非 $S^2$ 矩阵），prefill 长上下文收益最大。</p>
+</div>
+
+<h3 id="s3-2">3.2 FP8 精度红利</h3>
+<p>FP8 Tensor Core 算力 2× FP16，字节数减半 → decode 有效带宽 2×；prefill 同时吃算力+带宽。Horowitz 量级：HBM 读 ~640 pJ vs SRAM ~0.5 pJ——融合把访问从 HBM 拉到 SRAM，1000 GPU 可省 ~320 kW 内存子系统功率。</p>
+
+<h3 id="s3-3">3.3 推荐优化顺序（memory-bound serving）</h3>
+<ol>
+  <li>瓶颈修复：memory-bound batch-1 → <strong>INT4/FP8 权重 + KV 压缩</strong> 先于 compile</li>
+  <li>FlashAttention 族 + PagedAttention</li>
+  <li><code>torch.compile</code> / CUDA Graph 消 launch gap</li>
+  <li>Speculative decoding（最后，需 draft 模型）</li>
+</ol>
+
+<h2 id="s4">四、案例：70B LLM Serving Playbook</h2>
+
+<p><strong>目标：</strong>8×H100 NVLink；TTFT &lt;500 ms，ITL &lt;50 ms，集群吞吐 ≥1000 tok/s。<strong>基线（FP16 eager）：</strong>TTFT 1200 ms，ITL 85 ms，280 tok/s，max batch=4。</p>
+
+<div class="tech-card green">
+  <h4>Round 1 — 精度工程</h4>
+  <ul>
+    <li>AWQ INT4 权重：17.5 GB/GPU → 4.4 GB/GPU；权重读流量 ~4× 降</li>
+    <li>INT8 KV cache：每请求 cache 2× 小 → 可用 KV 从 ~62.5 GB 升到 ~75.6 GB/GPU</li>
+    <li>结果：batch=1 ITL 48 ms ✓；batch=32 吞吐 720 tok/s（仍不足）</li>
+  </ul>
+</div>
+
+<div class="tech-card green">
+  <h4>Round 2 — 融合</h4>
+  <ul>
+    <li><code>torch.compile max-autotune</code>：element-wise 14%→4%</li>
+    <li>FlashAttention-2 + CUDA Graph：launch overhead 12%→~0；attention decode −30%</li>
+    <li>结果：TTFT 380 ms ✓，ITL 32 ms，batch=32 吞吐 <strong>1050 tok/s</strong> ✓</li>
+  </ul>
+</div>
+
+<div class="tech-card yellow">
+  <h4>Round 3 — 自适应 Speculative Decoding</h4>
+  <p>1.5B INT4 draft（0.75 GB）一次提案 5 token（4 ms）；70B 验证 ~32 ms。$p_{\text{acc}}=0.78$，$k=5$：</p>
+  <div class="math-block">$$\text{ITL}_{\text{eff}} = \frac{4+32}{(1-0.78^{6})/(1-0.78)} \approx \frac{36}{3.5} \approx 10.3\ \text{ms/token}$$</div>
+  <p>相对 Round2 的 32 ms 约 3.1×。但 batch≥16 时 verification 不再「免费」→ <strong>仅低负载开 spec，高负载回退自回归</strong>。</p>
+</div>
+
+<h3 id="s4-1">4.1 速增不可相乘</h3>
+<p>INT4 先缓解 HBM 压力后，FlashAttention 单独测 1.9×，叠加仅再 1.4×——二者都攻击内存项，第一轮后瓶颈迁移。Round1 后大 batch 偏 compute-bound；再堆带宽优化收益递减。</p>
+
+<h2 id="s5">五、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>Playbook 要点</h4>
+  <ol>
+    <li><strong>先测后优</strong>：症状 → 应用层 → 分布式 → kernel；错诊 = 零收益</li>
+    <li>prefill 优化 FLOPs/FlashAttention；decode 优化 bytes（量化、KV、带宽）</li>
+    <li>FP8/INT4 是带宽杠杆；融合是 HBM 往返杠杆；compile 是 launch 杠杆</li>
+    <li>每轮优化后 reprofile——waterbed 效应，下一刀看新瓶颈</li>
+    <li>生产栈典型组合：INT4 + INT8 KV + FlashAttention-2 + compile + 条件 spec decode</li>
+  </ol>
+</div>
+
+<blockquote>性能工程不是追 peak TFLOP/s，而是让 tensor 路径匹配硅片物理：更少字节、更少 launch、更久留在 SRAM——在 C³ 的 Compute 维把 placement 与通信之外「本地执行」的浪费挤干。</blockquote>
+
+<p><strong>下一章预告：</strong>单节点优化就绪后，第 10 章进入<strong>规模化推理</strong>——批调度、路由、SLO 与多副本 serving 拓扑。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告基于《Machine Learning Systems at Scale》Vol.2 第9章整理。来源：<a href="https://mlsysbook.ai/vol2/performance_engineering/performance_engineering.html">mlsysbook.ai</a> · 生成日期：2026-07-04</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>
