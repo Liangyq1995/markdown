@@ -36,7 +36,8 @@ When generating new HTML reports for this directory:
 
 ### Math Formula Rules (critical)
 - Inline: `$...$`, Block: wrap in `<div class="math-block">$$...$$</div>`
-- **`<` in formulas → must write `\lt`** (prevents HTML parser truncation)
+- **Inside `$...$` / `$$...$$` only**: write `\lt` for `<`, `\gt` for `>` (prevents HTML parser truncation)
+- **Plain HTML text** (`<p>`, `<td>`, `<li>`, etc.): use `&lt;` and `&gt;` — **never** `\lt`/`\gt` (MathJax won't render them)
 - `.math-block` CSS must include MathJax override rules:
   ```css
   .math-block mjx-container[display="true"] { display:block!important; text-align:left!important; margin:0.4em 0!important; line-height:1.6!important; }
@@ -61,4 +62,5 @@ Extract with: `python3 -c "from pdfminer.high_level import extract_text; print(e
 - Do not use `timeline`, `mindmap`, `radar` in Mermaid (unstable rendering)
 - Do not use multi-series `bar` in Mermaid (use ECharts instead)
 - Do not put `<` directly in `$...$` or `$$...$$` — use `\lt`
+- Do not use `\lt`/`\gt` in plain HTML text — use `&lt;`/`&gt;` instead
 - Do not set `max-width` on `main` (causes large blank areas on wide screens)

@@ -156,7 +156,7 @@ graph LR
 <!-- ===== 四、定义 ML 系统 ===== -->
 <h2 id="s4">四、定义 ML 系统：D·A·M 三元组</h2>
 
-<p>以 Gmail 垃圾邮件过滤器为例：年处理约 44 万亿封邮件，50% 为垃圾邮件，准确率目标 \gt 99.9%，单封处理 \lt 50ms——揭示 ML 系统的三个交织关切：</p>
+<p>以 Gmail 垃圾邮件过滤器为例：年处理约 44 万亿封邮件，50% 为垃圾邮件，准确率目标 &gt; 99.9%，单封处理 &lt; 50 ms——揭示 ML 系统的三个交织关切：</p>
 
 <div class="tech-card blue">
   <h4>定义 1.1：机器学习系统</h4>
@@ -357,8 +357,8 @@ graph LR
 
 <table>
   <tr><th>系统</th><th>部署模式</th><th>关键约束</th><th>工程启示</th></tr>
-  <tr><td><strong>Waymo</strong></td><td>混合（车载 Edge + Cloud 训练）</td><td>\lt 10ms 感知延迟；1–19 TB/hr 传感器数据</td><td>安全认证冻结车载模型 vs Cloud 持续训练 → 版本差距</td></tr>
-  <tr><td><strong>FarmBeats</strong></td><td>资源受限 Edge</td><td>\lt 500KB 模型；kbps 级 TV 白空间带宽</td><td>绑定约束常是网络 BW 而非算力；模型新鲜度 \gt 模型精度</td></tr>
+  <tr><td><strong>Waymo</strong></td><td>混合（车载 Edge + Cloud 训练）</td><td>&lt; 10 ms 感知延迟；1–19 TB/hr 传感器数据</td><td>安全认证冻结车载模型 vs Cloud 持续训练 → 版本差距</td></tr>
+  <tr><td><strong>FarmBeats</strong></td><td>资源受限 Edge</td><td>&lt; 500 KB 模型；kbps 级 TV 白空间带宽</td><td>绑定约束常是网络 BW 而非算力；模型新鲜度 &gt; 模型精度</td></tr>
   <tr><td><strong>AlphaFold</strong></td><td>Cloud 密集计算</td><td>128 TPUv3 × 数周；200M+ 蛋白质预测</td><td>吞吐优先于延迟；科学发现驱动算力规模</td></tr>
 </table>
 

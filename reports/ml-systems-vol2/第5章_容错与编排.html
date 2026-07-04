@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第5章 容错与集群编排 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第5章 容错与集群编排</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 深度整合原第 7–8 章 · 2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>Llama 3 @ 16,384 H100 锚定可靠性算术 → Young-Daly 定 checkpoint 间隔并链第 3 章存储 tier → 故障谱系/SDC/恢复 → 自然过渡到「故障之外 GPU 仍空转」→ gang/拓扑/Goodput → Slurm vs K8s → spot 经济闭环</td></tr>
+  <tr><th>学习目标</th><td>从组件 MTBF 推算 fleet MTTF 与 $\tau_{\text{opt}}$；为 70B+ checkpoint 做存储 sizing；区分 fail-stop 与 SDC 并设计 check-and-verify；为同步训练配置 gang + 拓扑放置；用 Goodput 三因子诊断空转；评估 spot 有效成本</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、Llama 3 锚点：可靠性算术</h2>
+
+<p>Meta 在 <strong>16,384 张 H100</strong> 上训练 Llama 3，wall-clock <strong>54 天</strong>，期间记录 <strong>419 次硬件/软件故障</strong>。平均故障间隔 MTTF ≈ $(54 \times 24) / 419 \approx \mathbf{3.1\ \text{h}}$——约每 3 小时一次中断，不是偶发工单，而是<strong>训练背景噪声</strong>。第 4 章把 350 GB 梯度 AllReduce 定价为通信问题；本章追问：<strong>当任一 rank 在 3 h 内必然失效，months-long run 如何不被拖垮？</strong></p>
+
+<p>单卡 MTBF 约 50,000 h（~5.7 年）看似可靠；fleet 按串联模型缩放：</p>
+<div class="math-block">$$\text{MTBF}_{\text{system}} = \frac{\text{MTBF}_{\text{component}}}{N} = \frac{50{,}000}{16{,}384} \approx 3.05\ \text{h}$$</div>
+
+<p>与 Llama 3 观测 <strong>3.1 h</strong> 几乎重合——说明 GPU 本体已主导失效率；若再计入 PCIe retimer、电源域、leaf 交换机，$\lambda_{\text{system}}$ 还会略升。10k H100 集群实测级联故障率 $\lambda \approx 0.271$ 次/h → MTBF ≈ 3.7 h（~6.5 次/天），与 Llama 3 同量级。</p>
+
+<div class="tech-card red">
+  <h4>系统可靠度：$R_{\text{system}} = (R_{\text{component}})^N$</h4>
+  <p>独立组件串联：任一失效则同步训练步无法完成。</p>
+  <p><strong>Llama 3 手算：</strong>单 GPU 可用性 99.9%（$R=0.999$），$N=16{,}384$：</p>
+  <div class="math-block">$$R_{\text{cluster}} = 0.999^{16384} \approx 1.6 \times 10^{-7}$$</div>
+  <p>任意时刻<strong>全 fleet 同时可用概率趋近于零</strong>——不能指望硬件「全绿」，软件必须用 checkpoint + 弹性恢复持续吸收失效。54 天内 419 次故障意味着平均每次恢复若浪费 30 min 有效算力，累计损失 ≈ 209 GPU·h × 16k 卡规模下的协调成本——容错不是运维选项，是<strong>完成 pretrain 的前置条件</strong>。</p>
+</div>
+
+<table>
+  <tr><th>GPU 数 $N$</th><th>GPU-only MTBF</th><th>预期故障/天</th><th>Llama 3 对照</th></tr>
+  <tr><td>8</td><td>6,250 h</td><td>0.004</td><td>单机 debug</td></tr>
+  <tr><td>1,024</td><td>49 h</td><td>0.49</td><td>中小 pretrain</td></tr>
+  <tr><td>10,000</td><td>5 h</td><td>4.8</td><td>理论 1/N 曲线</td></tr>
+  <tr><td><strong>16,384</strong></td><td><strong>3.05 h</strong></td><td><strong>7.9</strong></td><td><strong>观测 3.1 h / ~7.8 次/天</strong></td></tr>
+  <tr><td>25,000</td><td>2 h</td><td>12</td><td>下一代 frontier</td></tr>
+</table>
+
+<p>可靠性算术给出第一个工程结论：<strong>checkpoint 间隔、检测 timeout、恢复路径必须在 ~3 h MTTF 量级上设计</strong>，而非按「几周一故障」的实验室经验。</p>
+
+<p>还可从故障率反推「有效训练时间占比」。设 MTTF = 3.1 h，平均恢复 $T_{\text{recover}} = 0.25$ h（15 min），则长期稳态：</p>
+<div class="math-block">$$\eta_{\text{avail}} = \frac{\text{MTTF}}{\text{MTTF} + T_{\text{recover}}} = \frac{3.1}{3.35} \approx 92.5\%$$</div>
+<p>仅 fail-stop 恢复就吃掉 ~7.5% $\eta_{\text{runtime}}$——尚未计入 checkpoint pause、SDC rollback、gang 排队。Llama 3 54 天若 $\eta_{\text{avail}} = 92.5\%$，等价于<strong>多烧 ~4 天算力</strong>在 restart 上；把 $T_{\text{recover}}$ 从 15 min 压到 5 min → $\eta_{\text{avail}} \approx 97.4\%$，节省 ~2.6 天 wall-clock。下一节用 Young-Daly 把 MTTF 直接映射为 checkpoint 频率，并接上第 3 章存储 tier 的 GB 账单。</p>
+
+<pre class="mermaid">
+graph TD
+  A["Llama 3: 16k H100\n54d / 419 failures"] --> B["MTTF ≈ 3.1 h\n1/N 算术"]
+  B --> C["Young-Daly τ_opt\n链 Ch3 存储 GB"]
+  C --> D["检测: heartbeat\nSDC: verify"]
+  D --> E["恢复 → 编排\nGPU 空转?"]
+  style A fill:#313244,stroke:#f38ba8
+  style E fill:#313244,stroke:#89b4fa
+</pre>
+
+<h2 id="s2">二、Young-Daly 与检查点存储</h2>
+
+<p>checkpoint 在「丢多少进度」与「写 checkpoint 吃多少算力」之间取 U 形最优。Young-Daly 公式（Daly 2006 对 Young 1974 的扩展）给出闭式解：</p>
+
+<div class="math-block">$$\tau_{\text{opt}} = \sqrt{2 \cdot T_{\text{write}} \cdot \text{MTBF}_{\text{system}}}$$</div>
+
+<p>$\tau$ = checkpoint 间隔；$T_{\text{write}}$ = 单次 checkpoint wall-clock 写时间（含 barrier + I/O）；MTBF = 系统平均故障间隔。总浪费 = checkpoint 开销 + 期望重做工作，在 $\tau_{\text{opt}}$ 取最小。</p>
+
+<div class="tech-card yellow">
+  <h4>Llama 3 量级算例</h4>
+  <p>取 $\text{MTBF}_{\text{system}} = 3.1$ h。70B LLM 全状态 checkpoint（权重 + Adam $m,v$）约 <strong>350–700 GB</strong>；175B 超 1 TB（见第 3 章：350 GB 权重 + 1,400 GB 优化器 ≈ 1,750 GB）。</p>
+  <p>若 16k GPU 分片写、<strong>本地 NVMe 同步</strong>（第 3 章推荐路径）使 $T_{\text{write}} = 12$ min = 0.2 h：</p>
+  <div class="math-block">$$\tau_{\text{opt}} = \sqrt{2 \times 0.2 \times 3.1} = \sqrt{1.24} \approx 1.11\ \text{h}$$</div>
+  <p>若错误地写远端 PFS、$T_{\text{write}} = 45$ min = 0.75 h（争用训练读 tier）：</p>
+  <div class="math-block">$$\tau_{\text{opt}} = \sqrt{2 \times 0.75 \times 3.1} \approx 2.16\ \text{h}$$</div>
+  <p>写慢不仅拉长 pause，还<strong>推远最优间隔</strong>——每次故障平均多丢 ~1 h 进度。Llama 3 若按 ~1 h checkpoint，与 $T_{\text{write}} \approx 10$–15 min 的假设自洽。</p>
+</div>
+
+<h3 id="s2-1">2.1 链第 3 章：checkpoint GB 与存储 tier</h3>
+
+<p>第 3 章将 checkpoint 定位为「保险丝」——与训练读「燃料线」争用不同带宽剖面。最优路径：<strong>同步写本地 NVMe（Tier 2）→ 异步复制 PFS/S3（Tier 3/4）</strong>。175B 检查点 1,750 GB / 10 min → 平均写带宽：</p>
+<div class="math-block">$$\text{BW}_{\text{ckpt,avg}} = \frac{1750\ \text{GB}}{600\ \text{s}} \approx 2.9\ \text{GB/s per job}$$</div>
+<p>256 节点各写 ~6.8 GB 分片，30 s 内完成 → 每节点 ~227 MB/s，单盘 NVMe 可承受；但 <strong>128 节点同时打 PFS → 1.8 TB 突发</strong>，必须与训练读分 tier。Llama 3 规模（16k 卡）下，$T_{\text{write}}$ 直接决定 Young-Daly 的 $\tau_{\text{opt}}$——<strong>投资 NVMe + GDS 不是存储章孤立话题，是容错章的 ROI 杠杆</strong>。</p>
+
+<p>集群加倍 → MTBF 减半 → $\tau_{\text{opt}}$ 仅 ×$\sqrt{2} \approx 1.4$，<strong>不必线性加倍 checkpoint 频率</strong>；但必须压 $T_{\text{write}}$，否则 checkpoint tax 吃掉 MFU。企业 NVMe 1 DWPD × 7.68 TB ≈ 7.68 TB/天可写；每 1 h 写 700 GB 分片 ≈ 16.8 TB/天——需多盘条带或降 checkpoint 粒度（仅 sharded optimizer state）。</p>
+
+<p>Young-Daly 总浪费率可展开为（Daly 2006）：</p>
+<div class="math-block">$$W(\tau) = \frac{T_{\text{write}}}{\tau} + \frac{\tau}{2 \cdot \text{MTBF}}$$</div>
+<p>第一项 = checkpoint 频率 × 单次写开销；第二项 = 期望故障间隔内平均重做工作量（三角形分布近似）。对 $\tau$ 求导令 $dW/d\tau = 0$ 即得 $\tau_{\text{opt}} = \sqrt{2 T_{\text{write}} \cdot \text{MTBF}}$。代入 Llama 3 参数（$T_{\text{write}}=0.2$ h，MTBF = 3.1 h）：</p>
+<div class="math-block">$$W_{\min} = 2\sqrt{\frac{T_{\text{write}}}{2 \cdot \text{MTBF}}} = 2\sqrt{\frac{0.2}{6.2}} \approx 11.4\%$$</div>
+<p>即<strong>最优策略下仍有 ~11% 时间花在 checkpoint + 重做</strong>——这是 months-long run 的物理下限，只能通过更快 NVMe/GDS（降 $T_{\text{write}}$）或更大 MTBF（更小 $N$ 或更可靠硬件）压缩，不能靠「少 checkpoint」逃避。</p>
+
+<p>Young-Daly 假设 fail-stop 且恢复时间远小于 MTBF。SDC（静默数据损坏）破坏该假设——下一节展开。</p>
+
+<h2 id="s3">三、故障谱系与检测</h2>
+
+<p>Llama 3 的 419 次故障并非同质：部分 rank 硬挂（fail-stop），部分仍响应但梯度 poison（SDC），部分与 rack PDU / 交换机 correlated。检测策略必须分型，否则要么误杀慢 rank，要么放行 poison 步。</p>
+
+<table>
+  <tr><th>类型</th><th>表现</th><th>ML 后果</th><th>Llama 3 级应对</th></tr>
+  <tr><td>瞬态</td><td>丢包、PCIe 重传、单 bit flip（ECC 未捕获）</td><td>单步梯度噪声、loss spike</td><td>重试 + loss/grad norm 监控</td></tr>
+  <tr><td>Fail-stop</td><td>进程/GPU 无响应、CUDA error</td><td>AllReduce 全员阻塞，16k 卡空等</td><td>heartbeat + checkpoint 重启</td></tr>
+  <tr><td>Byzantine / SDC</td><td>仍响应但数值错</td><td>优化轨迹 poison，loss 曲线「正常」</td><td>CRC/check-and-verify、冗余归约</td></tr>
+  <tr><td>Correlated</td><td>机架 PDU、leaf 交换机、驱动 bug</td><td>同域冗余同时失效</td><td>跨 rack 副本、拓扑 drain</td></tr>
+</table>
+
+<h3 id="s3-1">3.1 Fail-stop 与 heartbeat</h3>
+
+<p>同步训练中一个 rank 沉默 → 其余 16,383 GPU 空等计费。timeout 需统计标定：</p>
+<div class="math-block">$$T_{\text{timeout}} = H + k\sigma_d, \quad k \approx 3\text{–}5$$</div>
+<p>$H$ = 正常 heartbeat 间隔，$\sigma_d$ = 延迟抖动标准差。过紧会把<strong>正在写 checkpoint 的慢 rank</strong>误判为故障，触发不必要全局 restart；过松则在检测窗口内烧掉整 fleet 算力。Llama 3 级 run 常在 checkpoint 期间临时放宽 timeout，写完再收紧。</p>
+
+<h3 id="s3-2">3.2 SDC 与 check-and-verify</h3>
+
+<div class="tech-card purple">
+  <h4>Check-and-Verify 机制</h4>
+  <p>对每块 gradient shard / AllReduce 结果计算 CRC 或 hash，跨 rank 比对或做冗余归约；<strong>digest 不一致则阻塞 optimizer step</strong>。AllReduce 默认假设「活着即正确」——16k GPU fleet 下必须「Trust, but verify」。</p>
+  <p><strong>暴露算例：</strong>单卡 SDC 率 $10^{-6}$/h，2 s 步长、16,384 GPU → 每步 fleet 暴露 ~9.1 GPU·h，$\Pr(\ge1\ \text{SDC/步}) \approx 1 - e^{-9.1 \times 10^{-6} \times 2/3600} \approx 0.005\%$ → 约每 20,000 步（~11 h）一次静默错误。无校验则半天内参数被污染；Google TPU fleet 用 gradient norm spike + 热备 drain 可疑芯片。</p>
+</div>
+
+<p>浮点指数位单 bit flip 可把梯度放大 $10^{38}$ 量级——loss 曲线看似「训练正常」实则已毁。SDC 比 crash 更危险：无异常栈，只有 rollback 到<strong>已验证</strong>的 checkpoint。Llama 3 若每 1 h checkpoint、11 h 遇 SDC，最多浪费 1 h 进度；若无 verify、SDC 持续 24 h 才被发现，等价于<strong>整整一天算力产出有毒</strong>。</p>
+
+<h2 id="s4">四、恢复路径与 ML 经济性</h2>
+
+<p>检测之后是恢复。分布式 LLM 训练的状态不是单进程 checkpoint 能概括的——optimizer sharding、PP stage、TP group 都需一致重建。</p>
+
+<h3 id="s4-1">4.1 分布式 checkpoint 与弹性 rendezvous</h3>
+<ul>
+  <li><strong>同步 checkpoint</strong>：全员 barrier 后写；语义简单，但拉长步时、与 heartbeat timeout 冲突</li>
+  <li><strong>异步 checkpoint</strong>：后台线程写上一版；训练继续，需版本化防半写读</li>
+  <li><strong>TorchElastic</strong>：rendezvous 重建进程组，$N_{\min}$–$N_{\max}$ 弹性伸缩——为第 4 章 3D 并行提供「丢 rank 后重组」的入口</li>
+</ul>
+
+<p>Llama 3 恢复典型路径（与 Slurm/K8s 编排联动）：</p>
+<ol>
+  <li><strong>检测</strong>（30 s–2 min）：NCCL watchdog / heartbeat 超时，定位 fail rank 与 correlated 域（同 rack？）</li>
+  <li><strong>Drain</strong>（1–3 min）：Slurm <code>scontrol update NodeName=… State=DRAIN</code> 或 K8s taint，防止坏卡被重新调度</li>
+  <li><strong>Checkpoint 加载</strong>（5–10 min）：从本地 NVMe 读最近 verified 分片，并行 hydrate optimizer state</li>
+  <li><strong>Rendezvous</strong>（2–5 min）：TorchElastic/c10d 重建进程组，3D 并行坐标（TP/PP/DP）须与放置一致</li>
+  <li><strong>Resume</strong>：从断点 step 继续，首步 AllReduce 做 check-and-verify</li>
+</ol>
+<p>合计 wall-clock <strong>10–20 min</strong> 在 54 天 run 中可接受；但若 MTTF 仅 3.1 h，恢复占 15 min 意味着 <strong>~8% 时间花在 restart</strong>——仍须优化 $T_{\text{write}}$ 与 gang 快速重分配（第五节）。419 次 × 15 min ≈ <strong>104 GPU·h 级协调开销</strong>（单 rank 视角），fleet 级乘 16k 的空等成本远高于此。</p>
+
+<h3 id="s4-2">4.2 训练 vs 推理服务的恢复 SLA</h3>
+<table>
+  <tr><th>维度</th><th>训练（Llama 3 pretrain）</th><th>推理服务</th></tr>
+  <tr><td>恢复目标</td><td>分钟级可接受</td><td>毫秒级 failover</td></tr>
+  <tr><td>状态体量</td><td>350 GB–1 TB+ optimizer</td><td>KV cache / 会话态</td></tr>
+  <tr><td>SDC 代价</td><td>浪费 GPU·day + 模型不可发布</td><td>错误 token + SLA 违约</td></tr>
+  <tr><td>编排侧重</td><td>gang + checkpoint 存储</td><td>副本 + 负载均衡</td></tr>
+</table>
+
+<div class="tech-card green">
+  <h4>故障成本量级</h4>
+  <p>16,384 GPU × \$2/GPU·h ≈ <strong>\$786k/天</strong> 算力。丢 24 h 进度 ≈ \$786k + 排期延误 + 机会成本（竞品先发）。一次 15 min 空等 ≈ \$16k。Checkpoint 700 GB × 每 1 h ≈ 16.8 TB/天写放大——存储 ROI 与算力 ROI 同表核算。</p>
+</div>
+
+<h3 id="s4-3">4.3 故障注入与 staging 验证</h3>
+<p>TensorFI / NVBitFI / PyTorchFI 在 tensor 层注入；staging 用 chaos 分区、延迟、kill pod 验证恢复路径。软件注入快但可能跳过 ECC 掩蔽——生产 SLA 声明需硬件校准（beam test、Fidelity 映射）。Llama 3 级 run 在正式开跑前应用<strong>缩小版 gang</strong>（256–1024 GPU）做 end-to-end 故障演练，量测实际 $T_{\text{recover}}$ 而非假设值。</p>
+
+<p>至此，容错闭环完成：MTTF 算术 → $\tau_{\text{opt}}$ → 分型检测 → checkpoint 恢复。但 Meta 工程师还会发现另一种空转——<strong>硬件全绿，16k GPU 却在队列里等 gang 凑齐，或在 AllReduce 里等拓扑不佳的 straggler</strong>。故障之外，<em>调度</em>同样决定 months-long run 能否在 54 天内跑完；checkpoint 间隔与 gang 放置是同一 C³ coordination 预算的两面。</p>
+
+<h2 id="s5">五、故障之外：调度引起的 GPU 空转</h2>
+
+<p>10,000 GPU × \$2/GPU·h = \$480k/天。fleet 利用率从 50% 提到 80% 等价于<strong>白买 3,000 GPU·当量</strong>，年省 \$52M 量级——与容错投资同量级杠杆。ML 调度区别于普通云 batch job：同步 AllReduce 要求 <strong>gang scheduling（全有或全无）</strong>——1024 GPU 任务拿到 900 块仍 <strong>100% 浪费</strong>（~\$1,800/h 空烧），因缺 rank 无法完成一步迭代。</p>
+
+<div class="tech-card red">
+  <h4>War Story：OpenAI K8s gang 死锁（2021）</h4>
+  <p>7,500 节点 K8s 上两个实验各要整集群；调度器各放一半 pod → 两个 job 都无法 AllReduce → 集群「很忙」但<strong>零 useful step</strong>。Llama 3 若犯同样错误：16k 卡看似满载，实际可能<strong>两个 pretrain 互相占坑却都跑不动</strong>——419 次硬件故障之外，还会叠加人为调度死锁。教训：分布式 ML 必须把 gang 语义编进调度器（Slurm job array + pack、K8s PodGroup / Volcano / Kueue），「部分 pod 已调度」≠ 部分进度。</p>
+</div>
+
+<p>gang 语义与第 4 章 3D 并行绑定：TP group 必须同节点 NVLink，PP stage 需相邻 rack，DP replica 需 rail-aligned AllReduce——<strong>拓扑约束是 gang 调度的子集</strong>。此外，multi-tenant fleet 面临 <strong>fragmentation</strong>：剩余 GPU 总量够开 16k gang，但被小 job 切成无法拼齐的碎片。</p>
+
+<p>例：20k GPU fleet，Job A 占 12k，Job B 占 5k，剩余 3k——不够任何 8k+ pretrain，3k 卡空转或只能跑小 trial。Consolidation 策略：低优先级 job 抢占 + checkpoint 让路（Slurm PreemptMode），或 Tiresias 按 attained service 重排队列。Llama 3 级 flagship job 通常<strong>独占 partition</strong>（<code>--exclusive</code>）规避 fragmentation——代价是 fleet 利用率数字难看，但 Goodput（有效 pretrain 步）最大化。</p>
+
+<p>下一节选编排范式，再专节讲放置，最后用 Goodput 统一度量「故障恢复 + 调度排队 + 代码效率」的乘积损失。</p>
+
+<pre class="mermaid">
+graph TD
+  G["Gang: 全有或全无\n16k 同步步"] --> T["Topology: NVLink/rack/rail\n链 Ch4 3D 并行"]
+  T --> P["Paradigm: Slurm / K8s / Hybrid"]
+  P --> M["ML Scheduler: Tiresias / Pollux"]
+  M --> Y["Goodput = η_prog × η_run × η_sched"]
+  Y --> S["Spot 经济\n同一 checkpoint 栈"]
+  style G fill:#313244,stroke:#f38ba8
+  style S fill:#313244,stroke:#a6e3a1
+</pre>
+
+<h2 id="s6">六、编排范式：Slurm vs Kubernetes</h2>
+
+<p>大 pretrain 与推理服务对编排器的诉求分裂：前者要 gang、fair-share、长 job 抢占策略；后者要 Deployment、HPA、快速 pod 替换。Llama 3 类 job 常见落点：<strong>Slurm partition 跑 pretrain，K8s 管 CI/CD / RBAC / 推理</strong>——混合而非宗教战争。</p>
+
+<table>
+  <tr><th>维度</th><th>Slurm（HPC）</th><th>Kubernetes（云原生）</th><th>定制 ML 调度器</th></tr>
+  <tr><td>模型</td><td>命令式：sbatch 精确要资源</td><td>声明式：期望状态 + reconcile 控制环</td><td>读训练循环内部信号（loss、step）</td></tr>
+  <tr><td>CAP 类比</td><td>分区时阻塞新分配保一致</td><td>分区时仍响应，事后 reconcile</td><td>可接受有界不一致换吞吐</td></tr>
+  <tr><td>训练强项</td><td>gang、fair-share、MPI 成熟</td><td>需 Volcano/Kueue/PyTorchJob</td><td>Tiresias/Pollux 等 goodput 优化</td></tr>
+  <tr><td>服务强项</td><td>无原生 long-running service</td><td>Deployment + HPA、自愈 pod</td><td>Ray 统一 actor/serving</td></tr>
+  <tr><td>Llama 3 典型</td><td>16k GPU 单 job + topology.conf</td><td>实验跟踪 / Eval 推理 pod</td><td>插件增强 fair-share</td></tr>
+</table>
+
+<h3 id="s6-1">6.1 Slurm ML 扩展</h3>
+<ul>
+  <li><code>--gres=gpu:h100:8</code> + <code>--exclusive</code>：整节点 gang，避免 NVLink 邻居被抢</li>
+  <li><code>--array=0-99</code>：超参 sweep 一次提交，scheduler backfill 小 trial 填 gang 空隙</li>
+  <li><strong>异构 job（hetjob）</strong>：8 GPU 节点训练 + CPU 节点 tokenization 并行</li>
+  <li><strong>PreemptMode + GraceTime</strong>：SIGTERM → 60–300 s 写 checkpoint（第二节 NVMe 路径）→ SIGKILL</li>
+  <li><strong>TRES 加权</strong>：H100 GPU·h 与 V100 不同价，fair-share 按经济成本而非核数</li>
+  <li><strong>prolog/epilog</strong>：启动前查 NVLink 拓扑、ECC 计数；失败节点自动 drain</li>
+</ul>
+
+<h3 id="s6-2">6.2 Kubernetes 与混合架构</h3>
+<p>K8s 控制环天然适合推理：Deployment 保副本数、node 失效自动换 pod。分布式训练需 <strong>PyTorchJob/MPIJob + PodGroup</strong> 保证 gang——否则重现 OpenAI 死锁。混合模式：<strong>K8s Operator 把 TrainingJob CRD 翻译成 sbatch</strong>，用户面统一 YAML，执行面仍用 Slurm gang。</p>
+
+<pre><code># TorchElastic：声明弹性范围，供调度器 resize
+torchrun --nnodes=128:256 --nproc_per_node=8 \
+  --rdzv_backend=c10d --max_restarts=3 train.py</code></pre>
+<p><code>128:256</code> 节点 = 1,024–2,048 GPU。负载低时扩 gang 减 wall-clock；高优先级 job 到达时缩 gang + checkpoint 让路——与 Young-Daly 的 $\tau_{\text{opt}}$ 联动：resize 太频则 $T_{\text{write}}$ 爆炸。</p>
+
+<h2 id="s7">七、拓扑感知放置</h2>
+
+<p>gang 凑齐只是第一步；<strong>放错拓扑</strong>同样烧算力。64 GPU 随机散列 vs 同 leaf 打包：1 GB AllReduce 延迟 <strong>120 ms → 25 ms（4.8×）</strong>。Llama 3 的 3D 并行（TP×PP×DP）把放置规则写死：</p>
+
+<div class="math-block">$$\text{Cost}_{\text{locality}} = \sum_{i<j} w\bigl(d(g_i,g_j)\bigr)$$</div>
+<p>$d=0$ 同节点 NVLink（$w=0$）；$d=1$ 同 rack leaf（$w=1$）；$d=2$ 跨 rack IB（$w=10$）。调度器最小化 collective 通信代价，而非单纯 bin-packing 提高利用率。</p>
+
+<div class="tech-card blue">
+  <h4>3D 并行放置规则（Llama 3 量级：TP=8, PP=16, DP=128 → 16k GPU）</h4>
+  <ol>
+    <li><strong>TP=8</strong>：每组锁在同一 NVLink 节点（900 GB/s），绝不跨节点</li>
+    <li><strong>PP=16</strong>：相邻 stage 放同 rack leaf（~50 GB/s，1 hop），减 pipeline bubble 激活传输</li>
+    <li><strong>DP=128</strong>：副本跨 rack；<strong>rail-aligned</strong>——各节点 GPU $r$ 连同一 ToR，AllReduce 不跨 rail 争用</li>
+  </ol>
+  <p>反例：TP 跨两节点 → 1 GB 激活 2.2 ms（NVLink）变 20 ms（IB），约 9× 慢，80 层 transformer 每层付税 → 端到端吞吐损失 15–30%。</p>
+</div>
+
+<p>静态 <code>topology.conf</code> 不够——「limping switch」CRC 高仍显示 up。生产级拓扑感知需三层信号：</p>
+<ul>
+  <li><strong>配置层</strong>：Slurm <code>TopologyPlugin=topology/tree</code> + <code>topology.conf</code> 定义 leaf/rack/block</li>
+  <li><strong>实测层</strong>：NCCL all-to-all 带宽矩阵；低于 P50 50% 的 GPU 对标记 straggler</li>
+  <li><strong>运维层</strong>：switch SNMP CRC/error counter；连续 3 次超阈 → 自动 drain rack</li>
+</ul>
+<p>劣化 rack 若 &gt;20% 降速且 run 还剩数周，触发 checkpoint 迁移（10–15 min）——又回到第二节 NVMe 写路径与第四节恢复 SLA。Llama 3 级 run 常在<strong>每日低负载窗口</strong>做 rack 迁移，避免与 peak AllReduce 争 IB。</p>
+
+<p>拓扑与容错在此闭合：坏 rack 既是 correlated 故障源（第四节 PDU/交换机行），也是 straggler 源（拖慢全体 16k GPU 的同步步）。一次 5% straggler 在同步 AllReduce 中可让 $\eta_{\text{runtime}}$ 降至 ~95%——与 8% restart 开销同量级，须同等重视。</p>
+
+<h2 id="s8">八、Goodput 与 ML 定制调度器</h2>
+
+<p>SM 占用 92% 不代表有效训练——Google C³ 用 Goodput 分解三类损失，Llama 3 级 run 应监控同一指标：</p>
+
+<div class="tech-card yellow">
+  <h4>Goodput 三因子</h4>
+  <div class="math-block">$$\text{Goodput} = \eta_{\text{program}} \times \eta_{\text{runtime}} \times \eta_{\text{scheduling}}$$</div>
+  <ul>
+    <li>$\eta_{\text{program}}$（Compute）：MFU、有效 FLOPs——代码是否喂满 H100</li>
+    <li>$\eta_{\text{runtime}}$（Communication）：AllReduce stall、<strong>故障恢复</strong>、straggler、checkpoint pause</li>
+    <li>$\eta_{\text{scheduling}}$（Coordination）：gang 排队、抢占、fragmentation、resize</li>
+  </ul>
+  <p>三者<strong>相乘</strong>。例：$\eta_{\text{prog}}=0.35$，$\eta_{\text{run}}=0.85$（含 8% 恢复），$\eta_{\text{sched}}=0.90$ → Goodput ≈ <strong>26.8%</strong>——fleet 看似忙，有效训练仅四分之一。419 次故障主要打 $\eta_{\text{runtime}}$；gang 死锁打 $\eta_{\text{scheduling}}$。</p>
+</div>
+
+<table>
+  <tr><th>调度器</th><th>信号</th><th>优化目标</th><th>Llama 3 适用性</th></tr>
+  <tr><td>Tiresias</td><td>已消耗 GPU·h（attained service）</td><td>平均 JCT −40~60%</td><td>多 job 混部 pretrain + fine-tune</td></tr>
+  <tr><td>Gandiva</td><td>iteration 边界（数据加载空窗）</td><td>oversubscribe 提利用率</td><td>小模型 trial；大 gang 慎用</td></tr>
+  <tr><td>Themis</td><td>完成度 / 沉没成本</td><td>finish-time fairness</td><td>长跑 pretrain 可能饥饿</td></tr>
+  <tr><td>Pollux</td><td>goodput（统计效率×系统吞吐）</td><td>联调 GPU 数 + batch size</td><td>早期探索；稳态锁拓扑</td></tr>
+</table>
+
+<p>175B 稳态：Pollux 式动态改 worker 数 → 每次 resize 触发 TB 级 checkpoint-restart；实践是<strong>早期 elastic + warmup 后锁静态 gang</strong>——与 Llama 3 54 天 run 中后段行为一致。定制调度器应<strong>插件化进 Slurm/K8s</strong>，而非替换已有 fair-share 与审计链。</p>
+
+<h2 id="s9">九、Spot、弹性与成本</h2>
+
+<p>容错基础设施的第二个 ROI：使 <strong>spot / 抢占实例</strong>经济可行。云 spot 可比按需便宜 60–70%，但随时被回收——没有第二节 checkpoint 栈 + 第四节弹性 rendezvous，spot 不可用。</p>
+
+<div class="math-block">$$C_{\text{effective}} = C_{\text{spot}} \times \frac{T_{\text{total}}}{T_{\text{productive}}}$$</div>
+
+<p><strong>算例：</strong>512 GPU × 14 天 70B fine-tune。按需 \$344k；spot 65% 折扣，但 15% 时间花在 panic checkpoint + restart → $T_{\text{productive}}/T_{\text{total}} = 0.85$：</p>
+<div class="math-block">$$C_{\text{effective}} = 0.35 \times 344\text{k} \times \frac{1}{0.85} \approx \$142\text{k}\ \text{（省 59%）}$$</div>
+<p>wall-clock +18% 但 bill −59%——research budget 常见取舍。AWS spot 2 min / GCP 30 s 抢占通知 → GraceTime 内必须完成 NVMe 同步写（第二节），否则丢 &gt;1 h 进度，spot 优势被 Young-Daly 惩罚抵消。</p>
+
+<p>Llama 3 本身跑在 Meta 自有 fleet，但同一算术适用于 cloud burst：16k H100 按需 ≈ \$786k/天；若 30% spot 混部且 checkpoint 栈成熟，有效成本可降双位数百分比——<strong>容错与编排是成本方程的联合变量</strong>，不是事后运维。</p>
+
+<div class="tech-card purple">
+  <h4>Spot 混部可执行配置（Slurm + checkpoint 栈）</h4>
+  <pre><code># Slurm：spot partition 允许抢占，GraceTime 对齐云厂商通知
+PartitionName=spot PreemptMode=REQUEUE GraceTime=120
+# prolog：注册 SIGTERM handler，触发 async checkpoint 到 NVMe
+# epilog：上传 PFS 副本（第 3 章 Tier 3 异步路径）
+
+# torchrun：max_restarts 与 spot 回收频率匹配
+torchrun --max_restarts=10 --rdzv_backend=c10d ...</code></pre>
+  <p>AWS spot 平均中断间隔 ~2–4 h（因实例类型/区域而异）——与 Llama 3 MTTF 3.1 h 同量级，<strong>同一套 Young-Daly $\tau_{\text{opt}} \approx 1$ h 同时覆盖硬件故障与 spot 回收</strong>。GraceTime=120 s 要求 $T_{\text{write,panic}} \lt 120$ s（仅写最近 sharded state，非全量 700 GB）——需在工程上维护「轻量 panic checkpoint」与「完整 periodic checkpoint」两档。</p>
+</div>
+
+<h2 id="s10">十、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>容错 × 编排：Llama 3 决策清单</h4>
+  <ol>
+    <li><strong>MTTF 算术先行</strong>：16k GPU → ~3 h MTTF；$R_{\text{cluster}} \approx 0$——软件必须持续吸收失效</li>
+    <li><strong>Young-Daly + 第 3 章存储</strong>：$\tau_{\text{opt}}=\sqrt{2 T_{\text{write}} \cdot \text{MTBF}}$；压 $T_{\text{write}}$ 靠本地 NVMe + 独立 checkpoint tier，而非盲目缩短间隔</li>
+    <li><strong>SDC 比 crash 毒</strong>：16k GPU 约每 11 h 一次静默错误风险；check-and-verify 是发布级 pretrain 必需</li>
+    <li><strong>恢复分钟级可接受</strong>，但 MTTF 3 h 时 15 min restart ≈ 8% $\eta_{\text{runtime}}$——与 gang 快速重分配共同优化</li>
+    <li><strong>故障之外仍空转</strong>：gang + topology 优先于 bin-packing；OpenAI 死锁是调度 bug，非硬件 bug</li>
+    <li><strong>Goodput 相乘</strong>：MFU、恢复、排队三类损失不可互相掩盖；92% SM ≠ 有效训练</li>
+    <li><strong>同一 checkpoint 栈</strong>买三件事：抗硬件故障、抗 spot 抢占、抗弹性 resize——Slurm GraceTime 与 K8s PodGroup 是同一基础设施的不同 API</li>
+  </ol>
+</div>
+
+<p>容错让 fleet 在统计必然故障下仍能完成 Llama 3 式 months-long run；编排决定故障之外 GPU 是否空转——<strong>checkpoint 间隔与 gang 调度是同一 C³ coordination 预算的两面</strong>。下一章（第 6 章 性能与规模化推理）讨论工作落到正确 GPU、故障与排队清零之后，内核与 serving 栈如何把本地执行推近 Roofline 上限。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告深度整合 Vol.2 原第 7–8 章。来源：<a href="https://mlsysbook.ai/vol2/fault_tolerance/fault_tolerance.html">容错</a> · <a href="https://mlsysbook.ai/vol2/fleet_orchestration/fleet_orchestration.html">集群编排</a> · 2026-07-04</p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

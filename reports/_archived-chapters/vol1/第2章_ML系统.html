@@ -167,11 +167,11 @@ graph LR
   <tr><td>HBM 读取</td><td>20–50 ns</td><td>比计算慢一个数量级</td></tr>
   <tr><td>同数据中心网络</td><td>0.5 ms</td><td>微服务可行</td></tr>
   <tr><td>跨区网络</td><td>50–150 ms</td><td>仅适合批处理</td></tr>
-  <tr><td>Wake-word（TinyML）</td><td>100 µs</td><td>常开 \lt 1 mW 可行</td></tr>
+  <tr><td>Wake-word（TinyML）</td><td>100 µs</td><td>常开 &lt; 1 mW 可行</td></tr>
   <tr><td>GPT-4 首 token</td><td>200–500 ms</td><td>用户可感知延迟</td></tr>
 </table>
 
-<p><strong>关键规则：</strong>延迟 \gt 预算的操作不能出现在关键路径上——ML 推理往往并非最长阶段，预处理/后处理常占主导。</p>
+<p><strong>关键规则：</strong>延迟 &gt; 预算的操作不能出现在关键路径上——ML 推理往往并非最长阶段，预处理/后处理常占主导。</p>
 
 <h3 id="s4-2">4.2 硬件谱系与决策阈值</h3>
 
@@ -180,7 +180,7 @@ graph LR
   <tr><td>Cloud</td><td>TPU v4 Pod</td><td>131 TB HBM</td><td>1.1 EFLOP/s</td><td>~3 MW</td><td>按量租用</td></tr>
   <tr><td>Edge</td><td>DGX Spark / Jetson</td><td>32–128 GB</td><td>25 TFLOPS–1 PFLOP/s</td><td>25–200 W</td><td>$600–5000</td></tr>
   <tr><td>Mobile</td><td>旗舰 SoC</td><td>8–16 GB</td><td>15–45 TOPS</td><td>3–5 W</td><td>$999+</td></tr>
-  <tr><td>TinyML</td><td>ESP32-CAM</td><td>520 KB RAM</td><td>\lt 1 TOPS</td><td>50 mW–1.2 W</td><td>~$10</td></tr>
+  <tr><td>TinyML</td><td>ESP32-CAM</td><td>520 KB RAM</td><td>&lt; 1 TOPS</td><td>50 mW–1.2 W</td><td>~$10</td></tr>
 </table>
 
 <p>Cloud → TinyML 内存约差 <strong>2.5 亿倍</strong>——压缩不是可选优化，而是范式生存条件。</p>

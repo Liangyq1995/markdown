@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第4章 神经计算与架构 | Machine Learning Systems Vol.1</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+pre code{font-family:Consolas,monospace;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第4章 神经计算与架构</h1>
+<p class="meta">Vol.1 · Part II 构建 · 整合原第 5–6 章 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>整合主题</th><td>从原子算子（MAC/梯度/激活内存）到架构族谱（MLP→CNN→Transformer→DLRM），理解 Silicon Contract 如何在 Algorithm 轴上押注不同硬件瓶颈</td></tr>
+  <tr><th>学习目标</th><td>把 NN 从「黑盒 API」还原为可算 workload，并据此选型架构与部署形态</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、从逻辑到算术</h2>
+
+<p>编译好的数据集不会自己学习。模型边界上，数据通过 <strong>矩阵乘、激活、梯度更新</strong> 变成行为——这是 Silicon Contract 在 Algorithm 轴上的原子操作。本章前半沿 MNIST 贯穿这条链；后半问：这些算子如何组合成对硬件有不同「押注」的架构。</p>
+
+<div class="tech-card red">
+  <h4>War Story：Ariane 5 Flight 501 (1996)</h4>
+  <p>复用 Ariane 4 惯性参考软件；更快水平速度使 64-bit 值溢出 protected conversion → 异常关闭制导数据 → 约 40 s 后解体。教训：<strong>数值范围与物理 regime 是系统契约</strong>，与 ML 中 FP16 溢出 → Inf/NaN 静默传播同构。</p>
+</div>
+
+<p>MNIST 28×28 手写数字识别（本章贯穿案例）：一次前向约 <strong>109,184 MAC</strong>，无一分支——bug 在 learning rate、饱和激活、激活内存，不在 if-else 语法。</p>
+
+<h3 id="s1-1">1.1 深度学习的系统定义</h3>
+<div class="tech-card blue">
+  <p><strong>Deep Learning</strong>：通过多层非线性变换从原始数据学习层次特征，用增加 $O$（算量）换泛化，免手工特征。深度 $k$ 层可组合 $k$ 级抽象；铁律绑定约束从「算法（手工特征）」转向「机器（算力/内存）」。</p>
+</div>
+
+<h2 id="s2">二、三种范式对比</h2>
+
+<p>同一 MNIST 数字，三种范式给出截然不同的算量/内存 profile——系统工程师据此判断「该上 GPU 还是 CPU 就够」。</p>
+
+<table>
+  <tr><th>范式</th><th>算量/内存</th><th>硬件</th><th>系统含义</th></tr>
+  <tr><td>显式规则</td><td>~100 次比较，784 B</td><td>CPU L1 即可</td><td>无学习，规则维护成本高</td></tr>
+  <tr><td>HOG + SVM</td><td>7×7 细胞×9 方向 → 441 维；~8000 ops，~2 KB</td><td>CPU SIMD</td><td>专家特征，跨域迁移差</td></tr>
+  <tr><td>小型 MLP</td><td>109,184 MAC；权重+激活需 GPU 并行</td><td>算力绑定</td><td>数据驱动，算量跳 10×+</td></tr>
+</table>
+
+<p>HOG：8×8 像素格梯度方向直方图（Dalal &amp; Triggs 2005）——专家设计、CPU 友好但不可跨域迁移。2012 年 AlexNet 在 ImageNet 上证明：端到端 CNN 可超越手工特征；其系统侧先例是<strong>模型数学超单卡内存</strong>——双 GTX 580 各仅 3 GB VRAM，被迫模型并行。此后「更大模型 / 更大 batch」与「VRAM / 带宽 / 算力」的拉锯成为 DL 系统主线（后文架构节不再重复此案例）。</p>
+
+<pre class="mermaid">
+flowchart LR
+  R["Rules + Data"] --> A1["Answers"]
+  D["Data + Labels"] --> M["ML/DL"]
+  M --> R2["Learned Rules"]
+</pre>
+
+<h2 id="s3">三、NN 基础：前向/反向/激活</h2>
+
+<h3 id="s3-1">3.1 单层与参数量</h3>
+<p>784→128→10 MNIST MLP：</p>
+<div class="math-block">
+$$W_1 \in \mathbb{R}^{128 \times 784},\; b_1 \in \mathbb{R}^{128} \Rightarrow 128 \times 784 + 128 = 100{,}480$$
+$$W_2 \in \mathbb{R}^{10 \times 128},\; b_2 \in \mathbb{R}^{10} \Rightarrow 1{,}290 \quad \text{合计 } \approx 101{,}770 \text{ 参数}$$
+</div>
+<p>batch=32 前向 MAC：$32 \times (784 \times 128 + 128 \times 10) \approx 3.5 \times 10^6$（不含激活等非线性开销）。</p>
+
+<h3 id="s3-2">3.2 激活函数对比</h3>
+<table>
+  <tr><th>激活</th><th>公式</th><th>梯度/系统</th></tr>
+  <tr><td>Sigmoid</td><td>$\sigma(x)=1/(1+e^{-x})$</td><td>20 层链式 $\approx 0.25^{20} \sim 10^{-12}$ → 消失梯度</td></tr>
+  <tr><td>ReLU</td><td>$\max(0,x)$</td><td>正区梯度=1；ResNet 直连进一步保梯度（见第七节）</td></tr>
+  <tr><td>Softmax</td><td>$e^{z_i}/\sum_j e^{z_j}$</td><td>多类输出；数值稳定需 $z_i - \max(z)$</td></tr>
+</table>
+
+<h3 id="s3-3">3.3 张量布局代价</h3>
+<p>ImageNet 224×224×3 ≈ 151 KB。NCHW↔NHWC 转置：读+写 ≈ <strong>301 KB/图</strong> 纯内存流量、零算术——latency 预算在「有用计算」前就被吃掉。</p>
+
+<h3 id="s3-4">3.4 前向、损失与反向传播</h3>
+<div class="math-block">
+$$\mathcal{L} = -\sum_{c=1}^{C} y_c \log \hat{p}_c \quad \text{单样本正确类 } y_k=1$$
+</div>
+<p>logits $z$ → softmax $\hat{p}$ → 交叉熵；$\partial \mathcal{L}/\partial z_i = \hat{p}_i - y_i$（简洁梯度形式，反向实现友好）。两层网络：$\delta^{(2)} = \hat{y} - y$，$\delta^{(1)} = (W_2^T \delta^{(2)}) \odot \sigma'(z^{(1)})$。训练须存每层激活供 backward → <strong>激活内存 ≈ batch × 各层激活元素和</strong>，常为推理的 2–3×。</p>
+
+<h3 id="s3-5">3.5 SGD 更新</h3>
+<div class="math-block">
+$$W \leftarrow W - \eta \frac{1}{B}\sum_{i=1}^{B} \nabla_W \mathcal{L}_i \quad \eta=0.01 \text{ 过大可振荡；} \eta=10^{-4} \text{ 过慢}$$
+</div>
+<p>学习率是系统旋钮：不报错，只表现为 loss NaN 或平台期。</p>
+
+<h2 id="s4">四、推理流水线与 USPS</h2>
+
+<table>
+  <tr><th>阶段</th><th>MNIST 典型</th><th>系统关注</th></tr>
+  <tr><td>预处理</td><td>归一化 $\mu=0.1307,\sigma=0.3081$</td><td>与训练一致，否则 skew</td></tr>
+  <tr><td>前向</td><td>109k MAC</td><td>batch=1 延迟；batch&gt;1 吞吐</td></tr>
+  <tr><td>后处理</td><td>argmax / 阈值</td><td>校准概率用于拒识</td></tr>
+</table>
+
+<p>训练优化吞吐（大 batch、混合精度）；推理优化 <strong>$L_{\text{lat}}$</strong>（小 batch、量化，见第 6 章压缩栈）。</p>
+
+<p>美国邮政 1990 年代 OCR（USPS）：16×16 灰度、10 类。比 MNIST 更小输入 → 更少 MAC，适合嵌入式；但<strong>邮件字体/污渍/扫描噪声</strong>与实验室 MNIST 分布不同——再次说明 Data 轴设上限（第 3 章 lab-to-field）。算子与流水线搞清后，自然的问题是：<strong>算子如何组合成架构，以及架构对 Silicon Contract 押了什么注。</strong></p>
+
+<h2 id="s5">五、架构作为 Silicon Contract 押注</h2>
+
+<p>每种架构是对硬件的<strong>隐性押注</strong>：先饱和算力、带宽还是内存容量。选架构 = 选铁律哪一项成为瓶颈。</p>
+
+<table>
+  <tr><th>架构/负载</th><th>绑定资源</th><th>铁律项</th></tr>
+  <tr><td>ResNet-50 训练 batch≥32</td><td>算力</td><td>$O/(R_{\text{peak}}\cdot\eta)$</td></tr>
+  <tr><td>Llama3 8B decode batch=1</td><td>HBM 带宽</td><td>$D_{\text{vol}}/BW$（读全权重/层）</td></tr>
+  <tr><td>DLRM 推荐</td><td>Embedding TB 级 + 稀疏 lookup</td><td>内存容量 + 随机访问</td></tr>
+</table>
+
+<div class="tech-card blue">
+  <p>ResNet-50：~25.6M 参数 FP32 ≈ 102 MB 权重；单图 224×224 前向 ~4.1 GFLOP。batch=64 训练时算力绑定；batch=1 边缘推理可能转 memory bound（读权重主导）。</p>
+</div>
+
+<h2 id="s6">六、架构族谱 MLP/CNN/RNN/Transformer/DLRM</h2>
+
+<h3 id="s6-1">6.1 MLP</h3>
+<p>全连接：$y = \sigma(Wx+b)$。参数 $O(d_{\text{in}} \cdot d_{\text{out}})$，对高维图像（784→…）参数爆炸 → 需 inductive bias。</p>
+
+<h3 id="s6-2">6.2 CNN</h3>
+<div class="math-block">
+$$\text{Conv FLOPs} \approx 2 \cdot H \cdot W \cdot C_{\text{in}} \cdot C_{\text{out}} \cdot K^2 \quad \text{例：}224^2 \times 64 \times 3 \times 7^2 \approx 1.2 \times 10^8$$
+</div>
+<p>局部连接 + 权值共享：参数从 MLP 的 $784 \times 10^6$ 级降到 $3\times3\times3\times64=1{,}728$ 首层量级。押注：空间局部性 → GEMM 友好、SIMD/GPU 吞吐。</p>
+
+<h3 id="s6-3">6.3 RNN 与序列</h3>
+<p>隐藏状态 $h_t = f(W_x x_t + W_h h_{t-1})$。时间步串行 → 难并行，长序列梯度消失/爆炸。LSTM (1997) 门控缓解，但训练仍 $O(T)$ 顺序依赖——押注顺序计算，与现代 GPU 批量并行错位。</p>
+
+<h3 id="s6-4">6.4 Attention 与 Transformer</h3>
+<div class="math-block">
+$$\text{Attention}(Q,K,V)=\text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V \quad \text{复杂度 } O(n^2 d)$$
+</div>
+<p>$n=2048$, $d=64$ → $QK^T$ 为 $2048^2 \approx 4.2\times10^6$ 次点积/头。GPT-3 175B 训练算力 beast；decode $n=1$ 时变 memory bandwidth bound。</p>
+
+<pre class="mermaid">
+flowchart LR
+  IN["Input tokens"] --> E["Embedding"]
+  E --> SA["Self-Attention O(n²)"]
+  SA --> FFN["FFN 4d→d"]
+  FFN --> OUT["Logits"]
+</pre>
+
+<h3 id="s6-5">6.5 DLRM 与稀疏架构</h3>
+<table>
+  <tr><th>属性</th><th>值</th><th>数据工程含义</th></tr>
+  <tr><td>用户/物品 ID</td><td>10⁹ 级</td><td>Embedding 表 TB/PB</td></tr>
+  <tr><td>瓶颈</td><td>稀疏随机 lookup</td><td>分片跨机，非 FLOPS</td></tr>
+  <tr><td>与 ResNet 对比</td><td>算力 vs 容量</td><td>选型完全不同</td></tr>
+</table>
+
+<h2 id="s7">七、共享块与选型框架</h2>
+
+<h3 id="s7-1">7.1 共享构建块</h3>
+<ul>
+  <li><strong>BatchNorm：</strong>训练 batch 统计 vs 推理 running mean——serving 须切换 <code>model.eval()</code></li>
+  <li><strong>Dropout：</strong>训练随机置零，推理关闭</li>
+  <li><strong>Residual：</strong>$y=x+F(x)$，梯度高速公路，使 100+ 层可训</li>
+</ul>
+
+<h3 id="s7-2">7.2 架构选型框架</h3>
+<table>
+  <tr><th>数据类型</th><th>首选</th><th>原因</th></tr>
+  <tr><td>网格图像</td><td>CNN / ViT</td><td>空间局部性 / 全局依赖</td></tr>
+  <tr><td>序列</td><td>Transformer</td><td>并行训练；长上下文贵 $O(n^2)$</td></tr>
+  <tr><td>表格+高基数 ID</td><td>DLRM</td><td>Embedding + MLP</td></tr>
+  <tr><td>小数据边缘</td><td>MobileNet 等</td><td>深度可分离卷积（DR 512 MB 案例）</td></tr>
+</table>
+
+<h2 id="s8">八、D·A·M 与谬误总结</h2>
+
+<h3 id="s8-1">8.1 D·A·M 贯穿本章</h3>
+<table>
+  <tr><th>轴</th><th>神经计算侧</th><th>架构侧</th></tr>
+  <tr><td>Data</td><td>784 维归一化、标签 one-hot；USPS 分布偏移</td><td>图像网格 vs 序列 vs 高基数 ID 决定 inductive bias</td></tr>
+  <tr><td>Algorithm</td><td>101k 参数、109k MAC、CE+SGD、激活内存</td><td>MLP/CNN/Attention 承诺不同 $O$ 与内存访问模式</td></tr>
+  <tr><td>Machine</td><td>SIMD/GPU 适合 GEMM；布局转置纯 $D_{\text{vol}}$</td><td>ResNet 算力 bound vs Llama decode 带宽 bound vs DLRM 容量 bound</td></tr>
+</table>
+
+<h3 id="s8-2">8.2 谬误对照</h3>
+<table>
+  <tr><th>谬误</th><th>现实</th></tr>
+  <tr><td>「看懂 API 就够」</td><td>维度/精度/学习率错误无 stack trace</td></tr>
+  <tr><td>「更深 = 更宽 shallow 网络」</td><td>深度提供组合层次，非参数量 alone</td></tr>
+  <tr><td>「训练 acc 高即可部署」</td><td>预处理/量化/延迟未纳入同一数学契约</td></tr>
+  <tr><td>「最新架构总是更好」</td><td>512 MB 平板无法跑 ViT-L</td></tr>
+  <tr><td>「参数量 = 算力需求」</td><td>DLRM 参数在 lookup，不在 MAC</td></tr>
+  <tr><td>「训练选型 = 推理选型」</td><td>大模型 distill 到小模型部署</td></tr>
+</table>
+
+<div class="tech-card green">
+  <h4>章节总结</h4>
+  <ul>
+    <li>NN = 算术 workload：MAC、激活内存、梯度链；MNIST 规则 ~100 ops → HOG ~8k → MLP ~109k MAC</li>
+    <li>推理流水线三阶段须与训练契约一致；USPS 说明 Data 轴上限</li>
+    <li>架构 = 对 Silicon Contract 的押注：CNN 局部性、Transformer $O(n^2)$、DLRM 稀疏 lookup</li>
+    <li>BatchNorm/Dropout/Residual 是训练–推理行为切换的系统关注点</li>
+  </ul>
+</div>
+
+<p><strong>下一章：</strong>第 5 章 ML 框架与训练——谁执行这些算子（Execution / Autograd / Abstraction），以及如何把单步训练在铁律下扩展到集群。</p>
+<hr>
+<p class="meta">来源：<a href="https://mlsysbook.ai/vol1/contents/vol1/dl_primer/dl_primer.html">mlsysbook.ai — Neural Computation &amp; Network Architectures</a></p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{primaryColor:'#313244',primaryTextColor:'#cdd6f4',lineColor:'#89b4fa'}});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

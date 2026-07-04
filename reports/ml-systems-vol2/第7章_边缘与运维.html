@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第7章 边缘智能与规模化 ML 运维 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第7章 边缘智能与规模化 ML 运维</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 深度整合原第 11–12 章 · 2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>Vol.1 DR 同一模型贯穿部署光谱：Jetson 边缘（mW/KB/离线）→ 联邦学习传输 → 数据中心 N 模型舰队 MLOps（Goodput、Canary、PSI 基数）</td></tr>
+  <tr><th>学习目标</th><td>对比 cloud/edge serving physics；为 FL 估算通信轮次成本；设计 multi-LoRA 密度与 swap SLO；在 500+ 模型规模下分层 PSI/Canary</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、开篇：同一模型，两种物理</h2>
+
+<p>Vol.1 灾害响应（DR）案例在<strong>同一 MobileNet 损伤检测模型</strong>上走完六阶段 workflow——其中部署端形成两极：</p>
+
+<ul>
+  <li><strong>数据中心</strong>（第 6 章）：70B LLM @ 8×H100，continuous batching，~900 tok/s<sub>valid</sub>，$/M tok 驱动容量</li>
+  <li><strong>边缘</strong>（Jetson）：batch=1，p99 180 ms，无队列，coin-cell 级功耗预算</li>
+</ul>
+
+<p>二者都叫「serving」，优化目标几乎正交：舰队问 $/token 与 SLO headroom；边缘问 mW、KB 与离线可用。本章沿这条光谱展开——先推到网络边缘的 opposite physics，再拉回<strong>数千模型共享 GPU 池</strong>的平台运维：数据不必集中，但监控、版本与 Canary 必须集中。</p>
+
+<table>
+  <tr><th>维度</th><th>Cloud Fleet（第 6 章）</th><th>Edge（本章前半）</th><th>Platform MLOps（本章后半）</th></tr>
+  <tr><td>算力</td><td>H100 TFLOP/s 级</td><td>1–10 TOPS INT8</td><td>共享 GPU 池，N 模型争用</td></tr>
+  <tr><td>内存</td><td>80 GB HBM + KV 分页</td><td>512 KB–8 GB 统一内存</td><td>基座+LoRA 多租户</td></tr>
+  <tr><td>网络</td><td>IB / 低延迟 RPC</td><td>间歇 4G/WiFi</td><td>artifact 同步 + 指标 fan-out</td></tr>
+  <tr><td>验收 KPI</td><td>tok/s<sub>valid</sub>、$/M tok</td><td>p99 + 子群精度（农村 ≥0.90）</td><td>per-model p99、PSI、rollback</td></tr>
+</table>
+
+<h2 id="s2">二、边缘约束：mW 与 KB 先于 TFLOP/s</h2>
+
+<p>热节流：手机 sustained 性能可低于峰值 40–60%。静态内存：TinyML 无 malloc——Vol.1 MobileNet INT8 3.5 MB 仍超 524 KB 信封 6.7×，须 NAS 级架构（DS-CNN ~500 KB）。DR Jetson 验收仍是<strong>子群精度 + p99</strong>，非 FLOPs——与第 6 章 Offline 峰值是同一类误区。</p>
+
+<div class="tech-card blue">
+  <h4>DR 边缘验收（Vol.1 延续）</h4>
+  <ul>
+    <li>农村子群灵敏度 ≥ 0.90（全局 0.95 不够）</li>
+    <li>p99 推理 &lt; 2000 ms（batch=1，无排队掩盖）</li>
+    <li>PSI &lt; 0.20 触发调查（见第 8 章完整链）</li>
+  </ul>
+</div>
+
+<h2 id="s3">三、联邦学习：边缘上的训练传输层</h2>
+
+<p>当原始数据<strong>不可出设备</strong>（合规/带宽），训练 loop 从「集中梯度」变为「周期性权重上传」。FedAvg 是边缘与数据中心之间的<strong>传输协议</strong>——不是新算法，是把第 4 章 AllReduce 换成异步、稀疏、隐私约束的聚合。</p>
+
+<p>$K$ 客户端，各 $n_k$ 样本，总 $n = \sum n_k$。本地训练后上传 $w_k$，服务器聚合：</p>
+<div class="math-block">$$w_{t+1} = \sum_{k=1}^{K} \frac{n_k}{n} w_k^{(t+1)}$$</div>
+
+<div class="tech-card yellow">
+  <h4>三客户端 + 通信成本</h4>
+  <p>A/B/C 各 1000 样本 → 权重各 1/3。若 C 仅 100 样本仍等权平均，C 梯度被放大 10×——须 $n_k/n$ 加权。</p>
+  <p>MobileNet ~14 MB FP32/轮 × 1000 设备 = <strong>14 GB/轮</strong> 上行（聚合前）——须 INT8 权重、稀疏更新、client 采样（每轮 10% 参与）。通信成本 = 模型大小 × 参与设备 × 轮次，与第 4 章 collective 定价同构，只是 $\alpha$ 更大（蜂窝/WiFi）。</p>
+</div>
+
+<h3 id="s3-1">3.1 差分隐私：与第 8 章共享的 Pareto 旋钮</h3>
+
+<div class="math-block">$$(\epsilon, \delta)\text{-DP}: \Pr[\mathcal{M}(D) \in S] \leq e^\epsilon \Pr[\mathcal{M}(D') \in S] + \delta$$</div>
+
+<p>梯度裁剪（范数 $\leq C$）+ 高斯噪声。$\epsilon$ 越小隐私越强、收敛越慢——移动键盘典型 $\epsilon \approx 4$–8。FL 与数据中心 DP-SGD 共享数学；差异在<strong>设备掉线、straggler、异构算力</strong>（100× 差距）使同步轮次被最慢者拖住 → 异步 FL 或 tier 分组。</p>
+
+<h3 id="s3-2">3.2 边缘 straggler 与安全聚合</h3>
+<ul>
+  <li><strong>掉线：</strong>每轮仅采样 fraction 设备（FedProx 缓解异构）</li>
+  <li><strong>安全聚合：</strong>服务器只见加密权重和，防逆向单客户端</li>
+  <li><strong>Selekt 等：</strong>按设备贡献/算力分层，避免 edge straggler 绑定全局步长</li>
+</ul>
+
+<p>边缘闭环：本地推理满足 DR p99 → FL 更新模型 → DP 约束上传 → 下一轮本地验收。数据不出设备，但<strong>模型版本与 drift 信号仍须回平台</strong>——否则数千边缘节点各自 silent fail，中心无从感知。</p>
+
+<h2 id="s4">四、从单模型到 N 模型平台</h2>
+
+<p>Vol.1 第 14 章：一个模型 + MLflow + Prometheus。规模化后（Google/Netflix 量级）：<strong>数千模型</strong>共享同一 GPU 舰队——瓶颈从 kernel 变为<strong>调度、artifact 版本爆炸、监控基数（cardinality）</strong>。边缘 FL 产生的是「很多弱连接模型」；数据中心产生的是「很多强竞争 replica」——平台层用同一套 registry + Canary 统一治理。</p>
+
+<pre class="mermaid">
+graph TD
+  E["边缘 FL\n数据不出设备"] --> R["Model Registry\n版本 digest"]
+  C["数据中心 Serving\nN 模型 GPU 池"] --> R
+  R --> M["分层监控\nTop traffic 全量 PSI"]
+  M --> K["Canary / Rollback\nper model_id"]
+  style R fill:#313244,stroke:#89b4fa
+</pre>
+
+<h2 id="s5">五、Multi-model serving 与密度经济学</h2>
+
+<div class="tech-card blue">
+  <h4>10 LLM × 6×H100 争用</h4>
+  <p>10 个模型各需 1×H100 满负载；舰队仅 6 卡。Naive 一模型一 Deployment → 4 模型永久 pending。</p>
+  <p><strong>Multi-model serving</strong>（Triton/vLLM multi-LoRA）：单卡加载基座 + 多 LoRA adapter（~100 MB/个）→ 6 卡服务 10 模型。新 SLO：<strong>adapter swap 延迟</strong>（冷加载 200 ms–2 s）须写入 per-model p99，不能与 steady-state ITL 混报。</p>
+</div>
+
+<div class="math-block">$$\text{Effective GPU Util} = \frac{\sum_i \text{GPU-seconds}_{\text{useful},i}}{\text{Fleet GPU-seconds}_{\text{provisioned}}}$$</div>
+
+<p>训练 fleet Goodput 30–55%（第 5 章三因子分解）。推理 fleet 若 SLO 强制 headroom，账面 40% 可能是<strong>健康态</strong>——与训练「越高越好」不同。浪费来源：调度碎片 10–25%、checkpoint I/O 5–15%、多租户空泡 10–20%。</p>
+
+<h2 id="s6">六、舰队 CI/CD、Canary 与 PSI 基数</h2>
+
+<p>Vol.1 Istio <code>weight: 95/5</code> 仍适用，但须 <strong>fleet-wide metric 按 model_id 聚合</strong>——全局 p99 掩盖单模型回归。触发：5 min 内 error_rate &gt; 基线 + 0.3% → 自动 rollback artifact digest。</p>
+
+<h3 id="s6-1">6.1 监控基数：500 模型不能全量 PSI</h3>
+
+<p>500 模型 × 20 特征 × 10 分位 = 10⁵ 时间序列——TSDB OOM。策略：</p>
+<ul>
+  <li><strong>Top traffic 模型：</strong>全量 PSI + KS（Vol.1 四箱 $D_{\text{crit}}=0.061$ @ n=500）</li>
+  <li><strong>长尾模型：</strong>weekly batch + 采样 1% 请求</li>
+  <li><strong>边缘回传：</strong>聚合 drift 统计，非原始特征（隐私 + 带宽）</li>
+</ul>
+
+<h3 id="s6-2">6.2 平台工程与组织</h3>
+<ul>
+  <li><strong>Internal ML Platform：</strong>统一训练提交、registry、feature store SLA</li>
+  <li><strong>Conway 定律：</strong>Central platform 提供 GPU 池 + CI 模板；product team 拥有 model metrics</li>
+  <li><strong>Incident：</strong>SEV 分级 + blameless postmortem；LLM 舰队保留 prompt/response 采样审计链（第 8 章）</li>
+</ul>
+
+<h2 id="s7">七、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>部署光谱上的闭环</h4>
+  <ol>
+    <li><strong>边缘：</strong>mW/KB/离线；验收 = p99 + 子群精度，非 TFLOP/s</li>
+    <li><strong>FL：</strong>FedAvg $n_k/n$ + 通信 = 模型×设备×轮次；DP 与第 8 章同框架</li>
+    <li><strong>平台：</strong>N 模型 = 调度 + 版本 + 监控基数；LoRA 密度换 swap SLO</li>
+    <li><strong>Canary/PSI：</strong>Vol.1 单模型流程扩展到 per-model_id；长尾分层采样</li>
+    <li><strong>统一 registry：</strong>边缘与数据中心模型汇入同一 digest + rollback 链</li>
+  </ol>
+</div>
+
+<blockquote>边缘把 serving physics 推到极限；舰队 MLOps 把「上线后仍可靠」推到 N 模型规模——<strong>同一 DR 模型，Jetson 验 p99，平台验 drift</strong>。</blockquote>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告深度整合 Vol.2 原第 11–12 章。来源：<a href="https://mlsysbook.ai/vol2/edge_intelligence/edge_intelligence.html">边缘智能</a> · <a href="https://mlsysbook.ai/vol2/ml_ops_at_scale/ml_ops_at_scale.html">规模化 ML 运维</a> · 2026-07-04</p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

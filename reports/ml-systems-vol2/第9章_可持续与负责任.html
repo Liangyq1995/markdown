@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第9章 可持续 AI 与负责任 AI | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第9章 可持续 AI 与负责任 AI</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 深度整合原第 15–16 章 · 2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>Llama 3 级 fleet 的 MW/碳预算（PUE×CI×生命周期）→ 训练火箭 vs 推理机队交叉点 → 同一 Governance 层约束「能烧多少瓦、能服务谁、如何审计」→ control plane 写入 CI/CD 与调度</td></tr>
+  <tr><th>学习目标</th><td>用 $C=E_{\text{IT}}\times\mathrm{PUE}\times CI$ 比较选址；判断训练 vs inference 哪项主导生命周期碳；量化 fairness tax；设计 EU AI Act 可审计栈为 inference 成本项</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、开篇：Governance 是硬约束，非 CSR 附录</h2>
+
+<p>第 2 章：40 MW 设施上限约束 bisection 与机架密度。第 5 章：16,384 GPU × 700 W ≈ 11.5 MW 仅加速器。第 6 章：decode memory-bound 单 op 能耗 10–50× prefill。这些数字指向同一结论：<strong>能源与冷却是存在性约束</strong>，不是财务线 item。</p>
+
+<p>可持续 AI 测量并优化全生命周期环境成本；负责任 AI 把 fairness、safety、audit 转为可验证系统属性。二者在 Fleet Stack 中同属 <strong>Governance 层</strong>——下层（compute/comm/coordination/serving）提供能力；治理层决定<strong>能烧多少瓦、能服务谁、如何被审计</strong>。冲突时治理优先：无法通过 conformity assessment 的模型，MFU 再高也无法部署。</p>
+
+<pre class="mermaid">
+graph TD
+  subgraph Physical["物理预算"]
+    MW["MW / PUE / CI"]
+    LC["生命周期碳"]
+  end
+  subgraph Social["社会预算"]
+    F["Fairness 准则"]
+    A["Audit / Explain"]
+  end
+  subgraph Fleet["Fleet Stack"]
+    S["Serving / Training"]
+  end
+  MW --> S
+  LC --> S
+  F --> S
+  A --> S
+  style MW fill:#313244,stroke:#a6e3a1
+  style F fill:#313244,stroke:#cba6f7
+</pre>
+
+<h2 id="s2">二、运营碳：PUE × CI</h2>
+
+<div class="math-block">$$\mathrm{PUE} = \frac{P_{\text{facility}}}{P_{\text{IT}}}, \qquad C_{\text{operational}} = E_{\text{IT}} \times \mathrm{PUE} \times CI_{\text{grid}}$$</div>
+
+<p>PUE=1.0 理想不可达；Google 高效 ~1.10–1.12；行业平均 1.5–2.0。<strong>低 PUE ≠ 低碳</strong>——煤电厂 PUE 1.1 仍可能比水电 PUE 1.5 碳强度高。</p>
+
+<div class="tech-card red">
+  <h4>GPT-3 训练碳（锚点）</h4>
+  <p>1,287 MWh × 429 g/kWh（美国电网）≈ <strong>552 t CO₂</strong> ≈ 552 次 NY–London 往返/乘客。</p>
+  <p>Quebec 水电 20 g/kWh → 约 <strong>21× 减排</strong>——纯选址，不改一行代码。</p>
+</div>
+
+<div class="tech-card yellow">
+  <h4>PUE 优化 = 免费算力</h4>
+  <p>2 MW IT，PUE 1.58→1.10：节省 0.96 MW → 年 ~8,409 MWh——等价 fleet 效率 +30%，无 kernel 改动。</p>
+</div>
+
+<h3 id="s2-1">2.1 地理杠杆</h3>
+<p>10,000 MWh 训练：Quebec 200 t vs Poland 煤电 8,200 t → <strong>41×</strong>——超过多数算法效率增益。PlacementOptimizer + 内部碳价 $100/t 可使 Quebec TCO 全局最优。</p>
+
+<h2 id="s3">三、生命周期：训练火箭 vs 推理机队</h2>
+
+<p>训练像<strong>发射火箭</strong>——Llama 3 54 天集中消耗；推理像<strong>运营机队</strong>——按 query 连续燃烧。优化靶点取决于哪项主导生命周期。</p>
+
+<div class="tech-card purple">
+  <h4>交叉点（7B / 64 A100 训练 ~5.7 t 运营碳）</h4>
+  <p>每 query 0.001 kWh，日 1000 万 query → 日 10 MWh。7B 级训练能耗交叉 inference 约 <strong>1.3 天</strong>；GPT-3 级 ~130 天。</p>
+  <p><strong>广泛部署模型最高杠杆通常是 inference 效率</strong>（第 6 章 INT4/decode 优化）；频繁重训 frontier 模型则优先训练效率 + 碳感知时段。</p>
+</div>
+
+<h3 id="s3-1">3.1 Decode 能耗与第 6 章衔接</h3>
+<p>Prefill compute-bound；decode 读全量权重+KV，算术强度低，静态功耗浪费——decode 单 op 能耗 10–50× prefill。1000 token 自回归 decode 可能比单次 prefill 1000 token 多耗一个数量级——驱动 memory-optimized NPU 与 INT4 serving。</p>
+
+<h3 id="s3-2">3.2 Embodied carbon 与 Jevons</h3>
+<div class="math-block">$$C_{\text{lifecycle}} = C_{\text{training}} + C_{\text{inference}} + C_{\text{embodied}}$$</div>
+<p>H100 embodied ≈ 164 kg CO₂e/GPU。电网 decarbonize 后制造碳可成 dominant term——<strong>硬件 longevity + 利用率</strong> 与 PUE 同级杠杆。AI 算力 350,000×/2012–2019 vs 硬件效率 ~1.5×/年——效率增益可被部署规模吞没。</p>
+
+<h2 id="s4">四、缓解策略与调度目标函数</h2>
+<ul>
+  <li><strong>算法：</strong>稀疏/蒸馏降 FLOPs；early stopping</li>
+  <li><strong>基础设施：</strong>PUE、液冷、renewable 窗口调度 pretrain</li>
+  <li><strong>推理：</strong>第 6 章 $/M tok 与碳同源——少字节 = 少焦耳</li>
+  <li><strong>政策：</strong>内部碳价写入 scheduler 目标函数，与 Goodput 并列</li>
+</ul>
+
+<p>MW 预算与 carbon budget 必须在<strong>调度器与 CI/CD</strong>中内建——否则可持续报告与 operating path 脱节。下一节：同一 Governance 层还约束<strong>谁能被服务、如何被审计</strong>。</p>
+
+<h2 id="s5">五、负责任 AI：治理 Control Plane</h2>
+
+<p>高风险场景下，无法解释、记录、审计的模型——无论 accuracy 多高——都可能被挡在部署门外。Responsible AI 不是 CSR 附录，是<strong>与 MLOps scheduler 同级的 control plane</strong>：fairness check、explanation 生成、audit 写入占用 inference fleet 容量。</p>
+
+<div class="tech-card red">
+  <h4>Amazon 招聘算法（2018）</h4>
+  <p>历史简历训练 → 系统性惩罚女性。统计最优 ≠ 伦理可接受——技术与社会伤害可并存。</p>
+</div>
+
+<pre class="mermaid">
+graph TD
+  subgraph CP["治理 Control Plane"]
+    F["Fairness"]
+    X["Explainability"]
+    A["Audit Trail"]
+  end
+  subgraph DP["数据平面 Serving"]
+    M["Model Inference"]
+  end
+  CP -->|闸门/降级| DP
+  style CP fill:#24243e,stroke:#cba6f7
+</pre>
+
+<table>
+  <tr><th>原则</th><th>Control Plane 职责</th><th>嵌入点</th></tr>
+  <tr><td>Fairness</td><td>子群指标、阈值告警</td><td>采样 → 训练 → 部署 → 监控</td></tr>
+  <tr><td>Explainability</td><td>局部/全局解释 API</td><td>架构选择 → 异步解释队列</td></tr>
+  <tr><td>Accountability</td><td>决策日志、override</td><td>registry → audit trail → 申诉</td></tr>
+  <tr><td>Privacy</td><td>consent、DP、访问审计</td><td>与第 7–8 章 FL/DP 衔接</td></tr>
+</table>
+
+<h2 id="s6">六、公平性：准则冲突与 Fairness Tax</h2>
+
+<p>Demographic parity、Equalized odds、Calibration <strong>数学不兼容</strong>（Kleinberg–Chouldechova）——须 policy 选准则 + intersectional 监控（Buolamwini：深肤色女性 65% vs 全局 99%）。</p>
+
+<div class="tech-card green">
+  <h4>Fairness Tax 手算</h4>
+  <p>信贷 baseline 85%。强制 parity 后 81% → 代价 <strong>4 percentage points</strong>——显式政策成本，非 bug。</p>
+</div>
+
+<div class="tech-card purple">
+  <h4>Obermeyer 2019</h4>
+  <p>医疗支出 proxy 影响 ~2 亿人；修正后黑人高危识别 17.7%→46.5%——单一 proxy 的人口级代价。</p>
+</div>
+
+<h2 id="s7">七、EU AI Act 与可审计栈</h2>
+
+<p>高风险系统须：技术文档、自动决策 logging（输入+模型版本+阈值）、人类监督、上市后 monitoring。GDPR Art. 22/15：meaningful logic + recourse——须 explanation + appeal，非 opaque API。</p>
+
+<div class="tech-card blue">
+  <h4>Contestability Stack（inference 成本项）</h4>
+  <ol>
+    <li>Decision provenance：输出 ↔ 模型 digest + 输入哈希</li>
+    <li>Explanation：Shapley 高延迟 → 异步队列，保 serving SLA</li>
+    <li>Appeal routing：人工队列 + outcome tracking</li>
+  </ol>
+  <p>immutable audit trail 须预算存储与监督容量——与第 6 章 $/M tok 同表核算。</p>
+</div>
+
+<h2 id="s8">八、反馈环、隐私与机构嵌入</h2>
+
+<p>公平监控需 demographic 数据 ↔ privacy 张力：consent 直采、aggregate 审计、DP 群统计。预测性警务反馈环：部署 → 巡逻增 → 逮捕增 → 重训偏斜——静态 test set 检测不到。</p>
+
+<p>Automation bias：99% accuracy → 人工 override 15%→2% → 剩余 1% 错误几乎不捕获。对策：mandatory friction、随机 audit、confidence 强制展示。</p>
+
+<p>治理债在 scale 上不可逆——post-hoc 审计比设计期嵌入贵一个数量级，与 carbon、security 相同（第 8 章）。model registry、ethics board、red team 与 security review 同为<strong>部署瓶颈</strong>。</p>
+
+<h2 id="s9">九、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>Governance 双预算</h4>
+  <ol>
+    <li><strong>物理：</strong>$C = E_{\text{IT}} \times \mathrm{PUE} \times CI$；选址 20–40×；PUE 优化 = 免费算力</li>
+    <li><strong>生命周期：</strong>高流量 inference 可数月超越训练碳；decode 10–50× prefill 能耗</li>
+    <li><strong>社会：</strong>公平准则不兼容；fairness tax 可量化；EU AI Act 写入架构</li>
+    <li><strong>Control plane：</strong>fairness/explain/audit 与 scheduler 同级；占用 inference 容量</li>
+    <li><strong>内建：</strong>MW/碳/公平/审计须进 CI/CD 与调度目标函数——Governance 不是报告层</li>
+  </ol>
+</div>
+
+<blockquote>可持续约束 megawatt 与碳；负责任 AI 约束服务对象与审计能力——<strong>同一 Governance 层，须在 operating path 中与 Goodput、$/token 并列优化</strong>。</blockquote>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告深度整合 Vol.2 原第 15–16 章。来源：<a href="https://mlsysbook.ai/vol2/sustainable_ai/sustainable_ai.html">可持续 AI</a> · <a href="https://mlsysbook.ai/vol2/responsible_ai/responsible_ai.html">负责任 AI</a> · 2026-07-04</p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

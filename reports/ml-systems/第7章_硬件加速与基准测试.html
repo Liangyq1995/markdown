@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第7章 硬件加速与基准测试 | Machine Learning Systems Vol.1</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第7章 硬件加速与基准测试</h1>
+<p class="meta">《Introduction to Machine Learning Systems》Vijay Janapa Reddi · MIT Press · Vol.1 · 整合原第11–12章 · 生成日期：2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>Profile 硬件（内存墙 → Roofline/MFU）→ 基准验证 claim（MLPerf/有效 QPS）→ DR 端到端验收</td></tr>
+  <tr><th>学习目标</th><td>用算术强度诊断 compute/memory-bound，设计可复现基准协议，区分峰值与 SLO 约束下的 sustained 性能</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、开篇：为何搬数据比算数贵</h2>
+
+<p>现代计算的 central surprise：<strong>算术几乎免费，内存访问昂贵</strong>。从主存取一个值的时间内，处理器可完成数千次浮点运算——这不是待修复的工程缺陷，而是光速与硅片电子移动能量的物理后果。硬件加速的本质不是"算得更快"，而是<strong>组织内存、数据流与并行性以最小化数据移动成本</strong>。但"能跑多快"只是 half of the story——还须用可复现测量证明优化在端到端 SLO 下成立。</p>
+
+<div class="tech-card blue">
+  <h4>定义：硬件加速（Hardware Acceleration）</h4>
+  <p>用面向 ML 张量运算的领域专用硅片替代通用处理器逻辑，以可编程性换取 $R_{\text{peak}}$ 与每瓦性能。A100 FP16 矩阵乘 312 TFLOP/s vs 服务器 CPU ~1–2 TFLOP/s，差距 156–312×。</p>
+  <ul>
+    <li><strong>常见陷阱：</strong>峰值 TFLOP/s ≠ 实际吞吐；低算术强度内核无论芯片多快都会饿死等数据</li>
+    <li><strong>软硬协同：</strong>INT8 加速来自 Tensor Core 与算法共同设计，非"位数更少"的抽象收益</li>
+  </ul>
+</div>
+
+<h3 id="s1-1">1.1 Amdahl 定律与加速上限</h3>
+
+<div class="math-block">$$\text{Speedup} = \frac{1}{(1-p) + \frac{p}{G_{\text{accel}}}}$$</div>
+
+<p>$p$ 为可并行分数（ML 中矩阵乘约 90–99%），$G_{\text{accel}}$ 为加速器相对 CPU 增益。5% 串行开销（数据加载、Python、kernel launch）即使 $G_{\text{accel}}=\infty$ 也仅 20× 总加速。</p>
+
+<table>
+  <tr><th>场景</th><th>H100 硬件增益</th><th>并行分数 $p$</th><th>实际系统加速</th></tr>
+  <tr><td>ResNet-50 推理</td><td>247×</td><td>0.95</td><td>~18.6×</td></tr>
+  <tr><td>GPT-2 逐 token 生成</td><td>247×</td><td>0.80</td><td>~4.9×</td></tr>
+</table>
+
+<div class="tech-card yellow">
+  <h4>算术强度（Arithmetic Intensity）</h4>
+  <p>$I = O / D_{\text{vol}}$（FLOP/byte）——回答"搬数据 vs 算数"的核心指标。高 $I$ 的 tiled GEMM 受益于更多 TFLOP/s；低 $I$ 的 LayerNorm/Attention 受益于更多带宽。</p>
+</div>
+
+<h2 id="s2">二、硬件专用化演进</h2>
+
+<pre class="mermaid">
+graph LR
+  A["8087 浮点协处理器\n1980"] --> B["GeForce 256 GPU\n1999"]
+  B --> C["CUDA 通用 GPU 计算\n2006+"]
+  C --> D["TPU / Tensor Core\n2016+"]
+  style A fill:#313244,stroke:#89b4fa
+  style D fill:#313244,stroke:#cba6f7
+</pre>
+
+<table>
+  <tr><th>时代</th><th>瓶颈</th><th>专用化响应</th><th>代表</th></tr>
+  <tr><td>1980s</td><td>浮点精度</td><td>数学协处理器</td><td>Intel 8087（~100×）</td></tr>
+  <tr><td>1990s–2000s</td><td>图形吞吐</td><td>并行 GPU</td><td>GeForce 256, CUDA</td></tr>
+  <tr><td>2010s+</td><td>ML 矩阵乘</td><td>DSA 领域架构</td><td>TPUv1, Tensor Core</td></tr>
+</table>
+
+<div class="tech-card green">
+  <h4>TPUv1 vs K80 效率冲击（2015）</h4>
+  <p>Google 首代 TPU 推理比 K80 GPU 快 15–30×，能效高 30–80×——剥离缓存、分支预测、乱序执行，_die 填满 256×256 8-bit 脉动阵列。证明<strong>针对算法原语定制硅片</strong>可获数量级增益，Moore 定律 alone 需数十年才能达成。</p>
+</div>
+
+<p><strong>Systems Gap：</strong>模型算力需求年增约 6×，GPU 供应约 1.7×/年——差距须靠并行、压缩与协同设计填补，不能坐等下一代芯片。</p>
+
+<h2 id="s3">三、AI 计算原语</h2>
+
+<p>ML 框架抽象的核心是<strong>矩阵乘</strong>（GEMM）、向量运算与非线性 SFU。全连接层、Attention QKV 投影、卷积 im2col 变换均归约为 GEMM。</p>
+
+<h3 id="s3-1">3.1 执行单元演进</h3>
+
+<table>
+  <tr><th>架构</th><th>并行模型</th><th>特点</th><th>代表</th></tr>
+  <tr><td>SIMD</td><td>单指令多数据</td><td>向量宽度固定</td><td>CPU AVX-512</td></tr>
+  <tr><td>SIMT</td><td>单指令多线程</td><td>线程级分支</td><td>NVIDIA CUDA Core</td></tr>
+  <tr><td>Tensor Core</td><td>混合精度矩阵块</td><td>FP16/BF16/INT8/TF32</td><td>A100/H100</td></tr>
+  <tr><td>脉动阵列</td><td>数据流过 PE 网格</td><td>权重驻留、数据流</td><td>TPU, Google</td></tr>
+</table>
+
+<div class="tech-card purple">
+  <h4>Tensor Core 契约</h4>
+  <p>A100 Tensor Core 仅对特定精度/维度触发（FP16、BF16、TF32）。工作负载用不支持的 FP32 累加路径会<strong>回退到 CUDA Core</strong>（约 1/16 吞吐）——硬件特性是 brittle contract，必须 conform 数据类型与 tile 形状。</p>
+</div>
+
+<h3 id="s3-2">3.2 N:M 稀疏与分块（Tiling）</h3>
+
+<p>分块原则：将大图/大张量切分为 SRAM 可容纳的 tile，在片上复用数据后再写回 HBM。FlashAttention 即 IO-aware 分块 attention，避免物化完整 $S \times S$ 矩阵。</p>
+
+<div class="tech-card blue">
+  <h4>FlashAttention 流量对比</h4>
+  <p>标准 Attention（seq=4096, FP16）：物化 $S \times S$ 矩阵 → HBM 读写 $\mathcal{O}(S^2) \approx 67$ MB/层/head。<br>
+  FlashAttention-2：分块在 SRAM 完成 softmax → $\mathcal{O}(S)$ 流量，A100 上 2–4× 加速，算术强度从 0.75 提升至 ~20 FLOP/byte（跨越 H100 脊点方向）。</p>
+</div>
+
+<h2 id="s4">四、AI 内存系统</h2>
+
+<div class="tech-card red">
+  <h4>AI 内存墙（AI Memory Wall）</h4>
+  <p>当 $R_{\text{peak}}$ 增速远超 BW 时，性能由 $\frac{D_{\text{vol}}}{\text{BW}}$ 主导。H100：~989 TFLOP/s FP16 vs 3.35 TB/s HBM → 需 ~295 FLOP/byte 才能喂饱 ALU。</p>
+</div>
+
+<h3 id="s4-1">4.1 硬件平衡与脊点</h3>
+
+<div class="math-block">$$I_{\text{ridge}} = \frac{R_{\text{peak}}}{\text{BW}}$$</div>
+
+<p>脊点划分 memory-bound（$I \lt I_{\text{ridge}}$）与 compute-bound 两区域。H100 脊点 ~295 FLOP/byte；Jetson Xavier（~137 GB/s）脊点 ~20——同一 MobileNet 层在云端算力饥饿、边缘带宽饥饿。</p>
+
+<h3 id="s4-2">4.2 内存层次</h3>
+
+<table>
+  <tr><th>层级</th><th>延迟</th><th>带宽</th><th>DL 用途</th></tr>
+  <tr><td>寄存器 / Shared SRAM</td><td>~1–10 ns</td><td>最高</td><td>Tensor Core tile、FlashAttention</td></tr>
+  <tr><td>HBM</td><td>~100 ns</td><td>TB/s 级</td><td>权重、激活、KV cache</td></tr>
+  <tr><td>DRAM/SSD</td><td>µs–ms</td><td>中–低</td><td>checkpoint、KV offload</td></tr>
+</table>
+
+<p>Horowitz 能量层级：片外 DRAM 读/写相对 INT8 加法约 6400×/21000×——优化须减少 bit 移动，非单纯堆 FLOP/s。</p>
+
+<h3 id="s4-3">4.3 ML 不规则访问</h3>
+
+<p>Embedding lookup（DLRM）、变长序列、Attention KV-cache、小 batch 破坏缓存局部性——稠密 GEMM 擅长的加速器在不规则部分 struggle。结构化稀疏（2:4）是为对齐硬件而设计的折中。</p>
+
+<h3 id="s4-4">4.4 手算：MobileNetV2 depthwise 层</h3>
+<p>输入 $112\times112\times32$，depthwise $3\times3$，pointwise $1\times1$ 扩至 64 通道：</p>
+<ul>
+  <li>Depthwise FLOPs：$112^2 \times 32 \times 9 \approx 1.1 \times 10^7$</li>
+  <li>Pointwise FLOPs：$112^2 \times 32 \times 64 \times 2 \approx 5.8 \times 10^7$</li>
+  <li>读写字节（FP32 权重+激活）：约 1.6 MB → 算术强度 $I \approx 7$ FLOP/byte</li>
+</ul>
+<p>H100 脊点 ~295 FLOP/byte：$I \approx 7$ → <strong>严重 memory-bound</strong>，INT8 量化比加 FLOP/s 更有效。</p>
+
+<h2 id="s5">五、Roofline 模型</h2>
+
+<div class="math-block">$$R_{\text{attain}} = \min(R_{\text{peak}},\; \text{BW} \times I)$$</div>
+
+<pre class="mermaid">
+graph TD
+  subgraph roof ["Roofline 两区域"]
+    M["Memory-bound\n斜率 = BW\n低 I 操作"]
+    C["Compute-bound\n平顶 = R_peak\n高 I 操作"]
+  end
+  M --> R["脊点 I_ridge = R_peak/BW"]
+  R --> C
+  style M fill:#313244,stroke:#fab387
+  style C fill:#313244,stroke:#a6e3a1
+</pre>
+
+<table>
+  <tr><th>操作</th><th>算术强度</th><th>分类</th><th>优化方向</th></tr>
+  <tr><td>大 batch 卷积/GEMM</td><td>50–762 FLOP/byte</td><td>Compute-bound</td><td>Tensor Core、occupancy</td></tr>
+  <tr><td>小 batch 全连接</td><td>~31 FLOP/byte</td><td>Memory-bound</td><td>增大 batch、融合</td></tr>
+  <tr><td>LayerNorm</td><td>~1.5 FLOP/byte</td><td>严重 memory-bound</td><td>融合、消除 round-trip</td></tr>
+  <tr><td>Attention Softmax</td><td>0.75 FLOP/byte</td><td>Memory-bound</td><td>FlashAttention</td></tr>
+  <tr><td>Embedding lookup</td><td>$\lt 1$ FLOP/byte</td><td>Memory-bound</td><td>量化表、近存计算</td></tr>
+</table>
+
+<div class="tech-card yellow">
+  <h4>利用率鸿沟：H100 vs A100</h4>
+  <p>脊点从 A100 ~153 升至 H100 ~295 FLOP/byte。$I=200$ 的算法在 A100 上 compute-bound，在 H100 上变 bandwidth-bound——"遗留"代码常只见 1.6× 而非 3.2× 加速（带宽比 vs FLOP 比）。</p>
+</div>
+
+<h3 id="s5-1">5.1 按强度分区优化</h3>
+
+<table>
+  <tr><th>强度区间</th><th>典型操作</th><th>优化优先级</th></tr>
+  <tr><td>高 AI (&gt;200)</td><td>大卷积、batched GEMM</td><td>Tensor Core、线程块调优</td></tr>
+  <tr><td>中 AI (20–200)</td><td>中等 dense 层</td><td>增大 batch、寄存器 tiling、融合</td></tr>
+  <tr><td>低 AI (&lt;20)</td><td>Norm、Softmax、Depthwise</td><td>融合、降精度、算法改 IO</td></tr>
+</table>
+
+<h2 id="s6">六、硬件映射与数据流</h2>
+
+<p>映射问题：给定计算图与加速器，如何 placement（算子放哪）、allocation（张量放哪级内存）、scheduling（执行顺序）以最大化复用？组合爆炸使编译器/运行时（TVM、XLA、TensorRT）成为必需。</p>
+
+<h3 id="s6-1">6.1 数据流模式</h3>
+
+<table>
+  <tr><th>数据流</th><th>权重/激活移动</th><th>适用</th></tr>
+  <tr><td>Weight Stationary (WS)</td><td>权重驻留 PE</td><td>推理权重复用高</td></tr>
+  <tr><td>Output Stationary (OS)</td><td>部分和驻留</td><td>输出复用</td></tr>
+  <tr><td>Row/Col Stationary</td><td>输入行/列驻留</td><td>不同 reuse 模式</td></tr>
+</table>
+
+<p>TPU 脉动阵列采用 weight-stationary：权重加载一次后在 PE 间流动，输入激活流过，最小化 HBM 往返。GPU 通过 shared memory tiling 模拟类似复用。</p>
+
+<p><strong>编译器链（DR 部署）：</strong>PyTorch → ONNX → TensorRT；<code>trtexec --onnx=mobilenetv2_dr.onnx --saveEngine=dr.plan --fp16 --int8</code>。须 profiling 确认 kernel 命中 Tensor Core——FP32 累加路径峰值从 312 跌至 ~19 TFLOP/s。</p>
+
+<div class="tech-card green">
+  <h4>Tensor 生命周期（KWS on GPU）</h4>
+  <p>16K 样本 FP16 音频：HBM（~300 ns, ~20 pJ/bit）→ L2（~4 ns）→ L1/Shared（~1 ns）→ 寄存器/Tensor Core（~0.1 pJ/bit）。Roofline 由 Step1→Step4 的链路带宽决定——<strong>光速极限</strong>意味着不能比搬数据更快地计算。</p>
+</div>
+
+<blockquote><strong>过渡：从 Profile 到 Proof。</strong>Roofline 告诉你该优化带宽还是算力；基准测试验证优化是否在端到端 SLO 下成立。Profile 给出方向，Benchmark 给出问责——二者缺一不可。</blockquote>
+
+<h2 id="s7">七、为何需要 ML 基准测试</h2>
+
+<p>剪枝模型在 A 加速器上 2× 更快，在 B 上无改善；增大 batch 提升利用率却违反延迟 SLO。每项优化都带承诺——基准测试是<strong>将理论主张转化为可验证工程知识</strong>的纪律，量化 peak 与 sustained 性能之间、实验室与生产之间的鸿沟。</p>
+
+<div class="tech-card blue">
+  <h4>定义：ML 基准测试</h4>
+  <p>在代表性 ML 工作负载上<strong>端到端</strong>测量系统性能，将厂商峰值规格与 realistic 条件下可持续的吞吐/延迟解耦。A100 峰值 312 TFLOP/s，生产 Transformer 训练 MFU 通常 30–50%（93.6–156 TFLOP/s）——$\eta_{\text{hw}}$ 鸿沟须由基准量化。</p>
+</div>
+
+<h3 id="s7-1">7.1 三维评估框架</h3>
+
+<pre class="mermaid">
+graph TD
+  S["系统基准\n硬件/软件栈"] --- M["模型基准\n精度/校准/压缩"]
+  M --- D["数据基准\n覆盖/质量/漂移"]
+  S --- D
+  style S fill:#313244,stroke:#fab387
+  style M fill:#313244,stroke:#89b4fa
+  style D fill:#313244,stroke:#a6e3a1
+</pre>
+
+<ul>
+  <li><strong>系统基准：</strong>硬件是否在 realistic 负载下兑现承诺（带宽饱和、dispatch 开销）</li>
+  <li><strong>模型基准：</strong>优化是否在全输入分布上保留质量（非仅测试集）</li>
+  <li><strong>数据基准：</strong>模型是否泛化到含噪声/偏移的真实数据</li>
+</ul>
+
+<div class="tech-card yellow">
+  <h4>三条原则</h4>
+  <ol>
+    <li><strong>基准是代理，非真理</strong>——Offline 10K QPS vs Server 模式可能差一个数量级</li>
+    <li><strong>Goodhart 定律：</strong>指标成为目标即失效（BLEU 刷榜 vs 用户延迟）</li>
+    <li><strong>端到端 &gt; 组件指标：</strong>推理 5 ms→10 ms 模型阶段在 50 ms 流水线中仅 ~1.2× 端到端改善</li>
+  </ol>
+</div>
+
+<h2 id="s8">八、历史演进与 MLPerf</h2>
+
+<table>
+  <tr><th>基准</th><th>年份</th><th>焦点</th><th>对 ML 的教训</th></tr>
+  <tr><td>Whetstone</td><td>1976</td><td>合成浮点</td><td>编译器 gaming 破坏有效性</td></tr>
+  <tr><td>LINPACK</td><td>1979</td><td>矩阵求解</td><td>孤立操作 miss 系统瓶颈</td></tr>
+  <tr><td>SPEC CPU</td><td>1989</td><td>真实应用</td><td>代表性工作负载揭示真实性能</td></tr>
+  <tr><td>SPEC Power / Green500</td><td>2007</td><td>能效</td><td>多负载级评估，非仅峰值</td></tr>
+  <tr><td>MLPerf</td><td>2018</td><td>ML 训练+推理</td><td>综合：代表性+多目标+全栈</td></tr>
+</table>
+
+<h3 id="s8-1">8.1 MLPerf 套件变体</h3>
+
+<table>
+  <tr><th>变体</th><th>目标域</th><th>关键约束</th><th>主要指标</th></tr>
+  <tr><td>MLPerf Training</td><td>数据中心</td><td>多节点扩展、互联带宽</td><td>Time-to-quality、samples/s</td></tr>
+  <tr><td>MLPerf Inference</td><td>Server/Edge</td><td>延迟 SLO、吞吐</td><td>QPS、延迟分位数、精度</td></tr>
+  <tr><td>MLPerf Tiny</td><td>MCU/IoT</td><td>超低功耗、KB 级内存</td><td>延迟、精度、每推理能耗</td></tr>
+  <tr><td>MLPerf Power</td><td>跨场景</td><td>能耗预算、热约束</td><td>Performance/W、每 query 焦耳</td></tr>
+</table>
+
+<h2 id="s9">九、基准粒度与 DR 验收</h2>
+
+<table>
+  <tr><th>粒度</th><th>测量对象</th><th>优势</th><th>局限</th></tr>
+  <tr><td>Micro</td><td>单 kernel（GEMM）</td><td>隔离硬件能力</td><td>miss 系统交互</td></tr>
+  <tr><td>Macro</td><td>单层/单模型 forward</td><td>模型级 profiling</td><td>无数据管道开销</td></tr>
+  <tr><td>End-to-end</td><td>完整 pipeline</td><td>最接近生产</td><td>难归因瓶颈</td></tr>
+</table>
+
+<p>工程决策决定粒度：采购 GPU 看 macro+scaling；SLO 验证必须 end-to-end（含预处理、队列、后处理）。Roofline 诊断属于 micro/macro；DR 验收必须 end-to-end。</p>
+
+<h3 id="s9-1">9.1 DR 验收基准（系统/模型/数据三维合一）</h3>
+
+<p>野生动物相机 DR 案例的端到端验收基准——将 Roofline 优化方向与三维基准框架落地为可执行阈值：</p>
+
+<table>
+  <tr><th>维度</th><th>指标</th><th>阈值</th><th>测量条件</th></tr>
+  <tr><td>模型</td><td>农村子群灵敏度</td><td>≥ 0.90</td><td>held-out 500 张</td></tr>
+  <tr><td>系统</td><td>p99 端到端延迟</td><td>&lt; 2000 ms</td><td>Jetson batch=1，含 JPEG 解码</td></tr>
+  <tr><td>数据</td><td>PSI（部署后）</td><td>&lt; 0.20</td><td>月度 4-bin 分布对比</td></tr>
+</table>
+
+<p>仅报「INT8 3.5 MB、FLOPs 降 4×」而不测农村子群 = 违反模型基准维度；仅测 GPU forward 不测 JPEG 预处理 = 违反端到端原则；Roofline 显示 memory-bound 但 MFU 报告不含 JPEG 解码 = 优化方向与测量对象不匹配。</p>
+
+<h2 id="s10">十、训练 vs 推理基准</h2>
+
+<p>同一加速器在训练与推理中<strong>相反方式失败</strong>：训练 waste 天数于梯度同步；推理 miss SLO 于 tail latency 尖峰。故 MLPerf Training 与 Inference 分离。</p>
+
+<table>
+  <tr><th>维度</th><th>Training</th><th>Inference</th></tr>
+  <tr><td>计算方向</td><td>Forward + Backward</td><td>Forward only</td></tr>
+  <tr><td>内存</td><td>参数+梯度+优化器+激活（3–4× 推理）</td><td>权重+激活+KV cache</td></tr>
+  <tr><td>优化目标</td><td>Time-to-accuracy、scaling</td><td>Latency 分位数、QPS</td></tr>
+  <tr><td>绑定约束</td><td>小 scale 算力；大 scale 通信 BW</td><td>延迟、tail、冷启动</td></tr>
+  <tr><td>能耗模式</td><td>一次性摊销（GPT-3 ~1287 MWh）</td><td>每 query 累积（$E = P \times T$）</td></tr>
+</table>
+
+<h2 id="s11">十一、训练基准与 MFU</h2>
+
+<div class="math-block">$$T_{\text{train}} = \operatorname{arg\,min}_{t}\big\{\text{Accuracy}(t) \geq \text{target accuracy}\big\}$$</div>
+
+<div class="math-block">$$\text{Throughput} = \frac{N_{\text{samples}}}{T_{\text{train}}}$$</div>
+
+<p>吞吐 alone 无意义——MLPerf ResNet-50 须达 75.9% top-1 才有效。未达目标的"快"不算数。</p>
+
+<h3 id="s11-1">11.1 扩展效率</h3>
+
+<div class="math-block">$$\text{Eff}_{\text{scaling}} = \frac{T(1)}{N_{\text{GPU}} \times T(N_{\text{GPU}})} \times 100\%$$</div>
+
+<p>例：单卡 24 h，8 卡 4 h → $\text{Eff} = 24/(8 \times 4) = 75\%$。丢失 25% 来自 AllReduce（10–15%）、CPU↔GPU 拷贝（3–5%）、负载不均（2–5%）。</p>
+
+<h3 id="s11-2">11.2 MFU（Model FLOPs Utilization）手算</h3>
+<div class="math-block">$$\text{MFU} = \frac{\text{Achieved FLOP/s}}{\text{Peak FLOP/s}} = \frac{6 \times N \times D \times H \times L \times T / T_{\text{step}}}{R_{\text{peak}}}$$</div>
+<p>例：GPT-2 117M，batch=32，seq=1024，A100 FP16 峰值 312 TFLOP/s，实测 step 120 ms：</p>
+<ul>
+  <li>每 step FLOPs ≈ $6 \times 32 \times 1024 \times 768 \times 12 \approx 1.8 \times 10^{12}$</li>
+  <li>Achieved = $1.8 \times 10^{12} / 0.12 \approx 15$ TFLOP/s</li>
+  <li>MFU = $15/312 \approx 4.8\%$（小模型 GPU 利用率极低——CPU/Python 开销主导）</li>
+</ul>
+<p>LLM 7B+ scale MFU 30–50% 常见；<strong>MFU 低 ≠ 浪费</strong>，小 scale 通信/launch 占比高是物理现实。MFU 是 Roofline compute-bound 区域的利用率度量——与 memory-bound 操作的 $R_{\text{attain}}$ 互补。</p>
+
+<h2 id="s12">十二、推理基准与有效 QPS</h2>
+
+<h3 id="s12-1">12.1 推理指标</h3>
+
+<ul>
+  <li><strong>Latency：</strong>单请求延迟；生产关注 p95/p99 而非均值</li>
+  <li><strong>Throughput：</strong>满足 SLO 的有效 QPS——违反 SLO 的请求不计入</li>
+  <li><strong>Tail latency：</strong>多组件 fan-out 时 tail 放大（Tail at Scale）</li>
+</ul>
+
+<h3 id="s12-2">12.2 MLPerf 执行场景</h3>
+
+<table>
+  <tr><th>场景</th><th>负载模式</th><th>优化目标</th></tr>
+  <tr><td>SingleStream</td><td>逐条顺序</td><td>最低延迟</td></tr>
+  <tr><td>MultiStream</td><td>多流并行</td><td>多传感器/多摄像头</td></tr>
+  <tr><td>Server</td><td>Poisson 到达、SLO 约束</td><td>延迟约束下最大 QPS</td></tr>
+  <tr><td>Offline</td><td>批量全可用</td><td>最大吞吐</td></tr>
+</table>
+
+<div class="tech-card purple">
+  <h4>Server 场景要点</h4>
+  <p>10,000 QPS 但 5% 违反 99%ile SLO → 报告有效 QPS 9,500。Server 模式模拟真实 serving：请求随机到达、batch 与队列竞争同一延迟预算。</p>
+</div>
+
+<h3 id="s12-3">12.3 有效 QPS 手算</h3>
+<div class="math-block">$$\text{QPS}_{\text{valid}} = \text{QPS}_{\text{raw}} \times (1 - p_{\text{SLO violation}})$$</div>
+<p>例：ResNet-50 Server 模式测得 raw 12,000 QPS，p99 目标 15 ms，实测 8% 请求 p99 &gt; 15 ms → 有效 QPS = $12000 \times 0.92 = 11040$。若只报 12K 则 overstate 产能 7.3%。</p>
+
+<h3 id="s12-4">12.4 Offline vs Server 鸿沟</h3>
+<table>
+  <tr><th>场景</th><th>ResNet-50 V100</th><th>说明</th></tr>
+  <tr><td>Offline batch=128</td><td>~45,000 img/s</td><td>最大吞吐，无 SLO</td></tr>
+  <tr><td>Server p99&lt;15 ms</td><td>~8,500 img/s</td><td>Poisson 到达 + 动态 batch</td></tr>
+  <tr><td>SingleStream</td><td>~117 img/s (8.5 ms)</td><td>最低延迟</td></tr>
+</table>
+<p>Offline 数字比 Server 高 5× 常见——用 Offline 规划 Server 容量将严重 under-provision。</p>
+
+<h2 id="s13">十三、功耗测量</h2>
+
+<p>SPEC Power（2007）在 0–100% 共 11 档负载测 ssj_ops/W——ML serving 很少 100% 满载，部分负载效率决定真实电费。Green500 按 FLOP/s/W 排名，教训是<strong>最快集群 ≠ 最经济集群</strong>。</p>
+
+<div class="math-block">$$E_{\text{total}} = \text{Power} \times T$$</div>
+
+<p>300 W 加速器、10 ms 推理 → $300 \times 0.01 = 3$ J（~0.0008 Wh）。MLPerf Power 标准化测量边界：加速器 alone vs 整机 vs 机架级——边界选择可差 2–3×。</p>
+
+<table>
+  <tr><th>测量边界</th><th>包含</th><th>适用</th></tr>
+  <tr><td>Component</td><td>GPU/TPU 芯片</td><td>硬件能效对比</td></tr>
+  <tr><td>Node</td><td>CPU+GPU+内存+风扇</td><td>单节点部署规划</td></tr>
+  <tr><td>Rack/Cluster</td><td>网络、存储、冷却</td><td>TCO 与碳排放</td></tr>
+</table>
+
+<div class="tech-card green">
+  <h4>算法能效 vs 硬件功耗</h4>
+  <p>压缩（INT8 量化）通过减少<strong>工作量</strong>降能耗，非仅换更省电硬件。MobileNet 深度可分离卷积 + INT8 可在算法与数值两层同时攻击 $D_{\text{vol}}$ 与 $O$ 项——Roofline 低 $I$ 区域的首选策略。</p>
+</div>
+
+<h2 id="s14">十四、最佳实践与陷阱</h2>
+
+<ul>
+  <li><strong>统计 rigor：</strong>多次 run、报告分布而非单次 best；GPU boost/thermal throttling 可淹没小增益</li>
+  <li><strong>Benchmark-production gap（2–10×）：</strong>漂移、节流、动态负载、静默退化——再精密的仪器 alone 无法消除</li>
+  <li><strong>Benchmark gaming：</strong>test-set 调参、kernel 特化——MLPerf 多工作负载缓解</li>
+  <li><strong>模型评估盲区：</strong>高准确率 ≠ 校准良好；须测子群指标（DR 农村 0.88 vs 全局 0.95 → 拒绝部署）与分布外性能</li>
+</ul>
+
+<div class="tech-card red">
+  <h4>移动/边缘 omitted 条件</h4>
+  <p>厂商 burst 推理数字若未测<strong> sustained 热节流</strong>，steady-state 性能可远低于峰值——Jetson DR 部署最常被误导的 omitted 条件，直接关联 p99 &lt; 2000 ms 验收基准。</p>
+</div>
+
+<h2 id="s15">十五、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>核心要点</h4>
+  <ol>
+    <li>内存墙是物理约束：搬数据能量 &gt;&gt; 算术，Roofline 脊点 $I_{\text{ridge}}$ 是选择优化方向的首要诊断</li>
+    <li>DSA（TPU/Tensor Core）用可编程性换 10–300× 张量吞吐，但仅匹配规则并行负载；Amdahl 串行分数限制端到端加速</li>
+    <li>MFU 量化 compute-bound 利用率；memory-bound 操作看 $R_{\text{attain}} = \min(R_{\text{peak}}, \text{BW} \times I)$</li>
+    <li>基准是 D·A·M 协同设计的<strong>问责机制</strong>——系统/模型/数据三维 + micro/macro/e2e 粒度按决策问题选择</li>
+    <li>训练看 time-to-accuracy 与 scaling efficiency；推理看 SLO 约束下的有效 QPS 与 tail</li>
+    <li>DR 验收：农村灵敏度 ≥0.90 + p99 &lt; 2000 ms + PSI &lt; 0.20——Profile 与 Proof 的统一落地</li>
+    <li>Goodhart + benchmark-production gap：设计 for benchmark = 对 shifting reality 过拟合</li>
+  </ol>
+</div>
+
+<blockquote>选芯片的问题不是"哪个最快"，而是<strong>哪个芯片的内存系统最匹配模型的访问模式</strong>——然后用 MLPerf Server 场景证明该选择在 SLO 下成立。</blockquote>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告整合 Vol.1 原第11–12章。来源：<a href="https://mlsysbook.ai/vol1/hw_acceleration/hw_acceleration.html">硬件加速</a> · <a href="https://mlsysbook.ai/vol1/benchmarking/benchmarking.html">基准测试</a> · 生成日期：2026-07-04</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

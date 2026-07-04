@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第4章 分布式训练与通信 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第4章 分布式训练与通信</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 深度整合原第 5–6 章 · 2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>以 175B @ 1024 GPU（128 节点×8）为锚：Fleet Law 剖分步长 → 内存 sharding 动机 → DP/TP/PP 映射到第 2 章 NVLink/IB 层级 → 350 GB 梯度 collective 定价 → 分层 AllReduce 与 overlap → 原语选型</td></tr>
+  <tr><th>学习目标</th><td>用 Fleet Law 判断何时加卡无效；为 175B 配置 3D 并行坐标；对 350 GB AllReduce 做 Ring/分层/重叠三档估算；用 α-β 定价表区分 latency-bound 与 bandwidth-bound 原语</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、开篇：175B @ 1024 GPU 与 Fleet Law</h2>
+
+<p>第 2 章闭合了织物问题——350 GB 梯度在 IB 50 GB/s 下纯传输下限约 7 s。本章追问：<strong>这 350 GB 因何产生、如何切分、以何种 collective 付费</strong>。全章锚点不变：<strong>175B 参数、FP16 权重 350 GB、1024 GPU（128 节点×8 卡）</strong>，每训练步须同步 <strong>350 GB 梯度</strong>。</p>
+
+<p>「更多硬件 = 更快训练」在 bisection 墙前崩塌。Fleet Law 将单步 wall-clock 剖分为可优化项：</p>
+
+<div class="math-block">$$T_{\text{step}}(N) = \frac{T_{\text{compute}}}{N} + T_{\text{comm}}(N) + T_{\text{sync}}(N) - T_{\text{overlap}}$$</div>
+
+<p>通信-计算比 $\rho = T_{\text{comm}} / (T_{\text{compute}}/N)$ 趋近 1 时，集群从超算退化为加热器集合。1024 卡上若 $T_{\text{compute}}/N \approx 2.1$ s 而裸 AllReduce 暴露 ~14 s（第四节算例），$\rho \gg 1$——问题不在算力，而在<strong>切分与付费方式</strong>。</p>
+
+<pre class="mermaid">
+graph LR
+  FL["Fleet Law\n步长剖分"] --> SH["内存 sharding\n为何分布式"]
+  SH --> MAP["DP/TP/PP\n映射织物层级"]
+  MAP --> PRICE["Collective 定价\n350 GB 如何付费"]
+  PRICE --> HIER["分层 + overlap\n降暴露时间"]
+  HIER --> PRIM["原语选型\nAllReduce/AllToAll"]
+  style PRICE fill:#313244,stroke:#f38ba8
+</pre>
+
+<p>三信号触发分布式：<strong>① HBM 装不下</strong>（参数+优化器+激活）；<strong>② 单卡 wall-clock 不可接受</strong>；<strong>③ 数据集 TB 级无法单机供给</strong>。175B 同时触发 ① 与 ②——sharding 不是优化，是存在条件。</p>
+
+<h2 id="s2">二、训练步剖分：循环变换与 sharding 动机</h2>
+
+<p>分布式策略 = 编译器对训练三重循环的变换：<strong>DP</strong> 展开 batch 维；<strong>TP</strong> 向量化层内 GEMM（NVLink 作向量寄存器堆）；<strong>PP</strong> 指令流水线切 depth。与无状态 Web 不同，训练要求<strong>可变参数的全局一致视图</strong>——梯度同步是语义必需，其后各节的 collective 是这一语义的物理实现。</p>
+
+<h3 id="s2-1">2.1 Adam 内存天花板：5B 单卡硬限</h3>
+
+<div class="tech-card blue">
+  <h4>175B 静态状态 · 80 GB H100</h4>
+  <p>全量混合精度 Adam（简化 12 B/param：FP16 权重+梯度 + FP32 双状态）：</p>
+  <div class="math-block">$$M_{\text{static}} \approx 12 \times P\ \text{bytes}$$</div>
+  <p>$P=175\times 10^9$ → $M_{\text{static}} \approx 2.1$ TB，单节点 640 GB HBM 仍不足一个数量级。即便 $P=5\times 10^9$ → 60 GB，留 ~20 GB 给激活与 NCCL buffer——<strong>约 5B 为单卡全状态训练硬上限</strong>。10B+ 必须 ZeRO/FSDP + TP/PP；175B 必须 3D 混合并行。</p>
+</div>
+
+<p>ZeRO-3 分片优化器状态可降静态 footprint，但<strong>无法消灭超长上下文下 TB 级激活</strong>——仍需 TP 切 hidden、PP 切 depth。Sharding 解决「装得下」；并行维度选择决定「付得起多少通信」。</p>
+
+<h3 id="s2-2">2.2 Chinchilla 协同扩展</h3>
+
+<p>最优训练约需 ~20 token/参数（Hoffmann et al.）。175B 需 ~3.5T token；算力翻倍时若只加卡不加数据/token 预算，样本效率下降。舰队规划须同时扩展<strong>第 3 章存储管道 epoch 吞吐</strong>与<strong>本章梯度同步</strong>，而非孤立扩 GPU——否则 Fleet Law 中 $T_{\text{compute}}/N$ 缩小，$T_{\text{comm}}$ 反升，$\rho$ 恶化。</p>
+
+<h2 id="s3">三、并行维度：DP / TP / PP 与织物层级映射</h2>
+
+<p>并行策略不是软件偏好，而是<strong>把不同频率、不同体量的 collective 锁进匹配带宽的互联层</strong>。第 2 章给出物理分界：节点内 NVLink ~900 GB/s；跨节点 NDR IB ≈ 50 GB/s——<strong>约 9× 断崖</strong>。映射铁律由此导出，而非 NCCL 配置表。</p>
+
+<table>
+  <tr><th>并行维</th><th>通信模式</th><th>消息特征</th><th>应锁定的互联（第 2 章）</th><th>175B @ 1024 GPU</th></tr>
+  <tr><td>张量并行 (TP)</td><td>AllReduce 激活</td><td>高频、中块；$\propto B \times N_L$</td><td>NVLink 域（节点内）</td><td>TP=8，永不跨 IB</td></tr>
+  <tr><td>流水线 (PP)</td><td>P2P 激活/梯度</td><td>中频边界；$\propto B \times S \times d$</td><td>同 rack IB</td><td>~200 MB/边界，α 可感知</td></tr>
+  <tr><td>数据并行 (DP)</td><td>AllReduce 梯度</td><td>低频、350 GB 级</td><td>全网 IB + bisection</td><td>通信墙在此 bind</td></tr>
+</table>
+
+<p><strong>张量并行（TP）</strong>：层内矩阵切分，每层前后 AllReduce 激活；跨机架 IB 必 stall——每层 AllReduce 走 50 GB/s 时 MFU 崩塌。<strong>流水线（PP）</strong>：按层段接力，bubble 分数 $\approx (p-1)/(m+p-1)$；$p=4, m=32$ → ~9% 空泡，$p=16, m=32$ → ~32%。</p>
+
+<h3 id="s3-1">3.1 175B @ 1024 GPU 三配置对比</h3>
+
+<p>坐标 $N_{\text{total}} = d \times p \times t$（DP × PP × TP）。128 节点×8 卡 = 1024 GPU 下三档：</p>
+
+<ul>
+  <li><strong>DP-1024</strong>：全网 AllReduce 完整 350 GB → 裸暴露 ~14 s（§4.1），$\eta \approx 15\%$</li>
+  <li><strong>TP-8 + DP-128</strong>：网间 AllReduce $350/8 = 43.75$ GB/组 → 暴露 ~1.75 s，$\eta$ 可达 75–85%（overlap 后）</li>
+  <li><strong>TP-8 + PP-4 + DP-32</strong>：梯度进一步缩小 + PP bubble ~9%</li>
+</ul>
+
+<div class="tech-card green">
+  <h4>Hierarchy-Aware Parallelism · 带宽匹配原则</h4>
+  <p>高频、小块 → NVLink（TP）；中频边界 → 同 rack IB（PP）；低频巨型 → 全网（DP，配合 gradient bucketing overlap）。错误示范：跨机架 TP。正确大尺度示例：$d \times p \times t = 128 \times 16 \times 8 = 16{,}384$ GPU。</p>
+</div>
+
+<p>扩展定律实践：GPT-3 MFU ~21% → PaLM ~46%（混合并行+overlap）；Llama3 8192 卡 43% vs 16384 卡 41%——<strong>规模税可测</strong>。175B 成本高效区约 1024–4096 GPU；超 8192 可能 wall-clock 仍降但 $/有效 FLOP 上升。</p>
+
+<h3 id="s3-2">3.2 临界 batch 与统计效率</h3>
+
+<p>DP 使 $B_{\text{global}} = N_{\text{DP}} \times B_{\text{local}}$。超过临界 batch $B^*$ 后梯度噪声饱和——<strong>硬件吞吐线性，收敛/样本次线性</strong>。须配合 linear/sqrt LR scaling、warmup、梯度累积。系统 KPI 应是 time-to-target-loss，非裸 step/s。</p>
+
+<h2 id="s4">四、集合通信定价：350 GB 梯度如何付费</h2>
+
+<p>并行切分决定「搬什么」；集合通信决定「搬完花多少步长」。C³ 视角下，AllReduce / AllGather / ReduceScatter / AllToAll 是 fleet 的「指令集」——本节只做<strong>定价</strong>，不重讲 RDMA 与 bisection（见第 2 章 Gradient Bus）。</p>
+
+<div class="tech-card blue">
+  <h4>梯度同步（Gradient Synchronization）</h4>
+  <p>同步 DP 中，每 worker 贡献本地梯度 $g_k$，全局平均 $g_{\text{global}} = \frac{1}{N}\sum_k g_k$ 后各副本一致更新。不同步则模型发散，不再近似全局 SGD。175B FP16：$M_{\text{grad}} = 2P = 350$ GB/步。</p>
+</div>
+
+<h3 id="s4-1">4.1 Ring AllReduce：350 GB 唯一完整算例</h3>
+
+<p>Ring AllReduce 每 worker 发送/接收量近似恒定：</p>
+<div class="math-block">$$V_{\text{worker}} = \frac{2(N-1)}{N} \times M, \quad T_{\text{Ring}} \approx \frac{V_{\text{worker}}}{\beta} + 2(N-1)\alpha$$</div>
+
+<p><strong>代入锚点</strong>：$N=1024$，$M=350$ GB，有效 IB $\beta=50$ GB/s，$\alpha=1.5\,\mu\text{s}$：</p>
+<div class="math-block">$$V_{\text{worker}} \approx \frac{2 \times 1023}{1024} \times 350 \approx 699\ \text{GB} \quad\Rightarrow\quad T_{\text{bandwidth}} \approx \frac{699}{50} \approx 14.0\ \text{s}$$</div>
+<p>$T_{\text{latency}} = 2046 \times 1.5\,\mu\text{s} \approx 3$ ms——350 GB 场景<strong>纯带宽主导</strong>。若 $T_{\text{compute}}/N \approx 2.1$ s，朴素 DP 效率 $\eta \approx 2.1/(2.1+14) \approx 15\%$；75% overlap 后 $T_{\text{comm,exposed}} \approx 3.5$ s → $\eta \approx 37.5\%$。GPT-3 级作业 AllReduce 占步长 <strong>10–40%</strong> 是已做 3D 并行后的常见区间。</p>
+
+<p>规模放大（同一 175B 梯度，不同 $N$ 与互联）：</p>
+
+<table>
+  <tr><th>规模</th><th>互联</th><th>梯度同步占步时</th><th>有效计算</th></tr>
+  <tr><td>8 GPU（单节点 TP+DP）</td><td>NVLink ~900 GB/s</td><td>~25%</td><td>~75%</td></tr>
+  <tr><td>1024 GPU 平坦 DP</td><td>IB NDR 50 GB/s</td><td>~70%+（无 overlap）</td><td>&lt;30%</td></tr>
+  <tr><td>1024 GPU TP-8+DP-128+overlap</td><td>IB + 分层 NCCL</td><td>~10–25%</td><td>~75–85%</td></tr>
+</table>
+
+<h3 id="s4-2">4.2 α-β 定价表：消息大小决定优化杠杆</h3>
+
+<p>单次传输 $T(n) = \alpha + n/\beta$；临界 $n^* = \alpha \cdot \beta$（第 2 章 §7.1 完整推导）。此处只列<strong>定价表</strong>——175B 训练步同时出现三类消息，优化杠杆完全不同：</p>
+
+<table>
+  <tr><th>消息</th><th>大小 $n$</th><th>互联 $\alpha$, $\beta$</th><th>主导项</th><th>优化杠杆</th></tr>
+  <tr><td>PP 微批 handoff</td><td>~4 KB</td><td>IB 1.5 μs, 50 GB/s</td><td>α（~95%）</td><td>减 hop、同 rack 放置</td></tr>
+  <tr><td>TP 激活片（每层）</td><td>~0.1–1 MB</td><td>NVLink 1 μs, 450 GB/s</td><td>近 $n^*$</td><td>融合 kernel、禁跨节点</td></tr>
+  <tr><td>DP 梯度（TP-8 后）</td><td>~43.75 MB</td><td>IB 1.5 μs, 50 GB/s</td><td>β</td><td>分层 AllReduce、多 rail</td></tr>
+  <tr><td>全量梯度象流</td><td>350 GB</td><td>IB 50 GB/s</td><td>β</td><td>sharding 降 $M$、overlap、压缩</td></tr>
+</table>
+
+<p>4 KB PP 控制：$T \approx 1.5 + 4/50\text{GB/s} \approx 1.58\,\mu\text{s}$，加倍带宽几乎无效。MoE 路由包 $n \ll n^*$ 时 96% 是启动税——融合 100 个包为 400 KB 可获 ~20× 改善（§6.3）。350 GB 梯度仅降 $\alpha$ 几乎无效；须降 payload 或换算法。</p>
+
+<h2 id="s5">五、分层 AllReduce 与计算-通信重叠</h2>
+
+<p>平坦 Ring 让慢链路搬运完整 350 GB——§4.1 的 14 s 即此。分层策略：<strong>先在 NVLink 域内 ReduceScatter，再让 IB 只传归约分片，最后节点内 AllGather</strong>——与第 2 章「先吃满快链路」同一逻辑。</p>
+
+<h3 id="s5-1">5.1 128 节点×8 卡：分层 vs 平坦</h3>
+
+<p>DP-1024 平坦 Ring：350 GB 跨 1024 GPU IB ring → <strong>~14.0 s</strong>（§4.1，不再重复）。</p>
+
+<p>同一配置分层 AllReduce：节点内 8 GPU NVLink ReduceScatter（350 GB）→ 每节点持 43.75 GB 分片 → 128 节点 IB Ring 传 43.75 GB → 节点内 NVLink AllGather：</p>
+
+<ul>
+  <li>节点内：$T_{\text{intra}} \approx \frac{2 \times 7}{8} \times \frac{350}{900} \approx 0.68$ s（NVLink $\beta \approx 900$ GB/s）</li>
+  <li>跨节点：$T_{\text{inter}} \approx \frac{2 \times 127}{128} \times \frac{43.75}{50} \approx 1.73$ s</li>
+  <li>合计暴露（无 overlap）：<strong>~2.4 s</strong>，相对平坦 ~14 s 约 <strong>5.8×</strong></li>
+</ul>
+
+<p>若已采用 TP-8 + DP-128，网间 payload 本就是 43.75 GB——分层与 sharding <strong>叠加</strong>：sharding 降 $M$，分层让剩余 $M$ 走对链路。PaLM 类 MFU ~46% 来自这一组合而非单一技巧。</p>
+
+<h3 id="s5-2">5.2 Straggler、BSP 与协调税</h3>
+
+<div class="tech-card red">
+  <h4>Straggler · 1024 GPU 诊断算例</h4>
+  <p>BSP 下平均 worker 计算 180 ms，观测步长 340 ms（p99 720 ms）：</p>
+  <div class="math-block">$$T_{\text{exposed sync}} \approx 340 - 180 = 160\ \text{ms} \quad (p99: \ 540\ \text{ms})$$</div>
+  <p>尾延迟路径上的 barrier 等待——<strong>最慢 collective 参与者</strong>决定步长。1024 GPU × 100 ms 尾延迟 ≈ 102 GPU·s/事件浪费。$N$ 增大时单点故障概率上升；须监控 p99 与 RDMA retry（第 2 章），叠加 rail 拓扑、慢节点剔除——<strong>协调项 $T_{\text{sync}}$ 与通信项 $T_{\text{comm}}$ 并列，非 CUDA 错误能解释</strong>。</p>
+</div>
+
+<h3 id="s5-3">5.3 LogP 重叠与不可隐藏开销</h3>
+
+<p>AllReduce 网络延迟 $L_{\text{lat}}=100\,\mu\text{s}$ 可与 ~500 μs 层 backward 重叠；但发起/接收开销 $2o=100\,\mu\text{s}$ <strong>不可隐藏</strong>。Horovod/DDP 的 gradient bucketing：early layer 梯度 AllReduce 与 late layer backward 并行——75% overlap 将 §4.1 的 14 s 压至 ~3.5 s 暴露。优化 GPUDirect（第 2 章 §7.2）、降 $o$ 往往比盲目加 $\beta$ 更有效。</p>
+
+<pre class="mermaid">
+graph LR
+  DP["数据并行\nAllReduce 350 GB"] --> TP["张量并行\n节点内 AllReduce"]
+  TP --> PP["流水线\nP2P 微批"]
+  PP --> MoE["专家并行\nAllToAll 路由"]
+  style DP fill:#313244,stroke:#a6e3a1
+  style MoE fill:#313244,stroke:#f38ba8
+</pre>
+
+<h2 id="s6">六、集体原语与算法选型</h2>
+
+<p>原语选择 = 在已定并行坐标下，为每种 collective 选算法使 $\alpha$、$\beta$ 与 bisection 匹配。下表是 175B 舰队常用映射——Ring 大消息代价列引用 §4.1 公式，不再另算 350 GB。</p>
+
+<table>
+  <tr><th>原语</th><th>并行策略</th><th>175B 典型消息</th><th>瓶颈</th><th>大消息 Ring 代价</th></tr>
+  <tr><td>AllReduce</td><td>DP</td><td>43.75–350 GB</td><td>β、bisection</td><td>$2(N-1)M/(N\beta)$</td></tr>
+  <tr><td>AllGather / ReduceScatter</td><td>FSDP / ZeRO-3</td><td>权重/梯度分片</td><td>带宽+频率</td><td>每层一次</td></tr>
+  <tr><td>AllToAll</td><td>MoE / DLRM</td><td>token 路由包</td><td>α、争用</td><td>逻辑 $\mathcal{O}(N^2)$ 连接</td></tr>
+  <tr><td>P2P Send/Recv</td><td>PP</td><td>~200 MB 激活</td><td>α（小控制）或 β</td><td>阶段边界 handoff</td></tr>
+</table>
+
+<h3 id="s6-1">6.1 Ring vs Tree</h3>
+
+<p>大梯度（350 GB、43.75 GB）：Ring 带宽最优，§4.1 与 §5.1 已定价。小消息（TP 激活片、MoE gate）：Tree 延迟 $\mathcal{O}(\log N)$ 更优。NCCL 实测：1 KB 消息有效 $\alpha$ 比裸线高 7–8×（注册+协议）；1 GB 消息仅慢 7–15%——<strong>小消息必须用集群实测 $\alpha$ 选型</strong>，不能外推 §4.2 裸线表。</p>
+
+<h3 id="s6-2">6.2 压缩、Bucket 融合与层间重叠</h3>
+
+<ul>
+  <li><strong>梯度压缩</strong>：350 GB→3.5 GB（100×）仍远大于 $n^*$，仍 bandwidth-bound；需 error feedback 防收敛劣化</li>
+  <li><strong>Bucket 融合</strong>：合并小 AllReduce，摊销 $\alpha$——TP 与 MoE 小消息必备</li>
+  <li><strong>层间重叠</strong>：<code>bucket_size</code> 控制 AllReduce 发起时机，与 §5.3 同一机制</li>
+</ul>
+
+<h3 id="s6-3">6.3 MoE AllToAll：α 主导范例</h3>
+
+<div class="tech-card yellow">
+  <h4>8 GPU 节点 · 4096 token · BF16 hidden 2048</h4>
+  <p>4.096 KB/token；每 GPU 512 token，均匀路由 64 专家（8/GPU）：向其余 7 GPU 各发 64 token → 262 KB/链路，共发 1.84 MB。$\alpha=3\,\mu\text{s}$ → $T \approx 8\,\mu\text{s}$/链路；7 链路并行 ≈ 8 μs。但每层<strong>两次</strong> AllToAll，热门 expert 造成热点——MoE 瓶颈在 $\alpha$ 与负载均衡，非 raw $\beta$；与 175B _dense_ DP 的 350 GB 象流是不同定价 regime。</p>
+</div>
+
+<h2 id="s7">七、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>从 175B @ 1024 GPU 出发的设计链</h4>
+  <ol>
+    <li><strong>Fleet Law 剖分：</strong>$T_{\text{step}} = T_{\text{compute}}/N + T_{\text{comm}} + T_{\text{sync}} - T_{\text{overlap}}$；180 ms 计算 + 160 ms 同步 → 查 straggler，非盲目加卡</li>
+    <li><strong>Sharding 下限：</strong>$12P$ B Adam → 175B 必 3D 并行；5B@80GB 单卡天花板</li>
+    <li><strong>层级映射：</strong>TP∈NVLink，PP∈邻近 rack，DP∈全网——与第 2 章 9× 断崖同图；TP-8+DP-128 将网间 payload 从 350 GB 降至 43.75 GB</li>
+    <li><strong>定价：</strong>350 GB Ring AllReduce 裸 ~14 s（§4.1 唯一完整算例）；分层 ~2.4 s；75% overlap → ~3.5 s 暴露</li>
+    <li><strong>α-β 杠杆：</strong>PP/MoE 小消息降 $\alpha$（融合、拓扑）；大梯度降 $M$（sharding、压缩）</li>
+    <li><strong>MFU 40–46%</strong> 是已发表大模型合理天花板；Chinchilla 扩算力须同步扩 token 与存储供料</li>
+  </ol>
+</div>
+
+<blockquote>并行策略回答「切什么」；集合通信回答「切完如何付费」——二者合成 C³ 算法层：<strong>Compute 切分、Communication 定价、Coordination 屏障</strong>。第 5 章转向：通信把 fleet 绑成同步整体，单点失效即全员等待——MTBF 与 checkpoint 间隔如何把故障从例外变常态。</blockquote>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告深度整合 Vol.2 原第 5–6 章。来源：<a href="https://mlsysbook.ai/vol2/distributed_training/distributed_training.html">分布式训练</a> · <a href="https://mlsysbook.ai/vol2/collective_communication/collective_communication.html">集合通信</a> · 2026-07-04</p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第2章 计算基础设施与网络 | Machine Learning Systems Vol.2</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:260px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);color:var(--text);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;line-height:1.5;}
+pre code{font-family:Consolas,'JetBrains Mono',monospace;color:inherit;white-space:pre;display:block;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;font-family:Consolas,monospace;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}.tech-card.purple{border-left:4px solid var(--purple);}.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;font-size:.95em;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>第2章 计算基础设施与网络</h1>
+<p class="meta">《Machine Learning Systems at Scale》Vijay Janapa Reddi · MIT Press · Vol.2 · 整合原第 2–3 章 · 2026-07-04</p>
+
+<table>
+  <tr><th>核心主线</th><td>以 175B 为贯穿算例：硅片→节点→Pod 逐层诊断四座墙 → 节点边界处通信墙 bind → 织物作为 Gradient Bus（α-β、bisection、RDMA）闭合</td></tr>
+  <tr><th>学习目标</th><td>用同一模型在解码/训练两种负载下定位绑定墙；将 TP/DP/PP 映射到 NVLink/IB 层级；用 α-β 与 bisection 估算 AllReduce 占比并制定织物验收清单</td></tr>
+</table>
+<hr>
+
+<h2 id="s1">一、开篇：175B 与四座物理墙</h2>
+
+<p>大规模 ML 的参与门槛不在算法公开与否，而在<strong>能否建造并持续运营物理系统</strong>。本章用同一个锚点模型——<strong>175B 参数、FP16 权重 350 GB</strong>——从单卡推理追到千卡训练，看绑定约束如何在硅片、节点、Pod 三层切换。</p>
+
+<p>舰队有效吞吐不是峰值 TFLOP/s 的简单加总，而是各层瓶颈的最小值：</p>
+
+<div class="math-block">$$\text{Effective} = \min(\text{Compute},\ \text{Memory BW},\ \text{Bisection BW},\ \text{Storage Feed},\ \text{Reliability Budget})$$</div>
+
+<p>四座墙对应这一公式在不同规模下的具体项：内存墙（HBM 带宽追不上算术或容量）、功耗墙（机架 70–100 kW 液冷）、通信墙（跨节点 IB 相对 NVLink 的带宽断崖）、可靠性墙（组件数量使 MTBF 坍缩）。算法是软件；基础设施是<strong>参与边界</strong>。</p>
+
+<pre class="mermaid">
+graph LR
+  GPU["单卡\n内存墙"] --> Node["8-GPU 节点\nNVLink 域"]
+  Node --> Rack["机架\n功耗墙"]
+  Rack --> Pod["Pod / WSC\n通信墙 + 可靠性墙"]
+  style GPU fill:#313244,stroke:#a6e3a1
+  style Pod fill:#313244,stroke:#f38ba8
+</pre>
+
+<div class="tech-card blue">
+  <h4>175B · 推理侧：内存墙首次 bind</h4>
+  <p>自回归解码时，即便 350 GB 权重已分片进 HBM，<strong>每 token 仍须把活跃权重片流过算术单元</strong>。H100 单路径 HBM 3.35 TB/s 给出带宽地板：</p>
+  <div class="math-block">$$T_{\text{decode,floor}} = \frac{350\ \text{GB}}{3.35\ \text{TB/s}} \approx 104\ \text{ms/token}$$</div>
+  <p>这是用户感知「逐字停顿」的物理下限之一——与 989 TFLOP/s 峰值无关。推理 SLA 必须先算此地板，再谈算力。</p>
+</div>
+
+<p>训练侧同一 350 GB 将以<strong>梯度</strong>形态在步末穿越互联——那是通信墙的主战场，下文第五节沿此路径展开。在此之前，须先理解硅片与节点如何把算力「造出来」、又在何处停下。</p>
+
+<h2 id="s2">二、硅片层：加速器谱系与内存墙</h2>
+
+<p>现代服务器 CPU 仅 5–10% 晶圆面积用于算术——对 GEMM 主导负载这是<strong>通用性税（Generality Tax）</strong>。加速器谱系回收面积：GPU（SIMT，~50–60% 算术）、TPU（脉动阵列，~70–80%）、定制 ASIC（&gt;90%）。选型 = 工作负载稳定性 × 可编程性：研究迭代选 GPU；固定 Transformer 量产可评估 TPU/ASIC。</p>
+
+<h3 id="s2-1">2.1 GPU 代际：算力、NVLink 与功耗不同步</h3>
+
+<table>
+  <tr><th>架构</th><th>峰值 Tensor</th><th>TDP</th><th>NVLink</th><th>备注</th></tr>
+  <tr><td>V100 (2017)</td><td>125 TFLOP/s FP16</td><td>300 W</td><td>300 GB/s</td><td>首代 Tensor Core</td></tr>
+  <tr><td>H100 (2022)</td><td>989 TFLOP/s FP16</td><td>700 W</td><td>900 GB/s</td><td>Transformer Engine / FP8</td></tr>
+  <tr><td>B200 (2024)</td><td>4500 TFLOP/s FP8</td><td>1000 W</td><td>1800 GB/s</td><td>chiplet、NVLink 5</td></tr>
+</table>
+
+<p>峰值 TFLOP/s 增速快于 TFLOP/W——功耗墙因此与内存墙并列，成为机架与设施设计的一等公民。NVLink 带宽六代间从 300 增至 1800 GB/s，支撑<strong>节点内</strong>张量并行；跨节点仍受 IB 约束（第三节量化断崖）。</p>
+
+<h3 id="s2-2">2.2 Roofline：同一 175B，训练 GEMM vs 解码</h3>
+
+<div class="tech-card green">
+  <p>脊点算术强度 $I_{\text{ridge}} = \pi / \beta_{\text{HBM}}$。H100：$\pi = 989$ TFLOP/s、$\beta = 3.35$ TB/s →</p>
+  <div class="math-block">$$I_{\text{ridge}} \approx 295\ \text{FLOP/byte}$$</div>
+  <p>大 batch 训练 GEMM（$I \gg 295$）算力受限，调 batch/融合核；自回归解码（$I \ll 1$）带宽受限，调 KV cache/量化/投机解码——<strong>同一模型、两种负载、两种优化方向</strong>。</p>
+</div>
+
+<p>寄存器文件聚合带宽 &gt;300 TB/s，HBM 仅 3.35 TB/s（~100× 落差）。高 MFU 要求 tiling：权重块载入 SM SRAM，驱逐前尽可能复用。HBM 是「能放几十 GB 的最高带宽层」，永不单独消除内存墙。</p>
+
+<h3 id="s2-3">2.3 对照：DLRM 10 TB——容量墙先于带宽墙</h3>
+
+<p>推荐 Archetype B（DLRM）与 LLM 相反：<strong>容量先于带宽</strong>。10 TB embedding 无法装入单 H100 80 GB，8 卡节点 640 GB 仍不足——至少 <strong>16 个 8-GPU 节点</strong>才够容量底线。问题从 HBM 访问升级为跨节点 AllToAll；第八节拓扑选型须同时服务 LLM 大梯度与 DLRM 多对多路由。</p>
+
+<h2 id="s3">三、节点层：NVSwitch 与带宽断崖</h2>
+
+<p>8×H100 张量并行要求 all-to-all 交换部分激活/梯度。环形拓扑 8 卡需 4 hop，有效带宽降 4×；全连接 mesh 需 28 链路不可布线。<strong>NVSwitch 交叉开关</strong>（~800 W）换全 bisection，使节点成为逻辑「超级加速器」——175B 的 TP 切分应锁在此域内。</p>
+
+<div class="tech-card yellow">
+  <h4>DGX H100 节点 · 互联契约</h4>
+  <ul>
+    <li>8× H100 SXM，NVLink 4.0 聚合 ~900 GB/s/GPU 双向</li>
+    <li>4× NVSwitch，节点内 all-to-all bisection</li>
+    <li>8× ConnectX-7 NDR 400 Gb/s（~50 GB/s/端口）——跨节点唯一出口</li>
+    <li>主机 512 GB–2 TB DRAM：数据管道 staging；训练步中 PCIe 同时承载加载、梯度出口、检查点</li>
+  </ul>
+</div>
+
+<h3 id="s3-1">3.1 9× 断崖：TP 与 DP 的物理分界</h3>
+
+<p>节点内 NVLink ~900 GB/s；跨节点 NDR IB ≈ <strong>50 GB/s/端口</strong>——同向对比约 <strong>9× 断崖</strong>。HBM 3.35 TB/s vs IB 50 GB/s 更大：在同步点，「算得快」可瞬间归零。</p>
+
+<table>
+  <tr><th>并行维</th><th>消息特征</th><th>应锁定的互联</th><th>175B 含义</th></tr>
+  <tr><td>张量并行 (TP)</td><td>高频、中块 all-to-all</td><td>NVLink 域（节点内）</td><td>永不跨 IB 断崖</td></tr>
+  <tr><td>流水线 (PP)</td><td>微批 P2P，延迟敏感</td><td>同 rack / 邻近节点 IB</td><td>4 KB 控制消息 α 主导（第七节）</td></tr>
+  <tr><td>数据并行 (DP)</td><td>低频、350 GB 级梯度</td><td>全网 IB + bisection</td><td>通信墙在此 bind</td></tr>
+</table>
+
+<p>节点内 NVSwitch 闭合了 TP 交换；一旦 DP 需跨机架同步 350 GB 梯度，绑定项从 HBM/NVLink <strong>切换到 IB 与 bisection</strong>——以下各节沿 175B 训练步追踪这一切换。</p>
+
+<h2 id="s4">四、机架与 Pod：设施经济学</h2>
+
+<p>单机架 32×700 W GPU ≈ 22 kW 仅芯片，加 NVSwitch/IB/CPU 常达 <strong>70–100 kW/机架</strong>，风冷失效，必须冷板液冷。Pod 将数百机架织成 WSC：Fat-Tree 换全 bisection（SuperPOD），Torus 换成本与局部性（TPU Pod）。</p>
+
+<p>10,000 H100 峰值 ~9.89 EFLOP/s FP16，但<strong>有效吞吐 = min(算力, bisection BW, 存储供料)</strong>——第四节公式在 Pod 尺度的实例化。4:1 超额认购 bisection 可砍半，AllReduce 吞吐跌 30–60%。</p>
+
+<p>设施 ~40 MW 上限约束光学比例：机架内 DAC 铜缆（&lt;3 m，~$50/条）vs 脊层光模块（&gt;30 m，~$500+，~20 W/链路）。20,000 GPU 脊层 ~20,000 光链路 → <strong>$10M 线缆 + 400 kW 光模块</strong>——移动比特与计算争同一 MW 预算（第九节量化互联功耗）。</p>
+
+<p>硅片 lottery：同 bin H100 时钟差 50 MHz 在 BSP AllReduce 中可使整机吞吐降 5–10%。训练池保持同质性，慢卡隔离至推理池——可靠性墙在万卡规模上与通信墙同等可见。</p>
+
+<h2 id="s5">五、Gradient Bus：ML 织物不是传统网络</h2>
+
+<p>传统数据中心为百万<strong>小鼠流</strong>设计：异步、TCP 可丢包重传、优化平均吞吐。ML 训练是少数<strong>大象流</strong> + BSP 屏障：一次丢包可 stall 全部 GPU；评价指标从 per-flow 公平变为<strong>全局同步完成时间</strong>——最慢链路决定 1024 卡步长。</p>
+
+<table>
+  <tr><th>维度</th><th>传统 DC</th><th>ML Gradient Bus</th></tr>
+  <tr><td>流量形态</td><td>异步 many-to-many</td><td>周期性 AllReduce / AllGather / AllToAll</td></tr>
+  <tr><td>流大小</td><td>大量短流</td><td>175B 单步 350 GB 级梯度象流</td></tr>
+  <tr><td>丢包容忍</td><td>TCP 重传可接受</td><td>RDMA Go-Back-N：晚丢 1 包可重传数百 MB 尾部</td></tr>
+  <tr><td>拥塞语义</td><td>局部独立</td><td>全局 incast + 屏障放大 straggler</td></tr>
+</table>
+
+<div class="tech-card blue">
+  <h4>175B · 训练侧：通信墙 bind</h4>
+  <p>FP16 梯度 350 GB/步，有效 IB 50 GB/s 给出纯传输下限：</p>
+  <div class="math-block">$$T_{\text{sync,floor}} = \frac{350\ \text{GB}}{50\ \text{GB/s}} = 7.0\ \text{s}$$</div>
+  <p>此期间除非与 backward overlap，否则全员 idle。FP32 梯度 700 GB 加倍——AllReduce 可占单步 10–40%（混合并行与 overlap 前更高）。<strong>第一节 104 ms/token 的解码地板与这里 7 s/步的同步地板，是同一 350 GB 在两种负载下的两面。</strong></p>
+</div>
+
+<div class="tech-card red">
+  <h4>Straggler · 1024 GPU × 100 ms 尾延迟</h4>
+  <div class="math-block">$$\text{浪费 GPU·s} = 1024 \times 0.1\ \text{s} = 102.4\ \text{GPU·s/事件}$$</div>
+  <p>BSP 下 p99 路径延迟不是 outlier KPI，而是绑定约束——须监控尾延迟与 RDMA retry，非平均端口利用率。</p>
+</div>
+
+<p>单机上内存总线搬权重；集群上<strong>织物就是 Gradient Bus</strong>。以下三节按因果链设计这条总线：传输（α-β + GPUDirect）→ 拓扑（bisection）→ 行为与集成（PFC、SKU 验收）。</p>
+
+<h2 id="s6">六、五层织物模型</h2>
+
+<pre class="mermaid">
+graph TD
+  L1["L1 线缆/链路\nPAM4 SerDes FEC"] --> L2["L2 传输\nRDMA GPUDirect α-β"]
+  L2 --> L3["L3 交换机/拓扑\nFat-Tree Rail Dragonfly"]
+  L3 --> L4["L4 织物行为\nPFC DCQCN"]
+  L4 --> L5["L5 集群 SKU\nSuperPOD Grand Teton"]
+  style L1 fill:#313244,stroke:#fab387
+  style L5 fill:#313244,stroke:#89b4fa
+</pre>
+
+<p>五层是<strong>因果链</strong>，不是话题清单：350 GB 象流先压 L1–L2（物理 + 传输）；再逼 L3 保证 bisection；L4 暴露拥塞与 pause storm；L5 兑现为可采购的「一台训练机」或 commissioning 失败。第二至四节讨论的硅片/节点/Pod 决策，分别对应 L2 入口、L3 局部性与 L5 功率预算。</p>
+
+<h2 id="s7">七、L1–L2：物理层、RDMA 与 α-β</h2>
+
+<p>400G+ 链路用 PAM4 + RS FEC，每 hop 增加 ~100–200 ns 不可替代的 α。DAC 铜缆 &lt;3 m 最低延迟；脊层光模块换距离，付功耗与美元——与第四节光缆经济学同一账本。</p>
+
+<h3 id="s7-1">7.1 α-β 成本与临界消息大小</h3>
+
+<div class="math-block">$$T(n) = \alpha + \frac{n}{\beta}, \quad n^* = \alpha \cdot \beta$$</div>
+
+<p>NDR IB 典型 $\alpha \approx 1.5\,\mu\text{s}$、$\beta \approx 50\,\text{GB/s}$ → $n^* \approx 75$ KB（工程常记 ~100 KB）。175B 训练步同时出现两类消息：</p>
+
+<table>
+  <tr><th>消息</th><th>大小 $n$</th><th>主导项</th><th>175B 场景</th><th>优化杠杆</th></tr>
+  <tr><td>PP 微批 handoff</td><td>~4 KB</td><td>α（~95%）</td><td>流水线阶段边界</td><td>减 hop、同 rack 放置</td></tr>
+  <tr><td>DP 梯度分片</td><td>~350 MB</td><td>β</td><td>8 节点 DP 分片</td><td>加 rail、分层 AllReduce</td></tr>
+  <tr><td>全量梯度象流</td><td>350 GB</td><td>β</td><td>平坦 Ring AllReduce</td><td>bisection、overlap、压缩</td></tr>
+</table>
+
+<p>算例——4 KB PP 控制：$T \approx 1.5 + 4/50\text{GB/s} \approx 1.58\,\mu\text{s}$，加倍带宽几乎无效。算例——350 MB 分片：$T \approx 7.0\,\text{ms}$，投资带宽直接缩短步长。</p>
+
+<h3 id="s7-2">7.2 GPUDirect RDMA：消除主机 staging</h3>
+
+<p>第三节 DGX 每 GPU 独占 IB HCA。无 GPUDirect 时，350 GB 梯度须经「GPU HBM → 主机 DRAM → NIC」双拷贝；FP32 700 GB/步 × 双路径 ≈ <strong>700 GB 冗余主机流量/步</strong>。GPUDirect 使 NIC 直接 DMA GPU HBM，释放 CPU 做 overlap——万卡规模近乎必选，也是 PCIe 争用（加载/检查点/梯度）之外的第二条隐形 stall 来源。</p>
+
+<p>协议：InfiniBand 信用流控原生无损；RoCEv2 需 PFC+ECN，运维负担更高。RDMA 丢包 Go-Back-N 在 BSP 下放大为整机 straggler——要求无损织物，非「尽力而为以太网 + 调参」。 </p>
+
+<h2 id="s8">八、L3：拓扑与 Bisection Bandwidth</h2>
+
+<p><strong>Bisection bandwidth（$\text{BW}_{\text{bisect}}$）</strong>：集群一分为二时穿越分割面的总带宽。350 GB/步 AllReduce 需要接近非阻塞 bisection；ECMP 静态哈希无法把单条象流切到多路径——多象流碰撞可一路饱和、他路空闲。</p>
+
+<table>
+  <tr><th>拓扑</th><th>Bisection</th><th>175B LLM（大梯度）</th><th>DLRM（AllToAll）</th></tr>
+  <tr><td>3-tier Fat-Tree</td><td>非阻塞（足额端口）</td><td>通用 AllReduce；SuperPOD</td><td>可行，成本高</td></tr>
+  <tr><td>Rail-optimized</td><td>每 GPU 独立上行</td><td>节点内 NVLink + 每轨 IB；减 incast</td><td>层级并行首选</td></tr>
+  <tr><td>Dragonfly / Torus</td><td>$\mathcal{O}(\sqrt{N})$ bisection</td><td>差全局 AllReduce</td><td>强局部性时可接受</td></tr>
+</table>
+
+<p>1024 GPU、350 GB/步需数千条 400G 链路满速；3000 端口 × 25 W ≈ <strong>75 kW 纯互联功耗</strong>（可达 IT 负载 10%+）——第四节 MW 预算在此处落地为「比特的瓦特税」。</p>
+
+<h2 id="s9">九、L4–L5：拥塞控制、SKU 与验收</h2>
+
+<p><strong>L4 行为层：</strong>PFC 暂停、DCQCN/HPCC 主动降速——BSP 下 proactive 拥塞控制是延迟需求，非可选项。推理 mice 与训练 elephant 须流量隔离（SR-IOV、VL），避免共享 PFC 域引发 pause storm。</p>
+
+<p><strong>L5 集成层：</strong>NVIDIA SuperPOD（Fat-Tree + NVSwitch）、Meta Grand Teton（rail-optimized）把五层压成可采购 SKU。企业以太网上跑大规模同步训练通常低效——不是配置问题，是协议语义与 ML 同步模型不匹配。</p>
+
+<div class="tech-card purple">
+  <h4>织物 commissioning 检查表（占项目时间线 15–20%）</h4>
+  <ol>
+    <li>NCCL-tests：小/大消息 AllReduce，校准有效 $\alpha,\beta$</li>
+    <li><code>ibstat</code> / 交换机计数器：RDMA retry、PFC pause 计数</li>
+    <li>主动 incast 实验：验证 rail 均衡与 ECMP 哈希碰撞</li>
+    <li>硅片同质性：隔离 lottery 慢卡，训练池 bin 一致</li>
+    <li>多租户：训练象流与推理鼠流分域</li>
+  </ol>
+</div>
+
+<h2 id="s10">十、章节总结</h2>
+
+<div class="tech-card green">
+  <h4>从 175B 出发的设计链</h4>
+  <ol>
+    <li><strong>诊断顺序：</strong>解码查 HBM 地板（~104 ms/token）；多节点训练查 IB 地板（~7 s/步 350 GB）；万卡查 MTBF 与 bisection</li>
+    <li><strong>层级映射：</strong>TP∈NVLink 域，PP∈邻近 rack，DP∈全网——9× 断崖是物理分界，非软件可配</li>
+    <li><strong>Gradient Bus：</strong>织物 = 集群内存总线；α-β 区分 PP 控制（~4 KB）与 DP 梯度（350 MB–350 GB）</li>
+    <li><strong>采购双账：</strong>同时算 $\text{BW}_{\text{bisect}}$ 与互联功耗（75 kW+）；Fat-Tree vs rail 须匹配 LLM 与 DLRM 负载</li>
+    <li><strong>验收：</strong>GPUDirect + 无损 RDMA + NCCL burn-in——「上架即用」在 fleet 尺度不成立</li>
+  </ol>
+</div>
+
+<blockquote>本章闭合 Vol.2 Part I 的第一个问题：<strong>硅片与织物能否让 175B 在训练步长内不被通信 bind</strong>。第 3 章存储回答第二个问题——加速器再快，燃料线供不上同样空转。</blockquote>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">本报告深度整合 Vol.2 原第 2–3 章。来源：<a href="https://mlsysbook.ai/vol2/compute_infrastructure/compute_infrastructure.html">计算基础设施</a> · <a href="https://mlsysbook.ai/vol2/network_fabrics/network_fabrics.html">网络结构</a> · 2026-07-04</p>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>
