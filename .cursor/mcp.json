@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "cursor-pet": {
+      "type": "stdio",
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "args": [
+        "D:\\softwares\\cursor-pet\\packages\\mcp\\dist\\index.js"
+      ]
+    }
+  }
+}
