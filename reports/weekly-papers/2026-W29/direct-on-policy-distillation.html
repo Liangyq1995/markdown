@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Direct-OPD：弱到强泛化阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.12em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .insight { background: #2a2a3e; border-left: 3px solid var(--strong); padding: 10px 16px; margin: 1em 0; border-radius: 0 4px 4px 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+<h1>Weak-to-Strong Generalization via Direct On-Policy Distillation</h1>
+
+<h2 id="sec-1">1. 概述</h2>
+
+<table>
+  <tr><th>标题</th><td>Weak-to-Strong Generalization via Direct On-Policy Distillation</td></tr>
+  <tr><th>核心问题</th><td>RLVR 提升推理但每个强模型都要重跑大量 rollout，代价高昂；如何在小模型上跑 RL，再把所学迁移到强模型，且不被弱教师的能力上限所拖累。</td></tr>
+  <tr><th>开源地址</th><td><a href="https://bytedtsinghua-sia.github.io/Direct-OPD/">https://bytedtsinghua-sia.github.io/Direct-OPD/</a></td></tr>
+  <tr><th>机构</th><td>清华大学 AIR 研究院（SIA-Lab, Tsinghua AIR &amp; ByteDance Seed）、清华大学计算机系、北京大学</td></tr>
+</table>
+
+<p>论文提出 <strong>Direct On-Policy Distillation (Direct-OPD)</strong>，一种弱→强的后训练范式：在 rollout 更便宜的小模型上跑 RL，再把 RL 学到的"策略漂移"迁移到强学生。核心洞察是——<strong>不要迁移弱教师的最终策略</strong>（它把有用的 RL 收益与小模型的能力上限耦合在一起），而是迁移 RL 引发的策略漂移，即 post-RL 教师 $\pi_T$ 与其 pre-RL 参考 $\pi_{T}^{\mathrm{ref}}$ 的 log-ratio，把它当作作用在强学生 on-policy 状态上的 <strong>dense implicit reward</strong>。</p>
+
+<p>这一信号直接复用了弱模型的 RL 监督，无需在目标模型上跑稀疏奖励 RL，也无需训练显式 reward model。关键结果：</p>
+<ul>
+  <li>跨教师对（JustRL、QuestA）与学生家族（Qwen3、R1-Distill）一致提升，<strong>包括初始已超过 post-RL 教师的学生</strong>：Qwen3-1.7B 在 AIME 2024 上从 <strong>48.3 → 58.3 (+10.0)</strong>，Qwen3-4B 72.5 → 77.6，R1-Distill-7B 56.7 → 63.1。</li>
+  <li>仅需 <strong>8×A100 约 4 小时</strong>的迁移阶段，即可达到 Polaris 直接在 Qwen3-1.7B 上跑 RL（32×A100 ≥1 周）的水平。</li>
+  <li>在 matched-step 下，"小模型 RL + Direct-OPD 迁移"在精度与算力上均<strong>击败直接在 R1-Distill-7B 上跑 RL</strong>。</li>
+  <li>两个独立学到的策略漂移可<strong>顺序组合</strong>，累加收益：Qwen3-1.7B 在 AIME 2024 上 48.3 → 58.3 → 63.8（累计 +15.5）。</li>
+</ul>
+
+<h2 id="sec-2">2. 研究背景与动机</h2>
+
+<h3 id="sec-2-1">2.1 RLVR 的成本困境</h3>
+<p>RLVR（Reinforcement Learning with Verifiable Rewards）已成为激发 LLM 推理的主流后训练配方 [1,2,9-17]。其代价与被训练模型绑定：每次更新都要求当前策略生成 rollout、获取可验证结果分数、再基于轨迹更新。目标模型越大，单次 rollout 越慢、单步 RL 迭代越贵。当推理模型持续 scaling 时，<strong>为每个新强模型从零重跑 RLVR 会让后训练本身成为瓶颈</strong>。这正是本文动机的起点。</p>
+
+<h3 id="sec-2-2">2.2 三条相关研究脉络</h3>
+<p><strong>脉络一：推理模型的 on-policy 蒸馏（OPD）。</strong> OPD 让学生在自己采样的状态上接受教师监督，已成为推理模型蒸馏的主导变体 [5,8,40-57]，还有与 RL 耦合的混合方案 [51,58-62]。已有分析将 OPD 成功归因于<strong>学生访问状态上师生 top-k 重叠</strong> [5]，指出小模型难以复制强推理器 [63]，并将 OPD 重解释为 dense KL-constrained RL，通过奖励缩放外推超越教师 [64]。<strong>这些方法的共同点是：模仿或外推教师的"最终策略"</strong>。当教师是弱于目标的小 post-RL 模型时，这会把教师的能力上限也一并塞给学生。</p>
+
+<p><strong>脉络二：弱到强泛化。</strong> 弱到强泛化研究弱监督能否激发强模型能力 [65,66]，源于半监督与噪声标签学习 [67-76]，是 scalable oversight 的核心 [77-82]，并与 ELK、easy-to-hard 泛化相关 [83-86]。多数方法仍用弱模型的标签或分布监督，把学生封顶在监督者水平；self-rewarding 方案 [92] 用自身判断 bootstrap；与本文最接近的是 <strong>weak-to-strong preference optimization</strong> [93]，复用弱对齐模型的隐式奖励来引导强模型。本文同样追求"激发而非模仿"，但监督源是一对<strong>小 RL checkpoint</strong>。</p>
+
+<p><strong>脉络三：隐式奖励与训练模型复用。</strong> Direct-OPD 基于 policy-as-reward 恒等式：KL 正则化 RL 下，策略/参考的 log-ratio 在常数意义下恢复奖励，这正是 DPO 及其变体 [6,94-96] 用以从偏好直接拟合策略的恒等式。本文<strong>反向使用该恒等式</strong>——从 post-RL checkpoint 及其参考读出 dense 隐式奖励，连接到推理的 dense/process reward [97-99] 与逐 token credit assignment [100,101]，并规避显式 reward model 的 over-optimization [102]。另一条互补路线在<strong>权重空间</strong>复用模型——task arithmetic、model merging、proxy tuning [103-105]；Direct-OPD 的信号是<strong>行为 log-ratio 而非权重 delta</strong>，且作用在学生自己的 on-policy 状态上，因此能跨家族、跨尺度迁移。</p>
+
+<h3 id="sec-2-3">2.3 与相关工作的方法对比</h3>
+
+<table>
+  <tr>
+    <th>方法</th><th>迁移对象</th><th>需教师强于学生？</th><th>需在目标模型跑稀疏奖励 RL？</th><th>监督信号形态</th>
+  </tr>
+  <tr>
+    <td>经典/序列级蒸馏 [23-30]</td><td>教师输出或标签</td><td>是</td><td>否</td><td>序列级 KL / CE</td>
+  </tr>
+  <tr>
+    <td>标准 On-Policy Distillation [5]</td><td>教师最终分布 $\pi_T$</td><td>是（依赖 top-k 重叠）</td><td>否</td><td>序列/逐 token KL 到 $\pi_T$</td>
+  </tr>
+  <tr>
+    <td>直接 RL on target (RLVR)</td><td>目标模型自身 rollout</td><td>—</td><td>是</td><td>稀疏 verifiable reward</td>
+  </tr>
+  <tr>
+    <td>Weak-to-Strong Preference Opt [93]</td><td>弱对齐模型隐式奖励</td><td>否</td><td>否</td><td>偏好对奖励</td>
+  </tr>
+  <tr>
+    <td>Task Arithmetic / Model Merging [103-105]</td><td>权重 delta</td><td>—</td><td>否</td><td>权重空间信号</td>
+  </tr>
+  <tr style="background:#2a2a3e;">
+    <td><strong>Direct-OPD（本文）</strong></td><td>$\log(\pi_T/\pi_{T}^{\mathrm{ref}})$ 策略漂移</td><td><strong>否</strong>（即使学生已超教师仍有效）</td><td><strong>否</strong></td><td><strong>dense implicit reward（checkpoint 对）</strong></td>
+  </tr>
+</table>
+
+<div class="insight">
+<strong>动机小结：</strong> 直接蒸馏 post-RL 弱教师之所以不够，是因为其最终策略 $\pi_T$ 把"RL 带来的有用变化"与"小模型的固有能力上限"纠缠在一起——当学生已经强于教师时，模仿 $\pi_T$ 会<strong>覆盖更强行为</strong>（论文 Figure 1a：R1-Distill-7B 从 56.7 被 vanilla OPD 拖到约 50，而 post-RL JustRL-1.5B 教师仅 51.3）。Direct-OPD 通过"教师与自身前后对比"剥离出纯粹的 RL 改进方向。
+</div>
+
+<h2 id="sec-3">3. 核心方法</h2>
+
+<h3 id="sec-3-1">3.1 方法总览</h3>
+
+<pre class="mermaid">
+flowchart LR
+  A["弱教师参考模型 (pre-RL)<br>R1-Distill-1.5B"] --> B["GRPO 强化学习<br>数学可验证奖励, 便宜 rollout"]
+  B --> C["post-RL 弱教师<br>JustRL-1.5B"]
+  A --> D["教师策略漂移<br>log 教师 − log 参考"]
+  C --> D
+  D --> E["Direct-OPD 迁移<br>dense implicit reward"]
+  F["强学生初始化<br>Qwen3-1.7B / 4B / R1-Distill-7B"] --> E
+  E --> G["学生 on-policy rollouts<br>top-k = 16, 响应长度 2k"]
+  G --> H["学生策略更新<br>KL 锚定 + 自适应 alpha"]
+  H --> I["增强后的强学生"]
+  I -->|"下一迭代 / 下一教师对"| G
+</pre>
+
+<p>整体数据流分两阶段：<strong>(1) 廉价的小模型 RL</strong>——在小模型上跑 GRPO，得到一对 checkpoint（pre-RL 参考 $\pi_{T}^{\mathrm{ref}}$ 与 post-RL 教师 $\pi_T$）；<strong>(2) Direct-OPD 迁移</strong>——用这对 checkpoint 的 log-ratio 作为 dense 隐式奖励，作用在强学生自己采样的 on-policy 状态上，并用 KL 项把学生锚定在自身初始化 $\pi_S$。整个迁移只需短训练（默认 300 步），且因教师模型很小，打分不是速度瓶颈。</p>
+
+<h3 id="sec-3-2">3.2 预备：On-Policy Distillation (OPD)</h3>
+
+<p>设自回归语言模型策略对 prompt $x$ 与响应 $y=(y_1,\dots,y_T)$ 分解为 $\log \pi(y \mid x)=\sum_{t=1}^{T} \log \pi(y_t \mid s_t)$，前缀 $s_t = (x, y_{\lt t})$。论文区分四个策略：被训练策略 $\pi_\theta$ 与其初始 checkpoint $\pi_S$；以及一对教师——pre-RL 参考 $\pi_{T}^{\mathrm{ref}}$ 与 post-RL 教师 $\pi_T$。弱→强设定下 $\pi_T$ 可能比目标学生更小更弱，但从 $\pi_{T}^{\mathrm{ref}}$ 到 $\pi_T$ 的转移仍编码了值得迁移的信息。</p>
+
+<p>OPD 在学生自采样的轨迹上监督学生。给定 prompt $x$，学生采样 $\hat{y} \sim \pi_\theta(\cdot \mid x)$，在每个访问前缀读取学生与教师的下一 token 分布 $p_t(v)=\pi_\theta(v \mid s_t)$ 与 $q_t(v)=\pi_T(v \mid s_t)$。标准 OPD 最小化到教师的序列级 KL：</p>
+
+<p>$$L_{\mathrm{OPD}}(\theta) = \mathbb{E}_{x \sim \mathcal{D}}\left[ D_{\mathrm{KL}}(\pi_\theta(\cdot \mid x) \| \pi_T(\cdot \mid x)) \right]$$</p>
+
+<p>它精确分解为学生在实际访问状态上的 dense 逐 token 监督：</p>
+
+<p>$$L_{\mathrm{OPD}}(\theta) = \mathbb{E}_{x \sim \mathcal{D},\, \hat{y} \sim \pi_\theta}\left[ \sum_{t=1}^{T} D_{\mathrm{KL}}(p_t \| q_t) \right]$$</p>
+
+<p>实践中只在学生 top-k 支持 $S_t = \mathrm{TopK}_v\, p_t$ 上查询教师，得到局部估计：</p>
+
+<p>$$L_{\mathrm{OPD}}^{\mathrm{top\text{-}k}}(\theta) = \mathbb{E}\left[ \sum_{t=1}^{T} D_{\mathrm{KL}}(\bar{p}_t^{S_t} \| \bar{q}_t^{S_t}) \right]$$</p>
+
+<p>其中 $\bar{p}_t^{S_t}$、$\bar{q}_t^{S_t}$ 在 $S_t$ 上重归一化 [5]。该 top-k KL 估计产生含师生 log-ratio $\log q_t(v) - \log p_t(v)$ 的 dense 逐 token 信号。<strong>Direct-OPD 原封不动地继承这一 on-policy、top-k 接口，唯一改变的是从教师读出的信号</strong>。</p>
+
+<h3 id="sec-3-3">3.3 策略漂移作为隐式奖励（核心推导）</h3>
+
+<p><strong>迁移什么。</strong> Direct-OPD 不模仿教师的绝对输出分布，而迁移其 RL 引发的策略漂移——post-RL 教师 $\pi_T$ 与 pre-RL 参考 $\pi_{T}^{\mathrm{ref}}$ 的序列级 log-ratio：</p>
+
+<p>$$\Delta_T(y \mid x) = \log \pi_T(y \mid x) - \log \pi_{T}^{\mathrm{ref}}(y \mid x)$$</p>
+
+<p>该减法丢弃了弱模型在 RL 前已有的偏好，只保留 RL 改变的部分：$\Delta_T$ 在 RL 提升概率的响应上为正，在被抑制的响应上为负。这一漂移并非任意启发式：在 KL 正则化 RL 的 policy-as-reward 视角下，它可解释为教师的隐式奖励。</p>
+
+<p><strong>推导（policy-as-reward 恒等式）。</strong> 对奖励 $r$、参考策略 $\pi_{\mathrm{ref}}$ 与惩罚 $\beta \gt 0$，KL 正则化目标</p>
+
+<p>$$\max_\pi \, \mathbb{E}_{y \sim \pi}\left[ r(x,y) - \beta \log \frac{\pi(y \mid x)}{\pi_{\mathrm{ref}}(y \mid x)} \right]$$</p>
+
+<p>有闭式最优 $\pi^{*} \propto \pi_{\mathrm{ref}} \exp(r/\beta)$，因此</p>
+
+<p>$$\log \frac{\pi^{*}(y \mid x)}{\pi_{\mathrm{ref}}(y \mid x)} = \frac{1}{\beta} r(x,y) - \log Z(x)$$</p>
+
+<p>由于 $\log Z(x)$ 对同一 prompt 的所有响应是常数，<strong>策略/参考 log-ratio 在正尺度与 per-prompt 常数意义下恢复了奖励</strong>。这正是 DPO [6] 背后的恒等式。论文<strong>反向使用</strong>：给定 post-RL 教师 $\pi_T$ 与其 pre-RL 参考 $\pi_{T}^{\mathrm{ref}}$，把 $\pi_T$ 视作锚定在 $\pi_{T}^{\mathrm{ref}}$ 的某个隐式奖励 $r_T$ 的 KL 正则化最优，于是漂移 $\Delta_T$ 可解释为教师的隐式奖励：</p>
+
+<p>$$\Delta_T(y \mid x) = \frac{1}{\beta} r_T(x,y) - \log Z_T(x)$$</p>
+
+<p>Direct-OPD 把这一 reward-like 信号迁移给学生。注意其幅度 $\frac{1}{\beta} r_T$ 由教师训练时的 KL 预算 $\beta$ 决定，且无法从 checkpoint 对中恢复——这正是后续需要自适应 KL 的根源。</p>
+
+<h3 id="sec-3-4">3.4 Direct-OPD 目标与最优解</h3>
+
+<p><strong>理想化序列级目标。</strong> 学生从 $\pi_S$ 初始化，Direct-OPD 在教师漂移信号 $\Delta_T$ 上优化学生，同时把学生正则向自身初始化：</p>
+
+<p>$$J_{\mathrm{Direct\text{-}OPD}}(\theta) = \mathbb{E}_{x \sim \mathcal{D}}\left[ \mathbb{E}_{y \sim \pi_\theta(\cdot \mid x)}\left[\Delta_T(y \mid x)\right] - \alpha D_{\mathrm{KL}}(\pi_\theta(\cdot \mid x) \| \pi_S(\cdot \mid x)) \right]$$</p>
+
+<p>其中 $\alpha \gt 0$ 控制 KL 惩罚。<strong>这一理想形式本身就是一个关于学生的 KL 正则化 RL 目标</strong>，其最优为：</p>
+
+<p>$$\pi^{*}(y \mid x) \propto \pi_S(y \mid x) \exp\left(\frac{1}{\alpha} \Delta_T(y \mid x)\right) = \pi_S(y \mid x) \left(\frac{\pi_T(y \mid x)}{\pi_{T}^{\mathrm{ref}}(y \mid x)}\right)^{1/\alpha}$$</p>
+
+<p>代入 Eq.7 的隐式奖励形式得 $\pi^{*} \propto \pi_S \exp(r_T / \alpha\beta)$。<strong>学生等价于在用小教师的隐式奖励跑 KL 正则化 RL，但以自身初始化 $\pi_S$ 为参考</strong>——而该 reward-like 信号完全来自 checkpoint 对，无需查询可验证奖励或在目标上跑稀疏奖励 RL。</p>
+
+<p><strong>从序列到 token 级。</strong> 由于两个教师都在相同前缀上自回归分解，序列漂移精确分解为 token 级漂移之和：</p>
+
+<p>$$\Delta_T(y \mid x) = \sum_{t} r_t(y_t \mid s_t), \qquad r_t(v) = \log \pi_T(v \mid s_t) - \log \pi_{T}^{\mathrm{ref}}(v \mid s_t)$$</p>
+
+<p>于是 $r_t(v)$ 可视为 dense 即时逐 token 奖励：$r_t(v) \gt 0$ 处教师 RL 鼓励 token $v$，$r_t(v) \lt 0$ 处抑制它。实践中使用对应的零折扣 token 级代理，按即时漂移 $r_t(v)$ 而非未来回报给每个候选 token 计分，复用 §3.2 的 on-policy、top-k 接口。</p>
+
+<h3 id="sec-3-5">3.5 Top-k 解析梯度与 stop-gradient</h3>
+
+<p><strong>Top-k 动作空间限制。</strong> 在每个访问前缀限制到学生 top-k 支持 $S_t = \mathrm{TopK}_v\, \pi_\theta(v \mid s_t)$ 并在其上重归一化学生概率：</p>
+
+<p>$$\bar{p}_t(v) = \frac{\pi_\theta(v \mid s_t)}{\sum_{u \in S_t} \pi_\theta(u \mid s_t)}, \quad v \in S_t$$</p>
+
+<p><strong>解析 top-k 策略梯度。</strong> 即时 per-token 奖励 $r_t(v)$ 只依赖教师对，故直接用作局部优势。单样本 token 级策略梯度会给被采样 token 的对数似然加权即时奖励：</p>
+
+<p>$$\nabla_\theta J_{\mathrm{MC}} = \mathbb{E}_{x,y}\left[ \sum_{t} r_t(y_t)\, \nabla_\theta \log \pi_\theta(y_t \mid s_t) \right]$$</p>
+
+<p>但每步只用一个 token 估计方差很大。由于在每个访问前缀已有完整 top-k 奖励与概率，用其在限制分布 $\bar{p}_t$ 上的期望替代单 token 估计，即在仍采样轨迹 $y \sim \pi_\theta$ 的同时对每步动作 Rao–Blackwell 化：</p>
+
+<p>$$\nabla_\theta J_{\mathrm{analytical}} = \mathbb{E}_{x,\, y \sim \pi_\theta}\left[ \sum_{t} \sum_{v \in S_t} \underbrace{\bar{p}_t(v)}_{\text{weight}} \, \underbrace{r_t(v)}_{\text{reward}} \, \underbrace{\nabla_\theta \log \pi_\theta(v \mid s_t)}_{\text{log-likelihood}} \right]$$</p>
+
+<p>这给出限制 top-k 动作分布下的 Rao–Blackwell 化每步估计：消去 $\nabla_\theta J_{\mathrm{MC}}$ 的 token 采样方差，同时保持采样轨迹分布不变。</p>
+
+<p><strong>Stop-gradient 系数。</strong> 为使该代理匹配策略梯度形式，权重 $\bar{p}_t(v)$ 必须仅以标量进入。它通过学生 softmax 依赖 $\theta$，若对其求导会注入来自 top-k 分布的额外 Jacobian 项。因此把加权奖励 detach 为静态系数：</p>
+
+<p>$$A_t^{w}(v) = \mathrm{stop\_gradient}\left(\bar{p}_t(v) \cdot r_t(v)\right)$$</p>
+
+<p>给出零折扣目标的最终局部 top-k 代理：</p>
+
+<p>$$\nabla_\theta J_{\mathrm{Direct\text{-}OPD}} \approx \mathbb{E}_{x \sim \mathcal{D},\, y \sim \pi_\theta}\left[ \sum_{t} \sum_{v \in S_t} A_t^{w}(v)\, \nabla_\theta \log \pi_\theta(v \mid s_t) \right] - \alpha \nabla_\theta D_{\mathrm{KL}}(\pi_\theta(\cdot \mid x) \| \pi_S(\cdot \mid x))$$</p>
+
+<p>实践中不对 KL 解析求导，而是用 verl 中的标准 KL-penalty 实现把 $\pi_\theta$ 锚定到 $\pi_S$。</p>
+
+<h3 id="sec-3-6">3.6 自适应 KL 控制</h3>
+
+<p>Direct-OPD 迁移的奖励带有一个它无法选择的尺度。由 Eq.7，$\Delta_T = \frac{1}{\beta} r_T - \log Z_T$：其幅度是教师奖励除以教师 KL 预算 $\beta$，二者在教师训练时固定、编码在 $\pi_T$ 偏离 $\pi_{T}^{\mathrm{ref}}$ 的程度中，且都无法从 checkpoint 对恢复。per-token 漂移 $r_t(v)$ 同样只依赖教师对；学生仅通过"信号在哪里读出"（rollout 访问的前缀与每个前缀保留的 top-k 动作）进入。</p>
+
+<p>从 Eq.9 最优 $\pi^{*} \propto \pi_S \exp(\frac{1}{\alpha}\Delta_T)$ 看，$\alpha$ 是 $\pi_S$ 的指数倾斜温度，只有相对 $\Delta_T$ 的尺度才有意义。但 $\Delta_T$ 处于教师奖励单位（$\frac{1}{\beta} r_T$），而 $\alpha$ 是学生 KL 上的系数——两个尺度没有先验换算，教师的尺度不可观测。因此单一 $\alpha$ 无法跨教师-学生对预先标定，论文采用轻量控制器按 dense 信号运行尺度自适应 $\alpha$。</p>
+
+<p>设 $\alpha_m$ 为第 $m$ 次迭代的 KL 系数，$\bar{r}_m$ 为学生加权漂移 $\bar{p}_t(v) r_t(v)$ 在访问前缀及其 top-k 候选上的 batch 级均值——即梯度所优化的同一 dense 奖励。在 actor 更新前：</p>
+
+<p>$$\alpha_{m+1} = \mathrm{clip}\left(\alpha_m \,(1 + \epsilon \cdot \mathrm{sgn}(\bar{r}_m)),\; \alpha_{\min},\; \alpha_{\max}\right)$$</p>
+
+<p>其中 $\mathrm{sgn}(0)=0$；默认 $\epsilon=0.01$，$[\alpha_{\min}, \alpha_{\max}] = [0.5, 2.5]$。$\mathrm{sgn}(\bar{r}_m)$ 报告在学生当前访问的前缀上，教师 RL 平均是提升还是压低了保留的候选 token——一个学生加权漂移直接携带的 batch 级符号。<strong>当平均漂移为正，控制器提高 $\alpha$ 以抑制过度放大该局部信号；为负则降低 $\alpha$，放松锚定使 dense 梯度能把概率从教师 RL 降低的 token 上移走。</strong>这与标准针对 in-reward KL 惩罚的自适应控制器（驶向目标 KL 值）不同：此处的更新由 Direct-OPD dense 奖励的符号驱动，作用于显式 actor KL loss 系数。</p>
+
+<h3 id="sec-3-7">3.7 训练算法伪代码</h3>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: Direct-OPD 训练（单次迭代）</div>
+  <p><span class="kw">Input:</span> 教师 checkpoint 对 <span class="var">(pi_T, pi_Tref)</span>；学生初始化 <span class="var">pi_S</span>；数据集 <span class="var">D</span>；KL 系数 <span class="num">alpha</span>；自适应率 <span class="num">epsilon=0.01</span>；top-k=<span class="num">16</span>；响应长度 <span class="num">2048</span>；训练步数 <span class="num">300</span></p>
+  <p style="padding-left:1.5em"><span class="cm"># 阶段一已完成：在小模型上跑 GRPO 得到 (pi_Tref, pi_T)</span></p>
+  <p><span class="kw">for</span> iteration <span class="var">m</span> = 1 to 300 <span class="kw">do</span></p>
+  <p style="padding-left:1.5em">采样 prompt <span class="var">x</span> ~ <span class="var">D</span>（Skywork-OR1 数学子集，DAPO 模板）</p>
+  <p style="padding-left:1.5em">学生 on-policy rollout：<span class="var">y</span> ~ <span class="fn">pi_theta</span>(. | <span class="var">x</span>)， rollout n = 4</p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> 每个访问前缀 <span class="var">s_t</span> in <span class="var">y</span> <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="var">S_t</span> = <span class="fn">TopK</span>(<span class="fn">pi_theta</span>(. | <span class="var">s_t</span>), <span class="num">16</span>)   <span class="cm"># 学生 top-k 支持</span></p>
+  <p style="padding-left:3em"><span class="var">p_bar_t</span>(v) = <span class="fn">pi_theta</span>(v|<span class="var">s_t</span>) / Sum_{u in S_t} <span class="fn">pi_theta</span>(u|<span class="var">s_t</span>), v in S_t   <span class="cm"># 重归一化</span></p>
+  <p style="padding-left:3em"><span class="var">r_t</span>(v) = <span class="fn">log pi_T</span>(v|<span class="var">s_t</span>) - <span class="fn">log pi_Tref</span>(v|<span class="var">s_t</span>)   <span class="cm"># 逐 token 隐式奖励</span></p>
+  <p style="padding-left:3em"><span class="var">A_w_t</span>(v) = <span class="fn">stop_gradient</span>(<span class="var">p_bar_t</span>(v) * <span class="var">r_t</span>(v))   <span class="cm"># 加权优势，停止梯度</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em">梯度 g = Sum_t Sum_{v in S_t} <span class="var">A_w_t</span>(v) * Grad_<span class="var">theta</span> <span class="fn">log pi_theta</span>(v|<span class="var">s_t</span>) - <span class="num">alpha</span> * Grad_<span class="var">theta</span> <span class="fn">D_KL</span>(pi_theta || pi_S)</p>
+  <p style="padding-left:1.5em"><span class="var">r_bar_m</span> = batch 均值 of <span class="var">p_bar_t</span>(v) * <span class="var">r_t</span>(v) over 访问前缀与 top-k</p>
+  <p style="padding-left:1.5em"><span class="num">alpha</span> ← <span class="fn">clip</span>(<span class="num">alpha</span> × (1 + <span class="num">epsilon</span> × <span class="fn">sgn</span>(<span class="var">r_bar_m</span>)), <span class="num">0.5</span>, <span class="num">2.5</span>)   <span class="cm"># 自适应 KL</span></p>
+  <p style="padding-left:1.5em"><span class="fn">更新 theta</span>（verl，LR = 1e-6）</p>
+  <p><span class="kw">end for</span></p>
+  <p><span class="kw">Output:</span> 增强后的强学生 <span class="var">pi_theta</span></p>
+</div>
+
+<h3 id="sec-3-8">3.8 训练流程的 token 级视图</h3>
+
+<pre class="mermaid">
+graph TD
+  S["学生采样轨迹 y"] --> T["对每个前缀取学生 top-16 集合"]
+  T --> R1["post-RL 教师在集合上 log-prob"]
+  T --> R2["pre-RL 参考在集合上 log-prob"]
+  R1 --> D["逐 token 隐式奖励<br>r = log 教师 − log 参考"]
+  R2 --> D
+  D --> W["加权优势 (停止梯度)"]
+  T --> W
+  W --> G["解析梯度求和"]
+  G --> U["KL 锚定并更新学生"]
+  U -->|"下一迭代"| S
+</pre>
+
+<h3 id="sec-3-9">3.9 数据与评估策略</h3>
+
+<p><strong>训练数据与 prompt。</strong> Direct-OPD 使用 <strong>Skywork-OR1-RL-Data 的数学子集</strong> [15]，套用 DAPO 风格数学 prompt 模板（要求最后一行形如 <code>Answer: $Answer</code>）。该模板也用于训练 rollout 与评估。该模板与教师 RL 时使用的 boxed-answer prompt 不同，但在作者实验中 DAPO 风格 prompt 迁移效果略好。将 Skywork 换成 <strong>DAPO-Math-17K</strong> 保持相同 prompt 格式时迁移趋势相似，说明结果不依赖单一训练集。</p>
+
+<p><strong>评估协议。</strong> 所有 AIME 结果统一使用下表设置（ave@32）：</p>
+<table>
+  <tr><th>评估设置</th><th>取值</th></tr>
+  <tr><td>Benchmarks</td><td>AIME 2024, AIME 2025</td></tr>
+  <tr><td>每题采样数</td><td>32</td></tr>
+  <tr><td>采样温度</td><td>0.7</td></tr>
+  <tr><td>Top-p</td><td>0.95</td></tr>
+  <tr><td>最大生成长度</td><td>31,744</td></tr>
+</table>
+
+<p><strong>Direct-OPD 默认超参（Table 3）。</strong> 训练框架 verl；global/mini batch size 64；rollout n=4；最大 prompt 长度 1024；最大响应长度 2048；采样温度 1.0；top-p 1.0；学习率 1e-6；训练步数 300；KL 系数在不同师生对间取 [0.8, 2]（未用自适应 KL 时）；学生 top-k 支持 16；top-k 策略为学生 top-k。</p>
+
+<p><strong>RL 教师与直接 RL 基线设置（Table 4，GRPO）。</strong> R1-Distill 系列训练 batch 512、Qwen3-nonthinking 系列 128；PPO mini batch 128；rollout n=8；最大 prompt 2048、最大响应 16384；温度 1.0；LR 1e-6；KL 系数 0.0；clip high 0.28、clip low 0.2。</p>
+
+<h2 id="sec-4">4. 实验结果与分析</h2>
+
+<p>论文围绕三个研究问题展开：<strong>RQ1</strong> 小教师的策略漂移能否提升已达到或超过教师能力的学生，且跨教师对/学生家族是否成立；<strong>RQ2</strong> 在固定 RL 步预算下，小模型 RL + Direct-OPD 是否在精度与算力上击败直接在大目标上跑 RL；<strong>RQ3</strong> 多个独立策略漂移能否顺序组合累加收益。</p>
+
+<h3 id="sec-4-1">4.1 主实验：弱教师提升更强学生</h3>
+
+<p>使用 R1-Distill-1.5B 作教师参考、JustRL-1.5B 作 post-RL 教师，把策略漂移迁移到三个目标学生：R1-Distill-7B、Qwen3-1.7B、Qwen3-4B。其中 R1-Distill-7B 与 Qwen3-4B 在迁移前已超过 post-RL JustRL 教师，构成直接的弱→强测试。第二个教师对 Nemotron-1.5B → QuestA-Nemotron-1.5B 来自不同训练流水线与数据源，迁移到 R1-Distill-7B 与 Qwen3-1.7B。</p>
+
+<p><strong>Table 1(a)：JustRL 策略漂移迁移</strong>（AIME24 / AIME25，ave@32）：</p>
+<table>
+  <tr><th>Model</th><th>AIME24</th><th>AIME25</th></tr>
+  <tr><td>Teacher ref (R1-Distill-1.5B)</td><td>28.5</td><td>24.0</td></tr>
+  <tr><td>Teacher RL (JustRL-1.5B)</td><td>51.3</td><td>37.5</td></tr>
+  <tr><td>Qwen3-1.7B (initial)</td><td>48.3</td><td>36.8</td></tr>
+  <tr><td>Qwen3-1.7B + Direct-OPD</td><td><strong>58.3 (+10.0)</strong></td><td><strong>43.2 (+6.4)</strong></td></tr>
+  <tr><td>Qwen3-4B (initial)</td><td>72.5</td><td>65.6</td></tr>
+  <tr><td>Qwen3-4B + Direct-OPD</td><td><strong>77.6 (+5.1)</strong></td><td><strong>68.8 (+3.2)</strong></td></tr>
+  <tr><td>R1-Distill-7B (initial)</td><td>56.7</td><td>40.5</td></tr>
+  <tr><td>R1-Distill-7B + Direct-OPD</td><td><strong>63.1 (+6.4)</strong></td><td><strong>48.8 (+8.3)</strong></td></tr>
+</table>
+
+<p><strong>Table 1(b)：QuestA 策略漂移迁移</strong>（不同训练流水线/数据源，跨家族鲁棒性检验）：</p>
+<table>
+  <tr><th>Model</th><th>AIME24</th><th>AIME25</th></tr>
+  <tr><td>Teacher ref (Nemotron-1.5B)</td><td>61.77</td><td>49.50</td></tr>
+  <tr><td>Teacher RL (QuestA-Nemotron-1.5B)</td><td>72.50</td><td>62.29</td></tr>
+  <tr><td>Qwen3-1.7B (initial)</td><td>48.3</td><td>36.8</td></tr>
+  <tr><td>Qwen3-1.7B + Direct-OPD</td><td><strong>59.0 (+10.7)</strong></td><td><strong>43.1 (+6.3)</strong></td></tr>
+  <tr><td>R1-Distill-7B (initial)</td><td>56.3</td><td>39.5</td></tr>
+  <tr><td>R1-Distill-7B + Direct-OPD</td><td><strong>61.2 (+4.9)</strong></td><td><strong>44.0 (+4.5)</strong></td></tr>
+</table>
+
+<p>下图为 JustRL 教师对各学生的迁移效果（初始 vs Direct-OPD，AIME24 与 AIME25 双 benchmark）：</p>
+
+<div id="chart-justrl" class="echarts-container" style="height:360px"></div>
+<script>
+  echarts.init(document.getElementById('chart-justrl')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'JustRL 策略漂移迁移：初始 vs Direct-OPD', left: 'center', textStyle: { color: '#89b4fa', fontSize: 14 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['AIME24 初始','AIME24 Direct-OPD','AIME25 初始','AIME25 Direct-OPD'], top: 26, textStyle: { color: '#cdd6f4' } },
+    grid: { left: 50, right: 24, bottom: 40, top: 76 },
+    xAxis: { type: 'category', data: ['Qwen3-1.7B','Qwen3-4B','R1-Distill-7B'], axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', name: 'Accuracy (ave@32)', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'AIME24 初始', type: 'bar', data: [48.3, 72.5, 56.7], itemStyle: { color: '#587099' } },
+      { name: 'AIME24 Direct-OPD', type: 'bar', data: [58.3, 77.6, 63.1], itemStyle: { color: '#a6e3a1' }, markLine: { silent: true, symbol: 'none', lineStyle: { color: '#fab387', type: 'dashed' }, data: [{ yAxis: 51.3, label: { formatter: 'JustRL 教师 51.3', color: '#fab387' } }] } },
+      { name: 'AIME25 初始', type: 'bar', data: [36.8, 65.6, 40.5], itemStyle: { color: '#455a7a' } },
+      { name: 'AIME25 Direct-OPD', type: 'bar', data: [43.2, 68.8, 48.8], itemStyle: { color: '#89dceb' } }
+    ]
+  });
+</script>
+
+<div class="insight">
+<strong>读图要点：</strong> 三类学生中 R1-Distill-7B（初始 56.7）与 Qwen3-4B（初始 72.5）都<strong>已超过 post-RL JustRL 教师（51.3）</strong>，但 Direct-OPD 仍带来 +6.4 / +5.1 的提升——这正是"迁移 RL 方向而非模仿教师最终策略"的直接证据。橙色虚线标出教师水平，绿柱（Direct-OPD）始终高于初始灰蓝柱。
+</div>
+
+<h3 id="sec-4-2">4.2 弱到强击败直接 RL（算力与精度）</h3>
+
+<p>比较两条 matched-step 路线：<strong>direct-RL 路线</strong>直接在 R1-Distill-7B 上跑 RL；<strong>弱→强路线</strong>先在更小的 R1-Distill-1.5B 上跑 RL，再用 Direct-OPD 把得到的 RL/参考策略漂移迁移进 R1-Distill-7B。在 DAPO 数据集上训练 R1-Distill-1.5B，选取第 300/600/900/1200/1500 步 RL checkpoint 作为 $\pi_T$、base R1-Distill-1.5B 作 $\pi_{T}^{\mathrm{ref}}$ 构成教师对，再训练 R1-Distill-7B 并与 matched small-teacher RL step 的直接 R1-Distill-7B RL 比较（记号 T300…T1500）。</p>
+
+<p><strong>结论：</strong> 在相同 RL 步数下，小模型 RL + Direct-OPD 迁移<strong>在精度与算力上均优于直接在 R1-Distill-7B 上跑 RL</strong>；较晚的迁移点（T600–T1500）在可比耗时下位于 direct-RL 曲线之上。Qwen3 nonthinking 上同样：1.7B 跑 100 步 RL 后迁移到 Qwen3-4B-nonthinking，在 AIME 2025 上达到直接 Qwen3-4B RL 的 0.635 水平。</p>
+
+<table>
+  <tr><th>路线</th><th>模型/阶段</th><th>GPU</th><th>耗时</th><th>AIME 表现</th></tr>
+  <tr><td>Direct-RL on target</td><td>R1-Distill-7B RL</td><td>32×A100</td><td>~320 小时</td><td>matched-step 下更低</td></tr>
+  <tr><td>Weak-to-strong（本文）</td><td>R1-Distill-1.5B RL（1500 步）+ Direct-OPD 迁移</td><td>32×A100 + 8×A100</td><td>~160 小时 + ~4 小时</td><td>matched-step 下更高</td></tr>
+  <tr><td>对比：Polaris [4]</td><td>直接在 Qwen3-1.7B 跑 RL</td><td>32×A100</td><td>≥ 1 周</td><td>~58.3 水平</td></tr>
+  <tr><td>Direct-OPD（本文）</td><td>Qwen3-1.7B 迁移</td><td>8×A100</td><td>~4 小时</td><td>48.3 → 58.3</td></tr>
+</table>
+
+<div class="insight">
+<strong>关键解读：</strong> 小模型的角色被重新定义——它不是因为终态策略比 R1-Distill-7B 强，而是提供一个<strong>更便宜的"环境"</strong>，让 RL 在其中发现一个改进方向；Direct-OPD 再把这个方向在大学生自己的 on-policy 状态上评估迁移。直接在大模型上 RL 必须靠自身 rollout 重新发现同类方向，弱→强迁移则复用小模型已找到的方向。<strong>迁移阶段仅约 4 小时（8×A100），相对 RL 代价可忽略</strong>——这既因 Direct-OPD 只需短训练，也因教师模型小、打分不是瓶颈。
+</div>
+
+<h3 id="sec-4-3">4.3 顺序组合多个策略漂移</h3>
+
+<p>学生先用 R1-Distill-1.5B → JustRL-1.5B 信号训练，再继续用 Nemotron-1.5B → QuestA-Nemotron-1.5B 信号。第二阶段的 0–300 局部步对齐到全局 300–600 步。</p>
+
+<table>
+  <tr><th>Stage</th><th>AIME24</th><th>AIME25</th></tr>
+  <tr><td>Initial (Qwen3-1.7B)</td><td>48.3</td><td>36.8</td></tr>
+  <tr><td>After JustRL</td><td>58.3 (+10.0)</td><td>43.2 (+6.4)</td></tr>
+  <tr><td>After QuestA</td><td><strong>63.8 (+15.5)</strong></td><td><strong>46.8 (+10.0)</strong></td></tr>
+</table>
+
+<div id="chart-seq" class="echarts-container" style="height:320px"></div>
+<script>
+  echarts.init(document.getElementById('chart-seq')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '顺序组合策略漂移（Qwen3-1.7B）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 14 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['AIME 2024','AIME 2025'], top: 26, textStyle: { color: '#cdd6f4' } },
+    grid: { left: 50, right: 24, bottom: 40, top: 70 },
+    xAxis: { type: 'category', data: ['Initial','After JustRL','After QuestA'], axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', name: 'Accuracy (ave@32)', min: 30, max: 70, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'AIME 2024', type: 'bar', data: [48.3, 58.3, 63.8], itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}' } },
+      { name: 'AIME 2025', type: 'bar', data: [36.8, 43.2, 46.8], itemStyle: { color: '#89dceb' }, label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}' } }
+    ]
+  });
+</script>
+
+<div class="insight">
+<strong>Takeaway：</strong> 不同 RL 训练 run 学到不同能力，Direct-OPD 能把这些能力<strong>顺序组合进同一学生</strong>。这暗示 checkpoint 对信号具有某种"可加性"，为后续按能力模块化迁移打开了空间。
+</div>
+
+<h3 id="sec-4-4">4.4 消融与分析</h3>
+
+<h4 id="sec-4-4-1">4.4.1 跨思维模式迁移：无需 token 重叠模仿</h4>
+<p>标准 OPD 认为<strong>师生思维模式兼容</strong>是成功关键——成功 OPD 体现在学生访问状态上高概率 token 的逐步对齐，少量共享 top-k token 集承载大部分概率质量 [5]。这对原始教师模仿是自然的，因为学生被要求匹配教师最终分布。Direct-OPD 改变了迁移对象：它不匹配 post-RL 教师分布，而是在学生访问的候选 token 上评估教师/参考 log-ratio。该信号能在学生自己的支持内对动作排序，因此有用迁移不必要求学生进入教师的高重叠 token 区。</p>
+
+<p>per-state 重叠率定义为（$S$ 为学生、$C$ 为比较策略）：</p>
+<p>$$\mathrm{Overlap}_k(S, C; s_t) = \frac{|T_k^{S}(s_t) \cap T_k^{C}(s_t)|}{k}$$</p>
+
+<p>论文报告该指标对 post-RL 教师（$C=T$）与教师参考（$C=T_{\mathrm{ref}}$）的值。<strong>结果</strong>：模式对齐的 R1-Distill 迁移进入更高重叠区（符合标准 OPD 直觉）；而跨模式迁移与 post-RL 教师的重叠保持较低，且与教师参考的重叠也没有补偿性上升——即 Figure 2 的增益<strong>不能由对任一教师 checkpoint 的逐步模仿解释</strong>，而由"在学生访问 token 上使用 reference→post-RL 教师的 RL 方向"更好解释。同时 actor 熵保持受控、不崩塌，教师/参考熵差收窄，佐证同一机制。</p>
+
+<h4 id="sec-4-4-2">4.4.2 短视野训练改变长 rollout 行为</h4>
+<p>论文刻意用<strong>短 2k token 响应视野</strong>训练，考察策略变化是否超越直接监督的前缀。对每个响应前缀 $x_{\le t}$，取 actor top-16 集合 $K_t$，计算 actor 概率加权的教师 gap：</p>
+<p>$$g_t = \sum_{a \in K_t} \pi_{\mathrm{actor}}(a \mid x_{\le t}) \left[\log \pi_{\mathrm{JustRL}}(a \mid x_{\le t}) - \log \pi_{R1}(a \mid x_{\le t})\right]$$</p>
+<p>前缀累积 gap $G_T = \sum_{t=1}^{T} g_t$。$G_T$ 越大表示沿 actor 自身可能 token，JustRL 教师赋予更高加权对数概率。</p>
+<p><strong>结果</strong>：训练 40 步（2k 响应长度）后，actor 在远超 2k 训练视野的固定长 rollout 上朝教师漂移方向移动——短视野已捕获可迁移信号。6k 视野使 actor 在该诊断上移动更远，但<strong>验证最差</strong>（step-40：2k 得 48.8，6k 仅 45.6，base 48.3）。合理解释：长视野带来的额外移动来自后期前缀，那里小教师对日益 off-distribution、log-ratio 大但不可靠（见 4.4.3），6k 可能在不可靠后期信号上过度驱动而不改善答案；2k 既避开该噪声又捕获并泛化了可靠的前期方向。</p>
+
+<table>
+  <tr><th>设置（Qwen3-1.7B, step 40, 固定 KL=1）</th><th>AIME 2024/2025 平均 (ave@32)</th></tr>
+  <tr><td>Base（未训练）</td><td>48.3</td></tr>
+  <tr><td>2k 响应长度</td><td><strong>48.8</strong></td></tr>
+  <tr><td>6k 响应长度</td><td>45.6</td></tr>
+</table>
+
+<h4 id="sec-4-4-3">4.4.3 KL 控制教师漂移奖励的可靠性</h4>
+<p>教师/参考 log-ratio 充当 dense 奖励，但该奖励<strong>只在教师漂移对学生有意义的状态上可靠</strong>。这使 KL 不止是正则系数：它控制学生访问哪些 rollout 状态，进而决定 dense 奖励是否仍可靠。<strong>KL 太弱</strong>，学生会漂入教师与参考都低概率的区域，log-ratio 变成噪声目标；<strong>KL 太强</strong>，学生无法跟随教师策略漂移。</p>
+<p>在固定 2k 响应下扫掠固定 KL 系数并与自适应 KL 对比：<strong>最佳固定 KL 值不通用</strong>，不同师生对偏好不同约束强度；dense token 奖励也不提供跨对规则——某设定中更大正值伴随更差验证，另一设定中却跟踪最佳曲线。因此 dense 奖励不应被视为独立于 rollout 分布最大化标量目标。自适应 KL 运行在初始校正后把 dense token 奖励拉向零，而非保持强正或强负——这与"让学生停留在教师/参考比较仍 informative 的区域"的预期角色一致；持续大奖励常表示学生采样到 post-RL 教师与其参考强烈不一致的 token（往往因已漂离两者支持，log-ratio 量大但不再是可信改进方向），近零 batch 均值提示更平衡的局部排序 regime。</p>
+
+<div class="insight">
+<strong>Takeaway：</strong> dense 教师/参考奖励应被视作<strong>rollout-分布相关</strong>而非孤立优化对象。固定 KL 扫掠表明正确约束依赖师生对，自适应 KL 经验地把均值奖励拉向更平衡的 regime。这也解释了为何 4.4.2 中更长响应反而验证更差——更长 rollout 把学生带到 log-ratio 量大但不可靠的后期状态。
+</div>
+
+<h2 id="sec-5">5. 总结与启发</h2>
+
+<h3 id="sec-5-1">5.1 局限性</h3>
+<p>论文明确指出 Direct-OPD 的信号是<strong>有条件</strong>的：</p>
+<ul>
+  <li><strong>信号条件性</strong>：当教师/参考的改进在学生访问状态上不再有意义时，Direct-OPD 会失败。dense 奖励的可靠性依赖学生当前采样到的状态——这由 KL 与响应长度共同决定。</li>
+  <li><strong>超参依赖</strong>：最佳响应长度与 KL 强度仍是师生对相关的，没有一对通用取值；论文以自适应 KL 缓解但仍需经验调参。</li>
+  <li><strong>教师对依赖</strong>：迁移效果取决于选哪个小教师 RL checkpoint（T300 vs T900–T1500 携带不同漂移，并非每个都对大学生同样有用）。</li>
+  <li><strong>评测范围</strong>：实验集中在 AIME 2024/2025 数学推理基准，其他推理域（代码、长程 agent）的迁移性有待验证。</li>
+</ul>
+
+<h3 id="sec-5-2">5.2 核心洞见与读后评注</h3>
+<div class="insight">
+<p><strong>洞见一：把 RL 成果重新定义为"可复用的改进信号"而非"最终模型"。</strong> 这是全文最深刻的范式转换。传统蒸馏把 post-RL 模型当作要模仿的终点；Direct-OPD 把一对 checkpoint 视作存储了 RL 监督信号的载体——signal 在 policy space 里以 log-ratio 形式存在。这与 DPO 的 policy-as-reward 恒等式同源，但<strong>方向相反</strong>：DPO 从偏好拟合策略，Direct-OPD 从已训练策略读回奖励。这种"奖励可逆读出"的视角对后续工作有启发意义——任何 post-RL 模型都隐含一个可迁移的奖励函数。</p>
+</div>
+<div class="insight">
+<p><strong>洞见二：弱→强迁移的真正载体是"改进方向"而非"能力水平"。</strong> Figure 1a 的反例极具说服力：R1-Distill-7B 初始 56.7 已超过 JustRL 教师 51.3，vanilla OPD 把它拖到约 50——因为模仿弱教师最终策略会用教师的能力上限覆盖学生更强行为。Direct-OPD 通过"教师与自身前后对比"做减法，剥离出纯粹的 RL 方向 $\log \pi_T - \log \pi_{T}^{\mathrm{ref}}$，于是<strong>即使学生已超教师仍能继续受益</strong>。这回应了 weak-to-strong 领域"激发而非模仿"的核心诉求，也呼应 [64] 把 OPD 视作奖励外推的观点，但本文外推的"教师"是一对 checkpoint 而非单一终点。</p>
+</div>
+<div class="insight">
+<p><strong>洞见三：最优解的形式 $\pi^{*} \propto \pi_S (\pi_T/\pi_{T}^{\mathrm{ref}})^{1/\alpha}$ 给出清晰直觉。</strong> 学生等于在其自身初始化 $\pi_S$ 上做了一次指数倾斜，倾斜方向由教师漂移决定、倾斜强度由 $1/\alpha$ 决定。这意味着 Direct-OPD 在几何上是在 $\pi_S$ 的概率测度上重新加权，而非替换——这正是它不会"覆盖"学生既有强行为的数学根源，也是 KL 锚定的意义所在。</p>
+</div>
+<div class="insight">
+<p><strong>洞见四：算力经济学的重构。</strong> "小模型 RL + 短迁移"相对"大模型直接 RL"的双重优势——小模型 RL 更稳更易更廉（1.5B 1500 步约 160h@32A100 vs 7B 约 320h@32A100），迁移阶段仅约 4h@8A100——指向一种新的 post-training 流水线：<strong>把 RL 当作在小模型上"生产奖励"，再批量迁移到多个强学生</strong>。结合 4.3 的顺序组合，甚至可设想"能力模块化生产 + 组装"的范式。</p>
+</div>
+<div class="insight">
+<p><strong>洞见五：dense 奖励的可靠性是 rollout-分布相关的。</strong> 4.4.3 的 KL 扫掠与 4.4.2 的长度扫掠共同揭示一个反直觉现象——更多信号不等于更好。更长响应让学生进入 log-ratio 量大但不可靠的 off-distribution 后期状态，反而验证下降；自适应 KL 通过把均值奖励拉回近零来维持"局部仍能排序动作"的 regime。这对实际部署是重要工程教训：<strong>implicit reward 不能脱离学生当前状态分布独立优化</strong>。</p>
+</div>
+<div class="insight">
+<p><strong>评注与展望。</strong> Direct-OPD 的优雅在于它几乎"免费"——复用 OPD 的 on-policy、top-k 接口，只换读出的信号；不需要 reward model、不在目标上跑 RL、可顺序组合。其局限同样源于此：信号质量完全取决于教师漂移在学生访问状态上是否仍 meaningful。一个自然的后续方向是<strong>在学生侧主动选择/构造访问状态以最大化漂移可靠性</strong>（如 curriculum 或基于不确定性的前缀选择），以及把该框架推广到非数学域（代码、工具使用）与多教师漂移的更复杂组合策略。论文为"RL 成果跨尺度复用"提供了一个简洁、可验证的基线，预计会被后续弱→强与 post-training 流水线工作大量引用并扩展。
+</p>
+</div>
+
+<h2 id="sec-6">6. 参考文献</h2>
+<ol>
+  <li>DeepSeek-AI. <em>DeepSeek-R1: Incentivizing reasoning capability in LLMs via reinforcement learning.</em> Nature 645:633–638, 2025.</li>
+  <li>Bingxiang He et al. <em>JustRL: Scaling a 1.5B LLM with a simple RL recipe.</em> arXiv:2512.16649, 2025.</li>
+  <li>An Yang et al. <em>Qwen3 technical report.</em> arXiv:2505.09388, 2025.</li>
+  <li>Chenxin An et al. <em>POLARIS: A post-training recipe for scaling reinforcement learning on reasoning models.</em> 2025. <a href="https://github.com/ChenxinAn-fdu/POLARIS">GitHub</a></li>
+  <li>Yaxuan Li et al. <em>Rethinking on-policy distillation of large language models: Phenomenology, mechanism, and recipe.</em> arXiv:2604.13016, 2026.</li>
+  <li>Rafael Rafailov et al. <em>Direct preference optimization: Your language model is secretly a reward model.</em> arXiv:2305.18290, 2023.</li>
+  <li>Jiazheng Li et al. <em>QuestA: Expanding reasoning capacity in LLMs via question augmentation.</em> arXiv:2507.13266, 2025.</li>
+  <li>Dongxu Zhang et al. <em>Fast and effective on-policy distillation from reasoning prefixes.</em> Findings of ACL 2026, pp. 25553–25569.</li>
+  <li>Collin Burns et al. <em>Weak-to-strong generalization: Eliciting strong capabilities with weak supervision.</em> arXiv:2312.09390, 2023.</li>
+  <li>Wenhong Zhu et al. <em>Weak-to-strong preference optimization: Stealing reward from weak aligned model.</em> arXiv:2410.18640, 2025.</li>
+  <li>Wenkai Yang et al. <em>Learning beyond teacher: Generalized on-policy distillation with reward extrapolation.</em> arXiv:2602.12125, 2026.</li>
+  <li>Leo Gao, John Schulman, Jacob Hilton. <em>Scaling laws for reward model overoptimization.</em> ICML 2023.</li>
+</ol>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3, main h4').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      if (h.tagName === 'H4') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

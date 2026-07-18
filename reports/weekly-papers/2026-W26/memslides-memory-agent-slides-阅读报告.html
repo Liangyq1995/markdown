@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MemSlides 阅读报告</title>
+  <style>
+    :root { --bg:#1e1e2e; --bg-code:#313244; --bg-nav:#181825; --text:#cdd6f4; --heading:#89b4fa; --link:#89dceb; --border:#45475a; --quote-bar:#fab387; --strong:#a6e3a1; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; line-height:1.8; }
+    #toc { position:fixed; top:0; left:0; width:220px; height:100vh; background:var(--bg-nav); overflow-y:auto; padding:20px 12px; font-size:13px; border-right:1px solid var(--border); }
+    #toc h2 { color:var(--heading); font-size:12px; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:12px; }
+    #toc a { display:block; color:var(--text); text-decoration:none; padding:3px 8px; border-radius:4px; margin-bottom:2px; transition:background 0.15s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #toc a:hover { background:var(--border); }
+    #toc a.active { background:var(--heading); color:#1e1e2e; font-weight:600; }
+    #toc a.toc-h3 { padding-left:20px; font-size:12px; opacity:0.8; }
+    main { margin-left:240px; max-width:none; padding:40px 64px; }
+    h1 { color:var(--heading); font-size:1.9em; margin-bottom:8px; line-height:1.3; }
+    h2 { color:var(--heading); font-size:1.4em; margin:2em 0 0.6em; border-bottom:1px solid var(--border); padding-bottom:6px; }
+    h3 { color:var(--heading); font-size:1.1em; margin:1.4em 0 0.4em; }
+    p { margin:0.6em 0; }
+    a { color:var(--link); }
+    strong { color:var(--strong); }
+    blockquote { border-left:3px solid var(--quote-bar); padding:8px 16px; margin:1em 0; background:#2a2a3e; border-radius:0 4px 4px 0; }
+    table { border-collapse:collapse; width:100%; margin:1em 0; font-size:0.93em; }
+    th { background:#2a2a3e; color:var(--heading); padding:8px 12px; text-align:left; border:1px solid var(--border); }
+    td { padding:7px 12px; border:1px solid var(--border); }
+    tr:hover td { background:#2a2a3e; }
+    .mermaid { background:#2a2a3e; border-radius:6px; padding:16px; margin:1em 0; text-align:center; }
+    .echarts-container { margin:1em 0; border-radius:6px; overflow:hidden; }
+    hr { border:none; border-top:1px solid var(--border); margin:2em 0; }
+    .algo-box { background:#1a1a2e; border:1px solid var(--border); border-radius:6px; padding:18px 22px; margin:1em 0; font-size:.9em; line-height:1.9; }
+    .algo-box .algo-title { color:var(--heading); font-weight:700; font-size:1em; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .algo-box .kw { color:#cba6f7; font-weight:700; }
+    .algo-box .cm { color:#6c7086; font-style:italic; }
+    .algo-box .var { color:#94e2d5; }
+    .algo-box .fn { color:#a6e3a1; }
+    .algo-box .num { color:#f9e2af; }
+    ul, ol { margin: 0.6em 0 0.6em 1.8em; }
+    li { margin: 0.3em 0; }
+    .tag { display:inline-block; background:#2a2a3e; border:1px solid var(--border); border-radius:4px; padding:2px 8px; font-size:0.82em; margin:2px; color:var(--heading); }
+    .highlight-box { background:#1a1a2e; border-left:4px solid var(--heading); border-radius:0 6px 6px 0; padding:14px 18px; margin:1em 0; }
+    .metric-badge { display:inline-block; background:#313244; border-radius:4px; padding:3px 10px; font-size:0.88em; margin:2px; color:var(--strong); font-weight:600; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>MemSlides：面向个性化幻灯片生成的层级记忆驱动智能体框架</h1>
+    <p style="color:#6c7086; font-size:0.9em; margin-bottom:1.5em;">阅读报告 · 2026年6月26日</p>
+
+    <!-- 论文信息表 -->
+    <h2>论文基本信息</h2>
+    <table>
+      <tr><th>字段</th><th>内容</th></tr>
+      <tr><td>标题</td><td>MemSlides: A Hierarchical Memory Driven Agent Framework for Personalized Slide Generation with Multi-turn Local Revision</td></tr>
+      <tr><td>作者</td><td>Ye Jin, Yangyang Xu, Jun Zhu, Yibo Yang</td></tr>
+      <tr><td>arXiv ID</td><td><a href="https://arxiv.org/abs/2606.17162" target="_blank">2606.17162</a></td></tr>
+      <tr><td>PDF</td><td><a href="https://arxiv.org/pdf/2606.17162" target="_blank">arxiv.org/pdf/2606.17162</a></td></tr>
+      <tr><td>研究领域</td><td><span class="tag">cs.CL</span> <span class="tag">cs.HC</span> <span class="tag">cs.MA</span></td></tr>
+      <tr><td>社区热度</td><td>115 upvotes（HuggingFace Papers）</td></tr>
+      <tr><td>核心贡献</td><td>层级记忆框架（用户画像记忆 + 工作记忆 + 工具记忆）+ 局部作用域幻灯片修订策略</td></tr>
+    </table>
+
+    <!-- 概述 -->
+    <h2>概述</h2>
+    <p>MemSlides 是一个面向个性化演示文稿生成的层级记忆驱动智能体框架。现有的幻灯片生成系统往往将个性化视为提示词工程的副产品，而非通过显式记忆机制来实现。MemSlides 将记忆体系拆分为三个互补层次：<strong>用户画像记忆（User Profile Memory）</strong>、<strong>工作记忆（Working Memory）</strong>和<strong>工具记忆（Tool Memory）</strong>，分别解决跨任务的偏好持久化、多轮修订中的会话约束追踪、以及可靠的局部编辑执行三大核心挑战。</p>
+    <p>在修订策略上，MemSlides 提出<strong>作用域局部修订（Scoped Slide-Local Revision）</strong>机制，每次修订仅作用于受影响的最小幻灯片区域，而非重新生成整个演示文稿，从而大幅降低上下文压力并避免意外内容漂移。实验结果表明，该框架在个性化对齐、局部修订可靠性和会话级偏好延续三个维度上均超越现有基线系统。</p>
+
+    <blockquote>
+      <strong>核心洞察：</strong>演示文稿的有效个性化依赖于将持久用户画像、会话级工作记忆与可复用执行经验三者分离管理，而非将它们混入一个无差别的对话缓冲区。
+    </blockquote>
+
+    <!-- 研究背景与动机 -->
+    <h2>研究背景与动机</h2>
+    <p>自动化演示文稿生成是 AI 辅助内容创作的重要场景，近年来随着大语言模型能力的提升，该领域涌现出 PPTAgent、DeepPresenter、SlideTailor 等系统。然而，这些系统在面对真实用户场景时均存在明显短板，推动了 MemSlides 的研究动机。</p>
+
+    <h3>现有方法的三大痛点</h3>
+    <ul>
+      <li><strong>跨任务偏好无法持久化：</strong>现有系统每次生成都从零开始，无法记住用户在历史任务中表达的风格偏好（如配色方案、字体选择、内容密度等），导致用户需要反复重申相同需求。</li>
+      <li><strong>多轮修订中约束丢失：</strong>当用户在第一轮提出"将标题改为蓝色"后，第二轮继续修订时，系统往往忘记上一轮已确认的约束，产生回归性错误，破坏修订的连贯性。</li>
+      <li><strong>全局重生成效率低且易漂移：</strong>多数系统在每次修订时重新生成整个幻灯片组，不仅计算开销大，还会无意间修改用户已满意的其他部分，造成内容漂移（unintended drift）。</li>
+    </ul>
+
+    <h3>相关工作对比</h3>
+    <table>
+      <tr>
+        <th>系统/方向</th>
+        <th>代表工作</th>
+        <th>局限性</th>
+      </tr>
+      <tr>
+        <td>端到端幻灯片生成</td>
+        <td>AutoPresent, PPTAgent</td>
+        <td>个性化为提示副产品，无显式记忆</td>
+      </tr>
+      <tr>
+        <td>个性化生成</td>
+        <td>SlideTailor, DeepPresenter</td>
+        <td>无跨任务记忆，修订依赖全局重写</td>
+      </tr>
+      <tr>
+        <td>智能体记忆研究</td>
+        <td>MemGPT, Generative Agents</td>
+        <td>通用记忆框架，未针对幻灯片编辑特化</td>
+      </tr>
+      <tr>
+        <td>长上下文处理</td>
+        <td>MemAgent, RAPTOR</td>
+        <td>面向文档理解，非生成/编辑场景</td>
+      </tr>
+    </table>
+
+    <p>MemSlides 的核心思路是：将记忆作为一等公民（first-class citizen）纳入幻灯片生成智能体的设计，而非将其作为对话历史的被动附属物。</p>
+
+    <!-- 核心方法 -->
+    <h2>核心方法</h2>
+    <p>MemSlides 的方法体系由两个相辅相成的部分构成：<strong>层级记忆框架</strong>（解决个性化信息的存储与调用）和<strong>作用域局部修订策略</strong>（解决多轮编辑的精准性与稳定性）。下图展示了整体架构及三类记忆的交互关系。</p>
+
+    <h3>系统整体架构</h3>
+    <pre class="mermaid">
+flowchart TD
+    subgraph LTM["长期记忆 Long-Term Memory（跨任务持久化）"]
+        UPM["用户画像记忆<br/>User Profile Memory<br/>────────────────<br/>• 按用户 × 意图组织<br/>• 维度：主题/内容/视觉/布局/模板/通用<br/>• 意图感知路由"]
+        TM["工具记忆<br/>Tool Memory<br/>────────────────<br/>• 可复用执行经验<br/>• 成功修订案例存储<br/>• 闭环修改行为增强"]
+    end
+
+    subgraph WM["工作记忆 Working Memory（会话级）"]
+        WM_BOX["活跃偏好 + 会话约束<br/>────────────────<br/>• 当前轮次用户反馈<br/>• 跨修订轮次偏好延续<br/>• 临时约束追踪"]
+    end
+
+    subgraph AGENT["MemSlides 智能体"]
+        GEN["Round-0 生成<br/>初始个性化"]
+        REV["多轮局部修订<br/>Scoped Revision"]
+    end
+
+    subgraph SCOPE["作用域局部修订策略"]
+        PROJ["请求投影<br/>定位最小受影响区域"]
+        SNAP["局部快照读取<br/>布局结构 + 选择器 + 样式规则"]
+        PATCH["补丁写回<br/>仅修改目标选择器/样式"]
+    end
+
+    UPM -->|"任务开始时路由"| WM_BOX
+    TM -->|"注入执行经验"| REV
+    WM_BOX -->|"提供活跃偏好"| GEN
+    WM_BOX -->|"跨轮次约束传递"| REV
+    GEN -->|"生成初始幻灯片"| REV
+    REV --> PROJ
+    PROJ --> SNAP
+    SNAP --> PATCH
+    PATCH -->|"更新成功经验"| TM
+    PATCH -->|"更新会话状态"| WM_BOX
+
+    style LTM fill:#1a1a2e,stroke:#89b4fa
+    style WM fill:#1a1a2e,stroke:#fab387
+    style AGENT fill:#1a1a2e,stroke:#a6e3a1
+    style SCOPE fill:#1a1a2e,stroke:#cba6f7
+    </pre>
+
+    <h3>三类记忆详解</h3>
+
+    <h3>1. 用户画像记忆（User Profile Memory）</h3>
+    <div class="highlight-box">
+      <p><strong>是什么：</strong>一种以用户为键、以意图为条件的长期持久化记忆，存储用户在不同任务意图下的多维偏好画像。</p>
+      <p><strong>为什么：</strong>不同用户对幻灯片的期望差异显著（学术报告 vs. 商业提案），同一用户在不同意图下的偏好也不同。将偏好显式持久化，使智能体在 Round-0 生成时就能直接个性化，而非依赖用户实时描述。</p>
+      <p><strong>怎么做：</strong>偏好按六个维度组织——<strong>主题（theme）</strong>、<strong>内容（content）</strong>、<strong>视觉（visual）</strong>、<strong>布局（layout）</strong>、<strong>模板（template）</strong>、<strong>通用（general）</strong>。当一个新任务启动时，系统根据用户 ID 和检测到的任务意图，将相应的画像路由进工作记忆，作为初始生成的个性化约束。</p>
+      <p><strong>效果：</strong>实验证明用户画像记忆显著提升了 Round-0（首轮生成）的人格对齐得分，在 GLM-5 骨干下 Specificity 维度达到 8.89/10。</p>
+    </div>
+
+    <h3>2. 工作记忆（Working Memory）</h3>
+    <div class="highlight-box">
+      <p><strong>是什么：</strong>会话级的临时记忆，维护当前幻灯片编辑会话的状态，包括活跃偏好和用户在各修订轮次中引入的新约束。</p>
+      <p><strong>为什么：</strong>多轮修订的核心挑战在于"约束累积"——用户每轮反馈都是增量式的，系统必须在保留已确认偏好的同时接纳新约束。若缺乏工作记忆，每轮修订都是无状态的，极易发生约束遗忘和回归错误。</p>
+      <p><strong>怎么做：</strong>工作记忆在任务开始时从用户画像记忆加载初始偏好，随后在每个修订轮次结束后更新，将本轮用户反馈（新偏好、新约束）合并进当前会话状态。后续修订轮次读取更新后的工作记忆，确保偏好的跨轮次延续。</p>
+      <p><strong>效果：</strong>定性案例研究展示了工作记忆成功将第一轮修订中引入的偏好（如"使用更大的字体"）延续到第二、三轮修订，而不因新的修订请求而丢失。</p>
+    </div>
+
+    <h3>3. 工具记忆（Tool Memory）</h3>
+    <div class="highlight-box">
+      <p><strong>是什么：</strong>一种存储可复用执行经验的长期记忆，记录历史修订任务中成功的工具调用序列和编辑策略。</p>
+      <p><strong>为什么：</strong>幻灯片的局部编辑涉及复杂的 HTML/CSS 操作（定位元素、修改样式规则、调整布局），LLM 在闭环工具调用中容易犯重复性错误。将成功的执行经验持久化，可以在新任务中直接复用，提升修订的可靠性。</p>
+      <p><strong>怎么做：</strong>每次成功完成的局部修订操作（包括工具调用序列、目标选择器、样式修改）被结构化存储进工具记忆。执行新修订任务时，系统检索相似的历史经验，将其注入当前执行上下文，引导智能体采用经过验证的操作模式。</p>
+      <p><strong>效果：</strong>工具记忆注入在诊断性匹配对比实验（diagnostic matched-pair）中显著提升了闭环修改行为的正确率，减少了无效工具调用和格式错误。</p>
+    </div>
+
+    <h3>作用域局部修订（Scoped Slide-Local Revision）</h3>
+    <p>这是 MemSlides 的修订执行策略，与记忆框架协同工作，解决"如何可靠地执行局部编辑"的问题。</p>
+
+    <pre class="mermaid">
+sequenceDiagram
+    participant U as 用户反馈
+    participant A as MemSlides 智能体
+    participant WM as 工作记忆
+    participant TM as 工具记忆
+    participant S as 幻灯片
+
+    U->>A: "将第3页标题改为蓝色，字号加大"
+    A->>WM: 读取当前会话约束
+    WM-->>A: 返回活跃偏好（含历史约束）
+    A->>S: 请求投影：定位最小受影响区域（第3页标题元素）
+    S-->>A: 返回局部快照（布局结构 + CSS选择器 + 样式规则）
+    A->>TM: 检索相似修订经验
+    TM-->>A: 返回匹配的执行策略
+    A->>S: 写回补丁（仅修改 .slide-3 .title 的 color 和 font-size）
+    S-->>A: 修订完成确认
+    A->>WM: 更新会话状态（记录本轮新约束）
+    A->>TM: 存储成功执行经验
+    A->>U: 返回修订结果
+    </pre>
+
+    <p>局部修订的关键设计原则：</p>
+    <ul>
+      <li><strong>读取局部化：</strong>仅读取受影响区域的结构化快照（局部布局结构、可用选择器、暴露的样式规则），而非整个幻灯片的完整 HTML/CSS。</li>
+      <li><strong>写入局部化：</strong>补丁仅写回到显式指定的选择器或样式规则，不触碰其他元素，从根本上避免意外漂移。</li>
+      <li><strong>上下文压力降低：</strong>局部化读写显著减少了每次修订所需的上下文长度，降低了 LLM 的认知负担，提升了精准度。</li>
+    </ul>
+
+    <h3>多画像多意图评估基准</h3>
+    <p>论文还构建了一个专用于个性化演示文稿生成评估的基准数据集——<strong>多画像多意图用户画像库（multi-persona, multi-intent profile bank）</strong>。该基准涵盖不同背景用户（学术研究者、商业分析师、教育工作者等）在不同任务意图（技术汇报、销售提案、教学课件等）下的偏好组合，用于系统性评估个性化对齐能力。</p>
+
+    <!-- 实验结果 -->
+    <h2>实验结果</h2>
+    <p>论文从三个维度展开实验评估：个性化对齐质量、通用演示质量（DeepPresenter 风格检查）、以及局部修订的诊断性评估。核心实验在三个主干模型（GPT-5、GLM-5、Gemini 3.1 Pro）上与两个基线系统（DeepPresenter、SlideTailor）进行对比。</p>
+
+    <h3>主实验：个性化对齐得分（满分10分）</h3>
+    <table>
+      <tr>
+        <th>框架</th>
+        <th>模型</th>
+        <th>内容（Content）↑</th>
+        <th>结构（Structure）↑</th>
+        <th>视觉（Visual）↑</th>
+        <th>特异性（Specificity）↑</th>
+      </tr>
+      <tr>
+        <td rowspan="3"><strong>DeepPresenter</strong></td>
+        <td>GPT-5</td>
+        <td>6.22</td>
+        <td>7.56</td>
+        <td>5.76</td>
+        <td>5.89</td>
+      </tr>
+      <tr>
+        <td>GLM-5</td>
+        <td>6.67</td>
+        <td>7.61</td>
+        <td>5.28</td>
+        <td>7.22</td>
+      </tr>
+      <tr>
+        <td>Gemini 3.1 Pro</td>
+        <td>6.89</td>
+        <td>8.00</td>
+        <td>6.78</td>
+        <td>7.44</td>
+      </tr>
+      <tr>
+        <td rowspan="3"><strong>SlideTailor</strong></td>
+        <td>GPT-5</td>
+        <td>6.78</td>
+        <td>6.00</td>
+        <td>6.39</td>
+        <td>6.33</td>
+      </tr>
+      <tr>
+        <td>GLM-5</td>
+        <td>4.44</td>
+        <td>4.89</td>
+        <td>4.00</td>
+        <td>3.89</td>
+      </tr>
+      <tr>
+        <td>Gemini 3.1 Pro</td>
+        <td>4.48</td>
+        <td>5.00</td>
+        <td>4.03</td>
+        <td>4.67</td>
+      </tr>
+      <tr style="background:#1a3a1a;">
+        <td rowspan="3"><strong>MemSlides（本文）</strong></td>
+        <td>GPT-5</td>
+        <td>7.11</td>
+        <td>7.33</td>
+        <td>6.00</td>
+        <td>6.67</td>
+      </tr>
+      <tr style="background:#1a3a1a;">
+        <td>GLM-5</td>
+        <td><strong>9.00</strong></td>
+        <td><strong>8.78</strong></td>
+        <td><strong>8.56</strong></td>
+        <td><strong>8.89</strong></td>
+      </tr>
+      <tr style="background:#1a3a1a;">
+        <td>Gemini 3.1 Pro</td>
+        <td>7.77</td>
+        <td>8.64</td>
+        <td>8.24</td>
+        <td>8.56</td>
+      </tr>
+    </table>
+
+    <h3>个性化得分可视化对比</h3>
+    <div id="chart-persona" class="echarts-container" style="height:380px"></div>
+    <script>
+    (function(){
+      var dom = document.getElementById('chart-persona');
+      if(!dom) return;
+      var myChart = echarts.init(dom, 'dark');
+      myChart.setOption({
+        backgroundColor: '#2a2a3e',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: ['DeepPresenter', 'SlideTailor', 'MemSlides（本文）'], textStyle: { color: '#cdd6f4' } },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: { type: 'category', data: ['Content', 'Structure', 'Visual', 'Specificity'], axisLabel: { color: '#cdd6f4' } },
+        yAxis: { type: 'value', min: 0, max: 10, axisLabel: { color: '#cdd6f4' } },
+        series: [
+          {
+            name: 'DeepPresenter',
+            type: 'bar',
+            data: [6.89, 8.00, 6.78, 7.44],
+            itemStyle: { color: '#89b4fa' },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+          },
+          {
+            name: 'SlideTailor',
+            type: 'bar',
+            data: [6.78, 6.00, 6.39, 6.33],
+            itemStyle: { color: '#fab387' },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+          },
+          {
+            name: 'MemSlides（本文）',
+            type: 'bar',
+            data: [9.00, 8.78, 8.56, 8.89],
+            itemStyle: { color: '#a6e3a1' },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+          }
+        ]
+      });
+    })();
+    </script>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center; margin-top:4px;">图：MemSlides vs. 基线系统个性化得分对比（GLM-5 骨干，满分10分）</p>
+
+    <h3>消融实验分析</h3>
+    <p>论文通过控制变量实验验证了三类记忆各自的贡献：</p>
+    <table>
+      <tr>
+        <th>实验设置</th>
+        <th>主要发现</th>
+        <th>验证维度</th>
+      </tr>
+      <tr>
+        <td>有/无用户画像记忆</td>
+        <td>用户画像记忆显著提升 Round-0 人格对齐得分，Specificity 维度提升最为明显</td>
+        <td>个性化对齐</td>
+      </tr>
+      <tr>
+        <td>有/无工具记忆注入</td>
+        <td>工具记忆注入在诊断性匹配对比实验中显著改善闭环修改行为，减少无效工具调用</td>
+        <td>局部修订可靠性</td>
+      </tr>
+      <tr>
+        <td>有/无工作记忆（多轮）</td>
+        <td>工作记忆成功实现跨轮次偏好延续，定性案例展示约束不丢失</td>
+        <td>多轮修订连贯性</td>
+      </tr>
+    </table>
+
+    <h3>关键实验结论</h3>
+    <ul>
+      <li><strong>GLM-5 + MemSlides 组合表现最优：</strong>在四个个性化维度上均超过 9 分（满分10分），相比 DeepPresenter + GLM-5 提升约 20-60%，相比 SlideTailor + GLM-5 提升约 100%+。</li>
+      <li><strong>记忆框架对模型骨干有放大效应：</strong>MemSlides 在 GLM-5 上的提升幅度远大于在 GPT-5 上，说明记忆框架能够帮助能力较强的模型更好地利用结构化偏好信息。</li>
+      <li><strong>局部修订策略减少漂移：</strong>作用域局部修订相比全局重生成，在保持已对齐内容不变的同时，成功完成目标区域的修改，内容漂移现象显著减少。</li>
+    </ul>
+
+    <!-- 总结与启发 -->
+    <h2>总结与启发</h2>
+    <p>MemSlides 在方法论和工程实践两个层面都提供了有价值的参考，以下从研究贡献和实践启发两个角度进行总结。</p>
+
+    <h3>研究贡献总结</h3>
+    <table>
+      <tr>
+        <th>贡献维度</th>
+        <th>具体内容</th>
+        <th>意义</th>
+      </tr>
+      <tr>
+        <td>记忆分层设计</td>
+        <td>将长期记忆（用户画像 + 工具经验）与工作记忆（会话约束）显式分离</td>
+        <td>为个性化智能体提供了清晰的记忆架构范式</td>
+      </tr>
+      <tr>
+        <td>意图感知路由</td>
+        <td>用户画像按意图维度组织，任务启动时按意图路由相关偏好</td>
+        <td>解决了"同一用户不同场景需求不同"的细粒度个性化问题</td>
+      </tr>
+      <tr>
+        <td>局部修订策略</td>
+        <td>Scoped Slide-Local Revision：读写均限定在最小受影响区域</td>
+        <td>从根本上消除多轮修订中的内容漂移问题</td>
+      </tr>
+      <tr>
+        <td>评估基准</td>
+        <td>多画像多意图用户画像库 + 四维度个性化评估指标</td>
+        <td>填补了个性化幻灯片生成领域的评估基准空白</td>
+      </tr>
+    </table>
+
+    <h3>对智能体系统设计的启发</h3>
+
+    <blockquote>
+      <strong>启发1 — 记忆分层是个性化智能体的基础设施：</strong>MemSlides 的实践表明，将"用户是谁"（用户画像记忆）、"这次会话发生了什么"（工作记忆）、"如何可靠执行"（工具记忆）三类信息分开管理，比混入一个对话缓冲区效果好得多。这一设计原则可推广到任何需要个性化的智能体系统。
+    </blockquote>
+
+    <blockquote>
+      <strong>启发2 — 工具记忆是降低 LLM 工具调用错误率的有效手段：</strong>工具记忆的本质是"经验重放"——将历史成功案例结构化存储并在新任务中检索复用。这对于任何依赖复杂工具调用链的 Agent 系统都有借鉴价值，类似于 few-shot 但更系统化、更动态。
+    </blockquote>
+
+    <blockquote>
+      <strong>启发3 — 局部作用域编辑是多轮 Agent 交互的通用原则：</strong>每次修订只读取和写入最小必要的上下文，不仅降低了 LLM 的认知负担，也从架构上保证了已对齐内容的稳定性。这一"最小作用域"原则对代码编辑、文档修改等类似场景同样适用。
+    </blockquote>
+
+    <blockquote>
+      <strong>启发4 — 意图感知的偏好路由值得关注：</strong>将用户偏好按意图维度组织（而非简单地按用户 ID 聚合），使系统能够处理"同一用户在不同场景下有不同期望"的真实情况。这对构建更精细的个性化推荐和生成系统有参考价值。
+    </blockquote>
+
+    <h3>局限性与未来方向</h3>
+    <ul>
+      <li><strong>记忆更新策略：</strong>论文未详细讨论当用户偏好发生变化时，用户画像记忆如何动态更新（遗忘旧偏好、接纳新偏好），这是个性化记忆系统的核心难题。</li>
+      <li><strong>冷启动问题：</strong>新用户没有历史画像，系统如何快速建立初始偏好模型需要进一步研究。</li>
+      <li><strong>跨模态扩展：</strong>当前框架主要针对 HTML/CSS 幻灯片，扩展到 PowerPoint、PDF 等格式的局部编辑需要适配不同的文档表示。</li>
+      <li><strong>实时偏好学习：</strong>从用户的修订行为中自动学习和更新偏好（而非依赖显式反馈）是下一步值得探索的方向。</li>
+    </ul>
+
+    <hr>
+
+    <!-- 参考文献 -->
+    <h2>参考文献</h2>
+    <ul>
+      <li>[1] Ye Jin, Yangyang Xu, Jun Zhu, Yibo Yang. <em>MemSlides: A Hierarchical Memory Driven Agent Framework for Personalized Slide Generation with Multi-turn Local Revision</em>. arXiv:2606.17162, 2026. <a href="https://arxiv.org/abs/2606.17162" target="_blank">arxiv.org/abs/2606.17162</a></li>
+      <li>[2] Park, J. S., et al. <em>Generative Agents: Interactive Simulacra of Human Behavior</em>. UIST 2023.</li>
+      <li>[3] Packer, C., et al. <em>MemGPT: Towards LLMs as Operating Systems</em>. arXiv:2310.08560, 2023.</li>
+      <li>[4] PPTAgent / DeepPresenter — 幻灯片生成领域基线系统（论文中引用的相关工作）。</li>
+      <li>[5] SlideTailor — 个性化幻灯片生成基线系统（论文中引用的相关工作）。</li>
+      <li>[6] Sarthi, P., et al. <em>RAPTOR: Recursive Abstractive Processing for Tree-Organized Retrieval</em>. ICLR 2024.</li>
+      <li>[7] Yu, H., et al. <em>MemAgent: Reshaping Long-Context LLM with Multi-Conv RL-based Memory Agent</em>. ICLR 2026.</li>
+    </ul>
+
+  </main>
+  <script>
+    mermaid.initialize({startOnLoad:true,theme:'dark'});
+    const toc=document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h,i)=>{
+      if(!h.id)h.id='s'+i;
+      const a=document.createElement('a');
+      a.href='#'+h.id; a.textContent=h.textContent;
+      if(h.tagName==='H3')a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const obs=new IntersectionObserver(es=>es.forEach(e=>{
+      const l=toc.querySelector(`a[href="#${e.target.id}"]`);
+      if(l)l.classList.toggle('active',e.isIntersecting);
+    }),{rootMargin:'-10% 0px -80% 0px'});
+    document.querySelectorAll('main h2, main h3').forEach(h=>obs.observe(h));
+  </script>
+</body>
+</html>

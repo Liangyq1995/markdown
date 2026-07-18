@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRB: Trust-Region Behavior Blending for On-Policy Distillation — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    .badge { display: inline-block; background: #313244; border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.82em; margin-right: 6px; }
+    .highlight-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .highlight-box.key { border-left: 4px solid var(--heading); }
+    .highlight-box.warn { border-left: 4px solid var(--quote-bar); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ===== 1. 标题 + 论文信息表格 ===== -->
+    <h1>Trust-Region Behavior Blending for On-Policy Distillation</h1>
+    <p>
+      <span class="badge">arXiv: 2605.31159</span>
+      <span class="badge">cs.LG / cs.AI</span>
+      <span class="badge">2026-05-29</span>
+      <span class="badge">Upvotes: 64</span>
+    </p>
+
+    <table style="margin-top:1.2em">
+      <thead>
+        <tr><th>字段</th><th>内容</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>论文标题</td><td>Trust-Region Behavior Blending for On-Policy Distillation</td></tr>
+        <tr><td>arXiv ID</td><td><a href="https://arxiv.org/abs/2605.31159" target="_blank">2605.31159</a></td></tr>
+        <tr><td>作者</td><td>Daniil Plyusov, Alexey Gorbatovski, Alexey Malakhov, Nikita Balagansky, Boris Shaposhnikov, Daria Korotyshova, Daniil Gavrilov</td></tr>
+        <tr><td>机构</td><td>T-Tech (Tinkoff)</td></tr>
+        <tr><td>提交日期</td><td>2026 年 5 月 29 日</td></tr>
+        <tr><td>社区热度</td><td>Upvotes: 64</td></tr>
+        <tr><td>核心方法</td><td>TRB (Trust-Region Behavior Blending)</td></tr>
+        <tr><td>任务类型</td><td>大语言模型在策略知识蒸馏（On-Policy Distillation）</td></tr>
+        <tr><td>评测基准</td><td>MATH500, GSM8K, OlympiadBench, AMC, AIME24, AIME25</td></tr>
+        <tr><td>学生/教师模型</td><td>Qwen3-1.7B ← Qwen3-8B；Qwen3-0.6B ← Qwen3-4B</td></tr>
+        <tr><td>训练硬件</td><td>8× NVIDIA H100 GPU，FSDP2 + verl + SGLang</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 2. 概述 ===== -->
+    <h2>概述</h2>
+    <p>
+      本文研究<strong>大语言模型（LLM）在策略知识蒸馏（On-Policy Distillation, OPD）</strong>中的核心难题：
+      训练早期学生模型生成的 rollout 质量极差，导致教师信号被浪费在低质量前缀上，从而拖慢乃至破坏蒸馏收敛。
+      论文提出 <strong>TRB（Trust-Region Behavior Blending）</strong>——一种 warmup 阶段的行为策略替换方案，
+      在以学生为中心的 KL 置信域约束下，用"最接近教师"的混合策略替代早期 rollout，
+      并通过 KL 预算退火平滑地过渡回纯学生 rollout，全程保持 OPD 的逐前缀反向 KL 损失不变。
+      在两组数学推理蒸馏设置（Qwen3-1.7B←8B、Qwen3-0.6B←4B）上，TRB 在所有对比方法中取得最高平均分。
+    </p>
+    <div class="highlight-box key">
+      <strong>一句话总结：</strong>TRB 通过在置信域内用"最优混合策略"替换早期劣质 rollout，
+      在不改变 OPD 损失结构的前提下，解决了在策略蒸馏的冷启动问题。
+    </div>
+
+    <!-- ===== 3. 研究背景 ===== -->
+    <h2>研究背景</h2>
+    <p>
+      知识蒸馏（Knowledge Distillation, KD）是将大型教师模型的能力迁移到小型学生模型的重要技术。
+      在 LLM 时代，蒸馏目标通常是让学生模型的 token 分布逼近教师模型。
+      根据训练数据来源，蒸馏方法可分为两大范式：
+    </p>
+
+    <h3>离策略蒸馏（Off-Policy Distillation）</h3>
+    <p>
+      离策略蒸馏使用<strong>固定的静态数据集</strong>（通常由教师模型或人工标注生成）作为训练前缀。
+      代表方法包括 MiniLLM（Gu et al., 2023）、SKD 等。
+      其优势在于数据稳定、训练高效；但存在严重的<strong>前缀分布偏移（prefix mismatch）</strong>问题：
+      学生模型在推理时使用自身生成的前缀，而训练时却在教师/人工前缀上对齐，
+      导致学生在自身分布上的行为缺乏约束，出现"分布外泛化失败"。
+    </p>
+
+    <h3>在策略蒸馏（On-Policy Distillation, OPD）</h3>
+    <p>
+      在策略蒸馏让学生模型<strong>自己生成前缀</strong>，再在这些前缀上与教师对齐，
+      从根本上消除了前缀分布偏移。理论上，这使学生在自身实际遇到的分布上得到监督，
+      学习效率更高。然而，OPD 引入了新的挑战：
+    </p>
+    <div class="highlight-box warn">
+      <strong>核心矛盾：</strong>训练初期学生模型能力极弱，其生成的 rollout 质量极差（随机、重复、无意义）。
+      教师模型在这些低质量前缀上提供的 next-token 分布，并不能有效指导学生在"有意义的推理路径"上的行为。
+      这相当于在错误的"学习场景"下给出正确答案——监督信号被浪费了。
+    </div>
+
+    <h3>两种范式对比</h3>
+    <table>
+      <thead>
+        <tr><th>维度</th><th>离策略蒸馏</th><th>在策略蒸馏（OPD）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>训练前缀来源</td><td>固定数据集（教师/人工）</td><td>学生自身 rollout</td></tr>
+        <tr><td>前缀分布偏移</td><td>严重（训练≠推理分布）</td><td>无（训练=推理分布）</td></tr>
+        <tr><td>早期训练质量</td><td>前缀质量好，监督有效</td><td>前缀质量差，监督低效</td></tr>
+        <tr><td>长期收敛</td><td>受限于分布偏移</td><td>理论上更优</td></tr>
+        <tr><td>计算开销</td><td>低（无需在线生成）</td><td>高（需在线 rollout）</td></tr>
+        <tr><td>代表方法</td><td>MiniLLM, SKD</td><td>OPD, VETO, TIP</td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      TRB 正是针对 OPD 的冷启动问题提出的 warmup 方案。
+      它不改变 OPD 的损失函数和长期目标，仅在训练早期用更高质量的行为策略替代劣质 rollout，
+      为后续的纯在策略训练奠定更好的基础。
+    </p>
+
+    <!-- ===== 4. OPD 的挑战 ===== -->
+    <h2>On-Policy Distillation 的挑战</h2>
+    <p>
+      在深入理解 TRB 之前，需要精确分析 OPD 的损失函数结构，以及早期 rollout 质量问题在数学上的体现。
+    </p>
+
+    <h3>OPD 的损失函数</h3>
+    <p>
+      OPD 的核心目标是最小化学生策略 $\pi_\theta$ 与教师策略 $\pi_T$ 在学生生成的前缀分布下的 KL 散度。
+      对于给定的提示 $x$ 和学生生成的前缀（历史）$h_t = (x, a_1, \ldots, a_{t-1})$，
+      OPD 的逐前缀反向 KL 损失为：
+    </p>
+    <p>$$\mathcal{L}_{\text{OPD}}(\theta) = \mathbb{E}_{h \sim \pi_\theta} \left[ D_{KL}\!\left(\pi_T(\cdot|h) \,\|\, \pi_\theta(\cdot|h)\right) \right]$$</p>
+    <p>
+      其中期望是在学生自身生成的轨迹前缀 $h$ 上取的。
+      注意这里是<strong>正向 KL</strong>（教师对学生）：鼓励学生在教师有概率的地方也有概率，
+      避免模式崩塌（mode-covering 性质）。
+    </p>
+
+    <h3>前缀分布偏移的数学影响</h3>
+    <p>
+      设 $\rho_\theta$ 为学生策略诱导的前缀分布，$\rho_{\text{ref}}$ 为参考（离策略）前缀分布。
+      当 $\rho_\theta$ 与 $\rho_{\text{ref}}$ 差异很大时，离策略方法在 $\rho_{\text{ref}}$ 上最小化的损失
+      并不能保证在 $\rho_\theta$ 上也最小。具体而言，设离策略方法优化：
+    </p>
+    <p>$$\hat{\mathcal{L}}_{\text{off}}(\theta) = \mathbb{E}_{h \sim \rho_{\text{ref}}} \left[ D_{KL}\!\left(\pi_T(\cdot|h) \,\|\, \pi_\theta(\cdot|h)\right) \right]$$</p>
+    <p>
+      而真正关心的目标是 $\mathcal{L}_{\text{OPD}}(\theta)$（在 $\rho_\theta$ 上的期望）。
+      两者之差为：
+    </p>
+    <p>$$\mathcal{L}_{\text{OPD}}(\theta) - \hat{\mathcal{L}}_{\text{off}}(\theta) = \mathbb{E}_{h}\left[\left(\frac{\rho_\theta(h)}{\rho_{\text{ref}}(h)} - 1\right) D_{KL}\!\left(\pi_T \,\|\, \pi_\theta\right)(h)\right]$$</p>
+    <p>
+      当学生分布 $\rho_\theta$ 偏离参考分布时，重要性权重 $\rho_\theta / \rho_{\text{ref}}$ 的方差急剧增大，
+      导致梯度估计噪声极高，训练不稳定。
+    </p>
+
+    <h3>早期 rollout 质量问题的本质</h3>
+    <p>
+      OPD 虽然从理论上消除了分布偏移，但引入了另一个问题：
+      在训练初期，$\pi_\theta$ 几乎是随机的，其生成的前缀 $h$ 覆盖的是"无意义的随机序列空间"。
+      此时教师给出的条件分布 $\pi_T(\cdot|h)$ 虽然局部正确，
+      但这些前缀 $h$ 在推理时几乎不会出现，因此这部分监督信号对提升学生的实际推理能力帮助有限。
+    </p>
+    <div class="highlight-box warn">
+      <strong>类比理解：</strong>就像让一个刚学写字的学生先随机涂鸦，再在涂鸦的基础上学习如何写下一笔——
+      即使老师的指导是正确的，但"在涂鸦上学写字"与"在正确笔画上学写字"的效果截然不同。
+      OPD 的冷启动问题本质上是：<em>早期的监督场景（低质量前缀）与最终目标场景（高质量推理链）严重脱节。</em>
+    </div>
+    <p>
+      此外，早期劣质 rollout 还会导致：
+    </p>
+    <ul>
+      <li><strong>奖励稀疏</strong>：数学推理任务中，随机生成的序列几乎不会得到正确答案，reward 信号极为稀疏。</li>
+      <li><strong>梯度方差大</strong>：KL 损失在低概率区域的梯度数值不稳定。</li>
+      <li><strong>收敛缓慢</strong>：学生需要先"自举"到一定质量水平，才能有效利用教师监督。</li>
+    </ul>
+
+    <!-- ===== 5. TRB 核心方法 ===== -->
+    <h2>TRB 核心方法</h2>
+    <p>
+      TRB 的核心思想是：在 warmup 阶段，不直接使用学生策略 $\pi_\theta$ 生成 rollout，
+      而是使用一个<strong>行为策略（behavior policy）</strong> $\mu$，
+      该策略在以学生为中心的 KL 置信域内尽可能地接近教师。
+      这样既保证了 rollout 质量（接近教师），又不会让行为策略偏离学生太远（置信域约束），
+      确保 OPD 损失的梯度估计仍然有效。
+    </p>
+
+    <h3>KL 置信域的定义</h3>
+    <p>
+      对于给定前缀 $h$，TRB 定义以学生策略为中心、半径为 $\delta$ 的 KL 置信域：
+    </p>
+    <p>$$\mathcal{B}_\delta(\pi_\theta | h) = \left\{ \mu \in \Delta(\mathcal{A}) : D_{KL}\!\left(\mu(\cdot|h) \,\|\, \pi_\theta(\cdot|h)\right) \leq \delta \right\}$$</p>
+    <p>
+      其中 $\Delta(\mathcal{A})$ 是动作空间（词表）上的概率单纯形，$\delta \gt 0$ 是 KL 预算（budget）。
+      约束方向为 $D_{KL}(\mu \| \pi_\theta)$（行为策略对学生的 KL），
+      而非 $D_{KL}(\pi_\theta \| \mu)$，这是有意为之：
+      此方向的约束保证了 $\mu$ 在 $\pi_\theta$ 有概率的地方也有概率，
+      避免行为策略在学生"从未探索"的区域生成 rollout。
+    </p>
+
+    <h3>行为策略的选择</h3>
+    <p>
+      在置信域 $\mathcal{B}_\delta(\pi_\theta | h)$ 内，TRB 选择<strong>最接近教师策略</strong>的分布：
+    </p>
+    <p>$$\mu^*(\cdot|h) = \arg\min_{\mu \,:\, D_{KL}(\mu(\cdot|h) \,\|\, \pi_\theta(\cdot|h)) \,\leq\, \delta} D_{KL}\!\left(\mu(\cdot|h) \,\|\, \pi_T(\cdot|h)\right)$$</p>
+    <p>
+      这是一个带 KL 约束的 KL 最小化问题。利用 Lagrangian 方法，最优解具有闭合形式：
+    </p>
+    <p>$$\mu_\beta(a|h) = \frac{\pi_\theta(a|h)^{1-\beta} \cdot \pi_T(a|h)^\beta}{Z_\beta(h)}$$</p>
+    <p>
+      其中 $Z_\beta(h) = \sum_{a} \pi_\theta(a|h)^{1-\beta} \pi_T(a|h)^\beta$ 是归一化常数，
+      $\beta \in [0, 1]$ 是 Lagrange 乘子。
+      当 $\beta = 0$ 时 $\mu_\beta = \pi_\theta$（纯学生策略）；
+      当 $\beta = 1$ 时 $\mu_\beta = \pi_T$（纯教师策略）。
+      最优 $\beta^*(h)$ 是使约束恰好饱和（$D_{KL}(\mu_\beta \| \pi_\theta) = \delta$）的最大值，
+      通过二分搜索（bisection）逐前缀求解。
+    </p>
+
+    <h3>单调性保证（二分搜索的合法性）</h3>
+    <p>
+      二分搜索要求 $D_{KL}(\mu_\beta \| \pi_\theta)$ 关于 $\beta$ 单调。论文证明：
+    </p>
+    <p>$$\frac{d}{d\beta} D_{KL}(\mu_\beta \,\|\, \pi_\theta) = \beta \cdot \mathrm{Var}_{a \sim \mu_\beta}\!\left[\log \frac{\pi_T(a|h)}{\pi_\theta(a|h)}\right] \geq 0$$</p>
+    <p>
+      即 $D_{KL}(\mu_\beta \| \pi_\theta)$ 关于 $\beta$ 单调不减，因此二分搜索合法且收敛。
+      直观理解：$\beta$ 越大，行为策略越偏向教师，与学生的差异越大。
+    </p>
+
+    <h3>小预算效率（Small-Budget Efficiency）</h3>
+    <p>
+      TRB 的一个重要理论性质是<strong>小预算下的效率优势</strong>。
+      设 $\sigma_p^2 = \mathrm{Var}_{a \sim \pi_\theta}[\log(\pi_T / \pi_\theta)]$ 为对数似然比的方差，
+      则在小预算 $\delta \to 0$ 时：
+    </p>
+    <ul>
+      <li>教师 KL 的降低量（相对于纯学生策略）约为 $\sqrt{2\delta \sigma_p^2}$，即 $O(\sqrt{\delta})$；</li>
+      <li>置信域代价（行为策略与学生的 KL）恰好为 $\delta$，即 $O(\delta)$。</li>
+    </ul>
+    <p>
+      这意味着即使 KL 预算很小，行为策略也能以"超线性"的效率接近教师，
+      而对学生分布的偏离代价仅是线性的。这在理论上支持了 TRB 使用小预算的有效性。
+    </p>
+
+    <h3>序列级置信域控制</h3>
+    <p>
+      上述分析是 token 级别的。论文进一步证明，序列级别的 KL 散度满足：
+    </p>
+    <p>$$D_{KL}(P_\mu \,\|\, P_{\pi_\theta}) = \sum_{t=1}^{T} \mathbb{E}_{h_t \sim P_\mu}\!\left[\Delta_t(h_t)\right] \leq T \cdot \delta$$</p>
+    <p>
+      其中 $P_\mu, P_{\pi_\theta}$ 分别是行为策略和学生策略诱导的完整序列分布，
+      $T$ 是序列长度，$\Delta_t(h_t) = D_{KL}(\mu(\cdot|h_t) \| \pi_\theta(\cdot|h_t))$。
+      这表明序列级的偏离上界由 token 级预算 $\delta$ 线性控制，
+      为 warmup 阶段的分布偏离提供了可控的理论保证。
+    </p>
+
+    <!-- ===== 6. KL 预算退火 ===== -->
+    <h2>KL 预算退火</h2>
+    <p>
+      TRB 的关键设计之一是 KL 预算的退火机制。
+      warmup 阶段开始时使用较大的预算 $\delta_0$（允许行为策略更接近教师），
+      随着训练步数增加，预算线性衰减至 0，届时行为策略退化为纯学生策略，
+      完全过渡到标准 OPD 训练。
+    </p>
+    <p>退火公式为：</p>
+    <p>$$\delta_k = \delta_0 \cdot \left(1 - \frac{k}{K}\right), \quad k = 0, 1, \ldots, K$$</p>
+    <p>
+      其中 $k$ 为当前训练步，$K$ 为 warmup 总步数（超参数），$\delta_0$ 为初始 KL 预算（超参数）。
+      当 $k \gt K$ 时，$\delta_k = 0$，行为策略 $\mu_\beta = \pi_\theta$，恢复标准 OPD。
+    </p>
+    <p>
+      超参数搜索范围：$\delta_0 \in \{0.001, 0.005, 0.01, 0.02, 0.05\}$，
+      $K \in \{15, 25, 50\}$ 步，每 20 步评估一次，取平均基准分最高的检查点。
+    </p>
+
+    <div id="chart-annealing" class="echarts-container" style="height:280px"></div>
+    <script>
+    (function() {
+      var steps = [];
+      var delta0 = 0.05;
+      var K = 50;
+      var budgets005 = [], budgets001 = [], budgets0001 = [];
+      for (var k = 0; k <= 60; k++) {
+        steps.push(k);
+        budgets005.push(k <= K ? +(delta0 * (1 - k/K)).toFixed(4) : 0);
+        budgets001.push(k <= K ? +(0.01 * (1 - k/K)).toFixed(4) : 0);
+        budgets0001.push(k <= K ? +(0.001 * (1 - k/K)).toFixed(4) : 0);
+      }
+      var chart = echarts.init(document.getElementById('chart-annealing'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'KL 预算退火曲线（线性退火，K=50）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 8 },
+        legend: { data: ['δ₀=0.05', 'δ₀=0.01', 'δ₀=0.001'], textStyle: { color: '#cdd6f4' }, top: 36 },
+        grid: { top: 70, bottom: 40, left: 60, right: 30 },
+        xAxis: { type: 'category', data: steps, name: '训练步数 k', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', name: 'δ_k', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+        tooltip: { trigger: 'axis', backgroundColor: '#313244', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+        series: [
+          { name: 'δ₀=0.05', type: 'line', data: budgets005, smooth: false, lineStyle: { color: '#89b4fa', width: 2 }, symbol: 'none', areaStyle: { color: 'rgba(137,180,250,0.08)' } },
+          { name: 'δ₀=0.01', type: 'line', data: budgets001, smooth: false, lineStyle: { color: '#a6e3a1', width: 2 }, symbol: 'none', areaStyle: { color: 'rgba(166,227,161,0.08)' } },
+          { name: 'δ₀=0.001', type: 'line', data: budgets0001, smooth: false, lineStyle: { color: '#fab387', width: 2 }, symbol: 'none', areaStyle: { color: 'rgba(250,179,135,0.08)' } }
+        ]
+      });
+    })();
+    </script>
+
+    <p>
+      退火机制的设计哲学是：<strong>渐进式自举（progressive bootstrapping）</strong>。
+      训练初期，学生模型尚未建立有效的推理能力，此时允许较大的置信域，
+      让行为策略更多地借助教师的力量生成高质量前缀；
+      随着学生能力提升，逐渐收紧置信域，最终完全依赖学生自身的 rollout。
+      这与课程学习（curriculum learning）的思想一脉相承：从易到难，循序渐进。
+    </p>
+    <div class="highlight-box key">
+      <strong>为什么用线性退火而非其他形式？</strong>
+      线性退火简单、可解释，且超参数少（仅 $\delta_0$ 和 $K$）。
+      指数退火会导致初期退火过慢、后期过快；余弦退火则在边界附近变化率接近零，
+      可能导致过渡不够平滑。论文选择线性退火作为默认方案，实验表明其效果已足够优秀。
+    </div>
+
+    <!-- ===== 7. 与 OPD 的对比 ===== -->
+    <h2>与 OPD 的对比</h2>
+    <p>
+      TRB 是 OPD 的一个 warmup 扩展，而非替代方案。
+      两者在损失函数上完全一致，唯一的区别在于 warmup 阶段的 rollout 生成策略。
+      下面通过流程图展示两者的训练流程对比。
+    </p>
+
+    <pre class="mermaid">
+flowchart TD
+    subgraph OPD["标准 OPD 训练流程"]
+        O1([开始训练]) --> O2[用学生策略 π_θ 生成 rollout]
+        O2 --> O3[计算逐前缀反向 KL 损失]
+        O3 --> O4[梯度更新 θ]
+        O4 --> O5{收敛?}
+        O5 -- 否 --> O2
+        O5 -- 是 --> O6([结束])
+    end
+
+    subgraph TRB_flow["TRB Warmup + OPD 训练流程"]
+        T1([开始训练]) --> T2{k ≤ K?}
+        T2 -- 是 Warmup阶段 --> T3[计算当前预算 δ_k = δ₀·1-k/K]
+        T3 --> T4[对每个前缀 h 求解行为策略 μ*]
+        T4 --> T5["μ_β = π_θ^(1-β) · π_T^β / Z_β"]
+        T5 --> T6[用 μ* 生成 rollout]
+        T6 --> T7[计算逐前缀反向 KL 损失]
+        T7 --> T8[梯度更新 θ]
+        T8 --> T9[k = k+1]
+        T9 --> T2
+        T2 -- 否 纯OPD阶段 --> T10[用学生策略 π_θ 生成 rollout]
+        T10 --> T11[计算逐前缀反向 KL 损失]
+        T11 --> T12[梯度更新 θ]
+        T12 --> T13{收敛?}
+        T13 -- 否 --> T10
+        T13 -- 是 --> T14([结束])
+    end
+    </pre>
+
+    <p>
+      从流程图可以看出，TRB 相比标准 OPD 的主要变化在于 warmup 阶段：
+    </p>
+    <ul>
+      <li><strong>rollout 生成策略不同</strong>：OPD 始终用 $\pi_\theta$，TRB warmup 阶段用 $\mu^*$；</li>
+      <li><strong>损失函数相同</strong>：两者都使用逐前缀反向 KL OPD 损失，梯度更新方式一致；</li>
+      <li><strong>TRB 需要额外计算</strong>：每步需要对每个前缀运行二分搜索求 $\beta^*$，
+        以及在 warmup 期间需要教师模型在线解码（增加峰值显存）；</li>
+      <li><strong>warmup 结束后完全等价</strong>：$k \gt K$ 后 TRB 退化为标准 OPD，无额外开销。</li>
+    </ul>
+
+    <h3>与其他 Warmup 基线的对比</h3>
+    <table>
+      <thead>
+        <tr><th>方法</th><th>核心思路</th><th>是否改变损失</th><th>rollout 来源</th><th>主要缺陷</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>TRB（本文）</strong></td><td>置信域内最近教师混合策略</td><td>否</td><td>混合策略 μ*</td><td>需在线教师解码，显存增加</td></tr>
+        <tr><td>Vanilla OPD</td><td>纯学生 rollout</td><td>否</td><td>学生 π_θ</td><td>早期 rollout 质量差</td></tr>
+        <tr><td>SFT Warmup</td><td>先做有监督微调再切换 OPD</td><td>是（先 SFT 后 OPD）</td><td>教师数据</td><td>两阶段切换，可能遗忘</td></tr>
+        <tr><td>Temperature Warmup</td><td>早期降低采样温度</td><td>否</td><td>低温学生 π_θ</td><td>仍是学生分布，质量提升有限</td></tr>
+        <tr><td>SKD</td><td>交替注入教师 token</td><td>否</td><td>混合（学生+教师）</td><td>混合比例固定，不够自适应</td></tr>
+        <tr><td>VETO</td><td>自适应目标重构</td><td>是（修改目标分布）</td><td>学生 π_θ</td><td>改变了损失语义</td></tr>
+        <tr><td>Fixed-ε Blending</td><td>固定预算混合，无退火</td><td>否</td><td>固定混合 μ_β</td><td>无法过渡到纯 OPD</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 8. 实验结果 ===== -->
+    <h2>实验结果</h2>
+    <p>
+      论文在两组数学推理蒸馏设置上评估 TRB：
+      （1）Qwen3-1.7B-Base ← Qwen3-8B；（2）Qwen3-0.6B-Base ← Qwen3-4B。
+      训练数据使用 OpenThoughts3-1.2M 中的 25,600 条提示，奖励通过 math-verify 验证（正确 1.0，错误 0.0）。
+      评测基准包括 MATH500、GSM8K、OlympiadBench、AMC、AIME24、AIME25。
+    </p>
+
+    <h3>实验一：Qwen3-1.7B ← Qwen3-8B</h3>
+    <table>
+      <thead>
+        <tr><th>方法</th><th>平均分</th><th>MATH500</th><th>OlympiadBench</th><th>AMC</th><th>AIME24</th><th>AIME25</th></tr>
+      </thead>
+      <tbody>
+        <tr style="background:#2a2a3e;font-weight:600"><td>TRB（本文）</td><td>33.2</td><td>69.7</td><td>34.3</td><td>44.8</td><td>10.2</td><td>6.9</td></tr>
+        <tr><td>Temperature Warmup</td><td>32.8</td><td>69.2</td><td>34.1</td><td>44.2</td><td>9.9</td><td>6.6</td></tr>
+        <tr><td>SKD</td><td>32.7</td><td>69.4</td><td>33.8</td><td>44.2</td><td>9.8</td><td>6.6</td></tr>
+        <tr><td>VETO</td><td>32.6</td><td>69.4</td><td>34.0</td><td>43.1</td><td>9.3</td><td>7.3</td></tr>
+        <tr><td>Fixed-ε Blending</td><td>32.6</td><td>69.2</td><td>33.7</td><td>43.7</td><td>10.3</td><td>6.2</td></tr>
+        <tr><td>Vanilla OPD</td><td>32.3</td><td>69.1</td><td>33.7</td><td>43.0</td><td>8.8</td><td>7.1</td></tr>
+        <tr><td>SFT Warmup</td><td>32.2</td><td>67.6</td><td>34.0</td><td>42.4</td><td>9.6</td><td>7.1</td></tr>
+      </tbody>
+    </table>
+
+    <h3>实验二：Qwen3-0.6B ← Qwen3-4B</h3>
+    <table>
+      <thead>
+        <tr><th>方法</th><th>平均分</th><th>GSM8K</th><th>MATH500</th><th>OlympiadBench</th><th>AMC</th></tr>
+      </thead>
+      <tbody>
+        <tr style="background:#2a2a3e;font-weight:600"><td>TRB（本文）</td><td>44.4</td><td>70.1</td><td>53.6</td><td>22.3</td><td>31.6</td></tr>
+        <tr><td>SKD</td><td>44.2</td><td>70.1</td><td>52.8</td><td>22.2</td><td>31.5</td></tr>
+        <tr><td>Vanilla OPD</td><td>44.0</td><td>69.9</td><td>53.1</td><td>21.8</td><td>31.1</td></tr>
+        <tr><td>Temperature Warmup</td><td>44.0</td><td>69.1</td><td>53.1</td><td>21.8</td><td>32.1</td></tr>
+        <tr><td>Fixed-ε Blending</td><td>43.8</td><td>69.8</td><td>52.7</td><td>21.5</td><td>31.1</td></tr>
+        <tr><td>VETO</td><td>43.7</td><td>68.9</td><td>52.4</td><td>21.2</td><td>32.3</td></tr>
+        <tr><td>SFT Warmup</td><td>43.4</td><td>69.3</td><td>52.3</td><td>21.6</td><td>30.4</td></tr>
+      </tbody>
+    </table>
+
+    <div id="chart-results" class="echarts-container" style="height:320px"></div>
+    <script>
+    (function() {
+      var methods = ['TRB', 'Temp\nWarmup', 'SKD', 'VETO', 'Fixed-ε', 'Vanilla\nOPD', 'SFT\nWarmup'];
+      var avg17b = [33.2, 32.8, 32.7, 32.6, 32.6, 32.3, 32.2];
+      var avg06b = [44.4, 44.0, 44.2, 43.7, 43.8, 44.0, 43.4];
+      var chart = echarts.init(document.getElementById('chart-results'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '各方法平均分对比（两组蒸馏设置）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 8 },
+        legend: { data: ['Qwen3-1.7B←8B（平均分）', 'Qwen3-0.6B←4B（平均分）'], textStyle: { color: '#cdd6f4' }, top: 36 },
+        grid: { top: 72, bottom: 50, left: 60, right: 30 },
+        xAxis: { type: 'category', data: methods, axisLabel: { color: '#cdd6f4', interval: 0 }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: [
+          { type: 'value', name: '1.7B←8B\n平均分', min: 31.8, max: 33.6, nameTextStyle: { color: '#89b4fa', fontSize: 11 }, axisLabel: { color: '#89b4fa' }, axisLine: { lineStyle: { color: '#89b4fa' } }, splitLine: { lineStyle: { color: '#313244' } } },
+          { type: 'value', name: '0.6B←4B\n平均分', min: 43.0, max: 44.8, nameTextStyle: { color: '#a6e3a1', fontSize: 11 }, axisLabel: { color: '#a6e3a1' }, axisLine: { lineStyle: { color: '#a6e3a1' } }, splitLine: { show: false } }
+        ],
+        tooltip: { trigger: 'axis', backgroundColor: '#313244', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+        series: [
+          {
+            name: 'Qwen3-1.7B←8B（平均分）', type: 'bar', yAxisIndex: 0, data: avg17b,
+            itemStyle: { color: function(params) { return params.dataIndex === 0 ? '#89b4fa' : '#45475a'; } },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11, formatter: '{c}' }
+          },
+          {
+            name: 'Qwen3-0.6B←4B（平均分）', type: 'bar', yAxisIndex: 1, data: avg06b,
+            itemStyle: { color: function(params) { return params.dataIndex === 0 ? '#a6e3a1' : '#6c7086'; } },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11, formatter: '{c}' }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <p>
+      从结果可以看出：
+    </p>
+    <ul>
+      <li>TRB 在两组设置中均取得<strong>最高平均分</strong>（33.2 和 44.4），验证了方法的有效性；</li>
+      <li>提升幅度相对适中（相对 Vanilla OPD 分别提升 +0.9 和 +0.4 个百分点），
+        符合 warmup 方法的预期——解决冷启动问题，而非颠覆性改变；</li>
+      <li>SFT Warmup 的表现<strong>最差或次差</strong>，说明两阶段训练的范式切换存在遗忘问题；</li>
+      <li>Fixed-ε Blending（无退火版本）表现弱于 TRB，证明退火机制的必要性；</li>
+      <li>在较难的 AIME 任务上，各方法差距更大，说明 warmup 质量对困难推理任务影响更显著。</li>
+    </ul>
+
+    <!-- ===== 9. 消融分析 ===== -->
+    <h2>消融分析</h2>
+    <p>
+      论文对 TRB 的两个核心超参数——初始 KL 预算 $\delta_0$ 和 warmup 步数 $K$——进行了系统消融，
+      以理解置信域大小和退火速率对最终性能的影响。
+    </p>
+
+    <h3>初始 KL 预算 $\delta_0$ 的影响</h3>
+    <p>
+      $\delta_0$ 控制 warmup 初期行为策略与学生策略的最大偏离程度，
+      也决定了行为策略能够"借助"教师的程度。
+    </p>
+    <ul>
+      <li>
+        <strong>$\delta_0$ 过小</strong>（如 0.001）：置信域极窄，行为策略几乎等同于学生策略（$\beta^* \approx 0$），
+        warmup 效果微弱，退化为 Vanilla OPD。
+      </li>
+      <li>
+        <strong>$\delta_0$ 适中</strong>（如 0.01–0.02）：行为策略在学生和教师之间取得良好平衡，
+        rollout 质量显著提升，同时不偏离学生分布太远，梯度估计仍然有效。
+      </li>
+      <li>
+        <strong>$\delta_0$ 过大</strong>（如 0.05 以上）：行为策略过于接近教师，
+        rollout 分布与学生差异过大，OPD 损失的梯度估计出现较大偏差，
+        甚至可能引入类似"离策略"的问题。
+      </li>
+    </ul>
+    <p>
+      论文搜索范围 $\delta_0 \in \{0.001, 0.005, 0.01, 0.02, 0.05\}$，
+      最优值通常在 0.005–0.02 之间，具体取决于学生-教师模型的能力差距。
+    </p>
+
+    <h3>Warmup 步数 $K$ 的影响</h3>
+    <p>
+      $K$ 控制退火的持续时长，即学生模型在"辅助轮"下训练的步数。
+    </p>
+    <ul>
+      <li>
+        <strong>$K$ 过小</strong>（如 15 步）：warmup 期太短，学生尚未充分受益于高质量前缀，
+        过早切换到纯 OPD 可能导致训练不稳定。
+      </li>
+      <li>
+        <strong>$K$ 适中</strong>（如 25–50 步）：学生在 warmup 期间建立了基本的推理能力，
+        后续纯 OPD 阶段能够有效利用自身 rollout。
+      </li>
+      <li>
+        <strong>$K$ 过大</strong>（如 100 步以上）：warmup 期过长，
+        后期预算已接近 0 但仍未切换，计算开销增加但收益递减；
+        且过长的辅助训练可能使学生对教师产生"依赖"，削弱其自主探索能力。
+      </li>
+    </ul>
+    <p>
+      在 $K \in \{15, 25, 50\}$ 的搜索范围内，$K = 25$ 或 $K = 50$ 通常表现更好。
+    </p>
+
+    <h3>退火形式的影响</h3>
+    <p>
+      论文将 Fixed-ε Blending（固定预算，无退火）与 TRB（线性退火）对比，
+      结果表明退火是必要的：
+    </p>
+    <ul>
+      <li>Fixed-ε 在整个训练过程中保持行为策略偏向教师，
+        导致学生始终在"辅助"下训练，无法真正进入在策略自举模式；</li>
+      <li>线性退火确保了从辅助训练到自主训练的平滑过渡，
+        避免了突然切换带来的性能下降。</li>
+    </ul>
+
+    <h3>置信域方向的影响</h3>
+    <p>
+      TRB 使用 $D_{KL}(\mu \| \pi_\theta) \leq \delta$（行为策略对学生）而非 $D_{KL}(\pi_\theta \| \mu) \leq \delta$（学生对行为策略）。
+      这一方向选择至关重要：
+    </p>
+    <ul>
+      <li>
+        $D_{KL}(\mu \| \pi_\theta)$（前向 KL）：约束 $\mu$ 在 $\pi_\theta$ 有概率的地方也有概率，
+        即行为策略的支撑集包含在学生策略的支撑集内。
+        这保证了 rollout 中的每个 token 都在学生的"已知领域"，梯度估计有效。
+      </li>
+      <li>
+        $D_{KL}(\pi_\theta \| \mu)$（反向 KL）：约束 $\pi_\theta$ 不超出 $\mu$ 的支撑集，
+        但允许 $\mu$ 在学生零概率的地方有概率，可能生成学生从未见过的 token 序列，
+        导致重要性权重爆炸。
+      </li>
+    </ul>
+
+    <!-- ===== 10. 总结与启发 ===== -->
+    <h2>总结与启发</h2>
+    <p>
+      TRB 是一个在理论严谨性和工程实用性之间取得良好平衡的工作。
+      它以优化理论为基础，给出了行为策略的闭合形式解，
+      并通过退火机制优雅地解决了在策略蒸馏的冷启动问题。
+      以下从多个维度总结其贡献与启发。
+    </p>
+
+    <h3>方法论层面的贡献</h3>
+    <ul>
+      <li>
+        <strong>置信域思想的新应用</strong>：置信域（Trust Region）在强化学习中已被广泛使用（TRPO、PPO），
+        TRB 将其引入知识蒸馏的行为策略设计，为蒸馏方法提供了新的设计范式。
+      </li>
+      <li>
+        <strong>损失函数不变性</strong>：TRB 仅改变 rollout 生成策略，不改变损失函数，
+        这使其可以作为"即插即用"的 warmup 模块，与任何 OPD 变体结合使用。
+      </li>
+      <li>
+        <strong>理论保证完整</strong>：从 token 级到序列级的 KL 控制、
+        二分搜索的单调性、小预算效率，论文提供了完整的理论支撑。
+      </li>
+    </ul>
+
+    <h3>Warmup 策略在 RL 训练中的普遍意义</h3>
+    <p>
+      TRB 所解决的冷启动问题并非蒸馏特有，而是在策略强化学习（on-policy RL）的普遍挑战：
+    </p>
+    <ul>
+      <li>
+        <strong>RLHF/RLAIF 中的冷启动</strong>：在用 PPO 等算法微调 LLM 时，
+        初期策略同样很弱，奖励信号稀疏。TRB 的思想——用"接近参考模型的混合策略"替代早期 rollout——
+        可以直接迁移到 RLHF 的 warmup 阶段。
+      </li>
+      <li>
+        <strong>课程强化学习（Curriculum RL）</strong>：TRB 的退火机制本质上是一种课程学习，
+        从"有教师辅助"逐渐过渡到"完全自主"。这与 GRPO、DeepSeek-R1 等工作中的
+        课程难度调整思想一致。
+      </li>
+      <li>
+        <strong>探索与利用的平衡</strong>：KL 置信域约束了探索范围，
+        既保证了探索的有效性（不偏离学生太远），又提升了探索的质量（接近教师）。
+        这对于奖励稀疏的任务（如数学推理、代码生成）尤为重要。
+      </li>
+    </ul>
+
+    <h3>局限性与未来方向</h3>
+    <div class="highlight-box warn">
+      <strong>主要局限：</strong>
+      <ul style="margin-top:0.4em">
+        <li>实验范围局限于两组 Qwen3-Base 数学推理蒸馏设置，泛化性有待验证；</li>
+        <li>warmup 期间需要教师模型在线解码，峰值显存增加约 $W_Q + KV_Q(n_t)$，
+          对资源受限场景不友好；</li>
+        <li>超参数 $\delta_0$ 和 $K$ 需要网格搜索，增加了调参成本；</li>
+        <li>仅在数学推理任务上验证，代码生成、指令跟随等任务的效果未知。</li>
+      </ul>
+    </div>
+    <p>
+      未来可能的研究方向包括：
+    </p>
+    <ul>
+      <li>将 TRB 与 RLHF、GRPO 等强化学习方法结合，探索其在通用对齐任务中的效果；</li>
+      <li>研究自适应预算调整策略（根据学生能力动态调整 $\delta_k$，而非固定线性退火）；</li>
+      <li>探索更高效的行为策略计算方法，降低 warmup 阶段的显存和计算开销；</li>
+      <li>将置信域约束扩展到序列级别，直接控制完整轨迹的质量。</li>
+    </ul>
+
+    <h3>对实践者的建议</h3>
+    <blockquote>
+      如果你正在训练一个 OPD 系统，并发现早期训练收敛缓慢或不稳定，
+      TRB 是一个值得尝试的轻量级 warmup 方案。
+      建议从 $\delta_0 = 0.01$、$K = 25$ 开始调参，
+      在验证集上每 20 步评估一次，选择平均分最高的检查点。
+      如果显存充足，可以适当增大 $\delta_0$ 以获得更强的 warmup 效果。
+    </blockquote>
+
+    <!-- ===== 11. 参考文献 ===== -->
+    <h2>参考文献</h2>
+    <ol>
+      <li>Hinton, G., Vinyals, O., &amp; Dean, J. (2015). <em>Distilling the Knowledge in a Neural Network.</em> arXiv:1503.02531.</li>
+      <li>Bengio, S., Vinyals, O., Jaitly, N., &amp; Shazeer, N. (2015). <em>Scheduled Sampling for Sequence Prediction with Recurrent Neural Networks.</em> NeurIPS 2015.</li>
+      <li>Gu, Y., Dong, L., Wei, F., &amp; Huang, M. (2023). <em>MiniLLM: Knowledge Distillation of Large Language Models.</em> ICLR 2024.</li>
+      <li>On-Policy Distillation (OPD). <em>On-policy distillation of language models: Learning to reason with gauntlet.</em></li>
+      <li>Li, et al. (2026). <em>Rethinking On-Policy Distillation of Language Models.</em> arXiv:2026.</li>
+      <li>VETO. <em>VETO: Adaptive target reformulation for on-policy distillation.</em></li>
+      <li>Jin, et al. (2026). <em>Entropy-Aware Knowledge Distillation for Language Models.</em></li>
+      <li>TIP. <em>TIP: Token-level importance-aware policy distillation.</em></li>
+      <li>Ding, et al. (2025). <em>MiCoTA: Minimal-Cost Token Alignment for Knowledge Distillation.</em></li>
+      <li>Cobbe, K., et al. (2021). <em>Training Verifiers to Solve Math Word Problems.</em> arXiv:2110.14168.</li>
+      <li>Hendrycks, D., et al. (2021). <em>Measuring Mathematical Problem Solving With the MATH Dataset.</em> NeurIPS 2021.</li>
+      <li>He, et al. (2024). <em>OlympiadBench: A Challenging Benchmark for Promoting AGI with Olympiad-Level Bilingual Multimodal Scientific Problems.</em></li>
+      <li>Yang, et al. (2025). <em>Qwen3 Technical Report.</em></li>
+      <li>Schulman, J., et al. (2015). <em>Trust Region Policy Optimization (TRPO).</em> ICML 2015.</li>
+      <li>Schulman, J., et al. (2017). <em>Proximal Policy Optimization Algorithms (PPO).</em> arXiv:1707.06347.</li>
+      <li>Loshchilov, I., &amp; Hutter, F. (2019). <em>Decoupled Weight Decay Regularization (AdamW).</em> ICLR 2019.</li>
+      <li>Zhao, Y., et al. (2023). <em>PyTorch FSDP: Experiences on Scaling Fully Sharded Data Parallel.</em> VLDB 2023.</li>
+      <li>SGLang: <em>Efficient Execution of Structured Language Model Programs.</em></li>
+      <li>VERL: <em>Volcano Engine Reinforcement Learning for LLMs.</em></li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center; margin-top:2em">
+      本报告由 Claude 生成 · 基于 arXiv:2605.31159 · 生成日期：2026-06-05
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    // 自动生成 TOC
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // IntersectionObserver 滚动高亮
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

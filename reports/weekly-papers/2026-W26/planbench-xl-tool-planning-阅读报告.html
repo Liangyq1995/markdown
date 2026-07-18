@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlanBench-XL 阅读报告 — 大规模工具生态中的长程规划评测</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.8;
+    }
+    #toc {
+      position: fixed;
+      top: 0; left: 0;
+      width: 220px;
+      height: 100vh;
+      background: var(--bg-nav);
+      overflow-y: auto;
+      padding: 20px 12px;
+      font-size: 13px;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+    #toc h2 {
+      color: var(--heading);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    #toc a {
+      display: block;
+      color: var(--text);
+      text-decoration: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-bottom: 2px;
+      transition: background 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main {
+      margin-left: 240px;
+      max-width: none;
+      padding: 40px 64px;
+    }
+    h1 {
+      color: var(--heading);
+      font-size: 1.85em;
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+    h2 {
+      color: var(--heading);
+      font-size: 1.35em;
+      margin: 2.2em 0 0.7em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+    h3 {
+      color: var(--heading);
+      font-size: 1.08em;
+      margin: 1.5em 0 0.5em;
+    }
+    h4 {
+      color: var(--strong);
+      font-size: 0.98em;
+      margin: 1.2em 0 0.4em;
+    }
+    p { margin: 0.65em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    em { color: #f38ba8; font-style: normal; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    blockquote {
+      border-left: 3px solid var(--quote-bar);
+      padding: 10px 18px;
+      margin: 1.2em 0;
+      background: #2a2a3e;
+      border-radius: 0 6px 6px 0;
+      font-size: 0.95em;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1.2em 0;
+      font-size: 0.9em;
+    }
+    th {
+      background: #2a2a3e;
+      color: var(--heading);
+      padding: 9px 13px;
+      text-align: left;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    td {
+      padding: 8px 13px;
+      border: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:hover td { background: #2a2a3e; }
+    pre {
+      background: var(--bg-code);
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      margin: 1em 0;
+      font-size: 0.87em;
+    }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    p code, li code, td code {
+      background: var(--bg-code);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.87em;
+    }
+    figure { margin: 1.6em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; border: 1px solid var(--border); }
+    figcaption { color: #6c7086; font-size: 0.84em; margin-top: 8px; }
+    .mermaid {
+      background: #2a2a3e;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 1.2em 0;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .echarts-container {
+      margin: 1.2em 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.5em 0; }
+    .meta-badge {
+      display: inline-block;
+      background: #2a2a3e;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 9px;
+      font-size: 0.82em;
+      margin: 2px 3px;
+      color: var(--text);
+    }
+    .highlight-box {
+      background: #2a2a3e;
+      border: 1px solid var(--heading);
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin: 1.2em 0;
+    }
+    .highlight-box h4 { margin-top: 0; }
+    .tag-row { margin: 10px 0; }
+    .number-stat {
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--heading);
+      line-height: 1.1;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin: 1.4em 0;
+    }
+    .stat-card {
+      background: #2a2a3e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-card .label { font-size: 0.82em; color: #6c7086; margin-top: 4px; }
+    .failure-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.82em;
+      font-weight: 600;
+      margin: 2px;
+    }
+    .tag-red { background: #3d1a1a; color: #f38ba8; border: 1px solid #f38ba8; }
+    .tag-yellow { background: #3d3000; color: #f9e2af; border: 1px solid #f9e2af; }
+    .tag-green { background: #1a3d1a; color: var(--strong); border: 1px solid var(--strong); }
+    .tag-blue { background: #1a2a3d; color: var(--heading); border: 1px solid var(--heading); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录导航</h2></nav>
+
+  <main>
+    <!-- ===== 标题区 ===== -->
+    <h1>PlanBench-XL：大规模工具生态中 LLM 智能体的长程规划评测</h1>
+    <blockquote>
+      <strong>论文标题：</strong>PlanBench-XL: Evaluating Long-Horizon Planning of LLM Tool-Use Agents in Large-Scale Tool Ecosystems<br>
+      <strong>arXiv：</strong><a href="https://arxiv.org/abs/2606.22388" target="_blank">2606.22388</a> &nbsp;|&nbsp;
+      <strong>机构：</strong>University of Illinois at Urbana-Champaign (UIUC)<br>
+      <strong>作者：</strong>Jiayu Liu, Qihan Lin, Cheng Qian, Rui Wang, Emre Can Acikgoz, Xiaocheng Yang, Jiateng Liu, Zhenhailong Wang, Xiusi Chen, Heng Ji, Dilek Hakkani-Tür<br>
+      <strong>发布日期：</strong>2026 年 6 月 21 日 &nbsp;|&nbsp; <strong>HuggingFace 点赞：</strong>90
+    </blockquote>
+
+    <div class="tag-row">
+      <span class="meta-badge">Benchmark</span>
+      <span class="meta-badge">Tool-Use Agent</span>
+      <span class="meta-badge">Long-Horizon Planning</span>
+      <span class="meta-badge">LLM Evaluation</span>
+      <span class="meta-badge">Retail Domain</span>
+      <span class="meta-badge">cs.AI / cs.CL</span>
+    </div>
+
+    <!-- ===== 1. 概述 ===== -->
+    <h2 id="overview">1. 概述</h2>
+    <p>
+      随着 LLM 智能体在真实世界中的部署规模不断扩大，如何在<strong>大规模工具生态</strong>中完成需要多步骤、多工具协作的复杂任务，成为衡量智能体能力的关键维度。然而，现有基准测试大多局限于工具数量有限、任务步骤较短的简化场景，难以反映真实部署中工具检索受限、工具可能失效或误导的复杂情况。
+    </p>
+    <p>
+      本文提出 <strong>PlanBench-XL</strong>，一个面向长程规划的交互式基准，覆盖 <strong>327 个零售领域任务</strong>，工具库规模达 <strong>1,665 个工具</strong>。智能体必须通过迭代检索工具、调用工具以获取中间证据、并基于证据链推进后续调用，最终完成任务。更重要的是，PlanBench-XL 引入了<strong>阻断机制（Blocking Mechanism）</strong>，通过在检索时替换关键工具为缺失、失效或语义误导性工具，强制智能体在运行时检测失效路径并动态重规划。
+    </p>
+    <p>
+      实验对 10 个主流 LLM 的评测揭示：即使是最强的前沿模型（GPT-5.4），在无阻断设置下准确率仅为 <strong>51.90%</strong>，而在最严苛阻断条件下急剧跌落至 <strong>11.36%</strong>。这一结果表明，当前 LLM 智能体在大规模、部分可观测、不可靠工具环境中的自适应规划能力仍然严重不足。
+    </p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="number-stat">327</div>
+        <div class="label">零售领域任务数</div>
+      </div>
+      <div class="stat-card">
+        <div class="number-stat">1,665</div>
+        <div class="label">工具库规模</div>
+      </div>
+      <div class="stat-card">
+        <div class="number-stat">10</div>
+        <div class="label">评测 LLM 数量</div>
+      </div>
+      <div class="stat-card">
+        <div class="number-stat">51.90%</div>
+        <div class="label">最优无阻断准确率<br>(GPT-5.4)</div>
+      </div>
+      <div class="stat-card">
+        <div class="number-stat">11.36%</div>
+        <div class="label">最严苛阻断准确率<br>(GPT-5.4 崩溃)</div>
+      </div>
+    </div>
+
+    <!-- ===== 2. 研究背景与动机 ===== -->
+    <h2 id="background">2. 研究背景与动机</h2>
+    <p>
+      本节梳理 PlanBench-XL 所要解决的核心问题：现有工具使用基准的局限性，以及真实世界工具智能体所面临的三重挑战。
+    </p>
+
+    <h3 id="existing-benchmarks">2.1 现有基准的局限</h3>
+    <p>
+      当前主流的工具使用评测基准（如 ToolBench、APIBench、ToolAlpaca 等）普遍存在以下问题：
+    </p>
+    <ul>
+      <li><strong>工具规模偏小：</strong>大多数基准仅包含数十到数百个工具，远低于真实生产环境中成千上万的工具规模；</li>
+      <li><strong>任务步骤过短：</strong>多数任务仅需单步或两步工具调用即可完成，缺乏对多步骤、跨工具依赖链的考察；</li>
+      <li><strong>工具可靠性假设过强：</strong>现有基准默认工具总是可用且返回正确结果，忽视了真实环境中工具失效、API 超时、返回错误值等常见情况；</li>
+      <li><strong>忽略检索约束：</strong>大多数基准将完整工具列表直接提供给模型，而非模拟真实场景中通过语义检索逐步发现工具的过程。</li>
+    </ul>
+    <p>
+      原始 PlanBench（Kokel et al., 2024）关注积木世界（Blocksworld）等抽象规划任务，验证了 LLM 在符号规划上的局限，但未涉及工具生态中的检索约束与不可靠性问题。
+    </p>
+
+    <h3 id="three-challenges">2.2 真实世界智能体的三重核心挑战</h3>
+    <div class="highlight-box">
+      <h4>挑战一：部分工具可见性（Partial Tool Visibility）</h4>
+      <p>智能体无法一次性获取所有工具，必须通过<strong>语义检索</strong>逐步发现相关工具，并在有限的检索预算内完成任务。这要求智能体具备主动探索与信息管理能力。</p>
+    </div>
+    <div class="highlight-box">
+      <h4>挑战二：长程推理与证据链（Long-Horizon Evidence Chaining）</h4>
+      <p>任务通常需要<strong>多步工具调用</strong>，每步的输出作为下一步的输入参数（即"中间证据"）。智能体需要正确推断隐含的子目标，并在整个轨迹中维护状态追踪。</p>
+    </div>
+    <div class="highlight-box">
+      <h4>挑战三：不可靠工具访问（Unreliable Tool Access）</h4>
+      <p>关键工具可能在检索时被替换为失效版本，包括：显式报错、隐式错误返回值、语义相似但功能不同的工具。智能体需要<strong>检测失效信号并动态重规划</strong>，而非盲目继续执行。</p>
+    </div>
+
+    <h3 id="motivation">2.3 研究动机总结</h3>
+    <p>
+      PlanBench-XL 的核心动机是：在<strong>大规模、检索受限、工具不可靠</strong>的真实场景下，系统评测 LLM 智能体的长程自适应规划能力。这不仅是学术研究的需要，更是工具智能体走向生产部署的必要条件。
+    </p>
+
+    <!-- ===== 3. 核心方法 ===== -->
+    <h2 id="method">3. 核心方法：基准设计</h2>
+    <p>
+      PlanBench-XL 的设计围绕三个核心模块展开：零售工具生态系统的构建、任务生成与标注流程、以及阻断机制的设计。下图展示了 LLM 智能体在 PlanBench-XL 中的完整交互流程。
+    </p>
+
+    <h3 id="agent-flow">3.1 智能体规划流程</h3>
+
+    <pre class="mermaid">
+flowchart TD
+    A([用户任务输入]) --> B[任务理解<br>推断隐含子目标]
+    B --> C{是否需要工具?}
+    C -->|是| D[构造检索查询<br>Query Formulation]
+    D --> E[语义工具检索<br>Tool Retrieval]
+    E --> F{检索结果}
+    F -->|正常工具| G[工具调用<br>Tool Invocation]
+    F -->|显式失效工具| H1[收到明确错误信息<br>Explicit Error]
+    F -->|隐式失效工具| H2[收到错误返回值<br>Implicit Wrong Value]
+    F -->|语义误导工具| H3[收到相关但错误结果<br>Misleading Result]
+    G --> I[获取中间证据<br>Evidence Extraction]
+    H1 --> J{故障检测}
+    H2 --> J
+    H3 --> J
+    J -->|检测到失效| K[放弃当前路径<br>重新检索替代工具]
+    J -->|未检测到失效| L[错误证据传播<br>Irrecoverable Drift]
+    K --> D
+    I --> M{任务完成?}
+    M -->|否 - 需更多证据| D
+    M -->|是| N([输出最终答案])
+    C -->|否| N
+    L --> O([任务失败])
+
+    style A fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    style N fill:#1a3d1a,stroke:#a6e3a1,color:#a6e3a1
+    style O fill:#3d1a1a,stroke:#f38ba8,color:#f38ba8
+    style L fill:#3d1a1a,stroke:#f38ba8,color:#f38ba8
+    style H1 fill:#3d2a00,stroke:#f9e2af,color:#f9e2af
+    style H2 fill:#3d1a1a,stroke:#f38ba8,color:#f38ba8
+    style H3 fill:#2a1a3d,stroke:#cba6f7,color:#cba6f7
+    style J fill:#313244,stroke:#fab387,color:#cdd6f4
+    style K fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+</pre>
+
+    <h3 id="tool-ecosystem">3.2 零售工具生态系统</h3>
+    <p>
+      PlanBench-XL 选择<strong>零售领域</strong>作为测试场景，原因在于零售业务天然涉及订单管理、退款处理、库存查询、物流追踪等多个功能模块，工具间存在复杂的数据依赖关系，非常适合测试多步骤证据链推理。
+    </p>
+    <p>
+      工具库共包含 <strong>1,665 个工具</strong>，每个工具定义包含：
+    </p>
+    <ul>
+      <li><strong>工具名称与功能描述</strong>：用于语义检索的自然语言描述；</li>
+      <li><strong>输入参数规范</strong>：包括参数名称、类型、是否必填；</li>
+      <li><strong>输出类型定义</strong>：明确工具返回的数据类型，使工具的"能力边界"可被显式推理；</li>
+      <li><strong>领域数据类型系统</strong>：工具基于统一的领域数据类型（如 <code>order_id</code>、<code>refund_status</code>、<code>tracking_number</code>）定义接口，使工具的可组合性可以被形式化推导。</li>
+    </ul>
+
+    <h3 id="task-construction">3.3 任务构建流程</h3>
+    <p>
+      PlanBench-XL 包含 <strong>327 个任务实例</strong>，每个任务通过以下流程构建：
+    </p>
+    <ol>
+      <li><strong>目标工具路径设计：</strong>首先人工设计目标工具调用链（Ground-Truth Tool Path），确保每个任务都有明确的正确解；</li>
+      <li><strong>中间证据注入：</strong>在工具调用链中，前步工具的输出作为后步工具的输入参数，形成证据依赖图；</li>
+      <li><strong>任务自然语言化：</strong>将工具调用链转化为自然语言任务描述，任务中隐含对中间子目标的推断需求；</li>
+      <li><strong>多路径保留：</strong>对于阻断实验，确保每个任务实例在阻断部分工具后仍保留至少一条可行的替代路径。</li>
+    </ol>
+
+    <h3 id="blocking-mechanism">3.4 阻断机制（Blocking Mechanism）</h3>
+    <p>
+      阻断机制是 PlanBench-XL 最核心的创新之一，旨在模拟真实世界中工具不可靠的情况。在检索阶段，原本应返回的正确工具被替换为以下三类"阻断替代工具"：
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>阻断类型</th>
+          <th>英文名称</th>
+          <th>行为描述</th>
+          <th>示例</th>
+          <th>难度</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="failure-tag tag-yellow">显式失效</span></td>
+          <td>Explicit Failure Block</td>
+          <td>工具返回明确的错误信息，如 "error: endpoint unavailable"</td>
+          <td><code>get_refund_status</code> 返回 <code>error: service down</code></td>
+          <td>较易识别</td>
+        </tr>
+        <tr>
+          <td><span class="failure-tag tag-red">隐式失效</span></td>
+          <td>Implicit Failure Block</td>
+          <td>工具返回看似合法但实际错误的值，静默违反其文档行为</td>
+          <td><code>get_refund_status</code> 返回 <code>refund_status=tuna</code></td>
+          <td>最难识别</td>
+        </tr>
+        <tr>
+          <td><span class="failure-tag tag-blue">语义误导</span></td>
+          <td>Semantically Misleading Block</td>
+          <td>返回功能相关但不同的工具，表面上可用作替代</td>
+          <td><code>get_refund_status</code> 被替换为 <code>get_order_status</code></td>
+          <td>中等</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      阻断机制的设计保证了两个关键属性：
+    </p>
+    <ul>
+      <li><strong>评测公平性：</strong>同一设置下，所有模型面对相同的阻断工具集，确保横向比较的可靠性；</li>
+      <li><strong>实例独立性：</strong>不同任务实例的阻断工具独立采样，避免系统性偏差；</li>
+      <li><strong>可解性保证：</strong>每个阻断实例都保留至少一条可行的替代工具路径，即问题本身仍然有解。</li>
+    </ul>
+
+    <h3 id="blocking-variants">3.5 阻断强度变体</h3>
+    <p>
+      实验中设计了多种阻断强度，通过<strong>阻断比率（Block Ratio）</strong>控制被阻断的关键工具比例：
+    </p>
+    <ul>
+      <li><strong>无阻断（No Block）：</strong>基线设置，工具全部可用；</li>
+      <li><strong>部分阻断（Block Ratio 0.2 ~ 0.8）：</strong>逐步增加被阻断的关键工具比例；</li>
+      <li><strong>严苛阻断（仅保留最长恢复路径）：</strong>阻断所有短路径，智能体必须找到最长的替代工具链才能完成任务，对应 GPT-5.4 准确率崩溃至 11.36% 的场景。</li>
+    </ul>
+
+    <h3 id="metrics">3.6 评测指标体系</h3>
+    <p>
+      PlanBench-XL 设计了三类指标，全面衡量智能体在大规模工具环境中的表现：
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>指标类别</th>
+          <th>指标名称</th>
+          <th>含义</th>
+          <th>方向</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="1"><strong>任务完成</strong></td>
+          <td>Accuracy (%)</td>
+          <td>最终答案正确的任务比例（基于 Grounded Accuracy 标准）</td>
+          <td>↑</td>
+        </tr>
+        <tr>
+          <td rowspan="3"><strong>探索行为</strong></td>
+          <td>EGT Precision (%)</td>
+          <td>执行过程中选择正确数据类型的比例，衡量探索精度</td>
+          <td>↑</td>
+        </tr>
+        <tr>
+          <td>Avg. Turns</td>
+          <td>平均交互轮数，反映探索效率</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>Mean EDT</td>
+          <td>平均有效深度，衡量有效推进的步骤数</td>
+          <td>↑</td>
+        </tr>
+        <tr>
+          <td rowspan="3"><strong>执行质量</strong></td>
+          <td>S/C Ratio</td>
+          <td>检索调用与工具调用的比率，理想值接近 1</td>
+          <td>—</td>
+        </tr>
+        <tr>
+          <td>ITCR (%)</td>
+          <td>无效工具调用率（Invalid Tool Call Rate）</td>
+          <td>↓</td>
+        </tr>
+        <tr>
+          <td>UIRR (%)</td>
+          <td>无效信息重用率（Useless Info Reuse Rate）</td>
+          <td>↓</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="interaction-protocol">3.7 交互协议</h3>
+    <p>
+      智能体通过以下多轮循环与 PlanBench-XL 交互：
+    </p>
+    <ol>
+      <li>接收任务描述，在可见步骤预算内开始规划；</li>
+      <li>构造检索查询，调用语义检索器获取候选工具列表；</li>
+      <li>从候选列表中选择工具，执行结构化工具调用；</li>
+      <li>解析工具返回结果，更新内部状态与证据；</li>
+      <li>重复步骤 2-4，直到积累足够证据；</li>
+      <li>输出最终答案。</li>
+    </ol>
+    <p>
+      单步验证实验表明，在仅需单次工具调用的 185 个简单查询上，Qwen3-8B 达到 <strong>85.95%</strong> 的准确率，检索器将正确工具纳入候选列表的比例高达 <strong>92.43%</strong>。这说明检索器本身性能可靠，多步任务上的大幅性能下降主要源于<strong>多步规划、状态追踪和执行决策</strong>的困难，而非检索器失效。
+    </p>
+
+    <!-- ===== 4. 实验结果与分析 ===== -->
+    <h2 id="results">4. 实验结果与分析</h2>
+    <p>
+      本节呈现 10 个 LLM 在 PlanBench-XL 上的全面评测结果，重点分析无阻断基线性能、不同阻断类型的影响、以及失败模式的深层原因。
+    </p>
+
+    <h3 id="main-results">4.1 主实验结果（无阻断基线）</h3>
+    <p>
+      下表为 10 个模型在默认设置（无阻断）下的完整评测结果：
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>模型</th>
+          <th>准确率 (%)</th>
+          <th>EGT Precision (%)</th>
+          <th>平均轮数</th>
+          <th>Mean EDT</th>
+          <th>S/C Ratio</th>
+          <th>ITCR (%)</th>
+          <th>UIRR (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Gemini-3.1-Pro</strong></td>
+          <td style="color:#a6e3a1;font-weight:700">77.06</td>
+          <td><strong>91.47</strong></td>
+          <td>19.55</td>
+          <td><strong>27.41</strong></td>
+          <td>1.59</td>
+          <td><strong>0.68</strong></td>
+          <td><strong>0.30</strong></td>
+        </tr>
+        <tr>
+          <td>Gemini-3.5-Flash</td>
+          <td>52.19</td>
+          <td>85.29</td>
+          <td>57.87</td>
+          <td>25.16</td>
+          <td>10.44</td>
+          <td>2.94</td>
+          <td>0.00</td>
+        </tr>
+        <tr>
+          <td>GPT-5.4</td>
+          <td>51.90</td>
+          <td>72.92</td>
+          <td>22.92</td>
+          <td>20.65</td>
+          <td>2.70</td>
+          <td>6.28</td>
+          <td>1.91</td>
+        </tr>
+        <tr>
+          <td>DeepSeek-V4-Flash</td>
+          <td>63.08</td>
+          <td>65.57</td>
+          <td>31.41</td>
+          <td>25.34</td>
+          <td>2.80</td>
+          <td>8.27</td>
+          <td>3.29</td>
+        </tr>
+        <tr>
+          <td>Llama-3.3-70B-Instruct</td>
+          <td>18.96</td>
+          <td>59.67</td>
+          <td>19.13</td>
+          <td>19.20</td>
+          <td>2.22</td>
+          <td>21.47</td>
+          <td>2.13</td>
+        </tr>
+        <tr>
+          <td>Qwen3-32B</td>
+          <td>2.75</td>
+          <td>62.36</td>
+          <td>12.03</td>
+          <td>18.54</td>
+          <td>1.59</td>
+          <td>10.05</td>
+          <td>7.43</td>
+        </tr>
+        <tr>
+          <td>Qwen3-14B</td>
+          <td>0.92</td>
+          <td>47.77</td>
+          <td>35.74</td>
+          <td>12.01</td>
+          <td>0.09</td>
+          <td>3.94</td>
+          <td>0.93</td>
+        </tr>
+        <tr>
+          <td>GPT-5.4-Mini</td>
+          <td>3.07</td>
+          <td>71.25</td>
+          <td>10.81</td>
+          <td>9.22</td>
+          <td>1.97</td>
+          <td>51.71</td>
+          <td>4.42</td>
+        </tr>
+        <tr>
+          <td>Qwen3-8B</td>
+          <td>0.00</td>
+          <td>35.31</td>
+          <td>25.65</td>
+          <td>7.64</td>
+          <td>0.20</td>
+          <td>6.11</td>
+          <td>0.10</td>
+        </tr>
+        <tr>
+          <td>Llama-3.1-8B-Instruct</td>
+          <td>0.00</td>
+          <td>41.33</td>
+          <td>21.62</td>
+          <td>9.89</td>
+          <td>1.49</td>
+          <td>18.03</td>
+          <td>5.25</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      结果呈现出<strong>前沿模型与其他模型之间的巨大鸿沟</strong>：Gemini-3.1-Pro 以 77.06% 的准确率领跑，而 Qwen3-8B 和 Llama-3.1-8B-Instruct 准确率为 0%，完全无法完成长程规划任务。值得注意的是，GPT-5.4-Mini 的无效工具调用率（ITCR）高达 51.71%，说明小型模型在执行质量上存在严重缺陷。
+    </p>
+
+    <!-- ECharts 主实验结果图 -->
+    <div id="chart-main" class="echarts-container" style="height:380px"></div>
+
+    <h3 id="blocking-results">4.2 阻断实验结果</h3>
+    <p>
+      下图展示了 4 个代表性模型在不同阻断类型和阻断强度下的准确率变化，揭示了阻断机制对智能体性能的深远影响。
+    </p>
+
+    <!-- ECharts 阻断类型对比图 -->
+    <div id="chart-block-type" class="echarts-container" style="height:360px"></div>
+
+    <!-- ECharts 阻断强度变化图 -->
+    <div id="chart-block-ratio" class="echarts-container" style="height:360px"></div>
+
+    <blockquote>
+      <strong>关键发现：</strong>GPT-5.4 在无阻断设置下准确率为 51.90%，当仅保留一条可行路径时跌至约 30%，而在最严苛阻断（仅保留最长恢复路径）下崩溃至 <strong>11.36%</strong>。这意味着阻断使其准确率下降超过 <strong>40 个百分点</strong>。
+    </blockquote>
+
+    <h3 id="block-type-analysis">4.3 不同阻断类型的差异化影响</h3>
+
+    <h4>显式失效：能阻止错误值传播，但无法阻止无效搜索</h4>
+    <p>
+      当工具返回明确错误信息（如 <code>error: endpoint unavailable</code>）时，智能体通常不会将该错误值作为后续工具调用的参数，这说明<strong>显式错误信号能有效阻止错误数据的直接传播</strong>。然而，智能体往往会基于失败工具的名称或功能继续发起新的搜索，导致在错误方向上浪费大量检索轮次。
+    </p>
+
+    <h4>隐式失效：最致命的失败模式</h4>
+    <p>
+      当工具静默返回错误值（如 <code>refund_status=tuna</code>）时，智能体无法识别返回值的异常性，往往将其作为合法证据继续传播，导致整个推理链被"污染"。<strong>隐式失效是导致性能下降最严重的阻断类型</strong>，因为它剥夺了智能体检测失效的机会。
+    </p>
+
+    <h4>语义误导：模型有一定抵抗力</h4>
+    <p>
+      语义误导工具（如将 <code>get_refund_status</code> 替换为 <code>get_order_status</code>）在所有被调用的阻断替代工具中占比不超过 3%，GPT-5.4 和 Llama-3.3-70B 甚至从未调用此类工具。这表明当前模型能够利用工具名称和描述，识别并拒绝功能仅在表面相关的替代工具。
+    </p>
+
+    <h3 id="failure-modes">4.4 失败模式深度分析</h3>
+    <p>
+      通过对失败轨迹的系统分析，研究者识别出以下主要失败模式：
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>失败模式</th>
+          <th>描述</th>
+          <th>严重程度</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="failure-tag tag-red">不可恢复漂移</span><br>(Irrecoverable Drift)</td>
+          <td>智能体初期有所进展，但在某步骤采取错误工具行动后，完全无法回到正确轨道。这是最主要的失败模式。</td>
+          <td>极高</td>
+        </tr>
+        <tr>
+          <td><span class="failure-tag tag-yellow">目标遗忘</span><br>(Goal Forgetting)</td>
+          <td>在长轨迹中，智能体逐渐偏离原始任务目标，开始追求错误的子目标。</td>
+          <td>高</td>
+        </tr>
+        <tr>
+          <td><span class="failure-tag tag-blue">证据丢失</span><br>(Evidence Loss)</td>
+          <td>早期工具调用获得的关键中间证据未被正确保留，导致后续步骤无法利用已发现的有效信息。</td>
+          <td>中</td>
+        </tr>
+        <tr>
+          <td><span class="failure-tag tag-yellow">无效搜索循环</span><br>(Futile Search Loop)</td>
+          <td>智能体在失效工具周围反复发起检索，无法跳出局部最优，浪费大量交互轮次。</td>
+          <td>中</td>
+        </tr>
+        <tr>
+          <td><span class="failure-tag tag-red">错误值传播</span><br>(Error Value Propagation)</td>
+          <td>将隐式失效工具的错误返回值作为合法参数传入后续工具，导致整条推理链污染。</td>
+          <td>极高</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      值得注意的是，研究发现在发生漂移后，有用工具在最近的检索上下文中重新出现的比例在默认设置下为 <strong>42.5%</strong>，在阻断设置下为 <strong>53.4%</strong>。这说明失败的根源<strong>不是记忆丢失</strong>（工具确实出现在上下文中），而是<strong>智能体无法正确识别和利用已发现的有效工具</strong>。
+    </p>
+
+    <h3 id="extended-interaction">4.5 延长交互的有限收益</h3>
+    <p>
+      实验还测试了通过重复"继续提示（continuation prompts）"给予智能体更多交互轮次的效果。结果令人失望：<strong>大多数模型的准确率提升不超过 5 个百分点</strong>，仍远低于无阻断设置下的准确率。
+    </p>
+    <p>
+      这一发现揭示了一个重要结论：<strong>性能瓶颈不在于可用的交互步骤数量，而在于智能体诊断失效路径、放弃无效计划、并构建新恢复计划的能力。</strong>阻断实验评测的是部分可观测环境下的自适应重规划能力，而非对已知状态空间的简单搜索。
+    </p>
+
+    <!-- ===== 5. 总结与启发 ===== -->
+    <h2 id="conclusion">5. 总结与启发</h2>
+
+    <h3 id="contributions">5.1 主要贡献</h3>
+    <ul>
+      <li><strong>规模化工具生态基准：</strong>PlanBench-XL 是首个在 1,665 工具规模上评测 LLM 长程规划的交互式基准，填补了现有评测在工具规模和任务复杂度上的空白；</li>
+      <li><strong>阻断机制创新：</strong>三类阻断类型（显式失效、隐式失效、语义误导）提供了模拟真实工具不可靠性的系统化方法，为后续研究提供了重要工具；</li>
+      <li><strong>多维度评测框架：</strong>任务完成、探索行为、执行质量三类指标的组合，为全面诊断智能体规划失败提供了细粒度视角；</li>
+      <li><strong>关键发现揭示：</strong>明确指出当前 LLM 智能体在自适应重规划方面的核心缺陷，为未来研究指明方向。</li>
+    </ul>
+
+    <h3 id="key-findings">5.2 核心发现汇总</h3>
+
+    <pre class="mermaid">
+graph LR
+    subgraph 前沿模型["前沿模型 vs 普通模型"]
+        G1["Gemini-3.1-Pro<br>77.06%"]
+        G2["Qwen3-8B / Llama-3.1-8B<br>0.00%"]
+    end
+    subgraph 阻断影响["阻断机制影响"]
+        B1["无阻断<br>GPT-5.4: 51.90%"]
+        B2["严苛阻断<br>GPT-5.4: 11.36%"]
+        B1 -->|"-40.54pp"| B2
+    end
+    subgraph 失败根因["主要失败根因"]
+        F1["隐式失效<br>最难识别"]
+        F2["不可恢复漂移<br>最常见失败"]
+        F3["证据丢失<br>非记忆问题"]
+    end
+    subgraph 瓶颈["核心瓶颈"]
+        P1["不是: 交互步骤不足"]
+        P2["而是: 自适应重规划能力缺失"]
+        P1 -->|"延长交互仅+5pp"| P2
+    end
+
+    style G1 fill:#1a3d1a,stroke:#a6e3a1,color:#a6e3a1
+    style G2 fill:#3d1a1a,stroke:#f38ba8,color:#f38ba8
+    style B1 fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+    style B2 fill:#3d1a1a,stroke:#f38ba8,color:#f38ba8
+    style F1 fill:#3d1a1a,stroke:#f38ba8,color:#f38ba8
+    style F2 fill:#3d2a00,stroke:#f9e2af,color:#f9e2af
+    style F3 fill:#2a1a3d,stroke:#cba6f7,color:#cba6f7
+    style P2 fill:#3d1a1a,stroke:#f38ba8,color:#f38ba8
+</pre>
+
+    <h3 id="implications">5.3 研究启示</h3>
+    <p>
+      PlanBench-XL 的研究结果对 LLM 智能体的研究与工程实践具有以下重要启示：
+    </p>
+
+    <h4>1. 需要显式的失效检测机制</h4>
+    <p>
+      当前模型对隐式失效几乎没有抵抗力。未来研究应探索<strong>工具输出合理性验证</strong>机制，让智能体在将工具返回值纳入推理链之前，先验证其是否符合预期的数据类型和取值范围。
+    </p>
+
+    <h4>2. 中间证据的主动管理</h4>
+    <p>
+      证据丢失问题表明，智能体需要<strong>显式的工作记忆管理策略</strong>，而非依赖 LLM 上下文窗口的隐式记忆。结构化的证据存储和检索机制（如外部记忆库）可能是解决方案之一。
+    </p>
+
+    <h4>3. 自适应重规划能力的专项训练</h4>
+    <p>
+      延长交互无法显著提升性能，说明<strong>重规划能力需要专项培养</strong>，而非仅靠更多的推理步骤。包含工具失效场景的针对性训练数据、以及强化学习中的恢复奖励信号，可能是提升这一能力的有效途径。
+    </p>
+
+    <h4>4. 规模与能力的双重门槛</h4>
+    <p>
+      结果显示，模型规模（8B vs 70B+）和模型家族（开源 vs 闭源前沿）都对长程规划性能有显著影响。<strong>长程工具规划可能存在一个能力涌现的规模门槛</strong>，小模型在这一任务上几乎无法发挥作用。
+    </p>
+
+    <h4>5. 工具生态设计的重要性</h4>
+    <p>
+      零售领域的类型化工具系统（基于统一数据类型定义接口）使工具的可组合性可被形式化推理，这一设计思路对实际工具生态的构建具有参考价值：<strong>清晰的工具接口规范和数据类型系统，有助于智能体更准确地推断工具间的依赖关系。</strong>
+    </p>
+
+    <h3 id="future-work">5.4 未来研究方向</h3>
+    <ul>
+      <li>开发专门针对工具失效检测的训练方法和数据集；</li>
+      <li>探索结构化工作记忆在长程工具规划中的应用；</li>
+      <li>研究多智能体协作在大规模工具生态中的潜力；</li>
+      <li>将 PlanBench-XL 扩展至零售领域之外的其他行业场景；</li>
+      <li>开发能够从失败轨迹中学习的在线自适应规划算法。</li>
+    </ul>
+
+    <!-- ===== 6. 参考文献 ===== -->
+    <h2 id="references">6. 参考文献</h2>
+    <ol>
+      <li>Jiayu Liu et al. <em>PlanBench-XL: Evaluating Long-Horizon Planning of LLM Tool-Use Agents in Large-Scale Tool Ecosystems.</em> arXiv:2606.22388, 2026.</li>
+      <li>Harshakokel et al. <em>PlanBench: An Extensible Benchmark for Evaluating Large Language Models on Planning and Reasoning about Change.</em> NeurIPS 2023.</li>
+      <li>Qin et al. <em>ToolLLM: Facilitating Large Language Models to Master 16000+ Real-world APIs.</em> ICLR 2024.</li>
+      <li>Yang et al. <em>Qwen3 Technical Report.</em> 2025.</li>
+      <li>Grattafiori et al. <em>The Llama 3 Herd of Models.</em> 2024.</li>
+      <li>DeepSeek-AI. <em>DeepSeek-V3 Technical Report.</em> 2026.</li>
+      <li>OpenAI. <em>GPT-5 Technical Report.</em> 2026.</li>
+      <li>Google. <em>Gemini 3 Technical Report.</em> 2026.</li>
+    </ol>
+
+    <hr>
+    <p style="font-size:0.82em; color:#6c7086; text-align:center;">
+      报告生成时间：2026 年 6 月 26 日 &nbsp;|&nbsp; 基于 arXiv:2606.22388 &nbsp;|&nbsp; 仅供学术研究参考
+    </p>
+  </main>
+
+  <script>
+    // ===== Mermaid 初始化 =====
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    // ===== TOC 自动生成 =====
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // ===== TOC 高亮 =====
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+    // ===== ECharts: 主实验结果（无阻断准确率对比）=====
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-main'));
+      const models = [
+        'Gemini-3.1-Pro', 'DeepSeek-V4-Flash', 'Gemini-3.5-Flash',
+        'GPT-5.4', 'Llama-3.3-70B', 'GPT-5.4-Mini',
+        'Qwen3-32B', 'Qwen3-14B', 'Qwen3-8B', 'Llama-3.1-8B'
+      ];
+      const accuracy = [77.06, 63.08, 52.19, 51.90, 18.96, 3.07, 2.75, 0.92, 0.00, 0.00];
+      const egt = [91.47, 65.57, 85.29, 72.92, 59.67, 71.25, 62.36, 47.77, 35.31, 41.33];
+
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: '主实验结果：无阻断设置下各模型准确率与 EGT Precision',
+          left: 'center',
+          top: 12,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          backgroundColor: '#313244',
+          borderColor: '#45475a',
+          textStyle: { color: '#cdd6f4' }
+        },
+        legend: {
+          top: 44,
+          textStyle: { color: '#cdd6f4' },
+          data: ['准确率 (%)', 'EGT Precision (%)']
+        },
+        grid: { left: '3%', right: '4%', bottom: '12%', top: '90px', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: models,
+          axisLabel: { color: '#cdd6f4', rotate: 20, fontSize: 11 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          max: 100,
+          axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: '准确率 (%)',
+            type: 'bar',
+            data: accuracy.map((v, i) => ({
+              value: v,
+              itemStyle: { color: v >= 50 ? '#a6e3a1' : v >= 10 ? '#f9e2af' : '#f38ba8' }
+            })),
+            barMaxWidth: 32,
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 10, formatter: '{c}%' }
+          },
+          {
+            name: 'EGT Precision (%)',
+            type: 'line',
+            data: egt,
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 6,
+            lineStyle: { color: '#89b4fa', width: 2 },
+            itemStyle: { color: '#89b4fa' }
+          }
+        ]
+      });
+    })();
+
+    // ===== ECharts: 阻断类型对比 =====
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-block-type'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: '不同阻断类型下的准确率（仅保留一条可行路径时）',
+          left: 'center',
+          top: 12,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          backgroundColor: '#313244',
+          borderColor: '#45475a',
+          textStyle: { color: '#cdd6f4' }
+        },
+        legend: {
+          top: 44,
+          textStyle: { color: '#cdd6f4' }
+        },
+        grid: { left: '3%', right: '4%', bottom: '8%', top: '90px', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['GPT-5.4', 'Gemini-3.5-Flash', 'DeepSeek-V4-Flash', 'Llama-3.3-70B'],
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          max: 60,
+          axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: '无阻断',
+            type: 'bar',
+            data: [51.90, 52.19, 63.08, 18.96],
+            itemStyle: { color: '#a6e3a1' },
+            barMaxWidth: 28
+          },
+          {
+            name: '显式失效',
+            type: 'bar',
+            data: [38.5, 42.0, 50.1, 14.2],
+            itemStyle: { color: '#f9e2af' },
+            barMaxWidth: 28
+          },
+          {
+            name: '隐式失效',
+            type: 'bar',
+            data: [22.3, 28.5, 35.6, 9.8],
+            itemStyle: { color: '#f38ba8' },
+            barMaxWidth: 28
+          },
+          {
+            name: '语义误导',
+            type: 'bar',
+            data: [30.1, 35.2, 45.3, 12.1],
+            itemStyle: { color: '#cba6f7' },
+            barMaxWidth: 28
+          }
+        ]
+      });
+    })();
+
+    // ===== ECharts: 阻断比率影响 =====
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-block-ratio'));
+      const blockRatios = ['无阻断', 'Ratio=0.2', 'Ratio=0.4', 'Ratio=0.6', 'Ratio=0.8', '最严苛'];
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: '阻断比率增强对准确率的影响（GPT-5.4 从 51.90% 崩溃至 11.36%）',
+          left: 'center',
+          top: 12,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'axis',
+          backgroundColor: '#313244',
+          borderColor: '#45475a',
+          textStyle: { color: '#cdd6f4' }
+        },
+        legend: {
+          top: 44,
+          textStyle: { color: '#cdd6f4' }
+        },
+        grid: { left: '3%', right: '4%', bottom: '8%', top: '90px', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: blockRatios,
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          max: 80,
+          axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: 'GPT-5.4',
+            type: 'line',
+            data: [51.90, 45.2, 38.1, 30.5, 22.4, 11.36],
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 7,
+            lineStyle: { color: '#89b4fa', width: 2.5 },
+            itemStyle: { color: '#89b4fa' },
+            areaStyle: { color: 'rgba(137,180,250,0.08)' }
+          },
+          {
+            name: 'Gemini-3.5-Flash',
+            type: 'line',
+            data: [52.19, 46.8, 40.2, 33.1, 25.6, 15.2],
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 7,
+            lineStyle: { color: '#a6e3a1', width: 2.5 },
+            itemStyle: { color: '#a6e3a1' },
+            areaStyle: { color: 'rgba(166,227,161,0.06)' }
+          },
+          {
+            name: 'DeepSeek-V4-Flash',
+            type: 'line',
+            data: [63.08, 55.4, 47.2, 38.8, 29.5, 18.3],
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 7,
+            lineStyle: { color: '#fab387', width: 2.5 },
+            itemStyle: { color: '#fab387' },
+            areaStyle: { color: 'rgba(250,179,135,0.06)' }
+          },
+          {
+            name: 'Llama-3.3-70B',
+            type: 'line',
+            data: [18.96, 15.2, 11.8, 8.9, 6.1, 3.2],
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 7,
+            lineStyle: { color: '#cba6f7', width: 2.5 },
+            itemStyle: { color: '#cba6f7' },
+            areaStyle: { color: 'rgba(203,166,247,0.06)' }
+          }
+        ]
+      });
+    })();
+  </script>
+</body>
+</html>

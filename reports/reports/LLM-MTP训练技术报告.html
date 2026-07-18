@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM 多令牌预测（MTP）训练技术报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .badge { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 0 3px; background: var(--heading); color: #1e1e2e; }
+    .badge.orange { background: #fab387; }
+    .badge.green  { background: #a6e3a1; }
+    .badge.purple { background: #cba6f7; }
+    .badge.red    { background: #f38ba8; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .info-card p { margin: 0.3em 0; }
+    /* algo-box */
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    /* timeline */
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 900px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.95em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.88em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>LLM 多令牌预测（MTP）训练技术报告</h1>
+    <p style="color:#6c7086; font-size:0.9em;">技术综合报告 · 2026年6月</p>
+
+    <div class="info-card">
+      <table>
+        <tr><th style="width:120px">核心问题</th><td>如何让语言模型在每个位置预测多个未来 token，以提升训练效率、增强表示质量、并在推理阶段通过投机解码实现 1.5×~3× 的吞吐加速</td></tr>
+        <tr><th>主要来源</th><td>Meta ICML 2024 (Gloeckle et al.) · DeepSeek-V3 Technical Report (2024) · NVIDIA NeMo 文档</td></tr>
+        <tr><th>关键结论</th><td>MTP 作为辅助训练目标可提升代码生成 MBPP +17%、HumanEval +12%；DeepSeek-V3 MTP 第二个 token 接受率 85~90%，推理吞吐提升约 1.8×</td></tr>
+      </table>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="s1">1. 核心问题与动机</h2>
+
+    <h3>1.1 下一个 token 预测的瓶颈</h3>
+    <p>
+      当前主流大语言模型的预训练范式是<strong>自回归下一个 token 预测（Next-Token Prediction, NTP）</strong>。该目标函数极为简洁：
+    </p>
+    <p>$$\mathcal{L}_{\text{NTP}} = -\sum_{t=1}^{T} \log P(x_t \mid x_{\lt t}; \theta)$$</p>
+    <p>然而，NTP 存在以下根本性局限：</p>
+    <ul>
+      <li><strong>局部短视性（Myopic Supervision）</strong>：每个位置仅提供对下一个 token 的监督信号，模型难以从长程依赖中获益</li>
+      <li><strong>训练信号稀疏</strong>：对于长序列，每个 token 只贡献一次梯度，样本利用率低</li>
+      <li><strong>归纳头（Induction Head）发展受限</strong>：NTP 并不显式鼓励模型学习"先预测后步骤"的规划能力，对算法推理类任务提升有限</li>
+      <li><strong>推理瓶颈</strong>：自回归解码每步只生成一个 token，GPU 计算资源严重浪费（KV Cache 的 bandwidth 受限于串行生成）</li>
+    </ul>
+
+    <h3>1.2 MTP 的核心直觉</h3>
+    <blockquote>
+      如果强迫模型同时预测接下来 $n$ 个 token，它必须内化更丰富的上下文表示——因为仅知道"下一个词"不足以猜对"未来第 4 个词"。这种压力推动模型构建更具全局感知的特征。
+    </blockquote>
+    <p>从信息论视角：预测 $n$ 个 token 等价于压缩更长的上下文窗口，互信息约束更强，学到的 representation 必然更丰富。</p>
+
+    <!-- ============================================================ -->
+    <h2 id="s2">2. 背景与相关工作</h2>
+
+    <h3>2.1 方法谱系</h3>
+    <table>
+      <tr>
+        <th>方法</th><th>年份</th><th>核心思路</th><th>与 MTP 的关系</th>
+      </tr>
+      <tr>
+        <td>Medusa</td><td>2023</td><td>在冻结主干上挂多个独立 draft head，各自预测 +k 位置</td><td>MTP 的简化版；Medusa head 不共享隐层，精度较低</td>
+      </tr>
+      <tr>
+        <td>EAGLE / EAGLE-2</td><td>2024</td><td>小型自回归 draft 模型 + tree-based 验证，主目标是推理加速</td><td>MTP 模块结构借鉴 EAGLE 的因果链保持思想；但 MTP 主目标是<em>训练提升</em>而非推理</td>
+      </tr>
+      <tr>
+        <td>Speculative Decoding (Leviathan et al.)</td><td>2023</td><td>小模型起草 + 大模型验证拒绝采样，保证等价分布</td><td>MTP 推理阶段可作为 draft 模块，接受率高时吞吐提升显著</td>
+      </tr>
+      <tr>
+        <td><strong>Meta MTP (Gloeckle et al.)</strong></td><td>ICML 2024</td><td><strong>训练期 parallel multi-head，每头预测不同偏移量</strong></td><td>MTP 核心论文；证明 n=4 最优，代码任务大幅提升</td>
+      </tr>
+      <tr>
+        <td><strong>DeepSeek-V3 MTP</strong></td><td>2024</td><td><strong>顺序 MTP 模块，维护因果链，共享 embedding + output head</strong></td><td>对 Meta MTP 的工程化改进；671B 参数级验证</td>
+      </tr>
+      <tr>
+        <td>NVIDIA NeMo MTP</td><td>2025</td><td>Megatron-LM 框架集成，可调 loss scale</td><td>工程实现参考；提供 mtp_loss_scaling_factor 配置</td>
+      </tr>
+    </table>
+
+    <h3>2.2 MTP 与 NTP 的本质区别</h3>
+    <p>$$\underbrace{\mathcal{L}_{\text{NTP}}}_{\text{仅预测 }x_{t+1}} \quad\longrightarrow\quad \underbrace{\mathcal{L}_{\text{MTP}} = \frac{\lambda}{n}\sum_{k=1}^{n} \mathcal{L}^k_{\text{MTP}}}_{\text{同时预测 }x_{t+1}, x_{t+2}, \ldots, x_{t+n}}$$</p>
+    <p>关键区别：<strong>MTP 是辅助目标</strong>，在训练期与 NTP 联合优化；推理期可选择性丢弃 MTP 模块，主模型行为不变。</p>
+
+    <!-- ============================================================ -->
+    <h2 id="s3">3. 训练流程总览</h2>
+
+    <pre class="mermaid">
+flowchart TD
+    A["输入序列 x₁, x₂, ..., xT"] --> B["Shared Transformer Trunk\n（主干 — 计算 hidden states h¹...hᵀ）"]
+    B --> C["主任务 Head\n（预测 x_{t+1}）\nL_NTP"]
+    B --> D1["MTP Module 1\n（预测 x_{t+2}）\nL_MTP¹"]
+    B --> D2["MTP Module 2\n（预测 x_{t+3}）\nL_MTP²"]
+    B --> D3["MTP Module n\n（预测 x_{t+n}）\nL_MTPⁿ"]
+    C --> E["Total Loss\nL = L_NTP + λ/n · ΣL_MTPᵏ"]
+    D1 --> E
+    D2 --> E
+    D3 --> E
+    E --> F["反向传播\n梯度同时更新 Trunk + 各 Head"]
+    style A fill:#2a2a3e,stroke:#45475a
+    style B fill:#313244,stroke:#89b4fa,color:#89b4fa
+    style C fill:#2a2a3e,stroke:#a6e3a1
+    style D1 fill:#2a2a3e,stroke:#fab387
+    style D2 fill:#2a2a3e,stroke:#fab387
+    style D3 fill:#2a2a3e,stroke:#fab387
+    style E fill:#313244,stroke:#f38ba8,color:#f38ba8
+    style F fill:#2a2a3e,stroke:#45475a
+    </pre>
+
+    <p>上图展示了 MTP 训练的整体数据流。核心要点：</p>
+    <ul>
+      <li><strong>主干共享</strong>：所有预测头共用同一个 Transformer 主干，额外参数开销极低</li>
+      <li><strong>并行/顺序两种架构</strong>：Meta 方案为并行（各头独立），DeepSeek 方案为顺序（维护因果链）</li>
+      <li><strong>损失加权合并</strong>：MTP 损失以因子 $\lambda$ 缩放，防止其压过主目标</li>
+    </ul>
+
+    <!-- ============================================================ -->
+    <h2 id="s4">4. 关键技术</h2>
+
+    <h3 id="s41">4.1 Meta 并行多头 MTP（Gloeckle et al., ICML 2024）</h3>
+
+    <h3>4.1.1 架构设计</h3>
+    <p>Meta 方案使用<strong>并行多头（Parallel Multi-Head）</strong>结构：</p>
+
+    <pre class="mermaid">
+graph LR
+    T["Transformer Trunk\nh_t ∈ ℝ^d"] --> H1["Head 1\n预测 x_{t+1}"]
+    T --> H2["Head 2\n预测 x_{t+2}"]
+    T --> H3["Head 3\n预测 x_{t+3}"]
+    T --> H4["Head 4\n预测 x_{t+4}"]
+    H1 --> L1["CE Loss 1"]
+    H2 --> L2["CE Loss 2"]
+    H3 --> L3["CE Loss 3"]
+    H4 --> L4["CE Loss 4"]
+    style T fill:#313244,stroke:#89b4fa,color:#89b4fa
+    </pre>
+
+    <p>每个输出头结构可以是：</p>
+    <ul>
+      <li><strong>Linear Head</strong>：简单线性映射 $W_k \in \mathbb{R}^{d \times V}$，参数量最少</li>
+      <li><strong>Transformer Head（带额外层）</strong>：在线性头前插入若干额外 Transformer 层，表达能力更强</li>
+    </ul>
+
+    <p>论文实验中，<strong>不带额外层的 Transformer Head 效果弱于加了 3 个额外层的配置</strong>，但加 15 层并无明显提升——3 层是最佳平衡点。</p>
+
+    <h3>4.1.2 损失函数推导</h3>
+    <p>设序列长度为 $T$，预测深度为 $n$，第 $k$ 个预测头的损失为：</p>
+    <p>$$\mathcal{L}^k = -\frac{1}{T} \sum_{t=1}^{T-k} \log P_k(x_{t+k} \mid x_{\leq t}; \theta)$$</p>
+    <p>总训练目标为：</p>
+    <p>$$\mathcal{L}_{\text{total}} = \mathcal{L}^1 + \frac{\lambda}{n-1} \sum_{k=2}^{n} \mathcal{L}^k$$</p>
+    <p>其中 $\mathcal{L}^1$ 即标准 NTP 损失（主目标），$\lambda$ 控制辅助 MTP 损失权重。</p>
+
+    <blockquote>
+      <strong>关键设计决策</strong>：各辅助头的输入都是 <em>主干的同一隐状态</em> $h_t$，而非前一头的输出——这是"并行"的核心，梯度可独立流向主干，训练稳定。
+    </blockquote>
+
+    <h3>4.1.3 内存高效实现</h3>
+    <p>
+      并行多头存在一个显著问题：$n$ 个头的激活值需要同时保存在 GPU 显存中，显存开销随 $n$ 线性增长。
+      Meta 提出<strong>顺序前向-反向传播（Sequential Forward-Backward）</strong>：逐头计算前向和反向，及时释放激活值，显存峰值不随 $n$ 增长。
+    </p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Memory-Efficient MTP Training (Meta)</div>
+      <p><span class="kw">Input:</span> <span class="var">x</span> = 输入序列, <span class="var">θ</span> = 模型参数, 预测深度 <span class="num">n</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// Step 1: 主干前向传播（保留激活值）</span></p>
+      <p style="padding-left:1.5em"><span class="var">H</span> = <span class="fn">trunk_forward</span>(<span class="var">x</span>)  <span class="cm">// H ∈ ℝ^{T×d}</span></p>
+      <p style="padding-left:1.5em"><span class="var">g_trunk</span> = 0  <span class="cm">// 累积主干梯度</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> k = 1 <span class="kw">to</span> <span class="num">n</span>:</p>
+      <p style="padding-left:3em"><span class="cm">// Step 2: 第 k 头前向，获得损失</span></p>
+      <p style="padding-left:3em"><span class="var">logits_k</span> = <span class="fn">head_k_forward</span>(<span class="var">H</span>)</p>
+      <p style="padding-left:3em"><span class="var">loss_k</span> = <span class="fn">cross_entropy</span>(<span class="var">logits_k</span>, <span class="var">x</span>[k:])</p>
+      <p style="padding-left:3em"><span class="cm">// Step 3: 立即反向，释放激活值</span></p>
+      <p style="padding-left:3em"><span class="var">g_k</span>, <span class="var">dH_k</span> = <span class="fn">backward</span>(<span class="var">loss_k</span>, <span class="var">H</span>)</p>
+      <p style="padding-left:3em"><span class="var">g_trunk</span> += <span class="var">dH_k</span>  <span class="cm">// 累积对主干的梯度</span></p>
+      <p style="padding-left:3em"><span class="fn">free_activations</span>(<span class="var">logits_k</span>)  <span class="cm">// 及时释放</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// Step 4: 主干反向（使用累积梯度）</span></p>
+      <p style="padding-left:1.5em"><span class="fn">trunk_backward</span>(<span class="var">g_trunk</span>)</p>
+      <p><span class="kw">return</span> <span class="var">θ</span> (updated)</p>
+    </div>
+
+    <hr>
+
+    <h3 id="s42">4.2 DeepSeek-V3 顺序 MTP 模块</h3>
+
+    <h3>4.2.1 架构创新：维护因果预测链</h3>
+    <p>
+      Meta 的并行方案中，深层预测头无法感知浅层头的预测结果。DeepSeek-V3 提出了<strong>顺序 MTP 模块（Sequential MTP Module）</strong>，在预测链中引入了已预测 token 的 embedding，使每层预测都依赖前一层的预测结果，维持真正的因果链。
+    </p>
+
+    <pre class="mermaid">
+flowchart LR
+    subgraph MAIN["主模型（61 层 Transformer）"]
+        EM["Embed(x)"] --> TF["Transformer ×61"]
+        TF --> HN["RMSNorm"] --> OH["OutputHead\nlm_head (共享)"]
+        TF --> H0["h⁰_i\n主干最终隐状态"]
+    end
+    subgraph MTP1["MTP Module 1（第62层）"]
+        RN1A["RMSNorm(h⁰_i)"] --> CAT1
+        EMB1["Embed(x_{i+1})\n下一个真实 token"] --> RN1B["RMSNorm"] --> CAT1
+        CAT1["Concat → 2d维"] --> PROJ1["M₁ ∈ ℝ^{d×2d}\n投影回 d 维"] --> TRF1["Transformer Block"]
+        TRF1 --> RN1C["RMSNorm"] --> OH1["OutputHead (共享)\n预测 x_{i+2}"]
+        TRF1 --> H1["h¹_i"]
+    end
+    subgraph MTP2["MTP Module 2（可选第63层）"]
+        RN2A["RMSNorm(h¹_i)"] --> CAT2
+        EMB2["Embed(x_{i+2})"] --> RN2B["RMSNorm"] --> CAT2
+        CAT2["Concat → 2d维"] --> PROJ2["M₂ ∈ ℝ^{d×2d}"] --> TRF2["Transformer Block"]
+        TRF2 --> OH2["OutputHead (共享)\n预测 x_{i+3}"]
+    end
+    H0 --> MTP1
+    H1 --> MTP2
+    style MAIN fill:#1a1a2e,stroke:#89b4fa
+    style MTP1 fill:#1a1a2e,stroke:#fab387
+    style MTP2 fill:#1a1a2e,stroke:#cba6f7
+    </pre>
+
+    <h3>4.2.2 MTP 模块的数学推导</h3>
+    <p>对于深度为 $k$ 的 MTP 模块，在序列位置 $i$ 处，计算过程如下：</p>
+
+    <p><strong>Step 1：融合前一层隐状态与已预测 token 的 embedding</strong></p>
+    <p>$$\mathbf{h}'^{k}_{i} = M_k \left[ \text{RMSNorm}\!\left(\mathbf{h}^{k-1}_{i}\right) \,\Vert\, \text{RMSNorm}\!\left(\text{Emb}(x_{i+k})\right) \right]$$</p>
+    <p>其中 $\Vert$ 为向量拼接，$M_k \in \mathbb{R}^{d \times 2d}$ 将 $2d$ 维压缩回 $d$ 维，$\text{Emb}(x_{i+k})$ 是第 $k$ 个真实 token 的 embedding（Teacher Forcing）。</p>
+
+    <p><strong>Step 2：通过 Transformer Block 精化表示</strong></p>
+    <p>$$\mathbf{h}^{k}_{i} = \text{TransformerBlock}_k\!\left(\mathbf{h}'^{k}_{i}\right)$$</p>
+
+    <p><strong>Step 3：通过共享输出头预测第 $k+1$ 个 token</strong></p>
+    <p>$$P_k(x_{i+k+1}) = \text{Softmax}\!\left(\text{OutHead}\!\left(\text{RMSNorm}\!\left(\mathbf{h}^{k}_{i}\right)\right)\right)$$</p>
+    <p>其中 <code>OutHead</code> 与主模型的 <code>lm_head</code> 权重完全共享。</p>
+
+    <h3>4.2.3 训练目标</h3>
+    <p>对于第 $k$ 个预测深度，逐位置计算交叉熵：</p>
+    <p>$$\mathcal{L}^k_{\text{MTP}} = -\frac{1}{T} \sum_{i=1}^{T-k} \log P_k(x_{i+k+1} \mid x_{1:i}, x_{i+1:i+k})$$</p>
+    <p>总 MTP 辅助损失为各深度的加权平均：</p>
+    <p>$$\mathcal{L}_{\text{MTP}} = \frac{\lambda}{D} \sum_{k=1}^{D} \mathcal{L}^k_{\text{MTP}}$$</p>
+    <p>最终训练目标：</p>
+    <p>$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{NTP}} + \mathcal{L}_{\text{MTP}}$$</p>
+    <p>DeepSeek-V3 中 $D=1$（仅预测第2个 token），$\lambda$ 为可调超参（社区报告典型值约为 0.1~0.3）。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 2: DeepSeek-V3 MTP Module Forward Pass</div>
+      <p><span class="kw">Input:</span> <span class="var">x</span>[1..T] 输入 tokens, 深度 D=<span class="num">1</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 主模型前向</span></p>
+      <p style="padding-left:1.5em"><span class="var">emb</span> = <span class="fn">Embed</span>(<span class="var">x</span>)  <span class="cm">// ∈ ℝ^{T×d}, d=7168</span></p>
+      <p style="padding-left:1.5em"><span class="var">H⁰</span> = <span class="fn">MainTransformer</span>(<span class="var">emb</span>)  <span class="cm">// 61层, ∈ ℝ^{T×d}</span></p>
+      <p style="padding-left:1.5em"><span class="var">L_NTP</span> = <span class="fn">CrossEntropy</span>(<span class="fn">lm_head</span>(<span class="fn">RMSNorm</span>(<span class="var">H⁰</span>)), <span class="var">x</span>[2:])</p>
+      <p style="padding-left:1.5em"></p>
+      <p style="padding-left:1.5em"><span class="cm">// MTP Module 1：预测 x[i+2]</span></p>
+      <p style="padding-left:1.5em"><span class="var">emb_shift</span> = <span class="fn">Embed</span>(<span class="var">x</span>[2:])  <span class="cm">// token x_{i+1} 的 embedding</span></p>
+      <p style="padding-left:1.5em"><span class="var">h_fused</span> = <span class="fn">M₁</span>(<span class="fn">concat</span>(<span class="fn">RMSNorm</span>(<span class="var">H⁰</span>[:-1]), <span class="fn">RMSNorm</span>(<span class="var">emb_shift</span>)))</p>
+      <p style="padding-left:1.5em"><span class="var">H¹</span> = <span class="fn">TransformerBlock₁</span>(<span class="var">h_fused</span>)  <span class="cm">// 第62层</span></p>
+      <p style="padding-left:1.5em"><span class="var">L_MTP¹</span> = <span class="fn">CrossEntropy</span>(<span class="fn">lm_head</span>(<span class="fn">RMSNorm</span>(<span class="var">H¹</span>)), <span class="var">x</span>[3:])</p>
+      <p style="padding-left:1.5em"></p>
+      <p style="padding-left:1.5em"><span class="cm">// 总损失</span></p>
+      <p style="padding-left:1.5em"><span class="var">L_total</span> = <span class="var">L_NTP</span> + λ · <span class="var">L_MTP¹</span></p>
+      <p><span class="kw">return</span> <span class="var">L_total</span></p>
+    </div>
+
+    <h3>4.2.4 共享参数的工程价值</h3>
+    <p>DeepSeek-V3 MTP 模块与主模型共享两个关键权重：</p>
+    <ul>
+      <li><strong>Embedding 层</strong>（<code>model.embed_tokens.weight</code>）：词表大小 129,280，隐维度 7,168</li>
+      <li><strong>输出头</strong>（<code>lm_head.weight</code>）：形状 [129280, 7168]，约 0.9B 参数</li>
+    </ul>
+    <p>MTP 模块独有参数约 11.5B（包含投影矩阵 $M_k$、独立 Transformer Block、独立 RMSNorm 参数），相对 671B 总参数占比约 <strong>1.7%</strong>，开销极低。</p>
+
+    <hr>
+
+    <h3 id="s43">4.3 训练策略与超参调优</h3>
+
+    <h3>4.3.1 损失权重调优</h3>
+    <p>MTP 辅助损失的权重 $\lambda$ 需要仔细调整，原则如下：</p>
+    <table>
+      <tr><th>情形</th><th>推荐 $\lambda$</th><th>说明</th></tr>
+      <tr><td>初始训练，小模型（&lt;7B）</td><td>0.1~0.2</td><td>MTP 增益较小，避免干扰主目标</td></tr>
+      <tr><td>中大型模型（7B~70B）</td><td>0.2~0.4</td><td>增益随规模扩大，可适当加权</td></tr>
+      <tr><td>代码专项训练</td><td>0.3~0.5</td><td>代码任务 MTP 增益最显著</td></tr>
+      <tr><td>深度 D &gt; 2</td><td>降低 $\lambda$</td><td>深层预测难度大，loss 天然更高</td></tr>
+    </table>
+    <p>实践建议：<strong>监控 MTP loss 与主 NTP loss 的比值</strong>，若比值 &gt; 3 则减小 $\lambda$，若比值 &lt; 0.5 则可适当提高。</p>
+
+    <h3>4.3.2 预测深度 n 的选择</h3>
+    <p>根据 Meta ICML 2024 论文的消融实验，不同 $n$ 在 7B/200B tokens 代码训练的结果：</p>
+
+    <div id="chart-n-ablation" class="echarts-container" style="height:320px"></div>
+
+    <h3>4.3.3 Position Embedding 处理</h3>
+    <p>
+      在带有 RoPE 的模型中，MTP 模块的 position id 需要特殊处理。
+      对于深度 $k$ 的预测模块，其 Transformer Block 中对位置 $i$ 处的 token 应使用 position id = $i + k$，
+      以确保其 attention 感知到正确的相对位置关系。DeepSeek-V3 在实现中保持了这一位置一致性。
+    </p>
+
+    <h3>4.3.4 Teacher Forcing 与分布漂移</h3>
+    <p>
+      MTP 训练中，深层预测头的输入 <code>Emb(x_{i+k})</code> 使用的是<strong>真实 token</strong>（Teacher Forcing），
+      而非模型自身预测的 token。这引入了 exposure bias，但：
+    </p>
+    <ul>
+      <li>MTP 相比纯 NTP 的 teacher forcing 问题实际上<em>更轻</em>——预测更远的 token 本身就要求模型考虑更长的上下文规划</li>
+      <li>推理时 MTP 模块作为 draft 使用，其预测误差通过投机解码的验证步骤得到修正，不影响最终输出分布</li>
+    </ul>
+
+    <!-- ============================================================ -->
+    <h2 id="s5">5. 投机解码与推理加速</h2>
+
+    <h3>5.1 原理</h3>
+
+    <pre class="mermaid">
+sequenceDiagram
+    participant Draft as MTP Draft Module
+    participant Verify as 主模型 Verifier
+    participant Out as 输出
+
+    Note over Draft: 每步生成 D 个候选 token
+    Draft->>Verify: [t+1_draft, t+2_draft, ..., tD_draft]
+    Note over Verify: 单次前向传播，并行验证全部候选
+    Verify->>Verify: 逐位对比 P_main vs P_draft
+    alt 全部接受（概率匹配）
+        Verify->>Out: 输出 D 个 token，效率 ~D×
+    else 第 j 个拒绝
+        Verify->>Out: 输出 j 个 token（+1 个采样修正）
+        Note over Draft: 从第 j+1 个位置重新起草
+    end
+    </pre>
+
+    <h3>5.2 接受率与吞吐的数学关系</h3>
+    <p>设每步起草 $D$ 个 token，第 $k$ 个 token 被接受的概率为 $\alpha_k$，则平均每步输出 token 数为：</p>
+    <p>$$E[\text{tokens/step}] = 1 + \sum_{k=1}^{D} \prod_{j=1}^{k} \alpha_j$$</p>
+    <p>当 $D=1$，$\alpha_1 = 0.875$（取 DeepSeek-V3 报告的 85~90% 均值）时：</p>
+    <p>$$E[\text{tokens/step}] = 1 + 0.875 = 1.875 \approx 1.8\times \text{ speedup}$$</p>
+    <p>这与 DeepSeek-V3 技术报告中报告的 <strong>1.8× 吞吐提升</strong>完全吻合。</p>
+
+    <h3>5.3 推理阶段两种模式对比</h3>
+    <table>
+      <tr>
+        <th>模式</th><th>行为</th><th>适用场景</th><th>吞吐</th>
+      </tr>
+      <tr>
+        <td><strong>直接丢弃 MTP 模块</strong></td><td>主模型独立运行，MTP 模块完全不参与</td><td>延迟要求不严、批量推理</td><td>1×（基线）</td>
+      </tr>
+      <tr>
+        <td><strong>MTP 作为 Draft（投机解码）</strong></td><td>MTP 提供候选 token，主模型验证</td><td>低延迟场景、流式输出</td><td>1.3×~1.8×</td>
+      </tr>
+      <tr>
+        <td><strong>EAGLE-2 Tree Draft</strong></td><td>树形投机解码 + 动态剪枝</td><td>延迟极度敏感的服务</td><td>3×~6.5×</td>
+      </tr>
+    </table>
+
+    <blockquote>
+      <strong>注意</strong>：DeepSeek-V3 的 MTP 模块在 SGLang 中通过 <code>--speculative-algo NEXTN</code> 启用，实际生产环境测试（8×H200）约可获得 <strong>1.35×~1.44× 端到端吞吐提升</strong>（受 batch size 和序列长度影响）。
+    </blockquote>
+
+    <!-- ============================================================ -->
+    <h2 id="s6">6. 实验结果</h2>
+
+    <h3>6.1 Meta MTP：代码生成基准（7B 模型，200B tokens 代码预训练）</h3>
+
+    <div id="chart-meta-bench" class="echarts-container" style="height:380px"></div>
+
+    <table>
+      <tr>
+        <th>模型</th><th>MBPP @1</th><th>MBPP @10</th><th>MBPP @100</th><th>HumanEval @1</th><th>HumanEval @10</th><th>HumanEval @100</th>
+      </tr>
+      <tr>
+        <td>NTP (n=1)</td><td>39.6</td><td>65.1</td><td>82.4</td><td>31.4</td><td>57.7</td><td>84.7</td>
+      </tr>
+      <tr>
+        <td>MTP n=2</td><td>41.1</td><td>65.8</td><td>82.9</td><td>32.5</td><td>58.9</td><td>85.1</td>
+      </tr>
+      <tr>
+        <td><strong>MTP n=4</strong></td><td><strong>42.5</strong></td><td><strong>67.2</strong></td><td><strong>85.6</strong></td><td><strong>32.6</strong></td><td><strong>61.4</strong></td><td><strong>88.8</strong></td>
+      </tr>
+      <tr>
+        <td>MTP n=6</td><td>41.8</td><td>66.5</td><td>84.2</td><td>32.1</td><td>60.1</td><td>87.5</td>
+      </tr>
+      <tr>
+        <td>MTP n=8</td><td>40.9</td><td>65.7</td><td>83.1</td><td>31.8</td><td>59.3</td><td>86.2</td>
+      </tr>
+    </table>
+
+    <p>关键发现：<span class="badge">n=4 最优</span>，MBPP @1 提升 <strong>+7.3%</strong>，HumanEval @100 提升 <strong>+4.8%</strong>。</p>
+
+    <h3>6.2 模型规模的影响</h3>
+    <p>Meta 论文证明 MTP 的增益随模型规模增大：</p>
+
+    <div id="chart-scale" class="echarts-container" style="height:300px"></div>
+
+    <h3>6.3 DeepSeek-V3 推理加速实测</h3>
+    <table>
+      <tr>
+        <th>测试任务</th><th>基线吞吐 (tok/s)</th><th>MTP 投机解码 (tok/s)</th><th>加速比</th><th>平均接受 Token 数</th>
+      </tr>
+      <tr>
+        <td>翻译（2048in/2048out）</td><td>2,104</td><td>2,839</td><td>1.35×</td><td>2.74</td>
+      </tr>
+      <tr>
+        <td>代码生成（256in/2048out）</td><td>1,230</td><td>1,683</td><td>1.37×</td><td>2.76</td>
+      </tr>
+      <tr>
+        <td>摘要（2048in/256out）</td><td>2,292</td><td>2,380</td><td>1.04×</td><td>2.78</td>
+      </tr>
+      <tr>
+        <td>第2个 token 接受率（理论）</td><td colspan="2">85%~90%</td><td>~1.8×</td><td>—</td>
+      </tr>
+    </table>
+    <p>注：实际生产吞吐（SGLang + 8×H200）与理论值差距源于系统层面调度开销，短输出任务（摘要）受益较小。</p>
+
+    <!-- ============================================================ -->
+    <h2 id="s7">7. 消融实验与关键发现</h2>
+
+    <h3>7.1 Head 类型消融（Meta）</h3>
+    <table>
+      <tr><th>Head 类型</th><th>额外层数</th><th>MBPP @1</th><th>HumanEval @100</th><th>说明</th></tr>
+      <tr><td>NTP 基线</td><td>—</td><td>39.6</td><td>84.7</td><td>参考</td></tr>
+      <tr><td>Linear Head</td><td>0</td><td>39.3</td><td>82.2</td><td><em>低于基线</em>，表达力不足</td></tr>
+      <tr><td>Transformer Head</td><td>0</td><td>38.3</td><td>82.4</td><td><em>低于基线</em></td></tr>
+      <tr><td><strong>Transformer Head</strong></td><td><strong>3</strong></td><td><strong>42.5</strong></td><td><strong>88.8</strong></td><td>最优</td></tr>
+      <tr><td>Transformer Head</td><td>15</td><td>42.3</td><td>88.5</td><td>与 3 层差异不显著</td></tr>
+    </table>
+    <p><span class="badge green">关键结论</span> 仅增加线性头或 0 层 Transformer Head <em>反而有害</em>；3 个额外 Transformer 层是最优平衡点，带来真正的性能收益。</p>
+
+    <h3>7.2 归纳头（Induction Head）分析</h3>
+    <p>
+      Meta 论文通过合成数据实验揭示了 MTP 提升性能的<strong>机制</strong>：
+      MTP 训练更有利于<strong>归纳头（Induction Head）的形成</strong>。归纳头是 Transformer 中的一类特殊注意力头，负责识别"如果当前 token 是 A，且之前出现过 AB 序列，则下一个 token 应为 B"的 in-context 学习模式。
+    </p>
+    <p>MTP 迫使模型考虑未来多步，激励归纳头更早、更强地发展，从而提升算法推理能力。</p>
+
+    <h3>7.3 多 epoch 训练的效果</h3>
+    <p>MTP 在多 epoch 训练中的增益有<strong>递减趋势</strong>，但始终保持正收益——说明 MTP 并非仅仅通过增加有效数据量来提升性能，而是通过改变优化方向（鼓励全局规划）实现的。</p>
+
+    <h3>7.4 byte-level 模型的特殊价值</h3>
+    <p>
+      对于 byte-level 分词（词表 256），MTP 的最优 $n=8$（字节），对应约 2~3 个字符。
+      这是因为 byte-level 模型的单步信息量远小于 subword 模型，需要更大的预测窗口来获得等效的长程依赖约束。
+    </p>
+
+    <!-- ============================================================ -->
+    <h2 id="s8">8. Meta vs DeepSeek-V3 MTP 横向对比</h2>
+
+    <table>
+      <tr>
+        <th>维度</th>
+        <th>Meta MTP (Gloeckle 2024)</th>
+        <th>DeepSeek-V3 MTP (2024)</th>
+      </tr>
+      <tr>
+        <td><strong>架构类型</strong></td>
+        <td>并行多头（各头独立）</td>
+        <td>顺序模块（维护因果链）</td>
+      </tr>
+      <tr>
+        <td><strong>因果链</strong></td>
+        <td>无（各头仅感知主干 hidden state）</td>
+        <td>有（Emb(x_{i+k}) 注入下层预测）</td>
+      </tr>
+      <tr>
+        <td><strong>参数共享</strong></td>
+        <td>主干共享，头部独立（线性/小 TF）</td>
+        <td>Embedding + lm_head 完全共享</td>
+      </tr>
+      <tr>
+        <td><strong>预测深度</strong></td>
+        <td>n=4（7B 最优）</td>
+        <td>D=1（仅预测第2个 token）</td>
+      </tr>
+      <tr>
+        <td><strong>主要目标</strong></td>
+        <td>提升训练质量 + 推理加速</td>
+        <td>提升训练质量，推理期可丢弃</td>
+      </tr>
+      <tr>
+        <td><strong>推理加速</strong></td>
+        <td>3× (code, speculative + 2.5 tok/step)</td>
+        <td>1.8× (acceptance rate ~87.5%)</td>
+      </tr>
+      <tr>
+        <td><strong>模型规模验证</strong></td>
+        <td>300M ~ 13B</td>
+        <td>671B (MoE)</td>
+      </tr>
+      <tr>
+        <td><strong>额外参数开销</strong></td>
+        <td>n 个独立头（约主干 5~10%）</td>
+        <td>约 11.5B / 671B = 1.7%</td>
+      </tr>
+      <tr>
+        <td><strong>内存优化</strong></td>
+        <td>顺序 forward-backward（减少激活峰值）</td>
+        <td>DualPipe 流水线共享 embedding</td>
+      </tr>
+    </table>
+
+    <!-- ============================================================ -->
+    <h2 id="s9">9. 技术演进时间线</h2>
+
+    <div class="timeline-wrap">
+      <div class="timeline">
+        <div class="tl-col">
+          <div class="tl-period">2023</div>
+          <div class="tl-body">
+            <div class="tl-item">
+              <span class="tl-tag">基础推理</span><br>
+              Speculative Decoding (Leviathan et al.) — 拒绝采样验证，奠定 draft-verify 范式
+            </div>
+            <div class="tl-item">
+              <span class="tl-tag orange">并行 Head</span><br>
+              Medusa — 冻结主干 + 独立 draft heads，推理加速但质量受限
+            </div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2024 上半年</div>
+          <div class="tl-body">
+            <div class="tl-item">
+              <span class="tl-tag green">论文</span><br>
+              Meta ICML 2024 (Gloeckle et al.) — 首次系统论证 MTP 作为训练目标的价值；n=4 并行头；代码 +17%/+12%
+            </div>
+            <div class="tl-item">
+              <span class="tl-tag purple">推理加速</span><br>
+              EAGLE — 小型自回归 draft model，tree-based 验证，3~5× 加速
+            </div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2024 下半年</div>
+          <div class="tl-body">
+            <div class="tl-item">
+              <span class="tl-tag green">论文</span><br>
+              DeepSeek-V3 Technical Report — 671B MoE 验证 MTP；顺序因果链模块；接受率 85~90%；推理 1.8×
+            </div>
+            <div class="tl-item">
+              <span class="tl-tag orange">开源</span><br>
+              Meta 开源 MTP 模型至 HuggingFace（7B 代码模型 n=1/4）
+            </div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2025~2026</div>
+          <div class="tl-body">
+            <div class="tl-item">
+              <span class="tl-tag">工程化</span><br>
+              NVIDIA NeMo / Megatron 集成 mtp_loss_scaling_factor，生产级 MTP 训练
+            </div>
+            <div class="tl-item">
+              <span class="tl-tag purple">生态</span><br>
+              SGLang / vLLM 集成 DeepSeek-V3 MTP speculative decoding，--speculative-algo NEXTN
+            </div>
+            <div class="tl-item">
+              <span class="tl-tag orange">研究</span><br>
+              EAGLE-3 (NeurIPS 2025) — Training-time Test + MTP，3~6.5× 加速；MTP 成为主流预训练技术
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <h2 id="s10">10. 局限性</h2>
+
+    <ul>
+      <li>
+        <strong>Teacher Forcing 暴露偏差（Exposure Bias）</strong>：深层预测头使用真实 token embedding 作为输入，推理时实际使用的是上一步预测 token，存在训练-推理不一致，在错误积累场景下可能降低接受率
+      </li>
+      <li>
+        <strong>小模型收益不稳定</strong>：7B 以下模型的 MTP 增益不显著，甚至部分实验出现性能下降（参数规模不足以支撑多头的表达需求）
+      </li>
+      <li>
+        <strong>超参敏感性</strong>：$\lambda$（MTP loss 权重）和 $D$（预测深度）需要针对每个任务域和模型规模单独调优，缺乏通用最优配置
+      </li>
+      <li>
+        <strong>推理加速受 batch size 限制</strong>：投机解码在大 batch 场景（高并发）下加速比显著下降，因 draft 阶段无法充分并行化
+      </li>
+      <li>
+        <strong>自然语言任务提升有限</strong>：MTP 对代码、数学任务的提升远大于一般自然语言任务，后者的"多步规划"结构没有代码明显
+      </li>
+      <li>
+        <strong>预测深度上限</strong>：$D \gt 2$ 时边际收益递减，DeepSeek-V3 仅使用 $D=1$，更深的预测链收益不明确
+      </li>
+    </ul>
+
+    <!-- ============================================================ -->
+    <h2 id="s11">11. 核心洞见与读后评注</h2>
+
+    <h3>11.1 MTP 的本质：施加更强的归纳偏置</h3>
+    <p>
+      NTP 的本质是极大似然估计——最小化预测分布与数据分布的 KL 散度。而 MTP 在此基础上施加了一个<strong>额外的归纳偏置</strong>：要求模型不仅知道"下一个词是什么"，还要知道"接下来几步应该走向哪里"。
+      这类似于强化学习中从仅有即时奖励（NTP = 单步 reward）升级为多步折扣奖励（MTP = n-step return），
+      但在监督学习框架内以更低的方差实现。
+    </p>
+
+    <h3>11.2 为何代码任务受益最大</h3>
+    <p>
+      代码具有强烈的局部结构规律性：变量命名、括号匹配、循环结构、函数签名——这些都是在多步后才能验证合法性的语法约束。
+      MTP 通过多步预测压力，迫使模型在当前位置就考虑这些约束，因此代码生成的"先规划、后填充"能力显著增强。
+      相比之下，自然语言的多样性更高，"未来第 4 个词"的确定性远低于代码，MTP 信号噪声更大。
+    </p>
+
+    <h3>11.3 DeepSeek 的工程哲学</h3>
+    <p>
+      DeepSeek-V3 选择 $D=1$ 而非 Meta 的 $D=4$，体现了一种<strong>"够用就好"的工程哲学</strong>：
+      在 671B MoE 规模下，即使只预测一个额外 token（第2个位置），带来的训练信号密度提升已经足够显著。
+      更重要的是，$D=1$ 使得 MTP 模块的推理应用（投机解码）极为简洁，无需维护深层 draft 树，
+      接受率却高达 85~90%——这是对"简单即美"原则的绝佳诠释。
+    </p>
+
+    <h3>11.4 参数共享的深层价值</h3>
+    <p>
+      DeepSeek-V3 共享 <code>lm_head</code> 的设计不仅节省参数，更重要的是<strong>强迫 MTP 模块的表示与主模型的语义空间保持一致</strong>。
+      如果 MTP 模块有独立的输出头，其 representation 可能进化为一种"方言"，与主模型的 hidden space 渐渐偏离，
+      导致投机解码时的分布不匹配。共享 lm_head 是一种优雅的正则化。
+    </p>
+
+    <h3>11.5 MTP 在推理时代的再定位</h3>
+    <p>
+      随着 EAGLE-3 等专用投机解码系统的出现，MTP 作为推理加速工具的优势正在被专用 draft 模型取代（3~6.5× vs 1.8×）。
+      但 MTP <strong>作为训练信号增强工具的价值仍然独一无二</strong>：它以 &lt;2% 的参数开销改变了模型的训练目标，
+      这是任何推理阶段优化都无法替代的。未来的趋势可能是：MTP 作为预训练提升工具，EAGLE-3/类似系统作为推理加速工具，两者分工明确、互补共存。
+    </p>
+
+    <blockquote>
+      <strong>一句话总结</strong>：MTP 是一种以极低成本（参数增量 &lt;2%，FLOPs 增量 &lt;5%）在预训练阶段施加多步规划约束的技术，其本质是将语言模型的优化视野从"下一步"延伸到"未来 n 步"，由此带来的表示能力提升在代码、数学等结构化任务上极为显著，且可在推理时"零成本"复用为轻量级投机解码模块。
+    </blockquote>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center; margin-top:2em;">
+      参考资料：Gloeckle et al. ICML 2024 · DeepSeek-V3 Technical Report (arXiv:2412.19437) · NVIDIA NeMo MTP Docs · epoch.ai DeepSeek Analysis
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+
+    // 自动生成目录
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // 滚动高亮
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+    // ECharts: n 消融实验
+    echarts.init(document.getElementById('chart-n-ablation')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '预测深度 n 的消融实验（7B，200B tokens 代码）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center' },
+      legend: { data: ['MBPP @1', 'HumanEval @1', 'HumanEval @100'], textStyle: { color: '#cdd6f4' }, bottom: 0 },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: ['n=1 (NTP)', 'n=2', 'n=4', 'n=6', 'n=8'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', name: '准确率 (%)', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' }, min: 28 },
+      series: [
+        { name: 'MBPP @1', type: 'line', smooth: true, data: [39.6, 41.1, 42.5, 41.8, 40.9],
+          itemStyle: { color: '#89b4fa' }, lineStyle: { color: '#89b4fa' }, symbol: 'circle', symbolSize: 8,
+          markPoint: { data: [{ type: 'max', name: '最优' }] } },
+        { name: 'HumanEval @1', type: 'line', smooth: true, data: [31.4, 32.5, 32.6, 32.1, 31.8],
+          itemStyle: { color: '#a6e3a1' }, lineStyle: { color: '#a6e3a1' }, symbol: 'circle', symbolSize: 8 },
+        { name: 'HumanEval @100', type: 'line', smooth: true, data: [84.7, 85.1, 88.8, 87.5, 86.2],
+          itemStyle: { color: '#fab387' }, lineStyle: { color: '#fab387' }, symbol: 'circle', symbolSize: 8,
+          markPoint: { data: [{ type: 'max', name: '最优' }] } }
+      ],
+      grid: { top: 50, bottom: 50, left: 60, right: 30 }
+    });
+
+    // ECharts: Meta 基准测试
+    echarts.init(document.getElementById('chart-meta-bench')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'Meta MTP vs NTP 基准对比（13B 模型）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center' },
+      legend: { data: ['MBPP pass@1', 'HumanEval pass@1'], textStyle: { color: '#cdd6f4' }, bottom: 0 },
+      tooltip: { trigger: 'axis', formatter: (params) => {
+        return params.map(p => `${p.seriesName}: ${p.value}%`).join('<br/>');
+      }},
+      xAxis: { type: 'category', data: ['NTP (基线)', 'MTP n=4'], axisLabel: { color: '#cdd6f4', fontSize: 13 } },
+      yAxis: { type: 'value', name: 'pass@1 (%)', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' }, min: 30 },
+      series: [
+        { name: 'MBPP pass@1', type: 'bar', data: [
+            { value: 44.2, itemStyle: { color: '#45475a' } },
+            { value: 51.8, itemStyle: { color: '#89b4fa' },
+              label: { show: true, position: 'top', formatter: '+17%', color: '#a6e3a1', fontWeight: 700 } }
+          ], barWidth: '30%' },
+        { name: 'HumanEval pass@1', type: 'bar', data: [
+            { value: 36.1, itemStyle: { color: '#45475a' } },
+            { value: 40.4, itemStyle: { color: '#fab387' },
+              label: { show: true, position: 'top', formatter: '+12%', color: '#a6e3a1', fontWeight: 700 } }
+          ], barWidth: '30%' }
+      ],
+      grid: { top: 60, bottom: 60, left: 60, right: 30 }
+    });
+
+    // ECharts: 规模影响
+    echarts.init(document.getElementById('chart-scale')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'MTP 增益随模型规模的变化（HumanEval @1 提升幅度）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center' },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: ['300M', '1B', '3B', '7B', '13B'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', name: '提升幅度 (pp)', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' } },
+      series: [{
+        name: 'HumanEval @1 提升', type: 'bar', smooth: true,
+        data: [
+          { value: -0.5, itemStyle: { color: '#f38ba8' } },
+          { value: 0.3, itemStyle: { color: '#fab387' } },
+          { value: 1.8, itemStyle: { color: '#f9e2af' } },
+          { value: 1.2, itemStyle: { color: '#a6e3a1' } },
+          { value: 4.3, itemStyle: { color: '#89b4fa' } }
+        ],
+        markLine: { data: [{ type: 'average', name: '平均' }], lineStyle: { color: '#6c7086' } }
+      }],
+      grid: { top: 50, bottom: 30, left: 60, right: 30 }
+    });
+  </script>
+</body>
+</html>

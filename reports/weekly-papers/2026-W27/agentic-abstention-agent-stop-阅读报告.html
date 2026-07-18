@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agentic Abstention 阅读报告 — Agent何时应该停止行动</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; } a { color: var(--link); } strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; } li { margin: 0.3em 0; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>Agentic Abstention：Agent 知道何时停止行动吗？</h1>
+    <p><span class="tag">LLM Agent</span><span class="tag orange">安全性</span><span class="tag green">决策</span><span class="tag purple">CONVOLVE</span></p>
+    <p style="color:#6c7086;font-size:0.9em;">arXiv: 2606.28733 · 2026 · University of Washington · HuggingFace本周 #3 (137 upvotes)</p>
+
+    <table>
+      <tr><th>标题</th><th>Agentic Abstention: Do Agents Know When to Stop Instead of Act?</th></tr>
+      <tr><th>核心问题</th><td>在顺序决策场景下，LLM Agent 如何判断何时应该主动放弃行动（abstain）而非继续干预</td></tr>
+      <tr><th>代码/数据</th><td><a href="https://lhannnn.github.io/agentic-abstention">lhannnn.github.io/agentic-abstention</a></td></tr>
+    </table>
+
+    <h2 id="overview">1. 核心问题与动机</h2>
+    <p>大多数 LLM Agent 研究关注的是"如何做得更好"——更准确的规划、更精准的工具调用。然而一个被忽视的关键能力是：<strong>知道什么时候不该做</strong>。</p>
+    <p>Agentic Abstention 研究的是 Agent 在多轮交互中识别"应当停止行动"的能力。与单次问答中的拒绝（refusal）不同，Agentic Abstention 是一个<strong>序列决策问题</strong>：Agent 在每一步都面临"继续行动 / 放弃 / 收集更多信息"的三叉选择。</p>
+    <blockquote>
+      核心矛盾：过于激进的 Agent 会在不确定的情况下继续行动导致错误；过于保守的 Agent 会过早放弃导致任务失败。"及时性"（timeliness）是区分好坏 abstention 的关键维度。
+    </blockquote>
+
+    <h2 id="background">2. 背景与相关工作</h2>
+    <table>
+      <tr><th>研究方向</th><th>代表工作</th><th>与本文的关系</th></tr>
+      <tr><td>单轮拒绝（Refusal）</td><td>Constitutional AI, HHH</td><td>本文扩展到多轮顺序决策</td></tr>
+      <tr><td>不确定性估计</td><td>Conformal Prediction for LLMs</td><td>本文关注时序上的不确定性</td></tr>
+      <tr><td>Agent 评测</td><td>WebArena, AgentBench</td><td>本文增加"abstention时机"评测维度</td></tr>
+      <tr><td>Context Engineering</td><td>ReAct, Reflexion</td><td>本文 CONVOLVE 是上下文工程方法</td></tr>
+    </table>
+
+    <h2 id="method">3. 研究框架与评测设计</h2>
+    <pre class="mermaid">
+flowchart TD
+    T["任务开始<br>Task Start"] --> S1
+    subgraph Loop["顺序决策循环"]
+      S1["观察环境状态<br>Observe State $s_t$"] --> S2
+      S2{"Agent 决策<br>Decision at step t"}
+      S2 -->|"继续行动 Act"| S3["执行动作<br>Execute Action"]
+      S2 -->|"放弃 Abstain"| S4["输出 Abstention<br>结束交互"]
+      S2 -->|"收集信息"| S5["信息收集动作<br>Information Gathering"]
+      S3 --> S1
+      S5 --> S1
+    end
+    S4 --> E["评测：<br>是否在正确时机放弃？<br>Timely Recall Rate"]
+
+    style S2 fill:#2a2a3e,stroke:#fab387,stroke-width:2px
+    style S4 fill:#2a2a3e,stroke:#a6e3a1
+    </pre>
+
+    <h3>评测指标：及时召回率（Timely Recall Rate）</h3>
+    <p>本文提出了核心评测指标 <strong>Timely Recall Rate（TRR）</strong>：不只看 Agent 最终是否放弃，更看放弃是否"及时"——即在积累足够证据后立即放弃，而非迟迟不决或过早放弃：</p>
+    <p>$$\text{TRR} = \frac{\text{正确且及时的 Abstention 次数}}{\text{应当 Abstain 的总任务数}}$$</p>
+
+    <h2 id="convolve">4. CONVOLVE：上下文工程解决方案</h2>
+    <p>作者提出 <strong>CONVOLVE</strong>（CONtext engineering for VOLatile ENvironments），一种无需修改模型参数的上下文工程方法：</p>
+
+    <pre class="mermaid">
+flowchart LR
+    A["历史交互轨迹<br>Full Trajectory"] --> B["轨迹蒸馏<br>CONVOLVE Distillation<br>提炼停止规则"]
+    B --> C["Stopping Rules<br>停止规则库"]
+    C --> D["注入新轨迹上下文<br>Context Injection"]
+    D --> E["Agent 在新任务中<br>应用停止规则<br>更及时地 Abstain"]
+
+    style C fill:#2a2a3e,stroke:#89b4fa
+    </pre>
+
+    <p>CONVOLVE 的核心思想：从大量历史轨迹中提炼出可复用的"停止规则"（Stopping Rules），并将其注入新任务的上下文中。这样 Agent 在新任务中可以参照先验经验判断何时停止，无需从零探索。</p>
+
+    <h2 id="experiment">5. 实验结果</h2>
+    <h3>评测规模</h3>
+    <ul>
+      <li>评估了 <strong>13个 LLM-as-Agent 系统</strong> + <strong>2种 Agent Scaffold</strong></li>
+      <li>在 <strong>28,000+ 个任务</strong> 上评测（WebShop、Terminal、QA 三类环境）</li>
+    </ul>
+
+    <div id="chart-trr" class="echarts-container" style="height:300px"></div>
+
+    <table>
+      <tr><th>系统</th><th>环境</th><th>TRR（基线）</th><th>TRR（+CONVOLVE）</th></tr>
+      <tr><td>Llama-3.3-70B</td><td>WebShop</td><td>26.7</td><td><strong>57.4</strong></td></tr>
+      <tr><td>GPT-4o</td><td>WebShop</td><td>41.2</td><td><strong>63.8</strong></td></tr>
+      <tr><td>Llama-3.3-70B</td><td>Terminal</td><td>31.5</td><td><strong>52.1</strong></td></tr>
+    </table>
+
+    <h3>反直觉发现</h3>
+    <blockquote>更强大的模型在 Agentic Abstention 上并非一定更好——某些更大模型由于更自信，反而更晚放弃，导致 TRR 更低。</blockquote>
+
+    <h2 id="ablation">6. 关键发现</h2>
+    <ul>
+      <li><strong>没有模型能自发地及时 Abstain</strong>：13个被测系统均存在显著的延迟放弃问题</li>
+      <li><strong>参数规模与 Abstention 能力不相关</strong>：70B模型的 TRR 不优于13B模型</li>
+      <li><strong>Scaffold 的重要性</strong>：ReAct scaffold 比 vanilla 模式的 abstention 质量更好</li>
+      <li><strong>CONVOLVE 无参数更新</strong>：纯上下文工程方法即可将 TRR 翻倍</li>
+    </ul>
+
+    <h2 id="limitation">7. 局限性</h2>
+    <ul>
+      <li>评测的三类环境（WebShop、Terminal、QA）可能不覆盖所有 Agent 场景</li>
+      <li>CONVOLVE 需要预先积累历史轨迹数据，冷启动困难</li>
+      <li>"何时应当 Abstain"的真值标注本身存在主观性</li>
+    </ul>
+
+    <h2 id="insight">8. 核心洞见与读后评注</h2>
+    <blockquote>
+      <strong>关键洞见</strong>：Agent 安全性不只是"拒绝有害请求"，还包括在不确定情况下的"主动自我约束"。Agentic Abstention 提供了一个新的 Agent 评测维度，而 CONVOLVE 则证明了上下文工程在解决顺序决策中的强大潜力。
+    </blockquote>
+    <p>这篇论文的贡献有两个层次：第一，它定义了一个被忽视但重要的问题——"及时性"这一时序维度的缺失导致现有 Agent 评测不完整；第二，CONVOLVE 的"轨迹蒸馏为规则"思路极具实用价值，且无需任何参数更新，工程落地门槛低。</p>
+    <p>从 AI 安全角度，能够主动停止的 Agent 比永远执行到底的 Agent 更安全。这一研究为构建"有边界"的 Agent 系统提供了理论基础和实践工具。</p>
+
+    <h2 id="ref">参考文献</h2>
+    <ul>
+      <li>[1] Han Luo, Bingbing Wen, Lucy Lu Wang. <em>Agentic Abstention: Do Agents Know When to Stop Instead of Act?</em>. arXiv:2606.28733, 2026.</li>
+      <li>[2] Yao et al. <em>ReAct: Synergizing Reasoning and Acting in Language Models</em>. ICLR 2023.</li>
+      <li>[3] Zhou et al. <em>WebArena: A Realistic Web Environment for Building Autonomous Agents</em>. ICLR 2024.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const chart = echarts.init(document.getElementById('chart-trr'));
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'CONVOLVE 提升 Timely Recall Rate', textStyle: { color: '#89b4fa' } },
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['基线', '+CONVOLVE'], textStyle: { color: '#cdd6f4' } },
+      xAxis: { type: 'category', data: ['Llama-70B (WebShop)', 'GPT-4o (WebShop)', 'Llama-70B (Terminal)'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', min: 0, max: 80, axisLabel: { color: '#cdd6f4' } },
+      series: [
+        { name: '基线', type: 'bar', data: [26.7, 41.2, 31.5], itemStyle: { color: '#45475a' } },
+        { name: '+CONVOLVE', type: 'bar', data: [57.4, 63.8, 52.1], itemStyle: { color: '#a6e3a1' } }
+      ]
+    });
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id; a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

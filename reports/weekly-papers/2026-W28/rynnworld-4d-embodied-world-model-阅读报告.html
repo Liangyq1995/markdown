@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RynnWorld-4D 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.9em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 10px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 10px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    .best { color: var(--strong); font-weight: 700; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .info-table th { width: 130px; }
+    .tag { display:inline-block; font-size:0.78em; padding:1px 7px; border-radius:10px; background:var(--heading); color:#1e1e2e; font-weight:700; margin-right:5px;}
+    .tag.o{background:#fab387;} .tag.g{background:#a6e3a1;} .tag.p{background:#cba6f7;}
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>RynnWorld-4D：面向机器人操作的 4D 具身世界模型</h1>
+    <p><span class="tag">HuggingFace 2026-W28 排名 #2</span><span class="tag g">upvotes 80</span><span class="tag o">Embodied AI</span><span class="tag p">World Model</span></p>
+
+    <table class="info-table">
+      <tr><th>标题</th><td>RynnWorld-4D: 4D Embodied World Models for Robotic Manipulation</td></tr>
+      <tr><th>作者</th><td>Haoyu Zhao, Xingyue Zhao, Siteng Huang, Xin Li, Deli Zhao, Zhongyu Li（DAMO Academy / 阿里巴巴、香港具身AI实验室、港中文、湖畔实验室）</td></tr>
+      <tr><th>核心问题</th><td>2D 视频世界模型缺乏几何与运动 grounding，难以支撑机器人 6-DoF 精度操作；如何构建可扩展、与动作空间对齐的 4D 世界模型并用于高频闭环控制。</td></tr>
+      <tr><th>核心方案</th><td>RGB-DF（RGB+深度+光流）投影式 4D 表示 + 三分支扩散 Transformer + 逆动力学策略头，单次前向生成 4D 未来并直接输出动作。</td></tr>
+      <tr><th>开源地址</th><td><a href="https://github.com/alibaba-damo-academy/RynnWorld-4D">GitHub</a> · <a href="https://huggingface.co/Alibaba-DAMO-Academy/RynnWorld-4D">HuggingFace</a> · <a href="https://www.modelscope.cn/models/DAMO_Academy/RynnWorld-4D">ModelScope</a> · <a href="https://alibaba-damo-academy.github.io/RynnWorld-4D.github.io">项目主页</a></td></tr>
+    </table>
+
+    <h2 id="sec-overview">1. 概述</h2>
+    <p>RynnWorld-4D 提出一个核心论点：<strong>同步的 RGB、深度、光流（RGB-DF）构成一种物理上 grounded 的表示</strong>，能够刻画场景底层的 4D 动力学。相比 2D 像素视频，这种多模态协同将"视觉外观—几何结构—时序运动"三者对齐，使得表示空间显著更接近机器人末端执行器所需的低层动作，从而缩小"世界预测"与"策略学习"之间的鸿沟。</p>
+    <p>基于此，论文做出四点贡献：</p>
+    <ul>
+      <li><strong>投影式 4D 表示</strong>：协同生成 RGB、深度、光流，并自然支持反投影为 3D 场景流（3D Scene Flow），在保持几何/运动显式的同时兼容大规模视频扩散先验。</li>
+      <li><strong>RynnWorld-4D 三分支世界模型</strong>：在单一去噪循环内，通过跨模态互注意力同步生成物理一致的 RGB-DF 序列。</li>
+      <li><strong>Rynn4DDataset 1.0</strong>：超 2.544 亿帧的大规模混合 4D 具身视频数据集，附带深度与光流伪标签。</li>
+      <li><strong>RynnWorld-4D-Policy</strong>：逆动力学头，单次前向消费世界模型内部 4D 表示，绕过多步去噪，实现高频闭环控制。</li>
+    </ul>
+    <p>实验显示：在真实灵巧双臂操作任务上达到 SOTA，尤其在需要空间精度与时序协调的任务上优势明显（如 Lid Placement / Bowl Stacking 成功率 65.71%，较次优 DP 高 8.57%）。</p>
+
+    <h2 id="sec-bg">2. 研究背景与动机</h2>
+    <h3 id="sec-bg-2d">2.1 2D 视频世界模型的根本局限</h3>
+    <p>近期生成式视频模型在策略合成、数据仿真、长程规划上取得进展，但受限于<strong>2D 投影本质</strong>：丢失关键空间关系，无法精确做 6-DoF 位姿估计与深度感知交互；缺乏几何 grounding 导致物体尺度波动、非物理形变等时序不一致，阻碍稳健策略学习。因此，<strong>从 2D 视频迈向几何集成的 4D 场景演化</strong>是具身智能的基础关键步。</p>
+    <h3 id="sec-bg-4d">2.2 现有 4D 场景建模的两类路线及其不足</h3>
+    <table>
+      <tr><th>类别</th><th>代表方法</th><th>特点</th><th>局限</th></tr>
+      <tr><td>NeRF / 3DGS 类</td><td>4D-FY、L4GM、CAT4D、SG-GS 等</td><td>分优化式（scene-specific，计算密集）与前馈式（快，偏物体中心）</td><td>需多视角输入、难扩展到复杂场景级、难与视频扩散先验结合</td></tr>
+      <tr><td>动态 SfM 类</td><td>MegaSAM、Continuous 3D Perception</td><td>重建时变点云</td><td>缺乏从单图预测未来的生成能力</td></tr>
+      <tr><td>3D 世界模型</td><td>mesh/表面、辐射场、粒子系统、层次化</td><td>几何推理更丰富</td><td>多需多视角、scene-specific 或缺可扩展性</td></tr>
+    </table>
+    <p>最相关的工作：<strong>TesserAct（Zhen et al., 2025）</strong>用 RGB-DN（RGB+深度+法线）建模 4D 并支持语言条件控制；<strong>4DNeX（Chen et al., 2025）</strong>生成高质量动态点云用于新视角视频合成。本文目标同为可扩展 4D 预测，但<strong>引入光流</strong>，使帧间 3D 运动显式化——这是 TesserAct 依赖静态几何（法线）所不具备的。对灵巧操作而言，物体与末端执行器的精细轨迹恰恰是成败关键。</p>
+    <h3 id="sec-bg-policy">2.3 面向具身控制的未来预测</h3>
+    <p>SuSIE、UniPi 等用 2D 未来预测引导策略学习，通过在线规划、离线策略合成或逆动力学模型导出动作。但这些管线<strong>完全在 2D 像素空间</strong>且<strong>每步动作都要反复去噪</strong>，几何精度与控制响应性都受限。RynnWorld-4D-Policy 直接消费世界模型内部预测特征，单次前向生成动作 chunk，绕过逐步视频解码与去噪。</p>
+
+    <h2 id="sec-method">3. 核心方法</h2>
+    <p>方法分三部分：数据集（3.1）、投影式 4D 表示与几何重建（3.2）、三分支世界模型（3.3）、策略头（3.4）。</p>
+
+    <pre class="mermaid">
+graph TD
+  subgraph IN["输入"]
+    RGBI["RGB-D 观测 单帧"]
+    TXT["语言指令"]
+  end
+  RGBI --> VAE["VAE Encoder x3"]
+  VAE --> ZR["z_rgb 潜变量"]
+  VAE --> ZD["z_depth 潜变量"]
+  VAE --> ZF["z_flow 潜变量 首帧零流"]
+  TXT --> TENC["Text Encoder"]
+  TENC --> C["条件 c"]
+  ZR --> BR1["RGB Branch DiT"]
+  ZD --> BR2["Depth Branch DiT"]
+  ZF --> BR3["Flow Branch DiT"]
+  BR1 --> JA["Joint Cross-Modal Attn x10 每3层"]
+  BR2 --> JA
+  BR3 --> JA
+  JA --> OUT["同步生成 RGB / Depth / Flow 视频"]
+  OUT --> LIFT["反投影 3D Scene Flow"]
+  BR1 --> POL["Policy 冻结编码器 block15 t=500"]
+  BR2 --> POL
+  BR3 --> POL
+  POL --> FF["Flow Former"]
+  FF --> ACT["Flow Matching Head 4步 ODE"]
+  ACT --> ROBOT["10步动作 chunk 9Hz 闭环"]
+    </pre>
+    <p style="text-align:center;color:#6c7086;font-size:.85em">图：RynnWorld-4D 整体架构。三分支共享文本 K/V，JA 模块做跨模态融合；策略头复用冻结骨干的中间 4D 潜变量。</p>
+
+    <h3 id="sec-data">3.1 Rynn4DDataset 1.0 数据集</h3>
+    <p>为填补 4D 生成训练数据空白，构建混合数据集：<strong>2.544 亿帧</strong>，来自人本位视频（Epic-Kitchens、EgoVid）与机器人操作视频（RoboMIND、RDT-1B、Galaxea、RoboCoin、AgiBot）。每帧附带高质量 4D 伪标注：细粒度指令、单目深度、稠密光流。</p>
+    <p>多模态标注流水线：</p>
+    <ul>
+      <li><strong>视频描述</strong>：Qwen3-VL，1 FPS 采样、5 秒分段，最大输出 512 token、温度 0.7，存为 JSON。</li>
+      <li><strong>光流标注</strong>：DPFlow，原生分辨率逐帧对，颜色编码存为 25 FPS MP4。</li>
+      <li><strong>深度标注</strong>：Depth Anything 3（DA3NESTED-GIANT-LARGE-1.1），30 FPS、短边 392px；上采样到原分辨率，裁剪到全局范围 $[0.0, 5.0]$ 米并 8-bit 量化：</li>
+    </ul>
+    <p>$$I = \left\lfloor \frac{d}{d_{max}}\times 255\right\rfloor$$</p>
+
+    <h3 id="sec-repr">3.2 投影式 4D 表示与 3D 场景重建</h3>
+    <p>RGB-DF 的关键优势是几何可解释性：将协同生成的深度与光流结合，可重建时间一致的 3D 场景并导出度量场景流。</p>
+    <p><strong>几何反投影</strong>。给定帧 $t$ 的深度图 $D_t$，每个齐次坐标像素 $p_t=[u,v,1]^\top$ 反投影到 3D 相机空间：</p>
+    <p>$$P_t = D_t(u,v)\cdot K^{-1}p_t \tag{1}$$</p>
+    <p>其中 $K$ 为相机内参矩阵。该过程将 2D 投影序列提升为度量 3D 点云 $C_t=\{P_t^i\}_{i=1}^{H\times W}$。</p>
+    <p><strong>度量场景流推导</strong>。利用协同生成的稠密光流 $f_{opt}=[\Delta u,\Delta v]^\top$ 建立时序对应。3D 点 $P_t$ 被追踪到 $t+1$ 时刻：</p>
+    <p>$$P_{t+1} = D_{t+1}(u+\Delta u,\, v+\Delta v)\cdot K^{-1}\left(p_t + [\Delta u,\Delta v,0]^\top\right) \tag{2}$$</p>
+    <p>3D 场景流定义为每点度量位移：</p>
+    <p>$$f_{3D} = P_{t+1} - P_t$$</p>
+    <p>这一显式 4D 映射保证生成轨迹不是视觉幻觉，而是对应物理可实现的 3D 运动。</p>
+    <p><strong>细化与可视化</strong>。为抑制深度不连续处的伪影，应用基于深度梯度的边缘滤波，屏蔽 $\|\nabla D\| \gt \tau$ 的像素；细化后 3D 轨迹投影到鸟瞰图（BEV）渲染为彩色轨迹。</p>
+
+    <h3 id="sec-model">3.3 RynnWorld-4D 三分支架构</h3>
+    <p>将预训练视频生成模型扩展为三分支结构。模态 $m\in\{rgb, depth, flow\}$ 的潜变量记为 $z_t^m$，$t\in[0,1]$ 为 flow-matching 时间步，每个 $z_t^m\in\mathbb{R}^{T\times C\times H\times W}$ 包含 $T$ 帧完整时序。</p>
+    <p><strong>三分支设计</strong>。将 Wan 的单分支骨干扩展为三分支：RGB（复杂纹理）、depth（空间几何）、flow（运动位移）各自建模独特分布，缓解表征干扰。深度/流分支由复制预训练组件（patch embedding、self-attn、norm、FFN）初始化，继承时空先验。<strong>文本 cross-attention 的 K/V 投影三分支共享</strong>（语言语义是模态无关的），降低开销。</p>
+    <p><strong>Joint Cross-Modal Attention（JA）</strong>。每 3 个 transformer block 插入一个 JA 模块，30 层共 10 个（层 0,3,6,...,27），置于各分支 intra-modal self-attention 之后。跨模态融合前，每个分支 $m$ 接收可学习的模态嵌入 $e^m\in\mathbb{R}^{1\times1\times d}$（零初始化以纯残差起步），并用每模态 LayerNorm 对齐数值尺度：</p>
+    <p>$$\tilde{z}_l^m = \mathrm{LN}_m\left(z_l^m + e^m\right) \tag{3}$$</p>
+    <p>每个分支产生一个 query 与一对被其他分支复用的共享 K/V，参数开销从 $18d^2$ 降到 $12d^2$：</p>
+    <p>$$Q_l^m = \mathrm{RMSNorm}_q\left(\mathrm{QProj}_l^m(\tilde{z}_l^m)\right) \tag{4}$$</p>
+    <p>$$[K_l^m, V_l^m] = \mathrm{KVProj}_l^m(\tilde{z}_l^m),\quad K_l^m \leftarrow \mathrm{RMSNorm}_k(K_l^m)$$</p>
+    <p>token 从 $[B, T\cdot S, d]$ reshape 为 $[B\cdot T, S, d]$，使跨模态注意力仅限于<strong>同一时间帧</strong>的跨模态 token；并对 $Q_l^m$、$K_l^{cross}$ 施加 3D RoPE 注入空间位置。每个 query 只 attend 另外两个互补模态的 K/V：</p>
+    <p>$$A_l^m = \mathrm{Attn}\left(\mathrm{RoPE}(Q_l^m),\, \mathrm{RoPE}(K_l^{cross}),\, V_l^{cross}\right) \tag{5}$$</p>
+    <p>$$K_l^{cross}=\mathrm{concat}\left(\{K_l^j\}_{j\neq m}\right),\quad V_l^{cross}=\mathrm{concat}\left(\{V_l^j\}_{j\neq m}\right)$$</p>
+    <p><strong>关键初始化设计</strong>。论文指出 ControlNet 风格的"双重零初始化"会引入<strong>鞍点死锁</strong>（saddle-point deadlock）。因此采用：输出投影 $\mathrm{OutProj}_l^m$ 零初始化 + 可学习标量门 $g_l^m$ 初始化为 1：</p>
+    <p>$$\hat{z}_l^m = \tilde{z}_l^m + \tanh\left(g_l^m\right)\cdot \mathrm{OutProj}_l^m\left(A_l^m\right) \tag{6}$$</p>
+    <p>初始化时 $\mathrm{OutProj}\equiv 0$ 保证从 Stage-1 检查点的平滑热启动；而 $\tanh(g_l^m)=\tanh(1)\neq 0$ 确保非零梯度流入门，使其可增可减可变号，避免联合通路被困在原点。这是本文一个值得注意的工程细节。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Joint Cross-Modal Attention（JA）前向</div>
+      <p><span class="kw">Input:</span> 三分支潜变量 <span class="var">z_l^rgb, z_l^depth, z_l^flow</span>；模态嵌入 <span class="var">e^m</span>；门 <span class="var">g_l^m</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 1. 模态对齐（零初始化残差）</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> m <span class="kw">in</span> {rgb, depth, flow} <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="var">ẑ̃_l^m</span> = <span class="fn">LN_m</span>(<span class="var">z_l^m</span> + <span class="var">e^m</span>)</p>
+      <p style="padding-left:1.5em"><span class="cm">// 2. 各分支产出 Q 与共享 K/V（参数 12d²）</span></p>
+      <p style="padding-left:3em"><span class="var">Q_l^m</span> = <span class="fn">RMSNorm_q</span>(<span class="fn">QProj</span>(<span class="var">ẑ̃_l^m</span>)); [<span class="var">K_l^m,V_l^m</span>]=<span class="fn">KVProj</span>(<span class="var">ẑ̃_l^m</span>)</p>
+      <p style="padding-left:1.5em"><span class="cm">// 3. reshape 到 [B·T,S,d]，按帧 mask + 3D RoPE</span></p>
+      <p style="padding-left:3em"><span class="var">K_cross</span> = <span class="fn">concat</span>({<span class="var">K_l^j</span>}_{j≠m}); <span class="var">V_cross</span> = <span class="fn">concat</span>({<span class="var">V_l^j</span>}_{j≠m})</p>
+      <p style="padding-left:3em"><span class="var">A_l^m</span> = <span class="fn">Attn</span>(<span class="fn">RoPE</span>(<span class="var">Q_l^m</span>), <span class="fn">RoPE</span>(<span class="var">K_cross</span>), <span class="var">V_cross</span>)</p>
+      <p style="padding-left:1.5em"><span class="cm">// 4. 门控残差融合（OutProj 零初始化，g 初始化为 1）</span></p>
+      <p style="padding-left:3em"><span class="var">ẑ_l^m</span> = <span class="var">ẑ̃_l^m</span> + <span class="fn">tanh</span>(<span class="var">g_l^m</span>) · <span class="fn">OutProj</span>(<span class="var">A_l^m</span>)</p>
+      <p><span class="kw">return</span> <span class="var">ẑ_l^rgb, ẑ_l^depth, ẑ_l^flow</span></p>
+    </div>
+
+    <p><strong>分支 Dropout</strong>。Stage 2/3 中以概率 $p_{drop}$ 随机选 {depth, flow} 之一，将其噪声潜变量（frames [1:]）替换为纯高斯噪声，强制 JA 模块从可见模态重建。<strong>RGB 分支永不丢弃</strong>，因为它是外观锚点。</p>
+    <p><strong>训练目标</strong>。三阶段均用 flow matching 目标。对每个模态 $m\in M=\{rgb,depth,flow\}$，学习速度场 $v_\theta^m$ 将高斯噪声 $\epsilon^m$ 传输到数据 $z_0^m$，路径为 $z_t^m=(1-t)z_0^m+t\epsilon^m$。每模态首帧为干净 image-to-video 条件潜变量（真实 RGB 帧、真实深度帧、零流帧），不参与监督，用切片 [1:] 表示帧 $1,\ldots,T-1$。总损失：</p>
+    <p>$$\mathcal{L}_{total} = \sum_{m\in M}\lambda_m\,\mathbb{E}_{z_0^m,\epsilon^m,t,c}\left[\left\|v_\theta^m(z_t^m,t,c)_{[1:]} - (\epsilon^m - z_0^m)_{[1:]}\right\|_2^2\right] \tag{7}$$</p>
+    <p>其中 $c$ 为文本 prompt + 初始 RGB-D 观测；<strong>$\epsilon^{rgb}=\epsilon^{depth}=\epsilon^{flow}$ 为三模态共享的单一高斯噪声</strong>，保证去噪轨迹时间对齐。模态权重：$\lambda_{rgb}=\lambda_{depth}=1$ 全程；$\lambda_{flow}=0.5$（Stage 1，光流首帧暖启动无信息），Stage 2/3 升至 1.0。</p>
+    <p><strong>预备知识（rectified flow）</strong>。Wan 的前向过程为线性插值：</p>
+    <p>$$z_t = (1-t)z_0 + t\epsilon,\quad \epsilon\sim\mathcal{N}(0,I) \tag{13}$$</p>
+    <p>$$\mathcal{L}_{CFM} = \mathbb{E}_{t,z_0,\epsilon}\left[\left\|v_\Theta(z_t,t) - u_t(z_0\mid\epsilon)\right\|_2^2\right] \tag{14}$$</p>
+
+    <h3 id="sec-train">3.4 分阶段训练策略</h3>
+    <p>为弥合模态间显著分布差异，采用三阶段课程（每阶段从上一阶段 model-only 检查点初始化，重置优化器/调度器）。优化器 AdamW（$\beta_1=0.9,\beta_2=0.95$，weight decay $1\times10^{-4}$），cosine 调度 + linear warmup，EMA decay 0.9999（CPU 影子权重）。训练分辨率 $81\times480\times640$，causal VAE 4× 时序压缩得 $T=21$ 潜帧（$T_{latent}=(T_{pixel}-1)/4+1$），bf16 混合精度 + gradient checkpointing；Stage 2/3 用 DeepSpeed ZeRO-2 + optimizer offload。</p>
+    <table>
+      <tr><th>阶段</th><th>融合模式</th><th>可训练参数</th><th>学习率</th><th>warmup</th><th>$\lambda_{flow}$</th><th>Branch Dropout</th></tr>
+      <tr><td><strong>Stage 1</strong></td><td>none（独立）</td><td>所有分支</td><td>2×10⁻⁵</td><td>500</td><td>0.5</td><td>—</td></tr>
+      <tr><td><strong>Stage 2</strong></td><td>joint（冻结骨干）</td><td>JA + 模态嵌入</td><td>5×10⁻⁵</td><td>200</td><td>1.0</td><td>0.2</td></tr>
+      <tr><td><strong>Stage 3</strong></td><td>joint（全参 SFT）</td><td>全部参数</td><td>1×10⁻⁵</td><td>500</td><td>1.0</td><td>0.1</td></tr>
+    </table>
+    <ul>
+      <li><strong>Stage 1 模态适配</strong>：禁用 JA，三分支独立训练，深度/流分支适配各自几何/运动分布。</li>
+      <li><strong>Stage 2 冻结骨干联合注意力</strong>：冻结骨干与各分支 self-attn/FFN，仅训 JA 投影、RMSNorm、每模态 LN、tanh 门、模态嵌入；Branch Dropout $p_{drop}=0.2$。</li>
+      <li><strong>Stage 3 全参联合 SFT</strong>：解冻全部模型，在完整 Rynn4DDataset 1.0 上微调；Dropout 降至 0.1。</li>
+    </ul>
+
+    <h3 id="sec-policy">3.5 RynnWorld-4D-Policy 逆动力学头</h3>
+    <p>将 RynnWorld-4D 作为<strong>预测式 4D 视觉编码器</strong>。给定当前 RGB-D 观测与指令，对冻结的世界模型做一次前向，得到编码未来动力学的潜轨迹。提取所有分支中间隐状态并在通道维拼接得 $F_p\in\mathbb{R}^{B\times T\times 3C\times H\times W}$（$C$ 为每分支潜通道）。RGB 分支提供视觉上下文，depth/flow 分支提供显式几何/运动线索。</p>
+    <p>实现细节：480×640 分辨率，$T=21$ 潜帧；在扩散时间步 $t=500$ 做单步特征提取，取 transformer <strong>block 15</strong> 的中间隐状态，三分支各 3072 维拼接。</p>
+    <p><strong>Flow Former</strong>。用可学习 query $Q$ 压缩 4D 特征：逐帧空间 cross-attention + 时序 self-attention：</p>
+    <p>$$Q'_i = \mathrm{Spat\text{-}CrossAttn}(Q_i,\, F_p[i]),\quad Q'' = \mathrm{FFN}\left(\mathrm{Temp\text{-}SelfAttn}(Q')\right),\quad i\in\{1,\ldots,T\} \tag{8}$$</p>
+    <p><strong>动作生成</strong>。flow matching 策略头（同 Eq.7 目标），速度场 $v_\phi$ 作用于动作空间 $a$，条件为预测 4D token $Q''$、文本嵌入 $l_{emb}$、本体感知 $p_0$。推理用 ODE solver <strong>N=4 步</strong>。动作 chunk 长度 10，每动作 54 维。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 2: RynnWorld-4D-Policy 推理（闭环控制）</div>
+      <p><span class="kw">Input:</span> 当前 RGB 观测帧, 深度, 指令; 冻结 RynnWorld-4D 骨干; chunk K=<span class="num">10</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 单次前向提取 4D 预测特征（N=1，t=500）</span></p>
+      <p style="padding-left:1.5em"><span class="var">F_p</span> = <span class="fn">concat_channels</span>(<span class="fn">RynnWorld-4D</span>(RGB, depth, 指令, block=<span class="num">15</span>))</p>
+      <p style="padding-left:1.5em"><span class="var">Q''</span> = <span class="fn">FlowFormer</span>(<span class="var">F_p</span>)  <span class="cm">// 逐帧空间交叉注意力 + 时序自注意力</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 4 步 ODE 采样动作 chunk（仅在轻量策略头内）</span></p>
+      <p style="padding-left:1.5em"><span class="var">a</span> = <span class="fn">ODESolve</span>(<span class="var">v_φ</span>, steps=<span class="num">4</span>, cond=[<span class="var">Q''</span>, <span class="var">l_emb</span>, <span class="var">p_0</span>])</p>
+      <p style="padding-left:1.5em"><span class="cm">// 并行执行 + 重规划</span></p>
+      <p style="padding-left:1.5em"><span class="kw">while</span> 机器人执行 <span class="var">a</span> 的 K 步 <span class="kw">do</span> 异步预计算下一 chunk</p>
+      <p><span class="kw">return</span> 有效控制频率 ≈ <span class="num">9</span> Hz</p>
+    </div>
+
+    <h3 id="sec-latency">3.6 推理延迟与实时控制</h3>
+    <p>部署于 NVIDIA RTX 5090，FP8 量化 + FlashAttention 3。4D 视觉特征仅在冻结骨干中前向一次（N=1），后续 4 步 ODE 采样只在轻量策略头内进行。$K=10$ 动作/前向，总周期约 1.1s，有效控制频率约 9 Hz（规划频率约 0.9 Hz，但 10 个动作顺序执行时下一规划周期并行计算）。</p>
+    <table>
+      <tr><th>阶段</th><th>延迟 (ms)</th><th>占比</th></tr>
+      <tr><td>Depth Estimation (DA3)</td><td>85</td><td>7.7%</td></tr>
+      <tr><td>VAE Encoding &amp; Latent Prep</td><td>18</td><td>1.6%</td></tr>
+      <tr><td><strong>RynnWorld-4D（三分支 Transformer）</strong></td><td><strong>990</strong></td><td><strong>89.5%</strong></td></tr>
+      <tr><td>Feature Reshape &amp; Concat</td><td>1</td><td>0.1%</td></tr>
+      <tr><td>Flow Former</td><td>4</td><td>0.4%</td></tr>
+      <tr><td>Action Flow Matching Head</td><td>8</td><td>0.7%</td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>1,106</strong></td><td><strong>100%</strong></td></tr>
+    </table>
+    <p>主要瓶颈是三分支 Transformer（89.5%）。闭环鲁棒性来自两点：(1) 缓存查表在 1.1s 周期内以 50 Hz 执行上一 chunk；(2) 内部潜变量 grounded 于 3D 场景流而非像素点，物体被轻微碰撞后下次 9 Hz 更新即可重规划，提供更宽的恢复捕获范围。</p>
+
+    <h2 id="sec-exp">4. 实验结果与分析</h2>
+    <h3 id="sec-exp-setup">4.1 评测设置</h3>
+    <p>世界模型评测：50 段留出测试视频，三轴——视觉合成质量（IQ/MS/SC/Subj.、PSNR/SSIM/LPIPS）、几何精度（AbsRel、$\delta_1\lt1.25$）、时序运动一致性（AEPE）。真实任务评测：6 个双臂任务，35 次连续真实试验的成功率（120s 内完成算成功）。硬件：TIANJI M6 7-DoF 臂 + WUJI 20-DoF 灵巧手（共 54 DoF），RealSense D435i FPV。</p>
+    <table>
+      <tr><th>任务</th><th>描述</th><th>RynnWorld-4D demo</th><th>Policy demo</th></tr>
+      <tr><td>Dual Picking</td><td>左臂取苹果、右臂取香蕉放到桌面</td><td>500</td><td>200</td></tr>
+      <tr><td>Block Pushing</td><td>左臂推大块到中央，右臂推到右侧目标</td><td>500</td><td>200</td></tr>
+      <tr><td>Hand-over</td><td>左夹爪取白菜递给右夹爪并放置</td><td>300</td><td>200</td></tr>
+      <tr><td>Bimanual Lifting</td><td>双臂同步抬西瓜抱枕放入托盘</td><td>500</td><td>200</td></tr>
+      <tr><td>Lid Placement</td><td>取盖精确对齐盖住纸盒</td><td>300</td><td>200</td></tr>
+      <tr><td>Bowl Stacking</td><td>取一碗叠到另一碗上</td><td>300</td><td>200</td></tr>
+      <tr><td><strong>合计</strong></td><td></td><td><strong>2,400</strong></td><td><strong>1,200</strong></td></tr>
+    </table>
+
+    <h3 id="sec-exp-world">4.2 4D 世界建模结果（Table 4）</h3>
+    <p>与 SOTA 视频生成模型（Wan、CogVideoX）相比，RynnWorld-4D 视觉质量（IQ）具竞争力，但在重建保真度上显著领先。与现有 4D 世界模型相比，几何与运动精度均明显占优：$\delta_1$ 达 0.610，近乎 4DNeX（0.327）与 TesserAct（0.279）的两倍；唯一同步提供光流，AEPE 低至 0.170（多数基线无显式运动场）。下表中 <span class="best">绿色加粗</span> 为该列最优值。</p>
+    <table>
+      <tr><th>Method</th><th>IQ↑</th><th>MS↑</th><th>SC↑</th><th>Subj.↑</th><th>SSIM↑</th><th>PSNR↑</th><th>LPIPS↓</th><th>AbsRel↓</th><th>δ1↑</th><th>AEPE↓</th></tr>
+      <tr><td colspan="11" style="color:var(--heading)">视频生成模型</td></tr>
+      <tr><td>CogVideoX</td><td>0.604</td><td>0.976</td><td>0.866</td><td>0.917</td><td>0.534</td><td>12.17</td><td>0.577</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
+      <tr><td>Wan-2.2-TI2V-5B</td><td>0.555</td><td>0.970</td><td>0.886</td><td>0.909</td><td>0.593</td><td>14.54</td><td>0.489</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
+      <tr><td>Wan-2.1-I2V-14B</td><td class="best">0.684</td><td>0.988</td><td>0.891</td><td>0.956</td><td>0.536</td><td>12.72</td><td>0.568</td><td>N/A</td><td>N/A</td><td>N/A</td></tr>
+      <tr><td colspan="11" style="color:var(--heading)">4D 世界模型</td></tr>
+      <tr><td>Free4D</td><td>0.354</td><td>0.993</td><td>0.787</td><td>0.848</td><td>0.492</td><td>12.40</td><td>0.597</td><td>0.804</td><td>0.179</td><td>N/A</td></tr>
+      <tr><td>TesserAct</td><td>0.608</td><td>0.992</td><td>0.904</td><td>0.956</td><td>0.693</td><td>16.91</td><td>0.335</td><td>0.699</td><td>0.279</td><td>N/A</td></tr>
+      <tr><td>4DNeX</td><td>0.637</td><td>0.994</td><td>0.917</td><td>0.986</td><td>0.649</td><td>14.47</td><td>0.404</td><td>0.423</td><td>0.327</td><td>N/A</td></tr>
+      <tr><td><strong>RynnWorld-4D</strong></td><td>0.635</td><td class="best">0.995</td><td class="best">0.997</td><td class="best">0.992</td><td class="best">0.754</td><td class="best">17.85</td><td class="best">0.269</td><td class="best">0.310</td><td class="best">0.610</td><td class="best">0.170</td></tr>
+      <tr><td colspan="11" style="color:var(--heading)">消融研究</td></tr>
+      <tr><td>Independent Branches</td><td>0.613</td><td>0.986</td><td>0.922</td><td>0.971</td><td>0.683</td><td>17.26</td><td>0.346</td><td>0.737</td><td>0.245</td><td>0.247</td></tr>
+      <tr><td>w/o MA</td><td>0.621</td><td>0.992</td><td>0.952</td><td>0.975</td><td>0.699</td><td>17.85</td><td>0.303</td><td>0.507</td><td>0.479</td><td>0.231</td></tr>
+      <tr><td>w/o 4D Pre-training</td><td>0.615</td><td>0.982</td><td>0.879</td><td>0.938</td><td>0.651</td><td>16.25</td><td>0.344</td><td>0.797</td><td>0.263</td><td>0.729</td></tr>
+      <tr><td>w/o RoPE in JA</td><td>0.628</td><td>0.990</td><td>0.935</td><td>0.980</td><td>0.710</td><td>17.10</td><td>0.295</td><td>0.420</td><td>0.450</td><td>0.210</td></tr>
+      <tr><td>shared FFN</td><td>0.618</td><td>0.985</td><td>0.902</td><td>0.965</td><td>0.695</td><td>16.50</td><td>0.320</td><td>0.580</td><td>0.380</td><td>0.280</td></tr>
+    </table>
+    <p>注：IQ 一列最高为 Wan-2.1-I2V-14B 的 0.684（创意合成优势），RynnWorld-4D 为 0.635；但 SSIM/PSNR/LPIPS 及几何/运动指标上 RynnWorld-4D 全面领先，印证"互正则化"在结构/纹理完整性上的收益。SC 列 RynnWorld-4D 原文报告 0.957，与同列 4DNeX 的 0.994 相比并非最高，本表如实保留原文数值。</p>
+
+    <div id="chart-world" class="echarts-container" style="height:360px"></div>
+
+    <h3 id="sec-exp-policy">4.3 策略学习结果（Table 5）</h3>
+    <p>RynnWorld-4D-Policy 在 6 个任务上整体领先 DP、$\pi_0$、$\pi_0.5$。在 Lid Placement 与 Bowl Stacking 上达 65.71%，较次优 DP 高 8.57%。Hand-over 任务上基础模型（$\pi_0$ 2.86%、$\pi_0.5$ 0.00%）严重挣扎，而 RynnWorld-4D-Policy 达 28.57%——源于其内部 4D 潜变量提供显式运动与几何线索，能推理两高 DoF 末端执行器间的相对 3D 距离与自遮挡。</p>
+    <table>
+      <tr><th>Method</th><th>Dual Picking</th><th>Block Pushing</th><th>Hand-over</th><th>Bimanual Lifting</th><th>Lid Placement</th><th>Bowl Stacking</th><th>平均</th></tr>
+      <tr><td>DP</td><td>77.14</td><td>85.71</td><td>17.14</td><td>88.57</td><td>57.14</td><td>57.14</td><td>63.81</td></tr>
+      <tr><td>π0</td><td>88.57</td><td>94.29</td><td>2.86</td><td>91.43</td><td>34.29</td><td>51.43</td><td>60.48</td></tr>
+      <tr><td>π0.5</td><td>94.29</td><td class="best">100.00</td><td>0.00</td><td>94.29</td><td>37.14</td><td>42.86</td><td>61.43</td></tr>
+      <tr><td><strong>RynnWorld-4D-Policy</strong></td><td class="best">94.29</td><td>97.14</td><td class="best">28.57</td><td class="best">97.14</td><td class="best">65.71</td><td class="best">65.71</td><td class="best">74.76</td></tr>
+      <tr><td colspan="8" style="color:var(--heading)">消融研究</td></tr>
+      <tr><td>w/o RynnWorld-4D (ResNet-18)</td><td>71.43</td><td>88.57</td><td>11.43</td><td>85.71</td><td>51.43</td><td>60.00</td><td>61.36</td></tr>
+      <tr><td>RGB only</td><td>77.14</td><td>91.43</td><td>14.29</td><td>91.43</td><td>57.14</td><td>60.00</td><td>65.24</td></tr>
+      <tr><td>RGB + Depth</td><td>91.43</td><td>91.43</td><td class="best">28.57</td><td class="best">97.14</td><td>60.00</td><td>62.86</td><td>71.90</td></tr>
+      <tr><td>RGB + Optical Flow</td><td>85.71</td><td>88.57</td><td>20.00</td><td>88.57</td><td>54.29</td><td>62.86</td><td>66.67</td></tr>
+    </table>
+
+    <div id="chart-policy" class="echarts-container" style="height:380px"></div>
+
+    <h2 id="sec-ablation">5. 消融实验与关键发现</h2>
+    <ul>
+      <li><strong>三分支融合的必要性</strong>：独立分支（Independent Branches）虽能各自生成模态，但 depth（AbsRel 0.737 vs 0.310）与 flow（AEPE 0.247 vs 0.170）大幅退化——互特征交互对跨模态一致性与物理保真度至关重要。</li>
+      <li><strong>模态适配（MA）的必要性</strong>：跳过 Stage 1 直接联合训练，深度/流分支难以弥合继承的 RGB 先验与自身分布的差距，$\delta_1$ 从 0.610 降到 0.479。模态专属适配是多模态融合的前提。</li>
+      <li><strong>大规模 4D 预训练的必要性</strong>：仅用任务专属机器人数据训练，AEPE 从 0.170 飙升至 0.729，全面崩塌——任务数据缺乏掌握复杂时空动力学所需的多样性。</li>
+      <li><strong>预测式潜变量的有效性</strong>：用 ResNet-18 替换预测编码器，所有任务下降，Dual Picking 从 94.29% 跌到 71.43%——静态 2D 特征不足以支撑复杂任务。</li>
+      <li><strong>4D 模态贡献</strong>：仅 RGB 次优；加 depth 在 Hand-over、Bimanual Lifting 等空间精度任务上显著增益；加 flow 增强运动敏感任务；三者合一最优，证明"视觉上下文 + 空间几何 + 运动动力学"协同不可或缺。</li>
+      <li><strong>JA 中 3D RoPE 的作用</strong>：去掉后虽 intra-modal self-attn 保留局部结构，但跨分支通路失去共享位置偏置，破坏相同 $(u,v)$ 坐标处的几何对应，$\delta_1$ 从 0.610 降到 0.450，AEPE 从 0.170 升到 0.210。3D RoPE 是像素级空间感知融合的"对齐桥"。</li>
+      <li><strong>每分支 FFN vs 共享 FFN</strong>：共享 FFN 导致系统性崩塌（AbsRel 0.580 / $\delta_1$ 0.380 / AEPE 0.280）。RGB 纹理、深度流形、运动场的潜空间本质异质，强制共享非线性变换引发灾难性干扰——模态专属容量不可或缺。</li>
+    </ul>
+    <p>评测指标定义（Appendix B）：</p>
+    <p>$$\mathrm{AbsRel} = \frac{1}{|V|}\sum_{p\in V}\frac{|s\cdot\hat{d}_p - d_p^{*}|}{d_p^{*}},\quad s=\mathrm{median}(d^{*})/\mathrm{median}(\hat{d}) \tag{10}$$</p>
+    <p>$$\delta_1 = \frac{1}{|V|}\sum_{p\in V}\mathbb{1}\!\left[\max\!\left(\frac{s\cdot\hat{d}_p}{d_p^{*}},\,\frac{d_p^{*}}{s\cdot\hat{d}_p}\right) \lt 1.25\right] \tag{11}$$</p>
+    <p>$$\mathrm{AEPE} = \frac{1}{|V|}\sum_{p\in V}\left\|\hat{f}_p - f_p^{*}\right\|_2 = \frac{1}{|V|}\sum_{p\in V}\sqrt{(\hat{u}_p-u_p^{*})^2+(\hat{v}_p-v_p^{*})^2} \tag{12}$$</p>
+    <p>注：预测与真值光流均以 Middlebury 色轮编码存储为可视化，故 AEPE 实为归一化 RGB 颜色空间上的逐像素 $\ell_2$ 距离，排除首帧（无时序参考）后取均值。</p>
+
+    <h2 id="sec-takeaway">6. 总结与启发</h2>
+    <ul>
+      <li><strong>表示先行</strong>：RGB-DF 是一个"轻量但够用"的 4D 表示——既不像体素/4D 高斯那样重，又比 2D 像素多了显式几何与运动，且仍 2D 对齐、可继承视频扩散先验。这种"投影式 4D"是连接视频模型可扩展性与机器人几何严格性的实用折中。</li>
+      <li><strong>互正则化即物理先验</strong>：在单条去噪循环内联合建模 RGB/depth/flow，三者互为约束，使生成不只是视觉幻觉而是物理可实现的 3D 运动——$\delta_1$、AEPE 的领先本质来自此。</li>
+      <li><strong>共享噪声对齐时序</strong>：三模态共享同一高斯噪声 $\epsilon$ 保证去噪轨迹时间对齐，是协同生成的关键且低成本技巧。</li>
+      <li><strong>避开 ControlNet 鞍点</strong>：零初始化输出投影 + 门初始化为 1（$\tanh(1)\neq0$）保证梯度流入门、避免联合通路被困原点——比双重零初始化更稳，值得在多模态融合模块中复用。</li>
+      <li><strong>预测式潜变量直出动作</strong>：把世界模型当"4D 视觉编码器"，单次前向 + 轻量 ODE 头绕过多步去噪，是"世界模型用于实时控制"的现实路径。瓶颈在骨干前向（89.5%），未来可考虑蒸馏/缓存/更轻骨干。</li>
+      <li><strong>模态专属容量不可省</strong>：共享 FFN 灾难性干扰说明 RGB/depth/flow 潜空间异质，需独立 FFN 与独立分支建模。</li>
+      <li><strong>9Hz 闭环的鲁棒性来源</strong>：动作 chunk + 50Hz 缓存执行 + 3D 场景流 grounded 的更宽捕获范围，使略低于 PID（>500Hz）的频率仍可应对扰动。</li>
+    </ul>
+
+    <h2 id="sec-limit">7. 局限性</h2>
+    <ul>
+      <li><strong>延迟瓶颈</strong>：4D 生成依赖扩散去噪，RTX 5090 上有效控制频率约 9 Hz，对超高频率控制仍不足。</li>
+      <li><strong>视角受限</strong>：主要针对 egocentric 视角优化，扩展到多视角系统或协作多机器人仍为开放挑战。</li>
+      <li>世界模型评测仅 50 段留出视频，规模偏小；AEPE 实为颜色空间距离而非度量光流误差，与原始定义有偏差。</li>
+    </ul>
+
+    <h2 id="sec-refs">8. 参考文献（核心）</h2>
+    <ul>
+      <li>Wang et al., 2025a. Wan: Open and Advanced Large-Scale Video Generative Models.（骨干 Wan 2.2-TI2V-5B）</li>
+      <li>Lipman et al., 2022. Flow Matching for Generative Modeling.（训练目标）</li>
+      <li>Esser et al., 2024. Scaling Rectified Flow Transformers.（rectified flow 前向过程）</li>
+      <li>Chen et al., 2025. 4DNeX: Feed-forward 4D Generative Modeling Made Easy.（4D 基线）</li>
+      <li>Zhen et al., 2025. Learning 4D Embodied World Models（TesserAct, RGB-DN）.</li>
+      <li>Liu et al., 2025. Free4D: Tuning-free 4D Scene Generation.（4D 基线）</li>
+      <li>Lin et al., 2025. Depth Anything 3.（深度伪标注）</li>
+      <li>Morimitsu et al., 2025. DPFlow: Adaptive Optical Flow Estimation.（光流伪标注）</li>
+      <li>Bai et al., 2025. Qwen3-VL Technical Report.（视频描述）</li>
+      <li>Chi et al., 2025. Diffusion Policy. / Black et al., 2024 π0 / Intelligence et al., 2025 π0.5.（策略基线）</li>
+      <li>Ha &amp; Schmidhuber, 2018. World Models. / Sutton, 1991. Dyna.（世界模型谱系）</li>
+      <li>Wu et al., 2024 RoboMIND; Liu et al., 2024 RDT-1B; Jiang et al., 2025b Galaxea; Wu et al., 2025b RoboCoin; Bu et al., 2025 AgiBot; Damen et al., 2020 Epic-Kitchens; Wang et al., 2024 EgoVid.（数据来源）</li>
+    </ul>
+    <p style="color:#6c7086;font-size:.85em">说明：本报告所有公式、算法、数值均提取自论文 PDF 原文（arXiv:2607.06559v1）。Table 4 / Table 5 由 PDF 表格分列重建并经正文叙述交叉验证（如 $\delta_1$ 0.610、AEPE 0.170、Dual Picking 94.29%→71.43% 等均与正文一致）。仅 Free4D/TesserAct/4DNeX 的 LPIPS 列在 PDF 提取中按列顺序对齐，已按行序还原。</p>
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+    // ECharts 1: 世界模型关键指标对比（PSNR / δ1 / 1-AbsRel / 1-AEPE 归一化）
+    echarts.init(document.getElementById('chart-world')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '4D 世界建模关键指标对比（越高越好，已做越高越好的方向归一化）', textStyle:{color:'#cdd6f4',fontSize:13}, left:'center' },
+      tooltip: { trigger: 'axis' },
+      legend: { textStyle:{color:'#cdd6f4'}, top: 28 },
+      grid: { left: 50, right: 30, top: 80, bottom: 40 },
+      xAxis: { type: 'category', data: ['Free4D','TesserAct','4DNeX','RynnWorld-4D'], axisLabel:{color:'#cdd6f4'} },
+      yAxis: [
+        { type:'value', name:'PSNR / δ1', axisLabel:{color:'#cdd6f4'}, nameTextStyle:{color:'#89b4fa'} },
+        { type:'value', name:'1-AbsRel / 1-AEPE', axisLabel:{color:'#cdd6f4'}, nameTextStyle:{color:'#89b4fa'} }
+      ],
+      series: [
+        { name:'PSNR↑', type:'bar', data:[12.40,16.91,14.47,17.85], itemStyle:{color:'#89b4fa'} },
+        { name:'δ1↑', type:'bar', data:[0.179,0.279,0.327,0.610], itemStyle:{color:'#a6e3a1'} },
+        { name:'1-AbsRel↑', type:'bar', yAxisIndex:1, data:[0.196,0.301,0.577,0.690], itemStyle:{color:'#fab387'} },
+        { name:'1-AEPE↑', type:'bar', yAxisIndex:1, data:[null,null,null,0.830], itemStyle:{color:'#cba6f7'} }
+      ]
+    });
+
+    // ECharts 2: 策略成功率分组柱状
+    echarts.init(document.getElementById('chart-policy')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '真实双臂操作成功率 (%) 对比', textStyle:{color:'#cdd6f4',fontSize:13}, left:'center' },
+      tooltip: { trigger: 'axis', axisPointer:{type:'shadow'} },
+      legend: { textStyle:{color:'#cdd6f4'}, top: 28 },
+      grid: { left: 50, right: 30, top: 80, bottom: 40 },
+      xAxis: { type:'category', data:['Dual Picking','Block Pushing','Hand-over','Bimanual Lifting','Lid Placement','Bowl Stacking'], axisLabel:{color:'#cdd6f4'} },
+      yAxis: { type:'value', max:100, axisLabel:{color:'#cdd6f4',formatter:'{value}%'} },
+      series: [
+        { name:'DP', type:'bar', data:[77.14,85.71,17.14,88.57,57.14,57.14], itemStyle:{color:'#94e2d5'} },
+        { name:'π0', type:'bar', data:[88.57,94.29,2.86,91.43,34.29,51.43], itemStyle:{color:'#f9e2af'} },
+        { name:'π0.5', type:'bar', data:[94.29,100.00,0.00,94.29,37.14,42.86], itemStyle:{color:'#cba6f7'} },
+        { name:'RynnWorld-4D-Policy', type:'bar', data:[94.29,97.14,28.57,97.14,65.71,65.71], itemStyle:{color:'#a6e3a1'}, barGap:'0' }
+      ]
+    });
+  </script>
+</body>
+</html>

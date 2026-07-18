@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhysisForcing 阅读报告 — 物理强化机器人世界模拟器</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; } a { color: var(--link); } strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; } li { margin: 0.3em 0; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>PhysisForcing：物理强化的机器人操控世界模拟器</h1>
+    <p><span class="tag">世界模型</span><span class="tag orange">机器人</span><span class="tag green">DiT</span><span class="tag purple">物理对齐</span></p>
+    <p style="color:#6c7086;font-size:0.9em;">arXiv: 2606.28128 · 2026-06-26 · DAGroup-PKU (北京大学) / NVIDIA · HuggingFace本周 #8 (72 upvotes)</p>
+
+    <table>
+      <tr><th>标题</th><td>PhysisForcing: Physics Reinforced World Simulator for Robotic Manipulation</td></tr>
+      <tr><th>核心问题</th><td>通过像素级轨迹对齐和语义级关系对齐，让视频生成模型产生物理合理的机器人操控模拟视频</td></tr>
+      <tr><th>代码</th><td><a href="https://github.com/DAGroup-PKU/PhysisForcing">github.com/DAGroup-PKU/PhysisForcing</a></td></tr>
+    </table>
+
+    <h2 id="overview">1. 核心问题与动机</h2>
+    <p>视频生成模型（尤其是 DiT-based 扩散模型）被越来越多地用作机器人学习的<strong>世界模拟器</strong>：给定机器人动作序列，生成对应的视觉观测视频，用于规划和策略评估。</p>
+    <p>然而，这类模型存在严重的<strong>物理不合理性</strong>问题：</p>
+    <ul>
+      <li><strong>物体变形（Object Deformation）</strong>：物体在移动过程中形状改变（如杯子被拿起时变形）</li>
+      <li><strong>接触点的时空不一致</strong>：机械臂与物体接触时，两者的运动轨迹在物理上不对应</li>
+    </ul>
+    <p>这些"幻觉"视频如果用于训练机器人策略，会导致策略在真实世界中失效。</p>
+
+    <h2 id="background">2. 背景与相关工作</h2>
+    <table>
+      <tr><th>方法</th><th>物理合理性</th><th>可用于机器人世界模型</th></tr>
+      <tr><td>纯视频扩散模型</td><td>差（物体变形常见）</td><td>勉强</td></tr>
+      <tr><td>物理引擎（MuJoCo）</td><td>好</td><td>是，但视觉不真实</td></tr>
+      <tr><td>NeRF/Gaussian Splatting</td><td>中</td><td>静态场景</td></tr>
+      <tr><td><strong>PhysisForcing（本文）</strong></td><td><strong>好</strong></td><td><strong>是（视觉真实）</strong></td></tr>
+    </table>
+
+    <h2 id="method">3. PhysisForcing 框架</h2>
+    <pre class="mermaid">
+flowchart TD
+    A["输入：动作序列 + 初始帧<br>Action Sequence + Initial Frame"] --> B["DiT 视频扩散模型<br>Wan2.2-I2V / Cosmos3"]
+    B --> C["物理强化训练<br>PhysisForcing"]
+    subgraph Loss["双层物理约束损失"]
+      L1["像素级轨迹对齐损失<br>Pixel-Level Trajectory Alignment<br>参考点轨迹监督 DiT 特征"]
+      L2["语义级关系对齐损失<br>Semantic-Level Relational Alignment<br>冻结视频理解编码器对齐区间关系"]
+    end
+    C --> Loss
+    Loss --> D["物理合理的视频输出<br>Physically Plausible Video"]
+    D --> E["机器人策略学习<br>Downstream Robot Policy"]
+
+    style C fill:#2a2a3e,stroke:#89b4fa,stroke-width:2px
+    style D fill:#2a2a3e,stroke:#a6e3a1
+    </pre>
+
+    <h3>4.1 像素级轨迹对齐损失</h3>
+    <p>通过跟踪物体关键点在视频中的轨迹，将 DiT 的中间特征与参考轨迹对齐：</p>
+    <p>$$\mathcal{L}_{\text{pixel}} = \sum_{t=1}^{T} \sum_{p \in P_{\text{phys}}} \| f_\theta(x_t, p) - \text{traj}_{\text{ref}}(p, t) \|_2^2$$</p>
+    <p>其中 $P_{\text{phys}}$ 是物理关键点集合（接触点、物体中心等），$f_\theta$ 是 DiT 的特征提取。</p>
+
+    <h3>4.2 语义级关系对齐损失</h3>
+    <p>利用冻结的视频理解编码器（如 VideoMAE）提取跨物体的<strong>区域间关系</strong>，监督 DiT 在语义层面保持物理一致的时空关系：</p>
+    <p>$$\mathcal{L}_{\text{semantic}} = \| R_\theta(x_{1:T}) - R_{\text{enc}}(x_{1:T}^{\text{gt}}) \|_F^2$$</p>
+    <p>其中 $R$ 表示区域间关系矩阵（机械臂与目标物体的相对位置、接触状态等）。</p>
+
+    <h3>物理信息区域聚焦</h3>
+    <p>两个损失都聚焦于<strong>物理信息区域（physics-informative regions）</strong>——即接触点附近的像素，而非整个图像，这大幅提高了物理约束的效率。</p>
+
+    <h2 id="experiment">5. 实验结果</h2>
+    <div id="chart-rbench" class="echarts-container" style="height:300px"></div>
+
+    <table>
+      <tr><th>模型</th><th>指标</th><th>基础模型</th><th>Vanilla Finetune</th><th>PhysisForcing</th></tr>
+      <tr><td>Wan2.2-I2V-A14B</td><td>R-Bench 物理合理性</td><td>基线</td><td>+15.2%</td><td><strong>+22.3%</strong></td></tr>
+      <tr><td>Cosmos3-Nano</td><td>R-Bench 物理合理性</td><td>基线</td><td>+5.5%</td><td><strong>+9.2%</strong></td></tr>
+      <tr><td>Cosmos3-Nano (WM)</td><td>WorldArena 闭环成功率</td><td>16.0%</td><td>—</td><td><strong>24.0%</strong></td></tr>
+    </table>
+
+    <h2 id="ablation">6. 消融实验与关键发现</h2>
+    <ul>
+      <li><strong>双层损失的互补性</strong>：像素级损失解决变形问题，语义级损失解决接触一致性，两者去掉任一，性能均下降</li>
+      <li><strong>物理聚焦区域的必要性</strong>：在全局像素而非物理区域施加约束，效果更差（过度约束干扰了整体视频质量）</li>
+      <li><strong>冻结编码器的重要性</strong>：若微调语义编码器，语义约束退化</li>
+      <li><strong>策略学习的下游验证</strong>：物理合理的世界模型直接带来机器人策略成功率+50%（16→24%）</li>
+    </ul>
+
+    <h2 id="limitation">7. 局限性</h2>
+    <ul>
+      <li>参考轨迹的获取依赖深度相机或运动捕捉，增加数据采集成本</li>
+      <li>当前主要在桌面操控场景验证，室外或复杂场景的泛化性未知</li>
+      <li>CC BY-NC-ND 4.0 许可限制了商业使用</li>
+    </ul>
+
+    <h2 id="insight">8. 核心洞见与读后评注</h2>
+    <blockquote>
+      <strong>关键洞见</strong>：视频生成模型的"物理不合理性"根源在于它们被训练成最大化视觉相似性，而非物理一致性。PhysisForcing 通过双层物理约束损失"注入"物理先验，无需昂贵的物理引擎，是连接感知生成与物理模拟的重要桥梁。
+    </blockquote>
+    <p>从机器人学的角度，这项工作的价值超越了视频生成本身。物理合理的世界模型意味着机器人可以在"想象"中安全规划——类似于人类的心理演练。PhysisForcing 让这种"物理想象"成为可能。</p>
+    <p>闭环成功率从16%→24%（+50%相对提升）的结果非常有说服力，直接证明了物理合理性对下游策略的实质影响。这也说明了现有视频世界模型在机器人应用中的主要瓶颈恰恰是物理一致性，而非视觉质量。</p>
+
+    <h2 id="ref">参考文献</h2>
+    <ul>
+      <li>[1] Peiwen Zhang et al. <em>PhysisForcing: Physics Reinforced World Simulator for Robotic Manipulation</em>. arXiv:2606.28128, 2026.</li>
+      <li>[2] Chen et al. <em>R-Bench: Are Your Video Generation Models Physically Reasonable?</em> 2025.</li>
+      <li>[3] Wang et al. <em>Cosmos: World Foundation Model for Physical AI</em>. NVIDIA, 2025.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const chart = echarts.init(document.getElementById('chart-rbench'));
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'R-Bench 物理合理性提升 vs 基础模型', textStyle: { color: '#89b4fa' } },
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['Vanilla Finetune', 'PhysisForcing'], textStyle: { color: '#cdd6f4' } },
+      xAxis: { type: 'category', data: ['Wan2.2-I2V-A14B', 'Cosmos3-Nano'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', axisLabel: { color: '#cdd6f4', formatter: '+{value}%' }, name: '相对提升', nameTextStyle: { color: '#cdd6f4' } },
+      series: [
+        { name: 'Vanilla Finetune', type: 'bar', data: [15.2, 5.5], itemStyle: { color: '#89b4fa' } },
+        { name: 'PhysisForcing', type: 'bar', data: [22.3, 9.2], itemStyle: { color: '#a6e3a1' } }
+      ]
+    });
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id; a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

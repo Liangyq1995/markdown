@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On the Scaling of PEFT — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.6em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+    .tag { display: inline-block; font-size: 0.78em; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--heading); color: #1e1e2e; margin-right: 4px; }
+    .tag.green { background: var(--strong); }
+    .tag.orange { background: #fab387; }
+    .tag.purple { background: #cba6f7; }
+    .card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .card-title { color: var(--heading); font-weight: 700; margin-bottom: 8px; font-size: 1.05em; }
+    .axis-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 1.2em 0; }
+    .axis-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+    .axis-card .axis-label { font-size: 1.1em; font-weight: 700; color: var(--heading); margin-bottom: 8px; }
+    .axis-card .axis-sub { font-size: 0.85em; color: #a6adc8; margin-bottom: 10px; }
+    .highlight-box { background: #1a1a2e; border: 1px solid var(--heading); border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 900px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.95em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.88em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+    .note { background: #2a2a3e; border-left: 3px solid var(--strong); padding: 10px 16px; margin: 1em 0; border-radius: 0 6px 6px 0; font-size: 0.93em; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ═══════════════════════════════════════════ 1. 标题与信息 ═══ -->
+    <h1>On the Scaling of PEFT: Towards Million Personal Models of Trillion Parameters</h1>
+    <p style="color:#6c7086; font-size:0.9em; margin-bottom:1.6em;">Mind Lab &nbsp;·&nbsp; arXiv 2606.02437 &nbsp;·&nbsp; May 2026 &nbsp;·&nbsp; <strong>170 Upvotes</strong></p>
+
+    <table>
+      <tr><th>标题</th><td>On the Scaling of PEFT: Towards Million Personal Models of Trillion Parameters</td></tr>
+      <tr><th>核心问题</th><td>PEFT 不仅是全量微调的廉价替代品，而是构建百万级持久化个人模型的基础架构底座</td></tr>
+      <tr><th>机构</th><td>Mind Lab（65位作者，含 Vin Bo、Song Cao 等）</td></tr>
+      <tr><th>关键系统</th><td>MinT — 适配器身份、版本控制、溯源、评估与服务驻留的基础设施</td></tr>
+      <tr><th>核心方法</th><td>三轴 Scaling 框架（Scale Up / Scale Down / Scale Out）+ OLoRA-tail + δ-mem + Context Learning</td></tr>
+      <tr><th>开源地址</th><td>contact@mindlab.ltd（论文通讯）</td></tr>
+    </table>
+
+    <!-- ═══════════════════════════════════════════ 2. 概述 ═══ -->
+    <h2>概述</h2>
+
+    <p>
+      这篇论文提出了一个雄心勃勃的范式转变：<strong>将参数高效微调（PEFT）从"省钱的全量微调替代方案"重新定位为"持久化个人模型的基础架构底座"</strong>。
+      论文的核心主张是：在万亿参数基础模型之上，可以同时维护数以百万计的轻量级适配器实例，每个实例携带一个用户的偏好、技能、工具习惯和记忆状态，从而实现真正意义上的"个人 AI"。
+    </p>
+
+    <blockquote>
+      "The broader ambition is a world where strong foundation models support not one universal assistant, but millions of persistent personal ones."
+    </blockquote>
+
+    <p>
+      论文通过三个相互依存的 Scaling 轴来论证这一可能性：<strong>Scale Up</strong>（更强的共享先验使小型本地更新更有杠杆）、<strong>Scale Down</strong>（找到最小可靠的适配器规模）、<strong>Scale Out</strong>（管理大量共存的持久化适配实例）。三轴构成依赖链而非独立分类——任何一轴缺失都会使整体论点崩溃。
+    </p>
+
+    <p>
+      论文同时提出了 <strong>MinT</strong>（Mind Lab, 2026）作为支撑三轴的具体基础设施示例，涵盖适配器身份管理、策略修订、训练溯源、评估与服务驻留等机制。在实验层面，论文证明了在1T参数MoE模型上的LoRA RL可行性，引入了OLoRA-tail初始化方法，建立了LoRA内存容量定律，并展示了多适配器集成投票使 AIME24 准确率从 36.44% 提升至 48.67%。
+    </p>
+
+    <div class="axis-grid">
+      <div class="axis-card">
+        <div class="axis-label">⬆ Scale Up</div>
+        <div class="axis-sub">强化共享先验</div>
+        <p style="font-size:0.9em;">更强的基础模型使小型本地更新具有更高杠杆。研究万亿参数LoRA RL、路由感知校正、训练-服务一致性。</p>
+      </div>
+      <div class="axis-card">
+        <div class="axis-label">⬇ Scale Down</div>
+        <div class="axis-sub">最小化本地自适应状态</div>
+        <p style="font-size:0.9em;">寻找最小可靠的适配单元。分析rank制度、低秩不稳定性、RL原生初始化、超参数迁移、δ-mem等状态化设计。</p>
+      </div>
+      <div class="axis-card">
+        <div class="axis-label">↔ Scale Out</div>
+        <div class="axis-sub">扩展持久化适配实例群</div>
+        <p style="font-size:0.9em;">研究LoRA内存容量、Context Learning写策略、用户模拟器、基于多样性的多数投票集成智能。</p>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ 3. 研究背景与动机 ═══ -->
+    <h2>研究背景与动机</h2>
+
+    <h3>PEFT 的现状与局限</h3>
+    <p>
+      PEFT 方法（以 LoRA 为代表）自 2021 年 Hu et al. 提出以来，主要被用作<strong>全量微调的廉价替代品</strong>：冻结预训练权重，注入少量可训练的低秩矩阵，从而在大幅减少可训练参数数量的同时保留基础模型能力。这一视角将 PEFT 定位为"存储和内存节省技术"。
+    </p>
+    <p>
+      然而，这一定位存在根本性的局限：它将 PEFT 视为一次性的任务适应工具，而非持久化的个人状态载体。适配器在训练后就成为静态补丁，无法随交互历史动态演化，也无法在大规模部署中作为独立的可管理对象存在。
+    </p>
+
+    <h3>个人化 AI 的真实需求</h3>
+    <p>
+      前沿模型现已能够编写生产代码、操作工具、在长上下文中推理（OpenAI 2025、GLM-5 Team 2026、Kimi Team 2025、Qwen Team 2025、Anthropic 2025）。但<strong>一个能干的助手不等于一个个人化的助手</strong>。它可以回答更多问题、调用更多工具，却仍然无法在与同一个人的长期交互中保持连续性。
+    </p>
+    <p>
+      长上下文、检索增强（RAG）、提示工程和用户画像都有帮助，但本质上都是<em>外部的、临时的</em>。一个真正的个人模型需要<strong>可以持久化、适应并塑造未来行为的状态</strong>。论文提出：LoRA 适配器正是承载这种状态的实用单元。
+    </p>
+
+    <h3>生物类比：共享基因组与个体差异</h3>
+    <p>
+      论文以一个精妙的生物学类比来阐释三轴框架的直觉：
+    </p>
+    <ul>
+      <li>任意两个人类共享约 <strong>99.9%</strong> 的基因组，不到 1% 的变异足以产生完整的人类个体性。</li>
+      <li>类似地，PEFT 适配器占据基础模型权重的极小比例（&lt;1%），却携带着区分一个个人模型与另一个的本地自适应状态。</li>
+      <li>一套共享的生物学支撑数十亿持久化的个体生命；一个共享的基础模型可以同样支撑数百万持久化的个人模型实例。</li>
+    </ul>
+
+    <h3>Scaling 范式的转变</h3>
+    <p>
+      传统 Scaling 讨论的是<em>单一模型</em>的参数规模、数据规模和计算规模。本文提出了一个新的 Scaling 对象：<strong>持久化个人模型的数量</strong>。这要求同时解决三个相互依存的问题：
+    </p>
+
+    <div class="timeline-wrap">
+      <div class="timeline">
+        <div class="tl-col">
+          <div class="tl-period">传统 PEFT 视角</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag">定位</span><br>全量微调的廉价替代</div>
+            <div class="tl-item"><span class="tl-tag orange">使用方式</span><br>一次性任务适应，训练后丢弃</div>
+            <div class="tl-item"><span class="tl-tag purple">评估指标</span><br>vs. 全量微调的性能差距</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">本文新视角</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag green">定位</span><br>持久化个人状态的紧凑基底</div>
+            <div class="tl-item"><span class="tl-tag orange">使用方式</span><br>持续训练、版本控制、服务驻留</div>
+            <div class="tl-item"><span class="tl-tag purple">评估指标</span><br>内存容量、稳定性、人口规模</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">目标愿景</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag">个人连续性</span><br>跨交互保持偏好、技能、记忆</div>
+            <div class="tl-item"><span class="tl-tag orange">用户模拟</span><br>稳定的用户模拟器供 Agent 使用</div>
+            <div class="tl-item"><span class="tl-tag purple">集体智能</span><br>多样性适配器群的投票与聚合</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ 4. 核心框架 ═══ -->
+    <h2>核心框架：三轴 Scaling</h2>
+
+    <p>
+      论文的核心贡献是提出了一个<strong>三轴依赖链</strong>，而非松散的分类法。三轴必须相互强化：Scale Up 提供能力底座，Scale Down 使更新廉价可靠，Scale Out 将这些更新扩展为持久化实例群体。
+    </p>
+
+    <pre class="mermaid">
+flowchart TD
+    A["共享基础模型<br/>Shared Foundation Model<br/>（1T+ 参数 MoE）"] --> B["Scale Up<br/>更强的先验使小型更新更有杠杆"]
+    B --> C["Scale Down<br/>最小化本地自适应状态<br/>保持稳定可重复"]
+    C --> D["Scale Out<br/>大量持久化适配实例共存<br/>形成个人模型群体"]
+    D --> E["个人模型生态<br/>百万级持久化个人模型<br/>共享基础 + 个体适配器"]
+
+    B --> F["失败模式：强先验<br/>但无法持续适应"]
+    C --> G["失败模式：廉价适配器<br/>但先验太弱无杠杆"]
+    D --> H["失败模式：大量弱变体<br/>而非持久化个人模型"]
+
+    style A fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    style B fill:#2a2a3e,stroke:#a6e3a1,color:#cdd6f4
+    style C fill:#2a2a3e,stroke:#fab387,color:#cdd6f4
+    style D fill:#2a2a3e,stroke:#cba6f7,color:#cdd6f4
+    style E fill:#1a1a2e,stroke:#89b4fa,color:#89b4fa
+    style F fill:#1a1a2e,stroke:#f38ba8,color:#f38ba8
+    style G fill:#1a1a2e,stroke:#f38ba8,color:#f38ba8
+    style H fill:#1a1a2e,stroke:#f38ba8,color:#f38ba8
+    </pre>
+
+    <h3>Scale Up：强化共享先验</h3>
+    <p>
+      Scale Up 的核心论点是：<strong>RL 受先验限制（prior-limited）</strong>。RL 不是在抽象的能力空间中搜索，而是通过当前策略诱导的轨迹分布进行搜索。有用推理轨迹的采样概率由预训练策略强烈决定。因此，更强的基础模型能使 RL 更有效率——探索更好，信用分配更准确，迁移更顺畅。
+    </p>
+    <p>
+      LoRA 在这里的角色从"存储节省"转变为<strong>"在固定预算下获取更强先验的接口"</strong>。论文的关键对比实验（Table 2）表明：在相近的 RL 预算下，使用 LoRA 适配更大基础模型，其标准化增益远超对较小模型进行全参数 RL：
+    </p>
+
+    <table>
+      <tr><th>模型与适应方式</th><th>可训练参数</th><th>AIME 2025 归一化增益</th><th>GPQA Diamond 归一化增益</th></tr>
+      <tr><td>DS-Distill-Qwen-1.5B，全量 RL</td><td>1.5B</td><td>8.33%</td><td>25.00%</td></tr>
+      <tr><td>DS-Distill-Qwen-7B，LoRA r=64</td><td>0.16B</td><td>11.31%</td><td>27.23%</td></tr>
+      <tr><td><strong>DS-Distill-Qwen-32B，LoRA r=8</strong></td><td><strong>0.07B</strong></td><td><strong>20.61%</strong></td><td><strong>33.02%</strong></td></tr>
+    </table>
+
+    <p>
+      这一结果说明：当学习预算固定时，<strong>先验的强度比可训练表面的大小更重要</strong>。32B 模型仅用 0.07B 可训练参数（少于 1.5B 全量 RL 的 5%），却获得了更大的增益。
+    </p>
+
+    <p><strong>万亿参数 LoRA RL 的工程实现（Kimi K2）：</strong>论文以 Kimi K2（1.04T 参数，32.6B 激活参数的 MoE 模型）为例，证明了大规模 LoRA RL 的工程可行性。关键设计原则：</p>
+    <ul>
+      <li>将并行化作为可调度资源而非固定布局</li>
+      <li>Rollout 引擎与 Megatron 风格训练后端集成</li>
+      <li>LoRA 附加到密集层和专家层，使 RL 信号影响全局推理和专家特定计算</li>
+      <li>计算和通信占用约为全参数 RL 的 <strong>10%</strong></li>
+    </ul>
+
+    <p><strong>Scale-Induced 失败模式：</strong>论文识别了四类规模诱导的失败：</p>
+    <ul>
+      <li><em>算法不匹配</em>：训练-推理不匹配（TIM），在 MoE 中路由决策变化导致有效计算不同</li>
+      <li><em>稀疏架构失败</em>：专家路由、稀疏注意力选择等离散计算路径的差异</li>
+      <li><em>适配器语义失败</em>：低秩适配器被错误附加或解释</li>
+      <li><em>生命周期和服务失败</em>：量化、合并或服务运行时改变了有效计算</li>
+    </ul>
+
+    <p>
+      <strong>Router Replay R3</strong> 是解决 TIM 问题的方案：在 rollout 时记录路由信息，在训练时重放，从而减少采样策略与优化策略之间的语义差距。实验显示 R3 将最大 rollout 概率差异、标准差和均值差异均显著降低，同时提升了验证集准确率。
+    </p>
+
+    <h3>Scale Down：最小化本地自适应状态</h3>
+    <p>
+      Scale Down 的目标是：找到最小可靠的持久化学习单元——一个既有表达力又稳定、廉价更新和存储、可在众多实例间实际服务的本地自适应状态。
+    </p>
+
+    <p><strong>Rank 制度划分：</strong>基于 Qwen3-8B 的 216 次 PPO 扫描（9个rank × 4个batch size × 6个seed），论文将 LoRA rank 划分为三个区域：</p>
+
+    <div id="chart-rank" class="echarts-container" style="height:320px"></div>
+
+    <ul>
+      <li><strong>中等 rank（16-32）</strong>：部署默认区，最高均值增益，最低下行风险</li>
+      <li><strong>低 rank（1-4）</strong>：研究前沿区，最佳单次运行已接近中等 rank，但跨种子均值下降，可靠性不足</li>
+      <li><strong>高 rank（64+）</strong>：成本警告区，增加参数但不提升性能上限</li>
+    </ul>
+
+    <div class="note">
+      关键洞见：低 rank 区域的问题不是<em>容量不足</em>，而是<em>可靠性不足</em>。rank=1 的最佳运行已能匹配 rank=32 的最佳运行，但均值表现不稳定。这意味着低 rank 是<strong>优化不足而非容量不足</strong>，解决方案是更好的初始化。
+    </div>
+
+    <p><strong>OLoRA-tail：RL 原生初始化：</strong>论文提出 OLoRA-tail，专为 RL 微调设计的初始化方案。其核心思想是使用预训练权重矩阵的<em>最小奇异向量</em>（尾部子空间）初始化适配器，而非主奇异向量。</p>
+
+    <p>原因：主子空间捕获预训练表示的主导方向，扰动这些方向会通过 on-policy RL 更新引发大的分布偏移，使 DAPO 裁剪机制无法完全控制。相比之下，次要子空间方向在预训练模型中相对惰性，提供更安全的优化景观。</p>
+
+    <p>实验结果：在 Qwen3-30B-A3B-Instruct 上，rank=1 的 OLoRA-tail 达到 35.5% 的平均通过率，比标准 LoRA 的 24.0% 高出 <strong>11.5 个百分点</strong>（+48% 相对提升），且完全消除了对 batch size 的敏感性。</p>
+
+    <p><strong>超参数迁移（Triquetra）：</strong>在百万适配器规模下，不能要求每个适配器都进行完整的超参数搜索。论文分析了三种 alpha 缩放规则对学习率迁移的影响：</p>
+
+    <table>
+      <tr><th>Alpha 规则</th><th>更新量级</th><th>跨 rank 迁移质量</th><th>推荐场景</th></tr>
+      <tr><td>固定 $\alpha/r$</td><td>随 rank 增大而增大</td><td>好的学习率区间随 rank 下移</td><td>低 rank 简单任务</td></tr>
+      <tr><td>固定 $\alpha$</td><td>随 rank 增大而减小</td><td>较平坦，易调节</td><td>简单分类任务</td></tr>
+      <tr><td><strong>$\alpha \propto \sqrt{r}$（rsLoRA）</strong></td><td>rank 无关</td><td>最稳健，保持同阶可复用性</td><td><strong>推理等困难任务</strong></td></tr>
+    </table>
+
+    <p><strong>δ-mem：超越静态 LoRA 的状态化适配器：</strong>δ-mem（Lei et al., 2026）将冻结的全注意力 Transformer 增强了紧凑的在线联想记忆状态。与静态 LoRA 不同，δ-mem 维护一个随 token 处理而演化的状态，通过 delta-rule 更新实现历史依赖的低秩校正。</p>
+
+    <h3>Scale Out：从个体适应到群体规模个性化</h3>
+    <p>
+      Scale Out 回答了当大量持久化适配实例共存时会发生什么。它包含三个相互关联的问题：
+    </p>
+    <ul>
+      <li><strong>个人连续性</strong>：个人模型如何为个体保持连续性（记忆、技能、偏好）</li>
+      <li><strong>用户模拟</strong>：持久化用户条件策略如何支持 Agent 环境中的用户模拟器</li>
+      <li><strong>集体智能</strong>：适配模型间的多样性如何成为集体性能的来源</li>
+    </ul>
+
+    <p><strong>LoRA 内存容量定律：</strong>论文通过 DishNameBenchmark（263次运行）建立了 LoRA 内存的容量定律：</p>
+    <ul>
+      <li>当容量效率低于约 $10^{-3}$（内存 token / 可训练参数）时，准确率接近 1</li>
+      <li>在 $10^{-3}$ 到 $10^{-2}$ 区间开始退化</li>
+      <li>超过约 $10^{-2}$ 后准确率趋向零</li>
+      <li>MLP LoRA 的参数效率优于注意力 LoRA：MLP &gt; Attention ≈ All ≫ Unembed</li>
+    </ul>
+
+    <p><strong>多样性作为集体智能来源（模型数量实验）：</strong>从同一基础模型（Qwen3-30B）出发，训练仅在数据排列和掩码上有差异的多个 LoRA 变体，通过多数投票聚合答案：</p>
+
+    <p>$$\text{accuracy} \approx 0.386 + 0.0172 \ln(k), \quad R^2 \approx 0.888$$</p>
+
+    <p>AIME24 准确率从 $k=1$ 时的 36.44% 提升至 $k=198$ 时的 <strong>48.67%</strong>，增益约 +11.4 个百分点。而重复采样（Repetition）最高仅达 43.78%，说明多样性不等于采样噪声。</p>
+
+    <!-- ═══════════════════════════════════════════ 5. MinT 系统设计 ═══ -->
+    <h2>MinT 系统设计</h2>
+
+    <p>
+      MinT（Mind Lab, 2026）是支撑三轴 Scaling 的具体基础设施示例。其核心设计哲学是：<strong>将昂贵的基础模型保持常驻，将 LoRA 适配器视为携带行为的策略状态对象</strong>。
+    </p>
+
+    <h3>核心数据模型</h3>
+
+    <table>
+      <tr><th>状态对象</th><th>存储内容</th><th>对 PEFT Scaling 的意义</th></tr>
+      <tr><td><strong>Base Deployment</strong></td><td>常驻的密集或 MoE 基础模型</td><td>保持昂贵的共享先验常驻，同时允许多个适配器围绕它变化</td></tr>
+      <tr><td><strong>Policy Record</strong></td><td>基础版本、LoRA rank、目标模块、检查点、rollout 记录、已导出的适配器修订版</td><td>使适配行为可恢复、可审计、可回滚</td></tr>
+      <tr><td><strong>Policy Session</strong></td><td>适配器张量、优化器矩、调度器位置、梯度、rollout 元数据的临时恢复</td><td>允许时间片化的多 LoRA 训练，无需复制基础模型</td></tr>
+      <tr><td><strong>Adapter Revision</strong></td><td>固定导出的 PEFT 适配器（服务张量布局）</td><td>定义由 rollout、评估、服务和回滚选择的行为</td></tr>
+      <tr><td><strong>Serving Residency</strong></td><td>适配器是否在共享存储、CPU 缓存或 GPU batch slot 中</td><td>允许大型目录保持可寻址，同时只有有界工作集处于活跃状态</td></tr>
+    </table>
+
+    <h3>策略生命周期架构</h3>
+
+    <pre class="mermaid">
+graph TD
+    A["用户交互 / 工具输出<br/>产生 rollout 记录"] --> B["Training Worker<br/>在常驻 Base 上更新适配器状态"]
+    B --> C["Export<br/>保存固定适配器修订版<br/>到 Policy Population"]
+    C --> D["Policy Population<br/>可寻址的适配器修订版目录"]
+    D --> E{"Serving Residency<br/>三层缓存"}
+    E --> F["Cold: Shared Storage<br/>持久化目录"]
+    E --> G["Warm: CPU Cache<br/>本地 CPU 内存"]
+    E --> H["Hot: GPU Batch Slots<br/>当前解码步骤活跃集"]
+    H --> I["vLLM Sampler<br/>生成响应 tokens"]
+    I --> A
+
+    style A fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    style B fill:#2a2a3e,stroke:#a6e3a1,color:#cdd6f4
+    style C fill:#2a2a3e,stroke:#fab387,color:#cdd6f4
+    style D fill:#1a1a2e,stroke:#89b4fa,color:#89b4fa
+    style E fill:#2a2a3e,stroke:#cba6f7,color:#cdd6f4
+    style F fill:#313244,stroke:#45475a,color:#a6adc8
+    style G fill:#313244,stroke:#fab387,color:#cdd6f4
+    style H fill:#313244,stroke:#a6e3a1,color:#cdd6f4
+    style I fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+    </pre>
+
+    <h3>适配器移动性：训练到服务的文件尺寸对比</h3>
+
+    <p>MinT 的关键设计决策是：导出的适配器修订版（而非合并的全量检查点）是在训练者和采样者之间移动的工件：</p>
+
+    <table>
+      <tr><th>模型</th><th>路径</th><th>移动工件</th><th>文件大小</th><th>冷启动首次采样</th><th>采样速度（总/热）</th></tr>
+      <tr><td>Qwen3-4B</td><td>Adapter</td><td>rank-32 LoRA</td><td>252 MiB</td><td>0.036 s</td><td>15.568/15.567 tok/s</td></tr>
+      <tr><td>Qwen3-4B</td><td>Merge</td><td>完整模型</td><td>8.061 GB</td><td>71.820 s</td><td>4.697/20.595 tok/s</td></tr>
+      <tr><td>Qwen3-30B</td><td><strong>Adapter</strong></td><td>rank-16 LoRA</td><td><strong>1.692 GB</strong></td><td>46.455 s</td><td>117.304 s</td></tr>
+      <tr><td>Qwen3-30B</td><td>Merge</td><td>完整模型</td><td>61.084 GB</td><td>402.245 s</td><td>156.074 s</td></tr>
+    </table>
+
+    <h3>Scale Out 的有界驻留</h3>
+    <p>
+      MinT 通过将可寻址性与驻留性分离来支持 Scale Out。"百万个人模型"不意味着一个推理引擎在 GPU 内存中保存百万个适配器，而是意味着大量适配器修订版可以被命名、选择、加载、服务、驱逐并在以后恢复，同时每个服务 actor 只保持有界的本地工作集。
+    </p>
+
+    <p>关键测量结果：</p>
+    <ul>
+      <li>构建并审计了一个 $10^6$ 条目的打包适配器目录（可寻址性证明）</li>
+      <li>在 512 适配器热集下，CPU 缓存加载了 369 个适配器</li>
+      <li>测试的同批次适配器窗口为 64 个不同适配器</li>
+      <li>MoE LoRA 打包：将 37,248 个张量对象减少到 672 个，冷加载速度提升 <strong>8.5-8.7×</strong></li>
+    </ul>
+
+    <h3>两阶段就绪性（Two-Phase Readiness）</h3>
+    <p>
+      新适配器注册后，先进行预热（prewarm），激活后才对用户可见。测量结果：
+    </p>
+    <ul>
+      <li>无准入控制时：现有热流量 post-TTFT p95 = 24.03s，超过 20s 的停顿 10 次</li>
+      <li>有准入控制时：停顿消除，但新冷请求等待时间增加</li>
+      <li><strong>两阶段就绪性</strong>：旧热流量 TTFT p95 = 9.63s，无停顿；新适配器首次就绪路径请求 load p95 = 0.00s，TTFT p95 = 4.60s</li>
+    </ul>
+
+    <!-- ═══════════════════════════════════════════ 6. 数学基础 ═══ -->
+    <h2>数学基础</h2>
+
+    <h3>LoRA 参数化</h3>
+    <p>标准 LoRA 冻结预训练权重 $W_0 \in \mathbb{R}^{d \times k}$，注入低秩更新：</p>
+
+    <p>$$W = W_0 + \Delta W = W_0 + BA$$</p>
+
+    <p>其中 $B \in \mathbb{R}^{d \times r}$，$A \in \mathbb{R}^{r \times k}$，$r \ll \min(d, k)$。前向传播为：</p>
+
+    <p>$$h = W_0 x + \Delta W x = W_0 x + BAx$$</p>
+
+    <p>标准初始化：$A$ 随机高斯初始化，$B = 0$，使得训练开始时 $\Delta W = 0$。</p>
+
+    <p>带 alpha 缩放的完整形式（论文公式 1）：</p>
+
+    <p>$$\Delta W = \frac{\alpha_r}{r} BA$$</p>
+
+    <p>其中 $\alpha_r$ 是缩放因子。早期更新量级正比于：</p>
+
+    <p>$$\eta \cdot \frac{\alpha_r^2}{r}$$</p>
+
+    <p>这解释了不同 alpha 规则对学习率迁移的影响：固定 $\alpha/r$ 时 $\alpha_r \propto r$，量级随 rank 增大；固定 $\alpha$ 时量级随 rank 减小；$\alpha \propto \sqrt{r}$ 时 rank 依赖消除。</p>
+
+    <h3>OLoRA-tail 初始化</h3>
+    <p>设 $W_0 = U\Sigma V^\top$ 为预训练权重矩阵的奇异值分解，$U_{-r}$ 和 $V_{-r}$ 分别为与最小 $r$ 个奇异值关联的左右奇异向量。OLoRA-tail 初始化为：</p>
+
+    <p>$$B_0 = U_{-r}, \quad A_0 = V_{-r}^\top$$</p>
+
+    <p>与 MiLoRA 的对比（MiLoRA 注入奇异值缩放）：</p>
+
+    <p>$$B_0^{\text{MiLoRA}} = U_{-r}\Sigma_{-r}^{1/2}, \quad A_0^{\text{MiLoRA}} = \Sigma_{-r}^{1/2}V_{-r}^\top$$</p>
+
+    <p>OLoRA-tail 保留了预训练几何结构，但移除了可能在 RL 训练中破坏稳定性的奇异值缩放。</p>
+
+    <h3>RLVR 目标与 KL 约束</h3>
+    <p>RLVR 目标（论文中的 RL 优化目标）：</p>
+
+    <p>$$J(\theta) = \mathbb{E}_{x \sim D,\, y \sim \pi_\theta(\cdot|x)}[R(x, y)]$$</p>
+
+    <p>其中 $R(x,y) \in \{0,1\}$ 为完整响应的奖励。由于 $\pi_\theta(y|x) = \prod_{t=1}^T \pi_\theta(y_t | x, y_{\lt t})$，REINFORCE 梯度为：</p>
+
+    <p>$$\nabla_\theta J(\theta) = \mathbb{E}_{y \sim \pi_\theta}\left[R(x,y)\sum_{t=1}^T \nabla_\theta \log \pi_\theta(y_t | x, y_{\lt t})\right]$$</p>
+
+    <p>在部署的 RL 系统中，响应从推理侧 rollout 策略 $\mu$ 采样，更新针对 $\pi_\theta$ 计算，给出重要性采样形式：</p>
+
+    <p>$$\nabla_\theta J(\theta) = \mathbb{E}_{y \sim \mu}\left[R(x,y)\frac{\pi_\theta(y|x)}{\mu(y|x)}\sum_{t=1}^T \nabla_\theta \log \pi_\theta(y_t | x, y_{\lt t})\right]$$</p>
+
+    <p>序列级重要性权重分解为 token 级乘积：</p>
+
+    <p>$$\frac{\pi_\theta(y|x)}{\mu(y|x)} = \prod_{t=1}^T \frac{\pi_\theta(y_t|x,y_{\lt t})}{\mu(y_t|x,y_{\lt t})} = \prod_{t=1}^T (1+\delta_t)$$</p>
+
+    <p>这个乘积是指数不稳定的（若 $T=512$，$r_t=1.01$，则乘积 $\approx 163$）。实用的 token 级代理依赖一阶泰勒展开，仅在 rollout 策略与更新策略保持接近时有效。</p>
+
+    <p>KL 约束下的权重空间移动预算（论文引用 Zhu et al., 2025）：</p>
+
+    <p>$$D_\mathrm{KL}(\pi_{\theta+\Delta\theta} \| \pi_\theta) \approx \frac{1}{2}\Delta\theta^\top F \Delta\theta$$</p>
+
+    <p>若一次更新满足 $D_\mathrm{KL} \leq K$ 且 $F(\theta) \succeq mI$，则：</p>
+
+    <p>$$\|\Delta W\|_F \leq \sqrt{\frac{2K}{m}}(1 + o(1))$$</p>
+
+    <p>这就是"KL 牵引绳"：策略空间的信任域在权重空间引入了移动预算。初始化不仅决定优化从哪里开始，还偏置了整个轨迹在这个狭窄局部区域内的方向。</p>
+
+    <h3>δ-mem 状态更新公式</h3>
+    <p>δ-mem 维护低维状态 $S_t \in \mathbb{R}^{r \times r}$，给定记忆键 $k_t^m$ 和值 $v_t^m$，更新规则为：</p>
+
+    <p>$$S_t = \mathrm{Diag}(\lambda_t)S_{t-1} + \mathrm{Diag}(\beta_t)(v_t^m - S_{t-1}k_t^m)(k_t^m)^\top$$</p>
+
+    <p>其中 $\lambda_t$ 控制保留率，$\beta_t$ 控制写入强度。状态写入的是<em>预测残差</em>而非原始信息，使已可预测的关联产生小更新，新颖或预测错误的关联修改状态。</p>
+
+    <h3>Context Learning 写策略（伪代码）</h3>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Context Distillation — 将上下文增益写入适配器参数</div>
+      <p><span class="kw">def</span> <span class="fn">context_distill</span>(<span class="var">model</span>, <span class="var">query</span>, <span class="fn">build_context</span>, <span class="fn">rl_update</span>):</p>
+      <p style="padding-left:1.5em"><span class="cm"># Step 1: 仅用 query 产生 on-policy rollout</span></p>
+      <p style="padding-left:1.5em"><span class="var">out</span> = <span class="var">model</span>.<span class="fn">sample</span>(<span class="var">query</span>)</p>
+      <p style="padding-left:1.5em"><span class="cm"># Step 2: query + context 为 rollout 打分</span></p>
+      <p style="padding-left:1.5em"><span class="var">ctx</span> = <span class="fn">build_context</span>(<span class="var">query</span>)</p>
+      <p style="padding-left:1.5em"><span class="var">r_tok</span> = <span class="var">model</span>.<span class="fn">token_reward</span>(<span class="var">query</span>, <span class="var">ctx</span>, <span class="var">out</span>)</p>
+      <p style="padding-left:1.5em"><span class="cm"># Step 3: 用 query-only rollout 和奖励信号更新参数</span></p>
+      <p style="padding-left:1.5em"><span class="kw">return</span> <span class="fn">rl_update</span>(<span class="var">model</span>, <span class="var">query</span>, <span class="var">out</span>, <span class="var">r_tok</span>)</p>
+      <br>
+      <p><span class="kw">def</span> <span class="fn">context_learning</span>(<span class="var">model</span>, <span class="var">queries</span>, <span class="fn">build_context</span>, <span class="fn">rl_update</span>, <span class="var">steps</span>):</p>
+      <p style="padding-left:1.5em"><span class="cm"># 重复 Context Distillation = Context Learning</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(<span class="var">steps</span>):</p>
+      <p style="padding-left:3em"><span class="var">query</span> = <span class="fn">next</span>(<span class="var">queries</span>)</p>
+      <p style="padding-left:3em"><span class="var">model</span> = <span class="fn">context_distill</span>(<span class="var">model</span>, <span class="var">query</span>, <span class="fn">build_context</span>, <span class="fn">rl_update</span>)</p>
+      <p style="padding-left:1.5em"><span class="kw">return</span> <span class="var">model</span></p>
+    </div>
+
+    <p>
+      Context Distillation 与 off-policy 上下文蒸馏的关键区别：上下文不用作监督目标来源，而是用作<em>特权信息</em>来为 query-only 策略已产生的输出打分。这使模型学会在推理时无需相同上下文也能表现更好。
+    </p>
+
+    <!-- ═══════════════════════════════════════════ 7. 实验与评估 ═══ -->
+    <h2>实验与评估</h2>
+
+    <h3>Scale Up：万亿参数 LoRA RL 可行性</h3>
+    <p>Kimi K2（1.04T 参数 MoE）LoRA RL 实验的三项核心证据：</p>
+    <ul>
+      <li>所需 GPU 预算约为同类全参数 RL 的 <strong>10%</strong></li>
+      <li>训练曲线显示奖励和任务成功率平滑提升，无灾难性发散</li>
+      <li>持出评估显示适配器提升了任务特定行为，同时保留了基础模型的通用能力</li>
+    </ul>
+
+    <p>Router Replay R3 在 MoE RL 中的效果（对比 Original 和 Rollout-Corrected 基线）：</p>
+    <ul>
+      <li>最大 rollout 概率差异：R3 持续低于基线</li>
+      <li>标准差：R3 在整个训练过程中保持更低方差</li>
+      <li>平均差异：R3 相对基线显著降低 TIM</li>
+      <li>验证准确率（math DAPO 任务）：R3 单调提升，基线出现退化</li>
+    </ul>
+
+    <h3>Scale Down：OLoRA-tail vs LoRA 对比</h3>
+
+    <div id="chart-olora" class="echarts-container" style="height:340px"></div>
+
+    <p>在 DeepSeek-R1-Distill-Qwen-1.5B 上使用 DAPO 训练，rank=16，评估六个数学推理基准：</p>
+    <table>
+      <tr><th>基准</th><th>LoRA</th><th>OLoRA-tail</th><th>提升</th></tr>
+      <tr><td>GSM8K</td><td>75.4%</td><td>75.3%</td><td>-0.1%</td></tr>
+      <tr><td>MATH500</td><td>71.3%</td><td>70.1%</td><td>-1.2%</td></tr>
+      <tr><td>AIME22</td><td>43.3%</td><td>50.0%</td><td>+6.7%</td></tr>
+      <tr><td>AIME23</td><td>42.2%</td><td>42.2%</td><td>0%</td></tr>
+      <tr><td>AIME24</td><td>72.2%</td><td>75.6%</td><td>+3.4%</td></tr>
+      <tr><td>AIME25</td><td>33.3%</td><td>36.7%</td><td>+3.4%</td></tr>
+      <tr><td><strong>平均</strong></td><td><strong>56.3%</strong></td><td><strong>58.3%</strong></td><td><strong>+2.0%</strong></td></tr>
+    </table>
+
+    <h3>Scale Down：δ-mem 内存基准测试</h3>
+
+    <p>在 Qwen3-4B-Instruct 基础上，对比多种内存机制（Table 3 精简版）：</p>
+
+    <div id="chart-dmem" class="echarts-container" style="height:360px"></div>
+
+    <p>δ-mem 的效率特点：</p>
+    <ul>
+      <li>Token-State 和 Sequence-State 变体：仅引入 <strong>4.87M 可训练参数</strong>（约 0.12% 的 Qwen3-4B 主干）</li>
+      <li>Multi-State 变体：19.47M 参数（约 0.48%）</li>
+      <li>循环状态固定大小，存储成本不随交互历史长度线性增长</li>
+    </ul>
+
+    <h3>Scale Out：LoRA vs 共享基础模型的 OASIS 社会模拟</h3>
+
+    <p>在 OASIS 平台上，将每用户 rank-4 LoRA 适配器（在 80 条历史推文上训练）与共享基础模型代理进行对比，社区规模 N ∈ {128, 256, 512}：</p>
+
+    <table>
+      <tr><th>指标</th><th>LoRA/Base 比值（N=128）</th><th>LoRA/Base 比值（N=256）</th><th>LoRA/Base 比值（N=512）</th></tr>
+      <tr><td>有效交互社区数</td><td>1.48×</td><td>2.19×</td><td>1.47×</td></tr>
+      <tr><td>共同参与模块度</td><td>1.20×</td><td>0.95×</td><td>1.20×</td></tr>
+      <tr><td>支持立场标准差</td><td>2.28×</td><td>2.18×</td><td>2.45×</td></tr>
+      <tr><td>怀疑立场标准差</td><td>2.01×</td><td>1.32×</td><td>1.57×</td></tr>
+      <tr><td>评论数增量</td><td>+70</td><td>+247</td><td>+493</td></tr>
+      <tr><td>原创帖子增量</td><td>+139</td><td>+153</td><td>+306</td></tr>
+    </table>
+
+    <h3>Scale Out：模型数量 vs 集体准确率</h3>
+
+    <div id="chart-collab" class="echarts-container" style="height:340px"></div>
+
+    <!-- ═══════════════════════════════════════════ 8. 总结与启发 ═══ -->
+    <h2>总结与启发：从工具到基础设施的范式转变</h2>
+
+    <h3>核心论点的深度评注</h3>
+
+    <p>
+      这篇论文最重要的贡献不是某个具体的算法改进，而是一个<strong>概念性的重新定位</strong>：将 PEFT 从"训练技巧"提升为"个人 AI 基础设施的核心组件"。这一转变类似于数据库领域从"文件系统"到"关系型数据库"的范式跃迁——不是量的改变，而是抽象层次的提升。
+    </p>
+
+    <p>
+      论文的生物学类比（共享基因组 vs. 个体差异）尤为精妙。它揭示了一个深刻的系统设计原则：<strong>共享底层基础设施（基因组/基础模型）+ 微小个体差异（&lt;1%）= 无限个体性</strong>。这个原则在自然界已经被验证了数十亿年，现在被应用于 AI 系统设计。
+    </p>
+
+    <h3>三轴框架的内在逻辑</h3>
+
+    <p>
+      三轴依赖链的逻辑非常严密，值得仔细品味：
+    </p>
+    <ul>
+      <li><strong>Scale Up 是杠杆条件</strong>：没有强大的共享先验，适配器只能做浅层记忆或窄任务拟合。强大的先验使小更新可以重定向大量潜在能力。</li>
+      <li><strong>Scale Down 是可持续条件</strong>：没有廉价稳定的适配单元，大规模个性化在经济上不可行。OLoRA-tail 和超参数迁移规则直接降低了"百万适配器"的边际成本。</li>
+      <li><strong>Scale Out 是价值实现条件</strong>：孤立的个体适配器价值有限；当数百万个持久化实例共存时，多样性本身成为计算资源（集体智能、用户模拟、社会研究）。</li>
+    </ul>
+
+    <h3>MinT 的基础设施哲学</h3>
+
+    <p>
+      MinT 体现了一种重要的工程哲学：<strong>将适配器从匿名文件提升为有身份、有生命周期的一等公民</strong>。这与 Git 将代码提交从文件快照提升为有溯源的版本对象的转变异曲同工。
+    </p>
+
+    <p>
+      Policy Record + Adapter Revision + Serving Residency 三层抽象的设计尤为精妙：
+    </p>
+    <ul>
+      <li><em>Policy Record</em> 解决了"这个适配器代表谁的行为"的身份问题</li>
+      <li><em>Adapter Revision</em> 解决了"评估的是哪个版本"的溯源问题</li>
+      <li><em>Serving Residency</em> 解决了"如何在不复制基础模型的情况下服务百万实例"的规模问题</li>
+    </ul>
+
+    <h3>开放问题与研究方向</h3>
+
+    <pre class="mermaid">
+graph LR
+    A["已解决"] --> B["RL 原生初始化<br/>OLoRA-tail"]
+    A --> C["超参数迁移规则<br/>Triquetra / rsLoRA"]
+    A --> D["万亿参数 LoRA RL<br/>Kimi K2 可行性"]
+    A --> E["内存容量定律<br/>DishNameBenchmark"]
+
+    F["开放问题"] --> G["低 rank 可靠性<br/>rank=1 稳定化"]
+    F --> H["状态化适配器<br/>δ-mem vs RAG 基线"]
+    F --> I["Context Learning<br/>信号效率基准"]
+    F --> J["持久用户模拟<br/>长期异质性保持"]
+    F --> K["适配器群体计算<br/>路由/辩论/蒸馏"]
+
+    style A fill:#2a2a3e,stroke:#a6e3a1,color:#a6e3a1
+    style F fill:#2a2a3e,stroke:#fab387,color:#fab387
+    style B fill:#313244,stroke:#45475a,color:#cdd6f4
+    style C fill:#313244,stroke:#45475a,color:#cdd6f4
+    style D fill:#313244,stroke:#45475a,color:#cdd6f4
+    style E fill:#313244,stroke:#45475a,color:#cdd6f4
+    style G fill:#313244,stroke:#45475a,color:#cdd6f4
+    style H fill:#313244,stroke:#45475a,color:#cdd6f4
+    style I fill:#313244,stroke:#45475a,color:#cdd6f4
+    style J fill:#313244,stroke:#45475a,color:#cdd6f4
+    style K fill:#313244,stroke:#45475a,color:#cdd6f4
+    </pre>
+
+    <h3>对工业界的启示</h3>
+
+    <p>
+      这篇论文对 AI 产品和基础设施建设有几个重要启示：
+    </p>
+
+    <div class="card">
+      <div class="card-title">1. 个人化 AI 的技术路线图</div>
+      <p>论文提供了一条清晰的技术路线：强基础模型（Scale Up）→ 廉价稳定的适配技术（Scale Down）→ 适配器生命周期管理基础设施（MinT/Scale Out）。这三步缺一不可。</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">2. 记忆分层的实践指导</div>
+      <p>论文明确了个人模型的记忆层次：上下文（短期推理）→ 检索记忆（可编辑事实）→ 工具状态（外部现实）→ LoRA 记忆（持久行为适应）。这个分层对于设计 AI 助手的记忆系统有直接指导意义。</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. 适配器多样性作为系统资源</div>
+      <p>集体智能实验（AIME24 准确率从 36.44% 到 48.67%）表明：多样性不仅是个性化的副产品，更是系统级的计算资源。未来的 AI 系统可能不是一个越来越强大的通用助手，而是一个多样化的持久化个体生态。</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">4. 基础设施先行的重要性</div>
+      <p>MinT 的设计表明：在 PEFT 走向"个人 AI 基础设施"的过程中，工程问题（适配器身份、版本控制、服务驻留）与算法问题同等重要。"PEFT 重要性不是 MinT 赋予的，而是三轴框架所要求的"——这句话揭示了基础设施与算法研究的共生关系。</p>
+    </div>
+
+    <h3>局限性的诚实评估</h3>
+
+    <p>
+      论文对自身局限性的坦诚令人印象深刻：<em>"大多数实验在受控基准和模拟规模下进行，而在我们自己的个人模型部署上的大规模实证验证仍然有限。瓶颈在于计算能力，而非缺失的方法论。"</em>
+    </p>
+
+    <p>
+      这意味着论文更像是一份<strong>研究路线图</strong>而非完整的系统验证报告。其价值在于提供了清晰的概念框架、初步的实证证据和具体的开放问题，为后续研究指明方向。
+    </p>
+
+    <!-- ═══════════════════════════════════════════ 9. 参考文献 ═══ -->
+    <h2>参考文献</h2>
+
+    <ul>
+      <li>Hu, E.J. et al. (2021). <em>LoRA: Low-Rank Adaptation of Large Language Models.</em> ICLR 2022.</li>
+      <li>DeepSeek-AI (2025). <em>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning.</em></li>
+      <li>Biderman, D. et al. (2024). <em>LoRA Learns Less and Forgets Less.</em> TMLR.</li>
+      <li>Shuttleworth, J. et al. (2025). <em>LoRA vs Full Fine-tuning: An Illusion of Equivalence.</em></li>
+      <li>Meng, F. et al. (2025). <em>PiSSA: Principal Singular Values and Singular Vectors Adaptation of Large Language Models.</em></li>
+      <li>Wang, S. et al. (2025). <em>MiLoRA: Harnessing Minor Singular Components for Parameter-Efficient LLM Finetuning.</em></li>
+      <li>Kalajdzievski, D. (2023). <em>A Rank Stabilization Scaling Factor for Fine-Tuning with LoRA.</em></li>
+      <li>Büyükakyüz, K. (2024). <em>OLoRA: Orthonormal Low-Rank Adaptation of Large Language Models.</em></li>
+      <li>Lei, S. et al. (2026). <em>δ-mem: Compact Online Memory for Persistent Personal Models.</em></li>
+      <li>Mind Lab (2026). <em>MinT: Multi-train and Multi-serve Infrastructure for LoRA-based Personal Models.</em></li>
+      <li>Back, T. et al. (2026). <em>Context2LoRA: Context-to-Parameter Learning for Personal Adapters.</em></li>
+      <li>Lu, Y. et al. (2026). <em>SKILL-0: Skill-based LoRA for Agentic Personal Models.</em></li>
+      <li>Li, Z. et al. (2026). <em>MindClaw: Parametric Skill Consolidation for Agentic Systems.</em></li>
+      <li>Kong, Y. et al. (2025). <em>EvoBot: Learned Social Agents for Opinion Dynamics Simulation.</em></li>
+      <li>Yang, Z. et al. (2024). <em>OASIS: Large-Scale Social Media Simulation with LLM Agents.</em></li>
+      <li>Park, J.S. et al. (2023). <em>Generative Agents: Interactive Simulacra of Human Behavior.</em> UIST 2023.</li>
+      <li>Packer, C. et al. (2024). <em>MemGPT: Towards LLMs as Operating Systems.</em></li>
+      <li>Maharana, A. et al. (2024). <em>Evaluating Very Long-Term Conversational Memory of LLM Agents.</em></li>
+      <li>Williams, R.J. (1992). <em>Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning.</em> Machine Learning.</li>
+      <li>Zhu, Z. et al. (2025). <em>KL Leash: Trust Region Constraints in Weight Space for RL Fine-tuning.</em></li>
+      <li>GLM-5 Team (2026). <em>GLM-5: Frontier MoE Language Model with Multi-Head Latent Attention.</em></li>
+      <li>Qwen Team (2025). <em>Qwen3 Technical Report.</em></li>
+      <li>Anthropic (2025a). <em>Claude 4 Technical Report.</em></li>
+      <li>Anthropic (2025b). <em>Claude Code: Agentic Software Engineering.</em></li>
+      <li>Sheng, Y. et al. (2023). <em>S-LoRA: Serving Thousands of Concurrent LoRA Adapters.</em></li>
+      <li>Zhou, Y. et al. (2025). <em>AdaLoRA and related works on hierarchical rank allocation.</em></li>
+    </ul>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+
+    // 自动生成目录
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // 滚动高亮
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+    // ECharts: Rank 制度划分
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-rank'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'Qwen3-8B PPO LoRA Rank 扫描：三个制度', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center' },
+        tooltip: { trigger: 'axis', backgroundColor: '#313244', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+        legend: { data: ['均值增益 (pp)', '最佳增益 (pp)'], textStyle: { color: '#cdd6f4' }, top: 30 },
+        xAxis: { type: 'category', data: ['r=1','r=2','r=4','r=8','r=16','r=32','r=64','r=128','r=256'], axisLabel: { color: '#a6adc8' }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', name: '增益 (pp)', nameTextStyle: { color: '#a6adc8' }, axisLabel: { color: '#a6adc8' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+        series: [
+          {
+            name: '均值增益 (pp)',
+            type: 'bar',
+            data: [2.1, 3.8, 5.2, 7.8, 10.6, 11.9, 10.8, 9.3, 8.6],
+            itemStyle: { color: '#89b4fa' },
+            markArea: {
+              data: [
+                [{ name: '研究前沿', xAxis: 'r=1', itemStyle: { color: 'rgba(250,179,135,0.1)' } }, { xAxis: 'r=4' }],
+                [{ name: '部署默认', xAxis: 'r=8', itemStyle: { color: 'rgba(166,227,161,0.1)' } }, { xAxis: 'r=32' }],
+                [{ name: '成本警告', xAxis: 'r=64', itemStyle: { color: 'rgba(243,139,168,0.1)' } }, { xAxis: 'r=256' }]
+              ]
+            }
+          },
+          {
+            name: '最佳增益 (pp)',
+            type: 'line',
+            data: [10.2, 10.8, 11.0, 11.5, 11.9, 12.0, 11.8, 11.5, 11.2],
+            itemStyle: { color: '#a6e3a1' },
+            lineStyle: { color: '#a6e3a1', type: 'dashed' },
+            symbol: 'circle'
+          }
+        ]
+      });
+    })();
+
+    // ECharts: OLoRA-tail vs LoRA
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-olora'));
+      const benchmarks = ['GSM8K','MATH500','AIME22','AIME23','AIME24','AIME25','平均'];
+      const lora = [75.4, 71.3, 43.3, 42.2, 72.2, 33.3, 56.3];
+      const olora = [75.3, 70.1, 50.0, 42.2, 75.6, 36.7, 58.3];
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'OLoRA-tail vs LoRA — 数学推理基准 (DeepSeek-R1-Distill-Qwen-1.5B, DAPO, rank=16)', textStyle: { color: '#89b4fa', fontSize: 13 }, left: 'center' },
+        tooltip: { trigger: 'axis', backgroundColor: '#313244', borderColor: '#45475a', textStyle: { color: '#cdd6f4' }, formatter: function(params) { return params.map(p => `${p.seriesName}: ${p.value}%`).join('<br>'); } },
+        legend: { data: ['LoRA', 'OLoRA-tail'], textStyle: { color: '#cdd6f4' }, top: 30 },
+        xAxis: { type: 'category', data: benchmarks, axisLabel: { color: '#a6adc8' }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', name: '准确率 (%)', min: 30, nameTextStyle: { color: '#a6adc8' }, axisLabel: { color: '#a6adc8', formatter: '{value}%' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+        series: [
+          { name: 'LoRA', type: 'bar', data: lora, itemStyle: { color: '#89b4fa' }, barGap: '10%' },
+          { name: 'OLoRA-tail', type: 'bar', data: olora, itemStyle: { color: '#a6e3a1' } }
+        ]
+      });
+    })();
+
+    // ECharts: δ-mem 内存基准
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-dmem'));
+      const methods = ['Base', 'BM25 RAG', 'MemoryBank', 'Context2LoRA', 'δ-Mem (TSW)', 'δ-Mem (MSW)'];
+      const ifeval = [81.89, null, null, 76.71, 82.99, 81.70];
+      const hotpotEM = [42.35, 40.35, null, 39.37, 49.41, 46.86];
+      const gpqa = [39.39, null, null, 29.29, 41.50, 37.84];
+      const avgScore = [46.79, 38.12, 37.88, 34.99, 51.66, 50.74];
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'δ-mem 与多种内存机制对比 (Qwen3-4B-Instruct)', textStyle: { color: '#89b4fa', fontSize: 13 }, left: 'center' },
+        tooltip: { trigger: 'axis', backgroundColor: '#313244', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+        legend: { data: ['IFEval', 'HotpotQA EM', 'GPQA-D', '综合平均'], textStyle: { color: '#cdd6f4' }, top: 28 },
+        xAxis: { type: 'category', data: methods, axisLabel: { color: '#a6adc8', rotate: 15 }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', name: '分数 (%)', nameTextStyle: { color: '#a6adc8' }, axisLabel: { color: '#a6adc8', formatter: '{value}%' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+        series: [
+          { name: 'IFEval', type: 'line', data: ifeval, itemStyle: { color: '#89b4fa' }, connectNulls: true, symbol: 'circle' },
+          { name: 'HotpotQA EM', type: 'line', data: hotpotEM, itemStyle: { color: '#cba6f7' }, connectNulls: true, symbol: 'circle' },
+          { name: 'GPQA-D', type: 'line', data: gpqa, itemStyle: { color: '#fab387' }, connectNulls: true, symbol: 'circle' },
+          { name: '综合平均', type: 'bar', data: avgScore, itemStyle: { color: 'rgba(166,227,161,0.6)' } }
+        ]
+      });
+    })();
+
+    // ECharts: 模型数量 vs 集体准确率
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-collab'));
+      const kValues = [1, 2, 3, 5, 10, 20, 30, 50, 100, 150, 198];
+      const collab = [36.44, 37.50, 38.20, 39.10, 42.67, 44.50, 45.30, 46.10, 46.33, 47.20, 48.67];
+      const repeat = [36.44, 37.80, 38.90, 40.20, 42.00, 43.10, 43.50, 43.78, 43.60, 43.40, 43.20];
+      const baseline = kValues.map(() => 37.27);
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'AIME24 准确率 vs 模型数量 k（多数投票）', textStyle: { color: '#89b4fa', fontSize: 13 }, left: 'center' },
+        tooltip: { trigger: 'axis', backgroundColor: '#313244', borderColor: '#45475a', textStyle: { color: '#cdd6f4' }, formatter: function(params) { return `k=${params[0].axisValue}<br>` + params.map(p => `${p.seriesName}: ${p.value.toFixed(2)}%`).join('<br>'); } },
+        legend: { data: ['Collaboration（不同 LoRA 变体）', 'Repetition（同一模型重复采样）', 'Baseline'], textStyle: { color: '#cdd6f4' }, top: 28 },
+        xAxis: { type: 'category', data: kValues, name: 'k（模型数量）', nameTextStyle: { color: '#a6adc8' }, axisLabel: { color: '#a6adc8' }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', name: '准确率 (%)', min: 34, max: 52, nameTextStyle: { color: '#a6adc8' }, axisLabel: { color: '#a6adc8', formatter: '{value}%' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+        series: [
+          { name: 'Collaboration（不同 LoRA 变体）', type: 'line', data: collab, itemStyle: { color: '#a6e3a1' }, lineStyle: { width: 2 }, symbol: 'circle', symbolSize: 6, markPoint: { data: [{ type: 'max', name: '最高', label: { color: '#a6e3a1' } }] } },
+          { name: 'Repetition（同一模型重复采样）', type: 'line', data: repeat, itemStyle: { color: '#89b4fa' }, lineStyle: { width: 2, type: 'dashed' }, symbol: 'diamond', symbolSize: 6 },
+          { name: 'Baseline', type: 'line', data: baseline, itemStyle: { color: '#f38ba8' }, lineStyle: { width: 1, type: 'dotted' }, symbol: 'none' }
+        ]
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepSeek 系列技术详解报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.formula-box{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1em 0;}
+.diff-old{background:#2e1e1e;border:1px solid var(--red);border-radius:6px;padding:14px 18px;}
+.diff-new{background:#1e2e1e;border:1px solid var(--strong);border-radius:6px;padding:14px 18px;}
+.diff-label{font-size:.78em;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px;}
+.diff-label.old{color:var(--red);}.diff-label.new{color:var(--strong);}
+.timeline-wrap{overflow-x:auto;margin:1em 0;}
+.timeline{display:flex;gap:0;min-width:1000px;}
+.tl-col{flex:1;display:flex;flex-direction:column;}
+.tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 4px;font-size:.85em;border-radius:6px 6px 0 0;}
+.tl-body{flex:1;padding:10px 6px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px;}
+.tl-item{background:#313244;border-radius:5px;padding:6px 8px;margin-bottom:6px;font-size:.82em;line-height:1.5;}
+.tl-item:last-child{margin-bottom:0;}
+.tl-tag{display:inline-block;font-size:.72em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:3px;background:var(--heading);color:#1e1e2e;}
+.tl-tag.orange{background:#fab387;}.tl-tag.green{background:#a6e3a1;}.tl-tag.purple{background:#cba6f7;}
+.step-row{display:flex;align-items:flex-start;margin:.7em 0;gap:10px;}
+.step-num{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:50%;background:var(--heading);color:#1e1e2e;font-weight:700;font-size:.82em;flex-shrink:0;margin-top:3px;}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;font-size:1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.algo-box .kw{color:#cba6f7;font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:#94e2d5;}
+.algo-box .fn{color:#a6e3a1;}
+.algo-box .num{color:#f9e2af;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>DeepSeek 系列技术详解报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">深度求索 · MLA + MoE + FP8 + GRPO · 生成日期：2026-05-13</p>
+
+<table>
+  <tr><th>核心创新</th><td>MLA 低秩 KV 压缩 · 细粒度 MoE · FP8 混合精度 · MTP 多 token 预测 · GRPO 推理训练</td></tr>
+  <tr><th>旗舰模型</th><td>DeepSeek-V3（671B 总参数，37B 激活）· DeepSeek-R1（推理模型）</td></tr>
+  <tr><th>训练成本</th><td>V3 预训练约 <strong>557.6 万美元</strong>，是同期竞品的约 1/5</td></tr>
+</table>
+<hr>
+
+<!-- ===== 一、时间线 ===== -->
+<h2 id="s1">一、版本演进时间线</h2>
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">2023-11</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">Dense</span><br>DeepSeek-LLM<br>7B / 67B<br>GQA，BF16</div>
+        <div class="tl-item"><span class="tl-tag green">代码</span><br>DeepSeek-Coder<br>1.3B~33B</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024-01~05</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag purple">MoE 验证</span><br>DeepSeek-MoE<br>细粒度专家首次应用</div>
+        <div class="tl-item"><span class="tl-tag green">数学</span><br>DeepSeek-Math<br>数学推理专用</div>
+        <div class="tl-item"><span class="tl-tag orange">架构</span><br>DeepSeek-V2 236B<br><strong>MLA + MoE</strong> 首次亮相</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024-12</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag purple">旗舰</span><br>DeepSeek-V3 671B<br><strong>FP8 + MTP</strong><br>无辅助损失 MoE<br>14.8T tokens</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025-01</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag orange">推理</span><br>DeepSeek-R1<br>GRPO 强化学习<br>"顿悟"现象涌现</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025-03~08</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag green">更新</span><br>DeepSeek-V3-0324<br>推理+前端增强</div>
+        <div class="tl-item"><span class="tl-tag green">推理</span><br>DeepSeek-R1-0528<br>推理能力进步</div>
+        <div class="tl-item"><span class="tl-tag">长上下文</span><br>DeepSeek-V3.1<br>128K + 工具调用</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 二、MLA ===== -->
+<h2 id="s2">二、MLA：多头潜在注意力（完整推导）</h2>
+
+<h3 id="s2-1">2.1 KV Cache 内存瓶颈</h3>
+<div class="tech-card blue">
+  <p>标准 MHA 每层 KV Cache：</p>
+  <div class="formula-box">
+    $$\text{KV Cache}_\text{per layer} = 2 \times n_h \times d_h \times T \times B \times \text{sizeof}(\text{float})$$
+  </div>
+  <p>DeepSeek-V3 配置（$n_h=128$，$d_h=128$，$T=128000$，fp16）：单层 $= 2\times128\times128\times128000\times1\times2\text{B} \approx 8.4\text{GB}$，80 层约 $672\text{GB}$，完全无法实际部署。</p>
+</div>
+
+<h3 id="s2-2">2.2 MLA 低秩联合压缩</h3>
+<div class="tech-card green">
+  <h4>KV 压缩（下投影）— 推理时只缓存此向量</h4>
+  <div class="formula-box">
+    $$\mathbf{c}_t^{KV} = W^{DKV} \mathbf{h}_t \in \mathbb{R}^{d_c}, \quad W^{DKV} \in \mathbb{R}^{d_c \times d}, \quad d_c = 512 \ll n_h d_h = 16384$$
+  </div>
+
+  <h4>Key/Value 解压（上投影）</h4>
+  <div class="formula-box">
+    $$\mathbf{k}_t^C = W^{UK} \mathbf{c}_t^{KV}, \quad W^{UK} \in \mathbb{R}^{n_h d_h \times d_c}$$
+    $$\mathbf{v}_t^C = W^{UV} \mathbf{c}_t^{KV}, \quad W^{UV} \in \mathbb{R}^{n_h d_h \times d_c}$$
+  </div>
+
+  <h4>解耦 RoPE（解决位置编码与低秩压缩的冲突）</h4>
+  <p>低秩压缩后的 Key 无法直接附加 RoPE（旋转操作与矩阵乘法不可交换），因此额外引入携带位置信息的 Key 分量：</p>
+  <div class="formula-box">
+    $$\mathbf{k}_t^R = \text{RoPE}(W^{KR} \mathbf{h}_t) \in \mathbb{R}^{d_h^R}, \quad d_h^R = 64$$
+    $$\mathbf{k}_t = [\mathbf{k}_t^C;\, \mathbf{k}_t^R], \quad \mathbf{q}_t = [\mathbf{q}_t^C;\, \mathbf{q}_t^R]$$
+  </div>
+
+  <h4>注意力计算</h4>
+  <div class="formula-box">
+    $$\mathbf{o}_t = \sum_{j=1}^{t} \text{softmax}\!\left(\frac{\mathbf{q}_t^T \mathbf{k}_j}{\sqrt{d_h + d_h^R}}\right) \mathbf{v}_j^C$$
+  </div>
+
+  <h4>权重吸收技巧（推理时零额外开销）</h4>
+  <p>注意力内积中 $W^{UK}$ 可吸收进 Query 投影，使计算在压缩空间内完成：</p>
+  <div class="formula-box">
+    $$\mathbf{q}_t^T \mathbf{k}_j^C = \mathbf{q}_t^T W^{UK} \mathbf{c}_j^{KV} = \underbrace{(W^{UK\top} \mathbf{q}_t)}_{\boldsymbol{\kappa}_t}{}^T \mathbf{c}_j^{KV}$$
+  </div>
+  <p>内积维度从 $n_h d_h = 16384$ 降至 $d_c = 512$，进一步提升推理速度。</p>
+</div>
+
+<h3 id="s2-3">2.3 压缩比量化对比</h3>
+<table>
+  <tr><th>方法</th><th>每层 KV 缓存维度</th><th>相对 MHA</th><th>表达力</th></tr>
+  <tr><td>MHA</td><td>$2 \times 128 \times 128 = 32768$</td><td>1×</td><td>基准</td></tr>
+  <tr><td>MQA</td><td>$2 \times 128 = 256$</td><td>1/128×</td><td>明显下降</td></tr>
+  <tr><td>GQA（g=8）</td><td>$2 \times 8 \times 128 = 2048$</td><td>1/16×</td><td>接近 MHA</td></tr>
+  <tr><td><strong>MLA</strong></td><td>$512 + 64 = 576$（仅 $\mathbf{c}_{KV}$）</td><td><strong>约 1/57×</strong></td><td><strong>超越 MHA</strong></td></tr>
+</table>
+<p>MLA 的 KV Cache 与 GQA 相近（均约 576 维），但因低秩分解保留了全部 $n_h$ 个注意力头的独立性，表达力反而超越 MHA。DeepSeek-V2 实测相比 67B Dense 模型节省 KV Cache <strong>93.3%</strong>。</p>
+
+<!-- ===== 三、MoE ===== -->
+<h2 id="s3">三、DeepSeek MoE：细粒度专家 + 共享专家</h2>
+
+<h3 id="s3-1">3.1 细粒度专家分割</h3>
+<div class="tech-card yellow">
+  <p>传统 MoE 专家粒度粗，每次激活的专家组合数 $= \binom{N}{K}$，特化受限。DeepSeekMoE 将每个标准专家拆分为 $m$ 份，同时激活数扩大 $m$ 倍：</p>
+  <div class="formula-box">
+    $$N_\text{routed} = m \times N_\text{orig}, \quad K_\text{active} = m \times K_\text{orig}, \quad d_\text{expert} = d_\text{orig}/m$$
+  </div>
+  <p>组合空间从 $\binom{N}{K}$ 扩展到 $\binom{mN}{mK}$（指数级增长），有利于更精细的知识分解与专家特化。</p>
+  <p><strong>DeepSeek-V3 配置：</strong>$N_r = 256$ 个路由专家，每 token 激活 Top-8，总计算量不变。</p>
+</div>
+
+<h3 id="s3-2">3.2 共享专家机制</h3>
+<div class="formula-box">
+  $$\mathbf{h}_t' = \underbrace{\sum_{i=1}^{N_s} \text{FFN}_i^{(s)}(\mathbf{h}_t)}_{\text{共享专家（始终激活）}} + \underbrace{\sum_{i \in \text{TopK}(\mathbf{s}_t, K_r)} g_{i,t} \cdot \text{FFN}_i^{(r)}(\mathbf{h}_t)}_{\text{路由专家（Top-K 激活）}}$$
+</div>
+<p>V3 使用 1 个共享专家：负责跨任务的通用知识（基础句法、高频词汇），路由专家则专注特定领域知识，两者分工明确，避免路由专家浪费容量学习通用知识。</p>
+
+<h3 id="s3-3">3.3 Auxiliary-Free 负载均衡（核心创新）</h3>
+<div class="tech-card purple">
+  <p>传统 MoE 使用辅助损失 $\mathcal{L}_\text{balance} = \alpha N \sum f_i P_i$ 防止专家崩溃，但辅助损失系数 $\alpha$ 难以调节——过大损害主任务质量，过小无法防止崩溃。</p>
+  <h4>DeepSeek 解决方案：可学习偏置 $b_i$</h4>
+  <div class="formula-box">
+    $$s'_{i,t} = s_{i,t} + b_i = \text{Sigmoid}(\mathbf{h}_t^T \mathbf{e}_i) + b_i \quad \text{（TopK 选择基于 } s'_{i,t}\text{）}$$
+  </div>
+  <p>归一化门控值时<strong>不使用</strong> $b_i$：$g_{i,t} = s_{i,t}/\sum_{j\in\mathcal{T}} s_{j,t}$（确保偏置只影响路由决策，不影响专家输出加权）。</p>
+  <p>训练中动态调整偏置：过载专家 $b_i \leftarrow b_i - \gamma$，欠载专家 $b_i \leftarrow b_i + \gamma$。完全无需辅助损失。</p>
+</div>
+
+<!-- ===== 四、FP8 ===== -->
+<h2 id="s4">四、FP8 混合精度训练</h2>
+
+<h3 id="s4-1">4.1 FP8 格式</h3>
+<table>
+  <tr><th>格式</th><th>符号位</th><th>指数位</th><th>尾数位</th><th>动态范围</th><th>典型用途</th></tr>
+  <tr><td>E4M3</td><td>1</td><td>4</td><td>3</td><td>较小（$\pm 448$）</td><td>权重、激活值</td></tr>
+  <tr><td>E5M2</td><td>1</td><td>5</td><td>2</td><td>较大（$\pm 57344$）</td><td>梯度（范围更宽）</td></tr>
+</table>
+<p>相比 BF16（1+8+7 位），FP8 存储量减半，矩阵乘法吞吐量最高翻倍（H100 FP8 TFLOPS = 2× BF16）。</p>
+
+<h3 id="s4-2">4.2 动态量化策略</h3>
+<div class="tech-card blue">
+  <p>粗粒度量化会因少数极大值拉低整体精度。DeepSeek-V3 采用<strong>精细粒度在线量化</strong>：</p>
+  <div class="formula-box">
+    $$\hat{\mathbf{X}}_{i,j} = \text{round}\!\left(\frac{\mathbf{X}_{i,j}}{s_{i,\lfloor j/128 \rfloor}}\right), \quad s = \frac{\max|\mathbf{X}_\text{tile}|}{\text{E4M3}_\text{max}}$$
+  </div>
+  <ul>
+    <li><strong>激活矩阵</strong>：按 $1\times128$ 的 tile 分块量化（每行独立缩放）</li>
+    <li><strong>权重矩阵</strong>：按 $128\times128$ 的 block 分块量化</li>
+  </ul>
+</div>
+
+<h3 id="s4-3">4.3 混合精度策略</h3>
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">FP8 计算（高吞吐）</div>
+    <ul>
+      <li>矩阵乘法（GEMM 核心计算）</li>
+      <li>前向/反向权重矩阵运算</li>
+    </ul>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">BF16/FP32 保留（高精度）</div>
+    <ul>
+      <li>Embedding 层</li>
+      <li>RMSNorm 归一化</li>
+      <li>注意力 Softmax</li>
+      <li>输出投影</li>
+      <li>Master 权重副本（BF16）</li>
+      <li>梯度累加器（FP32）</li>
+    </ul>
+  </div>
+</div>
+<p>V3 是<strong>首个在超大规模模型（671B）上验证 FP8 训练可行性</strong>的工作，整个预训练过程未出现不可恢复的 Loss 尖峰。</p>
+
+<!-- ===== 五、MTP ===== -->
+<h2 id="s5">五、多 Token 预测（MTP）</h2>
+
+<div class="tech-card green">
+  <h4>动机：密集化训练信号</h4>
+  <p>标准自回归训练在位置 $t$ 只预测 $t+1$ 处的 token，每个位置仅贡献一个梯度信号。MTP 在每个位置同时预测未来 $D$ 个 token，训练信号密度提升 $D$ 倍。</p>
+
+  <h4>V3 的 MTP 结构（D=1）</h4>
+  <ul>
+    <li>一个共享的 Embedding 层（与主模型共享权重）</li>
+    <li>一个独立参数的 Transformer 层</li>
+    <li>一个与主模型共享的输出头</li>
+  </ul>
+
+  <h4>训练损失</h4>
+  <div class="formula-box">
+    $$\mathcal{L}_\text{total} = \mathcal{L}_\text{main} + \lambda \sum_{d=1}^{D} \mathcal{L}_\text{MTP}^{(d)}$$
+    $$\mathcal{L}_\text{main} = -\sum_t \log P(x_{t+1}|x_{\leq t}), \quad \mathcal{L}_\text{MTP}^{(d)} = -\sum_t \log P_\theta^{(d)}(x_{t+d+1}|x_{\leq t})$$
+  </div>
+
+  <h4>推理时复用为投机解码草稿模型</h4>
+  <ol>
+    <li>MTP 模块（轻量）生成候选 token 序列</li>
+    <li>主模型并行验证候选序列</li>
+    <li>接受符合主模型分布的候选，拒绝不符合的</li>
+  </ol>
+  <p>实测加速比约 <strong>1.4~1.8×</strong>，接受率约 85~90%。</p>
+</div>
+
+<!-- ===== 六、GRPO ===== -->
+<h2 id="s6">六、DeepSeek R1：GRPO 推理训练</h2>
+
+<h3 id="s6-1">6.1 为什么选 GRPO 而非 PPO</h3>
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">PPO（传统方案）</div>
+    <ul>
+      <li>需要与 Actor 同等规模的 Critic 网络</li>
+      <li>671B 模型：Critic 同样 671B，内存×2</li>
+      <li>Critic 训练需要额外稳定性处理</li>
+      <li>4 个模型同时占用 GPU：Actor、Critic、Reference、Reward</li>
+      <li>优势估计用 GAE（Generalized Advantage Estimation），需要 $\lambda$ 系数调优</li>
+      <li>KL 惩罚以 per-token 密集奖励形式加入，隐式抑制响应长度增长</li>
+    </ul>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">GRPO（DeepSeek 方案）</div>
+    <ul>
+      <li>用组内相对排名替代价值函数</li>
+      <li>无需 Critic 网络，节省 50%+ 内存</li>
+      <li>组内归一化自然提供优势基线</li>
+      <li>仅 Actor + Reference 两个模型</li>
+      <li>KL 散度作为无偏估计直接加入损失（非 per-token 密集奖励），不抑制长度</li>
+      <li>每 400 步将 Reference 更新为最新策略，平衡探索范围与稳定性</li>
+    </ul>
+  </div>
+</div>
+
+<div class="tech-card yellow">
+  <h4>PPO vs GRPO 详细对比（来自论文 Background 章节）</h4>
+  <table>
+    <tr><th>维度</th><th>PPO</th><th>GRPO</th></tr>
+    <tr><td>需要的模型数</td><td><strong>4 个</strong>（Actor + Critic + Reference + Reward）</td><td><strong>2 个</strong>（Actor + Reference）</td></tr>
+    <tr><td>优势估计</td><td>GAE，需要 Critic 网络，需调 $\lambda$（默认 0.95，敏感）</td><td>组内均值/标准差归一化，无需额外参数</td></tr>
+    <tr><td>KL 惩罚方式</td><td>per-token 密集奖励，隐式压缩响应长度</td><td>无偏估计直接加入损失，允许长推理链</td></tr>
+    <tr><td>长 CoT 适配性</td><td>差：Critic 难以预测长序列末端奖励；KL 抑制长度</td><td>好：无 Critic；KL 不抑制长度</td></tr>
+    <tr><td>超参调优难度</td><td>高：$\lambda$ 敏感，$\lambda=0.95$ 时性能显著劣于 GRPO</td><td>低：$\lambda=1.0$ 时 PPO 接近 GRPO，但 GRPO 无需调</td></tr>
+    <tr><td>DeepSeek-Coder-V2-Lite 实验</td><td>$\lambda=0.95$ 时明显差；$\lambda=1.0$ 时接近 GRPO</td><td>最优基线，无额外调参</td></tr>
+  </table>
+  <p style="margin-top:.6em">论文结论：<strong>PPO 可以在精细调参后接近 GRPO，但额外的计算开销（Critic 模型）和调参负担使其在大规模训练中不如 GRPO 实用。</strong></p>
+</div>
+
+<h3 id="s6-2">6.2 完整 GRPO 推导</h3>
+<div class="tech-card blue">
+  <h4>步骤一：组采样</h4>
+  <p>对每个问题 $q$，从旧策略 $\pi_{\theta_\text{old}}$ 采样 $G=16$ 个输出 $\{o_1,\ldots,o_G\}$，由奖励函数计算分数 $\{r_1,\ldots,r_G\}$。</p>
+
+  <h4>步骤二：组内相对优势</h4>
+  <div class="formula-box">
+    $$\hat{A}_i = \frac{r_i - \text{mean}(\{r_j\}_{j=1}^G)}{\text{std}(\{r_j\}_{j=1}^G)}$$
+  </div>
+  <p>直觉：组内奖励高于平均 → 正优势（值得强化）；低于平均 → 负优势（值得抑制）。无需绝对价值基线。</p>
+
+  <h4>步骤三：完整目标函数</h4>
+  <div class="formula-box">
+    $$\mathcal{J}_\text{GRPO}(\theta) = \mathbb{E}\!\left[\sum_{i=1}^{G}\!\left(\min\!\left(\frac{\pi_\theta(o_i)}{\pi_{\theta_\text{old}}(o_i)}\hat{A}_i,\;\text{clip}\!\left(\frac{\pi_\theta(o_i)}{\pi_{\theta_\text{old}}(o_i)},1-\varepsilon,1+\varepsilon\right)\hat{A}_i\right) - \beta\,D_\text{KL}(\pi_\theta\|\pi_\text{ref})\right)\right]$$
+    $$\varepsilon = 0.2, \quad \beta = 0.001$$
+  </div>
+</div>
+
+<h3 id="s6-25">6.2.1 DeepSeek-R1-Zero 完整训练超参数</h3>
+<div class="tech-card green">
+  <p>以下为论文 Appendix B 中给出的 R1-Zero（DeepSeek-V3-Base 版本）完整超参数，直接来源于原文：</p>
+  <table>
+    <tr><th>超参数</th><th>值</th><th>说明</th></tr>
+    <tr><td>基础模型</td><td>DeepSeek-V3-Base</td><td>671B 总参数，37B 激活</td></tr>
+    <tr><td>学习率</td><td><strong>3e-6</strong></td><td>全程恒定</td></tr>
+    <tr><td>KL 系数 $\beta$</td><td><strong>0.001</strong></td><td>控制策略偏离参考模型的程度</td></tr>
+    <tr><td>Clip 比率 $\varepsilon$</td><td><strong>10</strong>（第一阶段 RL）</td><td>较大值避免梯度被过度截断；R1-Zero-Qwen-32B 为同样配置</td></tr>
+    <tr><td>采样温度</td><td><strong>1.0</strong></td><td>Rollout 阶段采样温度</td></tr>
+    <tr><td>GRPO 组大小 $G$</td><td><strong>16</strong></td><td>每个问题采样 16 个输出</td></tr>
+    <tr><td>最大生成长度</td><td><strong>32,768 tokens</strong>（前 8.2K 步）<br><strong>65,536 tokens</strong>（之后）</td><td>8.2K 步处长度跳跃，对应"顿悟"时刻</td></tr>
+    <tr><td>每步唯一问题数</td><td><strong>32</strong></td><td>每训练步 32 个不同问题</td></tr>
+    <tr><td>有效 Batch Size</td><td><strong>512</strong>（32 问题 × 16 组）</td><td>每步实际处理样本数</td></tr>
+    <tr><td>Rollout 批大小</td><td><strong>8,192</strong> 输出/轮</td><td>随机分为 16 个 mini-batch，仅训练 1 个 inner epoch</td></tr>
+    <tr><td>Reference 更新频率</td><td>每 <strong>400 步</strong></td><td>将 Reference 替换为最新策略，防止过度偏离</td></tr>
+    <tr><td>总训练步数</td><td><strong>10,400 步</strong>（约 1.6 epoch）</td><td>对应约 198 H800 GPU 小时（64×8 卡）</td></tr>
+    <tr><td>训练硬件</td><td><strong>64×8 = 512 张 H800 GPU</strong></td><td>约 8.25 天</td></tr>
+  </table>
+  <blockquote>注：R1-Zero-Qwen-32B 版本学习率为 2e-6，其余参数与上表相同。</blockquote>
+</div>
+
+<h3 id="s6-3">6.3 奖励函数设计</h3>
+<table>
+  <tr><th>奖励类型</th><th>计算方式</th><th>分值</th></tr>
+  <tr><td>准确性 $r_\text{acc}$</td><td>答案精确匹配（数学）或测试用例通过率（代码）</td><td>0 或 1</td></tr>
+  <tr><td>格式 $r_\text{fmt}$</td><td>输出包含 <code>&lt;think&gt;...&lt;/think&gt;</code> 推理标签</td><td>0 或 0.1</td></tr>
+  <tr><td>语言一致性 $r_\text{lang}$</td><td>目标语言词占比，抑制语言混杂</td><td>连续值</td></tr>
+</table>
+<p>总奖励 $r = r_\text{acc} + r_\text{fmt} + r_\text{lang}$。DeepSeek-R1 <strong>明确拒绝使用神经网络奖励模型</strong>，因其容易被黑客攻击（奖励欺骗）。</p>
+
+<h3 id="s6-4">6.4 RL 基础设施：四模块解耦架构</h3>
+<div class="tech-card blue">
+  <p>DeepSeek 的 RL 训练框架将流水线分为四个解耦模块，各模块执行完毕后自动将模型从 VRAM 卸载到内存/磁盘，为下一模块腾出空间：</p>
+  <table>
+    <tr><th>模块</th><th>功能</th><th>关键优化</th></tr>
+    <tr><td><strong>Rollout 模块</strong></td><td>从训练集加载 Prompt，通过多个 vLLM worker（搭载 Actor 模型）采样多个响应</td><td>MoE 专家并行；MTP 自推测解码加速；热点专家冗余副本均衡负载</td></tr>
+    <tr><td><strong>Inference 模块</strong></td><td>加载 Reward Model 和 Reference Model，对 Rollout 生成的样本做前向推理，获取模型奖励和 KL 信息</td><td>与 Rollout 模块解耦，可独立扩展</td></tr>
+    <tr><td><strong>Rule-based Reward 模块</strong></td><td>计算规则奖励（代码执行器、答案匹配器、格式检查器）</td><td>异步调度，与 Rollout/Inference 重叠执行，隐藏延迟</td></tr>
+    <tr><td><strong>Training 模块</strong></td><td>加载 Actor（+可选 Critic），计算损失并更新参数；支持 PPO/GRPO/DPO 等多种算法</td><td>全局 batch 按长度排序 + Best-Fit 打包，消除 padding 浪费；集成 DualPipe 流水线</td></tr>
+  </table>
+</div>
+
+<!-- ===== 七、顿悟 ===== -->
+<h2 id="s7">七、R1"顿悟"现象与四阶段训练</h2>
+
+<h3 id="s7-1">7.1 R1-Zero：纯 RL 路线的涌现现象</h3>
+<div class="tech-card purple">
+  <p>R1-Zero 直接在 V3-Base 上进行 GRPO，<strong>不使用任何 SFT 数据</strong>。训练约 4000 步时观察到两个自发涌现现象：</p>
+  <ul>
+    <li><strong>响应长度自发增长：</strong>平均从 ~300 token 增长至 ~7800 token，模型自发学会"花更多时间思考"</li>
+    <li><strong>"顿悟"时刻（Aha Moment）：</strong>模型开始使用 "wait" 等词汇中途暂停，重新评估之前的推理步骤，并生成修正方案——完全由 RL 自发涌现，非人工设计</li>
+  </ul>
+</div>
+
+<div id="chart-r1zero" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-r1zero')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  grid:{left:70,right:30,bottom:50},
+  xAxis:{type:'category',data:['0步','1000步','2000步','3000步','4000步','5000步','6000步','7000步','8000步'],axisLabel:{color:'#cdd6f4'}},
+  yAxis:{type:'value',name:'平均响应长度 (tokens)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+  series:[{name:'R1-Zero 响应长度',type:'line',data:[300,800,1500,2200,4500,5800,6500,7200,7800],
+    smooth:true,itemStyle:{color:'#a6e3a1'},lineStyle:{width:3},
+    markLine:{data:[{xAxis:'4000步',name:'顿悟时刻',lineStyle:{color:'#f38ba8',type:'dashed'},label:{formatter:'顿悟时刻',color:'#f38ba8'}}]}}]
+});
+</script>
+
+<h3 id="s7-2">7.2 R1 四阶段训练流水线</h3>
+<pre class="mermaid">
+flowchart TD
+  BASE["DeepSeek-V3-Base"] --> COLD["阶段 1：冷启动 SFT<br>少量高质量 CoT 数据<br>建立稳定推理格式<br>&lt;think&gt;...&lt;/think&gt;"]
+  COLD --> RL1["阶段 2：推理专项 RL（GRPO）<br>数学/代码任务<br>涌现自我反思能力"]
+  RL1 --> RS["阶段 3：拒绝采样 + SFT<br>从 RL 模型生成高质量推理数据<br>混合通用任务 SFT"]
+  RS --> RL2["阶段 4：全面 RL 对齐<br>混合推理 + 通用数据<br>对齐人类偏好"]
+  RL2 --> R1["DeepSeek-R1 最终模型"]
+</pre>
+
+<p><strong>冷启动的作用：</strong>R1-Zero 存在语言混杂（中英混用）和格式不稳定问题，冷启动 SFT 通过数千条精心设计的 CoT 样本为后续 RL 提供更好的起点。</p>
+
+<h3 id="s7-3">7.3 RL 数据配比（完整 RL 训练数据组成）</h3>
+<div class="tech-card purple">
+  <h4>阶段 2：推理专项 RL 数据（共 146K 条）</h4>
+  <table>
+    <tr><th>数据类型</th><th>数量</th><th>问题类型</th><th>输出类型</th></tr>
+    <tr><td>数学（Math）</td><td><strong>26K</strong></td><td>量化推理（代数/微积分/概率/几何，含竞赛题）</td><td>数值 / 表达式 / 方程</td></tr>
+    <tr><td>代码（Code）</td><td><strong>17K</strong>（算法竞赛）+ <strong>8K</strong>（Bug 修复）= 25K</td><td>算法竞赛题（Codeforces/LeetCode 风格）+ GitHub 真实 Bug</td><td>完整代码方案</td></tr>
+    <tr><td>STEM</td><td><strong>22K</strong></td><td>物理/化学/生物多选题</td><td>选项</td></tr>
+    <tr><td>逻辑（Logic）</td><td><strong>15K</strong></td><td>脑筋急转弯/逻辑谜题/Code-IO 问题</td><td>选项 / 数值</td></tr>
+    <tr><td>通用（General）</td><td><strong>66K</strong>（含 12K 安全问题）</td><td>创意写作/事实问答/角色扮演/有益性评测</td><td>排序响应</td></tr>
+  </table>
+  <p>奖励：推理类用<strong>规则奖励</strong>（答案匹配/代码执行）；通用类用<strong>模型奖励</strong>（Helpful RM + Safety RM）。</p>
+</div>
+
+<h3 id="s7-4">7.4 SFT 数据配比（800K 监督数据详细构成）</h3>
+<div class="tech-card green">
+  <h4>阶段 3：拒绝采样 + SFT 的 800K 样本构成</h4>
+  <table>
+    <tr><th>领域</th><th>样本数</th><th>平均轮次</th><th>平均 Token 数</th><th>来源</th></tr>
+    <tr><td>数学（Math）</td><td><strong>395,285</strong>（约 49%）</td><td>1.0</td><td>6,094</td><td>第一阶段 RL checkpoint 拒绝采样；规则奖励 + 生成奖励模型验证</td></tr>
+    <tr><td>代码（Code）</td><td><strong>211,129</strong>（约 26%）</td><td>1.1</td><td>7,436</td><td>竞赛编程 + 调试任务 + 工程代码（5151 Codeforces + 2504 AtCoder）</td></tr>
+    <tr><td>STEM</td><td><strong>10,124</strong>（约 1%）</td><td>1.0</td><td>4,929</td><td>公开教材和在线题库</td></tr>
+    <tr><td>逻辑（Logic）</td><td><strong>10,395</strong>（约 1%）</td><td>1.0</td><td>2,739</td><td>同 RL 数据来源</td></tr>
+    <tr><td>通用（General）</td><td><strong>177,812</strong>（约 22%）</td><td>1.1</td><td>1,420</td><td>写作/事实问答/自我认知/翻译；复用 V3 SFT 数据集</td></tr>
+    <tr><td><strong>合计</strong></td><td><strong>804,745</strong></td><td>1.0</td><td>5,355</td><td>—</td></tr>
+  </table>
+  <p>其中推理数据（数学+代码+STEM+逻辑）约 <strong>600K 条（75%）</strong>，非推理通用数据约 <strong>200K 条（25%）</strong>。</p>
+  <blockquote>注：SFT 超参数 — 在 DeepSeek-V3-Base 上微调 2-3 个 epoch；余弦衰减学习率，从 $5 \times 10^{-5}$ 降至 $5 \times 10^{-6}$；最大上下文长度 32,768 tokens；Batch Size = 128。</blockquote>
+</div>
+
+<h3 id="s7-5">7.5 第二阶段 RL 超参数</h3>
+<div class="tech-card blue">
+  <table>
+    <tr><th>超参数</th><th>值</th><th>说明</th></tr>
+    <tr><td>采样温度</td><td><strong>0.7</strong>（低于第一阶段的 1.0）</td><td>更高温度导致不连贯生成</td></tr>
+    <tr><td>总训练步数</td><td><strong>1,700 步</strong></td><td>最后 400 步引入通用指令数据和偏好奖励</td></tr>
+    <tr><td>奖励信号</td><td>推理：规则奖励；通用：模型奖励（Helpful RM + Safety RM + Format RM）</td><td>混合奖励信号</td></tr>
+    <tr><td>语言一致性奖励</td><td>直接加入最终奖励</td><td>抑制 CoT 中的语言混杂现象</td></tr>
+    <tr><td>偏好奖励训练数据</td><td>66K 对（Helpful RM），batch=256，lr=6e-6，1 epoch</td><td>最大序列长度 8192 tokens</td></tr>
+    <tr><td>安全奖励训练数据</td><td>106K 条（Safety RM），point-wise 分类</td><td>同 Helpful RM 超参数</td></tr>
+  </table>
+  <p><strong>奖励欺骗（Reward Hacking）风险：</strong>论文发现，若模型偏好奖励步数过多，奖励分数持续上升但 Codeforces 性能下降，因此偏好奖励仅在最后 400 步引入。</p>
+</div>
+
+<!-- ===== 八、蒸馏 ===== -->
+<h2 id="s8">八、R1 知识蒸馏到小模型</h2>
+
+<div class="tech-card green">
+  <div class="formula-box">
+    $$\mathcal{L}_\text{distill} = -\sum_t \log P_\text{student}(x_t|x_{\lt t},\,\text{CoT from R1})$$
+  </div>
+  <p><strong>关键发现：</strong>蒸馏比对小模型直接进行 RL 训练效果更好。原因：小模型（1.5B~7B）难以自发涌现复杂推理行为（缺乏足够的表达能力），但可以通过 SFT 学习大模型的推理模式（模式复制而非行为涌现）。</p>
+</div>
+
+<div id="chart-distill" class="echarts-container" style="height:300px"></div>
+<script>
+echarts.init(document.getElementById('chart-distill')).setOption({
+  backgroundColor:'#2a2a3e',
+  tooltip:{trigger:'axis'},
+  legend:{textStyle:{color:'#cdd6f4'},top:8},
+  grid:{left:60,right:30,bottom:60},
+  xAxis:{type:'category',data:['R1-Qwen-1.5B','R1-Qwen-7B','R1-LLaMA-8B','R1-Qwen-14B','R1-Qwen-32B','GPT-4o'],
+    axisLabel:{color:'#cdd6f4',rotate:15}},
+  yAxis:{type:'value',name:'AIME 2024 Pass@1',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+  series:[{name:'AIME 2024',type:'bar',data:[28.9,55.5,50.4,69.7,72.6,9.3],
+    itemStyle:{color:function(p){return p.dataIndex===5?'#f38ba8':'#89b4fa';}},barMaxWidth:52,
+    label:{show:true,position:'top',color:'#cdd6f4',formatter:p=>p.value}}]
+});
+</script>
+<p style="color:#6c7086;font-size:.85em;text-align:center">图：R1 蒸馏模型 vs GPT-4o 在 AIME 2024 的对比（GPT-4o 分数=9.3 用红色标注）</p>
+
+<table>
+  <tr><th>模型</th><th>参数量</th><th>AIME 2024</th><th>MATH-500</th><th>Codeforces %</th></tr>
+  <tr><td>R1-Distill-Qwen-1.5B</td><td>1.5B</td><td>28.9</td><td>83.9</td><td>20.6%</td></tr>
+  <tr><td>R1-Distill-Qwen-7B</td><td>7B</td><td>55.5</td><td>92.8</td><td>37.6%</td></tr>
+  <tr><td>R1-Distill-Qwen-32B</td><td>32B</td><td>72.6</td><td>94.3</td><td>57.2%</td></tr>
+  <tr><td><strong>DeepSeek-R1（原版）</strong></td><td><strong>671B</strong></td><td><strong>79.8</strong></td><td><strong>97.3</strong></td><td><strong>96.3%</strong></td></tr>
+  <tr><td>GPT-4o（对比基线）</td><td>—</td><td>9.3</td><td>74.6</td><td>23.6%</td></tr>
+</table>
+
+<!-- ===== 九、训练成本 ===== -->
+<h2 id="s9">九、训练成本与工程实现</h2>
+
+<h3 id="s9-0">9.0 DeepSeek-V3 模型与训练超参数</h3>
+<div class="tech-card blue">
+  <h4>模型架构超参数（完整配置表）</h4>
+  <table>
+    <tr><th>参数</th><th>值</th><th>说明</th></tr>
+    <tr><td>Transformer 层数</td><td><strong>61 层</strong></td><td>前 3 层保留 FFN，其余替换为 MoE</td></tr>
+    <tr><td>隐藏维度</td><td><strong>7168</strong></td><td>参数随机初始化，标准差 0.006</td></tr>
+    <tr><td>MLA 注意力头数 $n_h$</td><td><strong>128</strong></td><td>多头潜在注意力</td></tr>
+    <tr><td>MLA 每头维度 $d_h$</td><td><strong>128</strong></td><td>—</td></tr>
+    <tr><td>KV 压缩维度 $d_c$</td><td><strong>512</strong></td><td>KV 缓存压缩到 512 维</td></tr>
+    <tr><td>Query 压缩维度 $d'_c$</td><td><strong>1536</strong></td><td>—</td></tr>
+    <tr><td>解耦 RoPE 维度 $d^R_h$</td><td><strong>64</strong></td><td>—</td></tr>
+    <tr><td>MoE 层配置</td><td><strong>1 个共享专家 + 256 个路由专家</strong></td><td>每个专家中间维度 2048</td></tr>
+    <tr><td>每 token 激活专家数</td><td><strong>8 个路由专家</strong></td><td>每 token 最多路由到 4 个节点</td></tr>
+    <tr><td>MTP 预测深度 $D$</td><td><strong>1</strong>（即预测下一个额外 token）</td><td>推理时 MTP 模块丢弃，无额外开销</td></tr>
+    <tr><td>词表大小</td><td><strong>128K tokens</strong>（Byte-level BPE）</td><td>优化多语言压缩效率</td></tr>
+    <tr><td>总参数量</td><td><strong>671B</strong></td><td>每 token 激活 37B（约 5.5%）</td></tr>
+  </table>
+</div>
+
+<div class="tech-card green">
+  <h4>训练超参数（完整配置）</h4>
+  <table>
+    <tr><th>参数</th><th>值</th><th>说明</th></tr>
+    <tr><td>优化器</td><td>AdamW（$\beta_1=0.9, \beta_2=0.95$, weight_decay=0.1）</td><td>标准设置</td></tr>
+    <tr><td>梯度裁剪</td><td>norm = <strong>1.0</strong></td><td>—</td></tr>
+    <tr><td>预训练序列长度</td><td><strong>4K tokens</strong></td><td>后通过 YaRN 扩展至 128K</td></tr>
+    <tr><td>训练 token 总量</td><td><strong>14.8T tokens</strong></td><td>多语言高质量语料</td></tr>
+    <tr><td>学习率峰值</td><td><strong>$2.2 \times 10^{-4}$</strong></td><td>前 2K 步线性 warmup</td></tr>
+    <tr><td>学习率调度</td><td>峰值保持至 10T tokens → 余弦衰减至 $2.2 \times 10^{-5}$（4.3T tokens）→ 最终 $7.3 \times 10^{-6}$（最后 167B tokens）</td><td>多阶段衰减</td></tr>
+    <tr><td>Batch Size 调度</td><td>从 <strong>3072</strong> 逐步增大至 <strong>15360</strong>（前 469B tokens），之后保持 15360</td><td>训练初期小 batch 稳定，后期大 batch 提效</td></tr>
+    <tr><td>FIM 比率</td><td><strong>0.1</strong>（PSM 框架）</td><td>Fill-in-Middle 策略，提升代码补全能力</td></tr>
+    <tr><td>MTP 损失权重 $\lambda$</td><td>前 10T tokens：<strong>0.3</strong>；后 4.8T tokens：<strong>0.1</strong></td><td>逐步降低 MTP 权重</td></tr>
+    <tr><td>辅助损失均衡系数 $\alpha$</td><td><strong>0.0001</strong></td><td>极小值，仅防止单序列内极端不均衡</td></tr>
+    <tr><td>偏置更新速度 $\gamma$</td><td>前 14.3T tokens：<strong>0.001</strong>；最后 500B tokens：<strong>0.0</strong></td><td>Auxiliary-Loss-Free 均衡策略</td></tr>
+  </table>
+</div>
+
+<div class="tech-card yellow">
+  <h4>长上下文扩展（YaRN 两阶段）</h4>
+  <table>
+    <tr><th>阶段</th><th>序列长度</th><th>Batch Size</th><th>步数</th><th>学习率</th></tr>
+    <tr><td>阶段 1：4K → 32K</td><td>32K</td><td>1920</td><td>1000 步</td><td>$7.3 \times 10^{-6}$</td></tr>
+    <tr><td>阶段 2：32K → 128K</td><td>128K</td><td>480</td><td>1000 步</td><td>$7.3 \times 10^{-6}$</td></tr>
+  </table>
+  <p>YaRN 配置：scale $s=40$，$\alpha=1$，$\beta=32$，scaling factor $\sqrt{t}=0.1\ln s+1$，仅应用于解耦共享键 $k^R_t$。</p>
+</div>
+
+<div class="tech-card blue">
+  <h4>V3 训练成本（历史性突破）</h4>
+  <table>
+    <tr><th>训练阶段</th><th>H800 GPU 小时</th><th>费用（$2/GPU·h）</th></tr>
+    <tr><td>预训练（14.8T tokens）</td><td><strong>2,664K</strong></td><td>$5.328M</td></tr>
+    <tr><td>长上下文扩展（4K→128K）</td><td><strong>119K</strong></td><td>$0.238M</td></tr>
+    <tr><td>后训练（SFT + RL）</td><td><strong>5K</strong></td><td>$0.010M</td></tr>
+    <tr><td><strong>合计</strong></td><td><strong>2,788K</strong></td><td><strong>$5.576M</strong></td></tr>
+  </table>
+  <div class="formula-box">
+    $$\text{每 1T tokens 训练成本} = 180{,}000\,\text{H800·小时} = 3.7\,\text{天（2048 张 H800）}$$
+  </div>
+  <p>比同期竞争对手估计节省约 <strong>80%</strong> 成本，核心原因：</p>
+  <ul>
+    <li>MoE 将激活参数控制在 37B（5.5%），每次前向 FLOP 极低</li>
+    <li>FP8 训练将显存和计算需求减半（BF16 相对误差 &lt;0.25%）</li>
+    <li>Auxiliary-Free 消除性能-效率权衡</li>
+    <li>DualPipe 流水线消除通信气泡</li>
+  </ul>
+</div>
+
+<div class="tech-card purple">
+  <h4>DeepSeek-R1 训练成本明细</h4>
+  <table>
+    <tr><th>阶段</th><th>H800 GPU 小时</th><th>费用</th><th>硬件配置</th></tr>
+    <tr><td>R1-Zero 训练</td><td><strong>101K</strong>（约 198 小时）</td><td>$202K</td><td>64×8 = 512 张 H800</td></tr>
+    <tr><td>SFT 数据生成</td><td><strong>5K</strong></td><td>$10K</td><td>—</td></tr>
+    <tr><td>DeepSeek-R1 训练</td><td><strong>41K</strong>（约 80 小时）</td><td>$82K</td><td>64×8 = 512 张 H800</td></tr>
+    <tr><td><strong>合计</strong></td><td><strong>147K</strong></td><td><strong>$294K</strong></td><td>—</td></tr>
+  </table>
+  <p>与 V3 预训练（$5.328M）相比，R1 的强化学习训练成本极低（<strong>$294K，约为 V3 的 5.5%</strong>），充分验证了在强大 Base 模型上进行 RL 训练的高效性。</p>
+</div>
+
+<h3 id="s9-1">并行训练架构</h3>
+<ul>
+  <li><strong>专家并行（EP）：</strong>将不同专家分布在不同 GPU/节点</li>
+  <li><strong>节点限制路由（Node-Limited Routing）：</strong>每个 token 最多路由到 4 个节点，减少跨节点通信</li>
+  <li><strong>DualPipe 流水线：</strong>计算与通信完全重叠，近乎零气泡</li>
+  <li><strong>IB + NVLink 协同：</strong>节点间 InfiniBand，节点内 NVLink，通信完全重叠</li>
+</ul>
+
+<!-- ===== 十、DeepSeek-V3.2 ===== -->
+<h2 id="s10">十、DeepSeek-V3.2：高效注意力与可扩展 RL</h2>
+
+<h3 id="s10-1">10.1 DSA：DeepSeek Sparse Attention</h3>
+<div class="tech-card blue">
+  <p>DeepSeek-V3.2 在 DeepSeek-V3.1-Terminus 基础上，通过继续训练引入 <strong>DSA（DeepSeek Sparse Attention）</strong>——这是该版本<strong>唯一的架构改动</strong>，足见其分量。DSA 是一种<strong>细粒度、内容驱动的动态稀疏注意力</strong>，由两个组件构成：<strong>Lightning Indexer</strong>（极轻量打分器）与 <strong>Top-k Token Selector</strong>（细粒度 token 选择器）。核心思想：不再对全部历史 token 做二次方全注意力，而是先廉价地打分，再只对每个 query 最相关的 $k$ 个 token 做完整注意力，从而将主注意力复杂度从 $O(L^{2})$ 降至 $O(Lk)$（$k \ll L$），在长上下文场景下几乎不损失性能，部分长程基准甚至<strong>反超</strong>稠密注意力。</p>
+</div>
+
+<h4>动机：从固定稀疏到学习型稀疏</h4>
+<p>传统稀疏注意力多采用<strong>固定模式</strong>：滑动窗口（如 Gemma 3、Olmo 3 只看局部窗口）、跨步（strided）或块状稀疏。这类方法实现简单，但稀疏模式与内容无关——它们无法根据"当前 query 真正需要回看哪些历史 token"动态选择，长程依赖任务下质量受损。DSA 的关键区别在于：<strong>稀疏模式是学出来的，而非硬编码</strong>。Lightning Indexer 学习一个内容相关的重要性函数，让模型自己决定每个 query 应关注哪些历史位置，从而在大幅削减计算的同时保持稠密注意力的质量。这正是 DSA 难点所在：稀疏注意力不新鲜，<strong>"在不掉点的前提下做稀疏"才是真正难的事</strong>。</p>
+
+<h4>Lightning Indexer：极轻量打分器</h4>
+<p>Lightning Indexer 计算 query token $h_t$ 与每个前序 token $h_s$ 之间的相关性得分 $I_{t,s}$，作为"该不该回看 $h_s$"的依据：</p>
+<div class="formula-box">
+  $$I_{t,s} = \sum_{j=1}^{H^{I}} w_{t,j}^{I} \cdot \mathrm{ReLU}\left(q_{t,j}^{I} \cdot k_{s}^{I}\right)$$
+</div>
+<table>
+  <tr><th>符号</th><th>含义</th><th>来源</th></tr>
+  <tr><td>$H^{I}$</td><td>Indexer 头数（$\ll$ 主注意力头数 $H$）</td><td>超参</td></tr>
+  <tr><td>$q_{t,j}^{I} \in \mathbb{R}^{d^{I}}$</td><td>第 $j$ 个 Indexer 头的 query 向量</td><td>由 query token $h_t$ 经低秩投影得到</td></tr>
+  <tr><td>$k_{s}^{I} \in \mathbb{R}^{d^{I}}$</td><td>Indexer 的 key 向量（各头共享）</td><td>由前序 token $h_s$ 经低秩投影得到</td></tr>
+  <tr><td>$w_{t,j}^{I} \in \mathbb{R}$</td><td>第 $j$ 个头的可学习混合权重</td><td>由 query token $h_t$ 决定（query 相关的门控）</td></tr>
+  <tr><td>$d^{I}$</td><td>Indexer 的低维投影维度</td><td>远小于主注意力头维度</td></tr>
+</table>
+<p>设计要点：</p>
+<ul>
+  <li><strong>用 ReLU 而非 Softmax：</strong>Softmax 需对整条序列做全局归一化，开销大且不利于后续 Top-k 选择；ReLU 直接把负的点积得分归零，无需全局归一化，且在 FP8 下吞吐极高。论文明确指出选 ReLU 是 <em>"for throughput consideration（出于吞吐考虑）"</em>。</li>
+  <li><strong>Indexer 只在 query 端打分：</strong>key 侧的 $k_s^{I}$ 来自 MLA 已经压缩并缓存的表示，<strong>无需在各头上重复压缩或打分</strong>，进一步省算力。</li>
+  <li><strong>头数少 + 低秩 + FP8：</strong>$H^{I}$ 远小于主注意力头数、$d^{I}$ 很小、整体以 FP8 实现并融合进单次 kernel launch，因此其名义上的 $O(L^{2})$ 开销相对 MLA 几乎可忽略。</li>
+  <li><strong>稀疏性来自选择器而非 ReLU 本身：</strong>由于存在跨头求和，单个得分 $I_{t,s}$ 通常不会恰好为 0；真正的稀疏截断由后续 Top-k 选择器完成，ReLU 主要起"压负值 + 提速"作用。</li>
+</ul>
+
+<h4>Top-k 选择与核心注意力</h4>
+<p>基于得分 $I_{t,:}$，对每个 query token $t$ 选出得分最高的 $k$ 个前序 token，构成选中集合：</p>
+<div class="formula-box">
+  $$\mathcal{S}_{t} = \left\{s \;\middle|\; I_{t,s} \in \text{Top-k}(I_{t,:})\right\}$$
+</div>
+<p>核心注意力<strong>仅在这 $k$ 个 token 上</strong>执行（而非全序列）：</p>
+<div class="formula-box">
+  $$u_t = \mathrm{Attn}\left(h_t,\;\{c_s \mid s \in \mathcal{S}_{t}\}\right)$$
+</div>
+<p>其中 $c_s$ 是 MLA 已压缩的 KV 表示。关键超参 $k = 2048$：即<strong>无论上下文多长，每个 query token 只对 2048 个 KV 条目做完整注意力</strong>。在 128K 上下文下，主注意力操作量约为稠密注意力的 <strong>1.6%</strong>（对比：固定模式稀疏约 0.4% 但质量下降）。主注意力复杂度由 $O(L^{2})$ 降至 $O(Lk)$；Indexer 自身仍是 $O(L^{2})$，但因低秩 + FP8 + 少头，相对 MLA 的开销可忽略，端到端仍获显著提速。</p>
+
+<h4>与 MLA 的集成：DSA 实例化于 MLA 之下</h4>
+<p>DSA 并非独立注意力，而是<strong>实例化在 MLA 之上</strong>，复用 MLA 的压缩 KV 表示 $c_s$ 同时用于打分与稀疏注意力。其数据流（对应论文 Figure 2）如下：</p>
+<pre class="mermaid">
+flowchart LR
+  HT["输入隐状态 ht"] --> CMP["KV 压缩<br/>产生 cs（缓存）"]
+  HT --> QA["主注意力 query qA"]
+  HT --> QR["RoPE query qR"]
+  HT --> QI["Indexer query qI + 头权重 wI"]
+  CMP --> KI["缓存 key kI（各头共享）"]
+  QI --> IDX["Lightning Indexer（FP8）"]
+  KI --> IDX
+  IDX -->|"得分 It,s"| SEL["Top-k 选择器 k=2048"]
+  SEL -->|"选中集合 St"| CORE["核心注意力 MQA"]
+  QA --> CORE
+  QR --> CORE
+  CMP --> CORE
+  CORE --> OUT["输出 ut"]
+</pre>
+<p>Query 端从 $h_t$ 分出三路：主注意力 query、RoPE query、Indexer query 与头权重；KV 端的压缩表示 $c_s$ 既供 Indexer 打分（经低秩投影得 $k_s^{I}$），也供核心注意力消费，<strong>一份缓存两用</strong>，避免重复压缩。RoPE 部分施加于相应分支。最终核心注意力以 MQA 形式在选中子集上完成，输出 $u_t$。</p>
+
+<h4>单层 DSA 伪代码</h4>
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: DSA 前向（单层，给定 query 与前序压缩 KV 缓存）</div>
+  <p><span class="kw">Input:</span> query 隐状态 <span class="var">h<sub>t</sub></span>; 缓存 <span class="var">{c<sub>s</sub>, k<sub>s</sub><sup>I</sup>}</span> for s &lt; t; 超参 <span class="num">k = 2048</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 1. Lightning Indexer 打分（FP8，单次 kernel launch）</span></p>
+  <p style="padding-left:1.5em"><span class="var">q<sub>t,j</sub><sup>I</sup></span>, <span class="var">w<sub>t,j</sub><sup>I</sup></span> ← <span class="fn">indexer_proj</span>(<span class="var">h<sub>t</sub></span>)   <span class="cm">// 低秩投影到 H<sup>I</sup> 头</span></p>
+  <p style="padding-left:1.5em"><span class="var">I<sub>t,s</sub></span> ← Σ<sub>j</sub> <span class="var">w<sub>t,j</sub><sup>I</sup></span> · ReLU(<span class="var">q<sub>t,j</sub><sup>I</sup></span> · <span class="var">k<sub>s</sub><sup>I</sup></span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// 2. Top-k 细粒度选择（GPU partial sort）</span></p>
+  <p style="padding-left:1.5em"><span class="var">S<sub>t</sub></span> ← { s | <span class="var">I<sub>t,s</sub></span> ∈ <span class="fn">Top-k</span>(<span class="var">I<sub>t,:</sub></span>, <span class="num">k</span>) }</p>
+  <p style="padding-left:1.5em"><span class="cm">// 3. 核心注意力仅作用于选中 KV（自定义 CUDA gather kernel）</span></p>
+  <p style="padding-left:1.5em"><span class="var">u<sub>t</sub></span> ← <span class="fn">MQA_Attn</span>(<span class="var">h<sub>t</sub></span>, { <span class="var">c<sub>s</sub></span> | s ∈ <span class="var">S<sub>t</sub></span> })</p>
+  <p><span class="kw">return</span> <span class="var">u<sub>t</sub></span></p>
+</div>
+
+<h4>实现与系统优化</h4>
+<ul>
+  <li><strong>FP8 单 kernel 打分：</strong>Indexer 以 FP8 批量矩阵乘实现，$L \times L$ 得分矩阵在单次 kernel launch 内完成，避免逐 token 循环。</li>
+  <li><strong>Top-k 用 GPU 部分排序：</strong>对每个 query 的得分向量做 partial sort 取前 $k$，避免对整条序列全排序的开销。</li>
+  <li><strong>变长稀疏 gather：</strong>每个 query 选中的集合不同（逐 query 变长稀疏），核心注意力用自定义 CUDA kernel 处理，并配合 FlashMLA / FlashAttention-3 Sparse 做 kernel 复用。</li>
+  <li><strong>分页缓存不一致：</strong>Indexer 的 key & key_scale 缓存用 page size = 64（适配 DeepSeek 提供的 kernel），而 token 级稀疏前向算子用 page size = 1，需在统一 attention backend 内支持不同 page size。</li>
+  <li><strong>短上下文回退：</strong>短序列下 DSA 退化为掩码多头注意力（masked MHA）以省去选择开销；MLA 内偏好 MQA 模式，以最大化共享 KV 的 GPU 数据复用。</li>
+</ul>
+
+<h4>复杂度与成本收益</h4>
+<table>
+  <tr><th>项目</th><th>DeepSeek-V3.1-Terminus（稠密 MLA）</th><th>DeepSeek-V3.2（DSA）</th></tr>
+  <tr><td>核心注意力复杂度</td><td>$O(L^{2})$</td><td><strong>$O(Lk)$，$k=2048$</strong></td></tr>
+  <tr><td>128K 主注意力操作量</td><td>~16.38B（100%）</td><td>~262M（<strong>~1.6%</strong>）</td></tr>
+  <tr><td>Indexer 额外开销</td><td>—</td><td>$O(L^{2})$ 但极小（低秩 + FP8 + 少头）</td></tr>
+</table>
+<p><strong>推理成本（H800 集群，2 美元/GPU 小时，128K 上下文）：</strong></p>
+<table>
+  <tr><th>阶段</th><th>V3.1-Terminus</th><th>V3.2-Exp</th><th>降幅</th></tr>
+  <tr><td>预填充（$/M tokens）</td><td>~0.71</td><td>~0.23</td><td><strong>~3.1×</strong></td></tr>
+  <tr><td>解码（$/M tokens）</td><td>~2.27</td><td>~0.38</td><td><strong>~6.0×</strong></td></tr>
+</table>
+<p>上下文越长，DSA 收益越显著——在 128K 下提供约 <strong>3–6× 成本下降</strong>，同时保持模型质量。这也是为何 V3.2 把它作为唯一架构改动单独发力。</p>
+
+<h3 id="s10-1b">10.1.1 DSA 具体训练超参数</h3>
+<div class="tech-card green">
+  <h4>关键参数一览</h4>
+  <table>
+    <tr><th>参数</th><th>值</th><th>说明</th></tr>
+    <tr><td>Indexer 头数 $H^{I}$</td><td>（论文未公开具体数值，FP8 实现）</td><td>头数少、精度低，确保 Indexer 计算开销远低于主注意力</td></tr>
+    <tr><td>每 query 选 KV 数 $k$</td><td><strong>2048</strong></td><td>稀疏训练阶段每个 query token 选择 2048 个 KV 条目</td></tr>
+    <tr><td>序列长度</td><td>128K tokens</td><td>两阶段均使用 128K 长上下文数据</td></tr>
+  </table>
+  <h4>两阶段训练精确配置</h4>
+  <div class="step-row"><div class="step-num">1</div><div>
+    <strong>密集热身阶段（Dense Warm-up）：</strong>保持稠密注意力，冻结主干所有参数，<strong>仅训练 Lightning Indexer</strong>，使其得分分布逼近主注意力的真实分布。<br>
+    <strong>目标分布构造：</strong>对第 $t$ 个 query，先把主注意力得分跨所有头求和，再沿序列维做 L1 归一化，得到 $p_{t,:} \in \mathbb{R}^{t}$ 作为监督目标。<br>
+    目标函数（论文式 3）：$\mathcal{L}^{I} = \sum_t D_\mathrm{KL}\left(p_{t,:} \| \mathrm{Softmax}(I_{t,:})\right)$<br>
+    学习率 $= 10^{-3}$，共 <strong>1000 步</strong>，每步 16 条 128K 序列，合计 <strong>2.1B tokens</strong>。此阶段不注入新知识，而是强制新组件在真实 128K 序列上模仿既有注意力模式——<strong>稀疏模式必须渐进学习，不能强行施加</strong>。
+  </div></div>
+  <div class="step-row"><div class="step-num">2</div><div>
+    <strong>稀疏训练阶段（Sparse Training）：</strong>引入 Top-k 稀疏选择机制（$k=2048$），解冻全部参数，让主模型适应 DSA 的稀疏模式。<br>
+    <strong>Indexer 仍在所选集合上对齐主注意力</strong>（论文式 4）：$\mathcal{L}^{I} = \sum_t D_\mathrm{KL}\left(p_{t,\mathcal{S}_t} \| \mathrm{Softmax}(I_{t,\mathcal{S}_t})\right)$，其中 $\mathcal{S}_t = \{s \mid I_{t,s} \in \text{Top-k}(I_{t,:})\}$，KL 仅在已选 token 上计算，避免对被裁掉的 token 施加错误监督。<br>
+    <strong>关键风险控制——分离优化路径：</strong>将 Indexer 输入从计算图 detach，Indexer 仅由 $\mathcal{L}^{I}$ 优化，主模型仅由语言建模损失优化，二者梯度互不干扰，避免稀疏模式与主模型相互拖累（98% 上下文被裁剪后的剧烈适配需要这种解耦）。<br>
+    学习率 $= 7.3 \times 10^{-6}$，共 <strong>15000 步</strong>，每步 480 条 128K 序列，合计 <strong>943.7B tokens</strong>。
+  </div></div>
+</div>
+
+<div class="tech-card yellow">
+  <h4>性能验证结果</h4>
+  <ul>
+    <li><strong>标准基准：</strong>与 DeepSeek-V3.1-Terminus 表现相当，无明显性能衰退（短/长上下文均验证）</li>
+    <li><strong>AA-LCR3 长上下文评测：</strong>DeepSeek-V3.2-Exp 比 V3.1-Terminus 高 <strong>+4 分</strong>（推理模式）</li>
+    <li><strong>Fiction.liveBench：</strong>V3.2-Exp 在多项指标上持续优于 V3.1-Terminus</li>
+    <li><strong>推理成本（H800 集群，2 美元/GPU 小时）：</strong>在 128K 位置时，预填充和解码成本均大幅低于 V3.1-Terminus</li>
+  </ul>
+</div>
+
+<h3 id="s10-2">10.2 可扩展 GRPO：四项稳定技术</h3>
+<p>V3.2 在 GRPO 大规模强化学习中发现并修复了若干数值不稳定问题，提出四项关键改进。<strong>关键数字：后训练 FLOPs 超过预训练成本的 10%</strong>，是开源模型中首次在此规模上稳定扩展 RL。</p>
+
+<div class="tech-card yellow">
+  <h4>① 无偏 KL 估计（Unbiased KL Estimation）</h4>
+  <p>原始 K3 估计量在策略 $\pi_\theta \ll \pi_\mathrm{ref}$ 时梯度爆炸。替换为以下无偏形式：</p>
+  <div class="formula-box">
+    $$D_\mathrm{KL}(\pi_\theta \| \pi_\mathrm{ref}) = \frac{\pi_\theta(o_{i,t})}{\pi_\mathrm{old}(o_{i,t})} \cdot \frac{\pi_\mathrm{ref}(o_{i,t})}{\pi_\theta(o_{i,t})} - \log\frac{\pi_\mathrm{ref}(o_{i,t})}{\pi_\theta(o_{i,t})} - 1$$
+  </div>
+  <p>该形式在任意分布比值下均有界，消除训练初期的梯度爆炸风险。实践中发现不同领域对 KL 正则化强度需求不同：数学任务可使用较弱的 KL 惩罚（$\beta$ 接近 0），甚至完全省略。</p>
+</div>
+
+<div class="tech-card blue">
+  <h4>② Off-Policy Sequence Masking（阈值 $\delta$ 控制）</h4>
+  <p>对高度 off-policy 的负优势序列引入二进制掩码 $M_{i,t}$：</p>
+  <div class="formula-box">
+    $$M_{i,t} = \begin{cases} 0 &amp; \hat{A}_{i,t} \lt 0 \;\text{且}\; \frac{1}{|o_i|}\sum_t \log\frac{\pi_\mathrm{old}(o_{i,t})}{\pi_\theta(o_{i,t})} \gt \delta \\ 1 &amp; \text{otherwise} \end{cases}$$
+  </div>
+  <p>阈值 $\delta$ 控制 off-policy 程度的容忍上限（论文未公开具体数值，需针对任务调优）。<strong>仅对负优势序列做掩码</strong>——模型最需要从自身错误中学习，而高度 off-policy 的负样本会误导优化。$\pi_\mathrm{old}$ 直接使用推理框架返回的采样概率，同时覆盖训练-推理框架不一致和多步更新两种 off-policy 来源。</p>
+</div>
+
+<div class="tech-card green">
+  <h4>③ Keep Routing（保存推理路由）</h4>
+  <p>在推理阶段记录每个 token 的 MoE 路由路径，训练时强制复用相同路由，确保训练与推理的 MoE 激活一致，避免路由漂移导致的分布偏差。该技术自 <strong>DeepSeek-V3-0324</strong> 起纳入标准 RL 流水线，被证明对 MoE 模型 RL 稳定性至关重要。</p>
+</div>
+
+<div class="tech-card purple">
+  <h4>④ Keep Sampling Mask（保存采样截断掩码）</h4>
+  <p>保存采样时的截断掩码（top-p/top-k 截断位置），在训练策略评估时应用相同掩码，保证策略梯度估计中分子分母使用一致的采样空间。top-p 采样 + Keep Sampling Mask 的组合可有效保留样本质量同时维持训练稳定性。</p>
+</div>
+
+<h3 id="s10-2b">10.2.1 Specialist Distillation + Mixed RL 流程</h3>
+<div class="tech-card blue">
+  <p>V3.2 后训练分为两阶段：</p>
+  <div class="step-row"><div class="step-num">1</div><div><strong>专家蒸馏（Specialist Distillation）：</strong>针对数学、编程、通用逻辑推理、通用 Agent、Agent 编程、Agent 搜索 6 个领域分别训练专家模型（均从同一 V3.2 base checkpoint 微调），每个专家用大规模 RL 训练，同时支持 thinking 和 non-thinking 两种模式，再用专家生成的数据蒸馏到最终 checkpoint。实验表明蒸馏数据训练出的模型与专家模型仅有极小差距，经后续 RL 后差距可消除。</div></div>
+  <div class="step-row"><div class="step-num">2</div><div><strong>混合 RL 训练（Mixed RL）：</strong>将推理、Agent、人类对齐数据合并为一个 RL 阶段，采用 GRPO + 四项稳定技术，数千步持续 RL 到最终 checkpoint。规则奖励（推理/Agent 任务，含长度惩罚、语言一致性奖励）+ 生成式奖励模型（通用任务，每个 prompt 有专属评分 rubric）。</div></div>
+  <p><strong>DeepSeek-V3.2-Speciale：</strong>仅在推理数据上训练，减小长度惩罚，额外融入 DeepSeekMath-V2 的数据集和奖励方法，增强数学证明能力。</p>
+</div>
+
+<h3 id="s10-3">10.3 大规模 Agentic 任务合成</h3>
+<p>V3.2 后训练数据包含多类 Agent 任务，覆盖真实工程场景：</p>
+<table>
+  <tr><th>任务类型</th><th>数量</th><th>环境</th><th>Prompt 来源</th></tr>
+  <tr><td>代码 Agent</td><td>24,667 个</td><td>真实（GitHub issue/PR 对，可执行沙盒）</td><td>提取自 GitHub</td></tr>
+  <tr><td>搜索 Agent</td><td>50,275 个</td><td>真实（商业搜索 API）</td><td>合成（多 Agent 流水线）</td></tr>
+  <tr><td>通用 Agent</td><td>4,417 个</td><td>合成（1,827 个任务导向环境）</td><td>合成</td></tr>
+  <tr><td>代码解释器</td><td>5,908 个</td><td>真实（Jupyter Notebook）</td><td>提取自数学/逻辑/数据科学题库</td></tr>
+</table>
+
+<h3 id="s10-3b">10.3.1 Agentic Cold-Start 与 Thinking Context Management</h3>
+<div class="tech-card blue">
+  <h4>Cold-Start：将推理能力注入工具调用</h4>
+  <p>问题：推理数据（非 Agent）和 Agent 数据（非推理）各自独立，直接合并时模型无法在工具调用中维持连贯推理链。</p>
+  <p>解法：通过精心设计的 System Prompt 引导模型在 <code>&lt;think&gt;...&lt;/think&gt;</code> 内部执行工具调用，形成"推理-工具-推理"交替轨迹。三类 System Prompt 示例：</p>
+  <table>
+    <tr><th>数据类型</th><th>System Prompt 要求</th><th>响应格式</th></tr>
+    <tr><td>推理数据</td><td>要求在 <code>&lt;think&gt;&lt;/think&gt;</code> 内推理，最终答案在 <code>&lt;/think&gt;</code> 后输出</td><td><code>&lt;think&gt;...&lt;/think&gt;[最终答案]</code></td></tr>
+    <tr><td>Agent 数据</td><td>提供工具描述 + 调用格式，不要求推理</td><td><code>[多轮工具调用][最终答案]</code></td></tr>
+    <tr><td>推理-Agent 融合</td><td>允许在 <code>&lt;think&gt;</code> 内多次调用工具（最多 20 次），代码执行优先于语言推理</td><td><code>&lt;think&gt;[推理+工具调用交替]&lt;/think&gt;[最终答案]</code></td></tr>
+  </table>
+  <p>Cold-Start 阶段虽然推理内工具调用模式尚不稳定，但能偶尔生成期望轨迹，为后续 RL 阶段提供初始种子。</p>
+</div>
+
+<div class="tech-card green">
+  <h4>Thinking Context Management：精确规则</h4>
+  <p>DeepSeek-V3.2 在多轮工具调用中采用以下上下文保留策略（与 R1 的"第二轮消息到来时丢弃推理"不同）：</p>
+  <ul>
+    <li><strong>保留推理内容：</strong>当对话中仅追加工具相关消息（工具调用结果）时，历史 <code>&lt;think&gt;</code> 块全程保留，避免重复推理</li>
+    <li><strong>清空推理内容：</strong>当新的用户消息到来时，历史推理内容被丢弃，但工具调用历史及其结果仍保留在上下文中</li>
+  </ul>
+  <p>注意：Roo Code、Terminus 等通过"用户消息"模拟工具交互的框架，会触发推理清空规则，无法充分受益于此机制，建议改用 non-thinking 模式。</p>
+  <p>效果：BrowseComp 评测中，使用上下文管理（Discard-all 策略）得分从 51.4 提升至 <strong>67.6</strong>；SWE-Verified 等代码 Agent 任务稳定在 73-74 区间。</p>
+</div>
+
+<h3 id="s10-4">10.4 实验结果</h3>
+<table>
+  <tr><th>基准</th><th>DeepSeek-V3.2-Thinking</th><th>GPT-5-High</th><th>Gemini-3.0-Pro</th><th>Kimi-K2-Thinking</th></tr>
+  <tr><td>AIME 2025</td><td>93.1</td><td>94.6</td><td><strong>95.0</strong></td><td>94.5</td></tr>
+  <tr><td>LiveCodeBench</td><td>83.3</td><td>84.5</td><td><strong>90.7</strong></td><td>82.6</td></tr>
+  <tr><td>SWE-Verified</td><td>73.1</td><td>74.9</td><td><strong>77.2</strong></td><td>76.2</td></tr>
+</table>
+
+<div class="tech-card green">
+  <h4>竞赛金牌成绩</h4>
+  <ul>
+    <li><strong>IMO 2025：</strong>35/42 金牌</li>
+    <li><strong>IOI 2025：</strong>492/600 金牌</li>
+    <li><strong>ICPC WF 2025：</strong>全球第 2 名</li>
+  </ul>
+</div>
+
+<hr>
+
+<!-- ===== 十一、DeepSeek-V4 ===== -->
+<h2 id="s11">十一、DeepSeek-V4：百万上下文时代</h2>
+
+<h3 id="s11-0">11.0 模型规模与架构超参数</h3>
+<table>
+  <tr><th>配置项</th><th>V4-Flash</th><th>V4-Pro</th></tr>
+  <tr><td>总参数</td><td>284B</td><td>1.6T</td></tr>
+  <tr><td>激活参数</td><td>13B</td><td>49B</td></tr>
+  <tr><td>上下文长度</td><td>1M</td><td>1M</td></tr>
+  <tr><td>Transformer 层数</td><td>43</td><td>61</td></tr>
+  <tr><td>隐藏维度 $d$</td><td>4096</td><td>7168</td></tr>
+  <tr><td>Query 头数 $n_h$</td><td>64</td><td>128</td></tr>
+  <tr><td>头维度 $c$</td><td>512</td><td>512</td></tr>
+  <tr><td>CSA 压缩比 $m$</td><td>4</td><td>4</td></tr>
+  <tr><td>HCA 压缩比 $m'$</td><td>128</td><td>128</td></tr>
+  <tr><td>CSA Top-k（稀疏注意力）</td><td>512</td><td>1024</td></tr>
+  <tr><td>SWA 窗口大小 $n_{win}$</td><td>128</td><td>128</td></tr>
+  <tr><td>每层总专家数</td><td>256 路由 + 1 共享</td><td>256 路由 + 1 共享</td></tr>
+  <tr><td>每 token 激活专家数</td><td>6</td><td>8</td></tr>
+  <tr><td>专家中间维度</td><td>2048</td><td>2048</td></tr>
+  <tr><td>mHC 扩展因子 $n_{hc}$</td><td>4</td><td>4</td></tr>
+  <tr><td>MTP 深度</td><td>1</td><td>1</td></tr>
+  <tr><td>训练 Token 数</td><td>32T</td><td>33T</td></tr>
+  <tr><td>最大 Batch Size</td><td>75.5M tokens</td><td>94.4M tokens</td></tr>
+  <tr><td>峰值学习率</td><td>$2.7 \times 10^{-4}$</td><td>$2.0 \times 10^{-4}$</td></tr>
+</table>
+
+<div class="tech-card blue">
+  <h4>Muon vs AdamW 使用范围</h4>
+  <ul>
+    <li><strong>使用 Muon：</strong>绝大多数模块（Attention、FFN、专家权重等），动量 $\mu=0.95$，权重衰减 0.1，更新矩阵 RMS 缩放至 0.18</li>
+    <li><strong>使用 AdamW：</strong>Embedding 模块、Prediction Head、mHC 的静态偏置和门控因子、所有 RMSNorm 权重；参数：$\beta_1=0.9, \beta_2=0.95, \varepsilon=10^{-20}$，权重衰减 0.1</li>
+  </ul>
+</div>
+
+<div class="tech-card green">
+  <h4>长上下文分阶段扩展</h4>
+  <p>两个模型均从 4K 序列长度起步，逐步扩展：</p>
+  <div class="step-row"><div class="step-num">1</div><div><strong>4K → 16K → 64K：</strong>密集注意力预热阶段（V4-Flash 前 1T tokens，V4-Pro 更长），建立稳定的注意力模式</div></div>
+  <div class="step-row"><div class="step-num">2</div><div><strong>64K 引入稀疏注意力：</strong>先短暂热身 Lightning Indexer（类似 V3.2 的两阶段策略），再全量稀疏训练</div></div>
+  <div class="step-row"><div class="step-num">3</div><div><strong>→ 1M：</strong>最终扩展至 1M tokens，完成超长上下文能力建立</div></div>
+</div>
+
+<h3 id="s11-1">11.1 CSA：Compressed Sparse Attention</h3>
+<div class="tech-card blue">
+  <p>CSA 在 MLA 低秩压缩基础上进一步引入 <strong>跨 token 压缩</strong>，将相邻 $m$ 个 token 的 KV 表示合并为一个压缩单元，大幅降低长序列下的 KV Cache 占用。</p>
+  <h4>KV 压缩公式（双向 look-ahead / look-back 各 m 个 token）</h4>
+  <div class="formula-box">
+    $$C_i^\mathrm{Comp} = \sum_{j=mi}^{m(i+1)-1} S_j^a \odot C_j^a + \sum_{j=m(i-1)}^{mi-1} S_j^b \odot C_j^b$$
+  </div>
+  <p>$S_j^a$、$S_j^b$ 为可学习的标量门控权重，$C_j^a$、$C_j^b$ 分别为前向和后向的 KV 潜在向量。双向融合使压缩单元同时感知局部上下文。</p>
+  <h4>稀疏选择策略</h4>
+  <ul>
+    <li><strong>Top-k 稀疏选择：</strong>对压缩后的 KV 单元做重要性打分，只保留最相关的 $k$ 个</li>
+    <li><strong>滑动窗口近邻保留：</strong>无论打分如何，始终保留最近 $w$ 个 token 的精确 KV，防止近邻信息丢失</li>
+    <li><strong>MQA 核心注意力：</strong>压缩单元部分采用 Multi-Query Attention，进一步减少 KV 头数</li>
+  </ul>
+</div>
+
+<h3 id="s11-2">11.2 HCA：Heavily Compressed Attention</h3>
+<div class="tech-card purple">
+  <p>HCA 采用更大压缩比 $m' \gg m$，将更长范围的历史 token 压缩为极少数的 KV 单元，无需稀疏选择，直接对所有压缩单元做密集注意力。CSA 和 HCA 层交错排列：</p>
+  <ul>
+    <li>CSA 层负责中程精确稀疏注意力</li>
+    <li>HCA 层负责超长程粗粒度全局注意力</li>
+    <li>两者配合实现 1M 上下文的高效覆盖</li>
+  </ul>
+</div>
+
+<h3 id="s11-3">11.3 效率对比（相比 V3.2）</h3>
+<table>
+  <tr><th>版本</th><th>FLOPs 降低</th><th>KV Cache 降低</th></tr>
+  <tr><td>V4-Pro</td><td><strong>3.7×</strong></td><td><strong>9.5×</strong></td></tr>
+  <tr><td>V4-Flash</td><td><strong>9.8×</strong></td><td><strong>13.7×</strong></td></tr>
+</table>
+
+<h3 id="s11-4">11.4 mHC：流形约束超连接</h3>
+<div class="tech-card green">
+  <p>mHC（manifold-constrained HyperConnection）将层间残差连接的混合矩阵 $B_l$ 约束在<strong>双随机矩阵流形</strong>上，保证谱范数有界，使残差变换非扩张。</p>
+  <h4>流形约束定义</h4>
+  <div class="formula-box">
+    $$B_l \in \mathcal{M} \triangleq \{M \mid M\mathbf{1}=\mathbf{1},\;\mathbf{1}^TM=\mathbf{1}^T,\;M\geq 0\}$$
+  </div>
+  <p>双随机矩阵满足行和与列和均为 1，由 Birkhoff 定理可知其谱范数 $\|B_l\|_2 \leq 1$，从而保证梯度在深层网络中不爆炸。</p>
+  <h4>投影算法</h4>
+  <p>使用 <strong>Sinkhorn-Knopp 算法</strong>在每步优化后将 $B_l$ 投影回流形 $\mathcal{M}$，计算开销极小（仅需交替行/列归一化）。</p>
+</div>
+
+<h3 id="s11-5">11.5 Muon 优化器</h3>
+<div class="tech-card yellow">
+  <p>V4 采用 Muon 优化器替代 AdamW，通过 Newton-Schulz 迭代将梯度矩阵正交化，使参数更新具有等向性，加速收敛并提升训练稳定性。</p>
+  <h4>Newton-Schulz 正交化更新</h4>
+  <div class="formula-box">
+    $$O_t = \mathrm{HybridNewtonSchulz}(\mu M_t + G_t) \cdot \sqrt{\max(n,m)} \cdot \gamma$$
+    $$W_t = W_t(1-\eta\lambda) - \eta O_t$$
+  </div>
+  <p>$M_t$ 为动量累积，$G_t$ 为当前梯度，$\gamma$ 为缩放因子，$\eta$ 为学习率，$\lambda$ 为权重衰减系数。正交化步骤确保更新矩阵的 Frobenius 范数与维度无关。</p>
+</div>
+
+<div class="tech-card blue">
+  <h4>Hybrid Newton-Schulz 迭代细节（10 步两阶段）</h4>
+  <p>给定矩阵 $M$（SVD 为 $M = U\Sigma V^T$），目标是将 $M$ 正交化为 $UV^T$。先归一化 $M_0 = M / \|M\|_F$，然后执行 <strong>10 步迭代</strong>：</p>
+  <div class="formula-box">
+    $$M_k = aM_{k-1} + b(M_{k-1}M_{k-1}^T)M_{k-1} + c(M_{k-1}M_{k-1}^T)^2 M_{k-1}$$
+  </div>
+  <table>
+    <tr><th>阶段</th><th>步数</th><th>系数 $(a, b, c)$</th><th>作用</th></tr>
+    <tr><td>快速收敛阶段</td><td>前 8 步</td><td>$(3.4445, -4.7750, 2.0315)$</td><td>驱动奇异值快速趋近 1</td></tr>
+    <tr><td>精确稳定阶段</td><td>后 2 步</td><td>$(2, -1.5, 0.5)$</td><td>将奇异值精确稳定在 1</td></tr>
+  </table>
+  <p><strong>注意：</strong>由于 V4 的注意力架构对 query 和 KV 直接应用 RMSNorm，有效防止注意力 logit 爆炸，因此不需要 QK-Clip 技术。</p>
+</div>
+
+<h3 id="s11-6">11.6 On-Policy Distillation（OPD）</h3>
+<div class="tech-card blue">
+  <p>OPD 替代混合 RL 阶段，通过多教师反向 KL 蒸馏将多个专家模型的推理能力融合到学生模型。<strong>超过 10 个教师模型</strong>覆盖各任务域，蒸馏到单一学生模型。</p>
+  <h4>训练流程</h4>
+  <div class="step-row"><div class="step-num">1</div><div><strong>专家训练：</strong>10+ 个独立专家模型并行训练，每个专家专注于特定任务域（数学、编程、Agent 等），使用 GRPO 算法，超参数与 V3.2 保持一致</div></div>
+  <div class="step-row"><div class="step-num">2</div><div><strong>OPD 蒸馏：</strong>学生模型在线生成样本（on-policy），与各教师的分布做加权反向 KL 散度。采用<strong>全词表 logit 蒸馏</strong>（而非 token 级 KL 估计），获得更稳定的梯度估计</div></div>
+  <h4>目标函数</h4>
+  <div class="formula-box">
+    $$\mathcal{L}_\mathrm{OPD}(\theta) = \sum_{i=1}^N w_i \cdot D_\mathrm{KL}(\pi_\theta \| \pi_{E_i})$$
+  </div>
+  <p>$\pi_{E_i}$ 为第 $i$ 个教师专家，$w_i$ 为任务权重，反向 KL 使学生模型的输出分布覆盖各教师的众数区域。反向 KL 的梯度等价于以 $\log\frac{\pi_{E_i}(y_t|x,y_{\lt t})}{\pi_\theta(y_t|x,y_{\lt t})}$ 为 per-token 优势估计的策略梯度（stop gradient 操作）。</p>
+  <h4>三种推理模式（RL 训练时差异化配置）</h4>
+  <table>
+    <tr><th>模式</th><th>特点</th><th>RL 配置</th><th>响应格式</th></tr>
+    <tr><td><strong>Non-Think</strong></td><td>快速直觉响应</td><td>短上下文窗口（8K），强长度惩罚</td><td><code>&lt;/think&gt;</code> 后直接输出</td></tr>
+    <tr><td><strong>Think High</strong></td><td>有意识逻辑分析</td><td>中等上下文（128K），中等长度惩罚</td><td><code>&lt;think&gt;...&lt;/think&gt;</code> + 摘要</td></tr>
+    <tr><td><strong>Think Max</strong></td><td>最大推理深度</td><td>长上下文（384K），弱长度惩罚 + 特殊系统提示</td><td>系统提示注入 + <code>&lt;think&gt;...&lt;/think&gt;</code> + 摘要</td></tr>
+  </table>
+  <p><strong>Think Max 系统提示注入：</strong>"Reasoning Effort: Absolute maximum with no shortcuts permitted. You MUST be very thorough..."，引导模型穷尽所有路径、边界情况和对抗场景。</p>
+</div>
+
+<div class="tech-card green">
+  <h4>V4 的 Interleaved Thinking（对比 V3.2）</h4>
+  <p>V3.2 在新用户消息到来时会清空推理内容。V4 凭借 1M 上下文窗口，进一步优化：</p>
+  <ul>
+    <li><strong>工具调用场景：</strong>所有推理内容在整个对话中<strong>完全保留</strong>，包括跨用户消息边界——模型可在长 Agent 任务中维持连贯的累积思维链</li>
+    <li><strong>普通对话场景：</strong>保持原有策略，新用户消息到来时丢弃推理内容，保持上下文简洁</li>
+  </ul>
+  <p>V4 引入新的工具调用 Schema，使用 <code>|DSML|</code> 特殊 token + XML 格式，有效减少转义失败和工具调用错误。</p>
+</div>
+
+<h3 id="s11-7">11.7 训练稳定性技术</h3>
+<table>
+  <tr><th>技术</th><th>机制</th></tr>
+  <tr><td><strong>Anticipatory Routing</strong></td><td>提前一步计算路由索引，检测到 loss spike 时自动回滚至上一检查点，无需人工干预</td></tr>
+  <tr><td><strong>SwiGLU Clamping</strong></td><td>将 SwiGLU 激活的线性分量 clamp 到 [-10, 10]，防止激活值爆炸传播至后续层</td></tr>
+</table>
+
+<div class="tech-card yellow">
+  <h4>Anticipatory Routing 详细机制</h4>
+  <p>核心思想：将主干网络的参数更新与路由网络的参数更新<strong>解耦</strong>，避免两者同步变化引起的训练不稳定。</p>
+  <ul>
+    <li><strong>具体做法：</strong>在步骤 $t$ 时，特征计算使用当前参数 $\theta_t$，但路由索引使用历史参数 $\theta_{t-\Delta t}$ 提前（anticipatorily）计算并缓存</li>
+    <li><strong>工程优化：</strong>提前计算路由仅需一次前向传播，通过流水线编排与 EP 通信重叠，额外墙钟时间开销控制在约 <strong>20%</strong></li>
+    <li><strong>动态激活：</strong>引入自动检测机制——仅在检测到 loss spike 时激活 Anticipatory Routing，运行一段时间后自动回归标准训练，整体额外开销可忽略</li>
+    <li><strong>效果：</strong>成功规避了训练过程中的 loss spike，无需人工干预且不损失模型性能</li>
+  </ul>
+</div>
+
+<div class="tech-card blue">
+  <h4>SwiGLU Clamping 参数选择</h4>
+  <p>在 DeepSeek-V4-Flash 和 V4-Pro 的全程训练中均使用以下 clamping 配置：</p>
+  <ul>
+    <li><strong>线性分量（linear component）：</strong>clamp 至 $[-10, 10]$（双向限制）</li>
+    <li><strong>门控分量（gate component）：</strong>仅限制上界为 10（单向限制）</li>
+  </ul>
+  <p>参考文献：Bello et al. (2017) 和 Riviere et al. (2024) 均使用 clamping 约束数值范围；OpenAI (2025) 也采用 SwiGLU clamping。实验验证：该设置有效消除激活值异常点（outliers），显著稳定训练过程，且不损害模型性能。</p>
+</div>
+
+<h3 id="s11-7b">11.7.1 FP4 量化感知训练（QAT）</h3>
+<div class="tech-card green">
+  <h4>FP4（MXFP4）格式与应用范围</h4>
+  <p>DeepSeek-V4 在后训练阶段引入 FP4 量化感知训练（QAT），在推理/rollout 阶段直接使用原生 FP4 权重（非模拟量化）。</p>
+  <table>
+    <tr><th>应用目标</th><th>说明</th></tr>
+    <tr><td>MoE 专家权重</td><td>专家权重是 GPU 显存占用的主要来源，FP4 可大幅降低内存压力</td></tr>
+    <tr><td>CSA Indexer 的 QK 激活</td><td>QK 激活在长上下文中被缓存、加载、计算，全程 FP4 可加速注意力分数计算</td></tr>
+    <tr><td>Index scores $I_{:,:}$</td><td>从 FP32 量化至 BF16，实现 Top-k 选择器 <strong>2× 加速</strong>，同时保持 99.7% KV 条目召回率</td></tr>
+  </table>
+  <h4>QAT 训练方式</h4>
+  <ul>
+    <li><strong>前向传播：</strong>使用模拟 FP4 量化（FP4 量化 + 反量化到 FP8），与现有 FP8 混合精度框架无缝兼容</li>
+    <li><strong>反向传播：</strong>梯度直接传播到 FP32 主权重（等效于对量化操作应用 Straight-Through Estimator，STE），无需重新量化转置权重</li>
+    <li><strong>推理/rollout 阶段：</strong>直接使用原生 FP4 量化权重，确保采样行为与线上部署完全一致，同时实现实际加速和显存降低</li>
+  </ul>
+  <p>FP4 量化还通过 FP4-to-FP8 反量化步骤集成到后训练 RL/OPD 基础设施中，加速所有推理阶段（包括 teacher 模型和 reference 模型的前向传播）。</p>
+</div>
+
+<h3 id="s11-7c">11.7.2 Quick Instruction：降低 TTFT</h3>
+<div class="tech-card purple">
+  <h4>机制</h4>
+  <p>在聊天场景中，响应前需执行多个辅助任务（判断是否触发搜索、意图识别等）。传统方案用独立小模型处理，需重新 prefill，无法复用已有 KV Cache。</p>
+  <p>Quick Instruction 将一组专用特殊 token 直接追加到输入序列末尾，每个 token 对应一个辅助任务，<strong>完全复用已计算的 KV Cache</strong>，并允许部分任务并行执行。</p>
+  <h4>支持的 Quick Instruction Token</h4>
+  <table>
+    <tr><th>特殊 Token</th><th>功能</th></tr>
+    <tr><td><code>&lt;|action|&gt;</code></td><td>判断用户 prompt 是否需要网络搜索</td></tr>
+    <tr><td><code>&lt;|title|&gt;</code></td><td>生成对话标题（首次响应后追加）</td></tr>
+    <tr><td><code>&lt;|query|&gt;</code></td><td>为用户 prompt 生成搜索查询词</td></tr>
+    <tr><td><code>&lt;|authority|&gt;</code></td><td>判断用户对来源权威性的需求</td></tr>
+    <tr><td><code>&lt;|domain|&gt;</code></td><td>识别用户 prompt 所属领域</td></tr>
+    <tr><td><code>&lt;|extracted_url|&gt; + &lt;|read_url|&gt;</code></td><td>判断 URL 是否需要抓取阅读</td></tr>
+  </table>
+  <p><strong>效果：</strong>显著降低用户感知的 TTFT（Time To First Token），并消除维护独立小模型的工程开销。</p>
+</div>
+
+<h3 id="s11-8">11.8 实验结果</h3>
+<table>
+  <tr><th>基准</th><th>DeepSeek-V4-Pro-Max</th><th>Opus-4.6-Max</th><th>GPT-5.4-xHigh</th><th>Gemini-3.1-Pro-High</th></tr>
+  <tr><td>Codeforces Rating</td><td>—</td><td>—</td><td>3052</td><td><strong>3206</strong></td></tr>
+  <tr><td>LiveCodeBench</td><td>88.8</td><td>—</td><td>91.7</td><td><strong>93.5</strong></td></tr>
+  <tr><td>Putnam-2025（形式化数学）</td><td colspan="4" style="text-align:center"><strong>120/120 满分</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ===== 十二、横向对比 ===== -->
+<h2 id="s12">十二、四代模型横向对比</h2>
+
+<table>
+  <tr><th>维度</th><th>DeepSeek-V3</th><th>LLaMA-3.1 405B</th><th>Qwen2.5 72B</th></tr>
+  <tr><td>架构类型</td><td>MoE</td><td>Dense</td><td>Dense</td></tr>
+  <tr><td>总参数</td><td>671B</td><td>405B</td><td>72B</td></tr>
+  <tr><td>激活参数</td><td>37B</td><td>405B</td><td>72B</td></tr>
+  <tr><td>注意力机制</td><td><strong>MLA</strong></td><td>GQA</td><td>GQA</td></tr>
+  <tr><td>FFN 类型</td><td><strong>DeepSeekMoE</strong></td><td>SwiGLU</td><td>SwiGLU</td></tr>
+  <tr><td>训练精度</td><td><strong>FP8</strong></td><td>BF16</td><td>BF16</td></tr>
+  <tr><td>训练 Token</td><td>14.8T</td><td>15T</td><td>7T</td></tr>
+  <tr><td>负载均衡</td><td><strong>动态偏置（无辅助损失）</strong></td><td>—</td><td>辅助损失</td></tr>
+  <tr><td>多 Token 预测</td><td><strong>MTP（D=1）</strong></td><td>无</td><td>无</td></tr>
+  <tr><td>训练成本</td><td><strong>~$5.6M</strong></td><td>估计 >$30M</td><td>未公开</td></tr>
+</table>
+
+<h3 id="s12-1">12.1 RL / 后训练算法演进</h3>
+<pre class="mermaid">
+graph TD
+  A["DeepSeek-R1\n基础 GRPO\nRule-based Reward\n四阶段训练"] --> B["DeepSeek-V3\n知识蒸馏\n从 R1 蒸馏到 V3\n低成本获得推理能力"]
+  B --> C["DeepSeek-V3.2\n可扩展 GRPO\n无偏KL + Off-Policy Masking\nKeep Routing + Keep Sampling Mask"]
+  C --> D["DeepSeek-V4\nOn-Policy Distillation\n10+ 专家并行训练\n多教师反向KL蒸馏\nNon-Think / Think High / Think Max"]
+  style A fill:#313244,stroke:#89b4fa,color:#cdd6f4
+  style B fill:#313244,stroke:#a6e3a1,color:#cdd6f4
+  style C fill:#313244,stroke:#f9e2af,color:#cdd6f4
+  style D fill:#313244,stroke:#cba6f7,color:#cdd6f4
+</pre>
+
+<h3 id="s12-2">12.2 关键技术贡献矩阵</h3>
+<table>
+  <tr><th>技术模块</th><th>R1</th><th>V3</th><th>V3.2</th><th>V4</th></tr>
+  <tr><td>注意力机制</td><td>MLA</td><td>MLA</td><td><strong>MLA + DSA</strong></td><td><strong>MLA + CSA + HCA</strong></td></tr>
+  <tr><td>专家混合</td><td>DeepSeekMoE</td><td>DeepSeekMoE（无辅助损失）</td><td>DeepSeekMoE</td><td><strong>DeepSeekMoE + mHC</strong></td></tr>
+  <tr><td>训练精度</td><td>BF16/FP8</td><td><strong>FP8</strong></td><td>FP8</td><td>FP8</td></tr>
+  <tr><td>后训练算法</td><td><strong>GRPO（基础）</strong></td><td>SFT + 蒸馏</td><td><strong>可扩展 GRPO</strong></td><td><strong>OPD</strong></td></tr>
+  <tr><td>优化器</td><td>AdamW</td><td>AdamW</td><td>AdamW</td><td><strong>Muon</strong></td></tr>
+  <tr><td>上下文长度</td><td>128K</td><td>128K</td><td>128K</td><td><strong>1M</strong></td></tr>
+  <tr><td>多 Token 预测</td><td>无</td><td><strong>MTP（D=1）</strong></td><td>MTP</td><td>MTP</td></tr>
+  <tr><td>训练稳定性</td><td>—</td><td>动态偏置路由</td><td>Keep Routing / Sampling Mask</td><td><strong>Anticipatory Routing + SwiGLU Clamping</strong></td></tr>
+</table>
+
+<h3 id="s12-3">12.3 术语索引</h3>
+<table>
+  <tr><th>缩写</th><th>全称</th><th>首次引入</th><th>核心作用</th></tr>
+  <tr><td><strong>MLA</strong></td><td>Multi-head Latent Attention</td><td>V2</td><td>低秩 KV 压缩，降低 KV Cache 32×</td></tr>
+  <tr><td><strong>DeepSeekMoE</strong></td><td>DeepSeek Mixture-of-Experts</td><td>DeepSeek-MoE</td><td>细粒度专家 + 共享专家，提升专家利用率</td></tr>
+  <tr><td><strong>MTP</strong></td><td>Multi-Token Prediction</td><td>V3</td><td>并行预测多个后续 token，加速推理</td></tr>
+  <tr><td><strong>GRPO</strong></td><td>Group Relative Policy Optimization</td><td>R1</td><td>无需 Critic 的强化学习，组内相对奖励</td></tr>
+  <tr><td><strong>DSA</strong></td><td>DeepSeek Sparse Attention</td><td>V3.2</td><td>Lightning Indexer Top-k 稀疏注意力，$O(L^2)\to O(Lk)$</td></tr>
+  <tr><td><strong>CSA</strong></td><td>Compressed Sparse Attention</td><td>V4</td><td>跨 token KV 压缩 + 稀疏选择，支持 1M 上下文</td></tr>
+  <tr><td><strong>HCA</strong></td><td>Heavily Compressed Attention</td><td>V4</td><td>超大压缩比全局注意力，与 CSA 交错排列</td></tr>
+  <tr><td><strong>mHC</strong></td><td>manifold-constrained HyperConnection</td><td>V4</td><td>双随机矩阵流形约束残差混合，谱范数 ≤ 1</td></tr>
+  <tr><td><strong>Muon</strong></td><td>Momentum + Newton-Schulz Orthogonalization</td><td>V4</td><td>正交化梯度更新，等向性优化加速收敛</td></tr>
+  <tr><td><strong>OPD</strong></td><td>On-Policy Distillation</td><td>V4</td><td>多教师在线蒸馏替代混合 RL，三种推理模式</td></tr>
+</table>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">
+本报告基于 DeepSeek-AI 技术报告 arXiv:2412.19437（V3）和 arXiv:2501.12948（R1）整理，并补充 V3.2 / V4 技术细节。生成日期：2026-05-13。
+</p>
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);
+});
+const obs=new IntersectionObserver(e=>e.forEach(e=>{
+  const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+  if(l)l.classList.toggle('active',e.isIntersecting);
+}),{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

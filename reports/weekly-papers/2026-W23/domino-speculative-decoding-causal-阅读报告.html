@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domino: Decoupling Causal Modeling from Autoregressive Drafting — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+    .tag { display: inline-block; background: #313244; color: var(--heading); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.82em; margin: 2px; }
+    .highlight-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; margin: 1em 0; }
+    .highlight-box h4 { color: var(--strong); margin-bottom: 6px; font-size: 1em; }
+    .formula-block { background: #2a2a3e; border-left: 3px solid var(--heading); border-radius: 0 6px 6px 0; padding: 12px 20px; margin: 1em 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ===== 1. 标题 + 论文信息表格 ===== -->
+    <h1>Domino: Decoupling Causal Modeling from Autoregressive Drafting in Speculative Decoding</h1>
+    <p style="color:#6c7086; margin-bottom:1.2em;">arXiv:2605.29707 &nbsp;·&nbsp; 2026年5月28日 &nbsp;·&nbsp; 阅读报告</p>
+
+    <table>
+      <tr><th>字段</th><th>内容</th></tr>
+      <tr><td>论文标题</td><td>Domino: Decoupling Causal Modeling from Autoregressive Drafting in Speculative Decoding</td></tr>
+      <tr><td>arXiv ID</td><td><a href="https://arxiv.org/abs/2605.29707" target="_blank">2605.29707</a></td></tr>
+      <tr><td>作者</td><td>Jianuo Huang, Yaojie Zhang, Qituan Zhang, Hao Lin, Hanlin Xu, Linfeng Zhang</td></tr>
+      <tr><td>机构</td><td>Shanghai Jiao Tong University (EPIC Lab) &nbsp;·&nbsp; HUST &nbsp;·&nbsp; UESTC &nbsp;·&nbsp; Fudan &nbsp;·&nbsp; Huawei</td></tr>
+      <tr><td>投票数</td><td>135 upvotes</td></tr>
+      <tr><td>代码</td><td><a href="https://github.com/jianuo-huang/Domino" target="_blank">github.com/jianuo-huang/Domino</a></td></tr>
+      <tr><td>模型</td><td><a href="https://huggingface.co/collections/Huang2020/domino" target="_blank">HuggingFace: Huang2020/domino</a></td></tr>
+      <tr><td>测试模型</td><td>Qwen3-4B, Qwen3-8B</td></tr>
+      <tr><td>硬件环境</td><td>NVIDIA A100-SXM4-80GB</td></tr>
+      <tr><td>关键结果</td><td>端到端最高 <strong>5.49×</strong> 加速（Transformers）；吞吐量最高 <strong>5.8×</strong>（SGLang）</td></tr>
+      <tr><td>主题标签</td><td>
+        <span class="tag">投机解码</span>
+        <span class="tag">LLM推理加速</span>
+        <span class="tag">并行Draft</span>
+        <span class="tag">因果建模</span>
+        <span class="tag">课程训练</span>
+      </td></tr>
+    </table>
+
+    <!-- ===== 2. 概述 ===== -->
+    <h2 id="overview">概述</h2>
+    <p>
+      Domino 是一个针对大语言模型（LLM）推理加速的投机解码（Speculative Decoding）新框架，其核心洞察在于：<strong>因果依赖建模（causal dependency modeling）与自回归执行（autoregressive execution）是两个可分离的关注点</strong>。传统自回归 draft 模型为了捕获 token 间的依赖关系，不得不串行逐步生成每个候选 token，导致 draft 阶段成为推理瓶颈；而并行 draft 方案虽然速度快，却因为忽略了 draft 块内部的 token 依赖，导致 draft 质量下降，最终接受长度（acceptance length）较低。
+    </p>
+    <p>
+      Domino 通过引入一个<strong>轻量级 Domino Head</strong>（由 GRU 因果编码器 + 低秩修正头组成），在并行 backbone 完成一次前向传播之后，以极低的额外开销将前缀因果信息"注入"到每个 draft 位置的 logit 分布中。配合专门设计的<strong>基础锚定训练课程（Base-Anchored Training Curriculum）</strong>，Domino 在 Qwen3 系列模型上实现了迄今最高的 draft 接受长度与端到端加速比，最高单任务加速比达 <strong>8.02×</strong>，平均端到端加速比达 <strong>5.49×</strong>。
+    </p>
+
+    <!-- ===== 3. 研究背景 ===== -->
+    <h2 id="background">研究背景</h2>
+    <p>
+      要理解 Domino 的贡献，首先需要掌握投机解码的基本原理，以及自回归与并行两类 draft 策略各自的优劣。
+    </p>
+
+    <h3 id="bg-sd">投机解码原理</h3>
+    <p>
+      投机解码的核心思路是：用一个轻量级的 draft 模型（drafter）快速生成若干候选 token，再由目标大模型（verifier）并行验证这些候选 token 是否可接受。由于验证阶段可以将所有候选 token 打包为一次前向传播，与逐步自回归生成相比，每个验证步骤的计算开销几乎不变，但却能一次确认多个 token。
+    </p>
+    <p>
+      设 $\gamma$ 为 draft 块大小，$\tau$ 为平均接受长度（$1 \leq \tau \leq \gamma$），则投机解码的每步延迟为：
+    </p>
+    <p class="formula-block">
+      $$L_{\mathrm{spec}} = \frac{T_{\mathrm{draft}} + T_{\mathrm{verify}}}{\tau}$$
+    </p>
+    <p>
+      相对于目标模型自回归解码的延迟 $L_{\mathrm{target}}$，加速比为：
+    </p>
+    <p class="formula-block">
+      $$\eta = \frac{L_{\mathrm{target}}}{L_{\mathrm{spec}}} = \frac{\tau \cdot L_{\mathrm{target}}}{T_{\mathrm{draft}} + T_{\mathrm{verify}}}$$
+    </p>
+    <p>
+      从公式可以看出，提升加速比有两条路径：<strong>提高接受长度 $\tau$</strong>（提升 draft 质量），或<strong>降低 draft 延迟 $T_{\mathrm{draft}}$</strong>（提升 draft 速度）。这两者之间存在根本性张力。
+    </p>
+
+    <h3 id="bg-ar">自回归 Drafting 的优劣</h3>
+    <p>
+      自回归 draft 模型（如 EAGLE 系列）在生成第 $i$ 个 draft token 时，会将已生成的 $i-1$ 个 draft token 作为条件输入，从而精确建模 draft 块内部的因果依赖：
+    </p>
+    <p class="formula-block">
+      $$q_{\mathrm{AR}}(x_{t+1:t+\gamma} \mid x_{\leq t}) = \prod_{i=1}^{\gamma} q(x_{t+i} \mid x_{\lt t+i})$$
+    </p>
+    <p>
+      这使得自回归 drafter 的 draft 质量较高，接受长度较长。然而，其代价是串行执行：每生成一个 token 都需要一次完整的网络前向传播，draft 延迟随块大小线性增长：
+    </p>
+    <p class="formula-block">
+      $$T_{\mathrm{draft}}^{\mathrm{AR}} \approx \gamma \cdot (t_{\mathrm{net}} + t_{\mathrm{head}})$$
+    </p>
+    <p>
+      当 draft 块大小 $\gamma$ 增大时，draft 延迟显著上升，抵消了接受长度提升带来的收益。
+    </p>
+
+    <h3 id="bg-par">并行 Drafting 的优劣</h3>
+    <p>
+      并行 draft 方案（如 Medusa、DFlash）在一次前向传播中同时预测整个 draft 块的所有 token，将 draft 延迟降低到近似常数：
+    </p>
+    <p class="formula-block">
+      $$T_{\mathrm{draft}}^{\mathrm{PAR}} \approx t_{\mathrm{net}}^{\mathrm{block}} + t_{\mathrm{head}}^{\mathrm{block}}$$
+    </p>
+    <p>
+      速度优势显著，但由于各位置的预测相互独立，忽略了 draft 块内部的 token 依赖，导致 draft 分布与真实自回归分布之间存在系统性偏差，接受长度较低。
+    </p>
+
+    <h3 id="bg-tension">核心矛盾总结</h3>
+    <div class="highlight-box">
+      <h4>自回归 vs. 并行 Drafting 的核心权衡</h4>
+      <table>
+        <tr>
+          <th>维度</th>
+          <th>自回归 Drafting（EAGLE-3）</th>
+          <th>并行 Drafting（DFlash）</th>
+          <th>Domino（本文）</th>
+        </tr>
+        <tr>
+          <td>Draft 速度</td>
+          <td>慢（串行，$O(\gamma)$）</td>
+          <td>快（并行，$O(1)$）</td>
+          <td>接近并行（$O(1) + \epsilon$）</td>
+        </tr>
+        <tr>
+          <td>因果依赖建模</td>
+          <td>完整</td>
+          <td>缺失</td>
+          <td>轻量 GRU 修正</td>
+        </tr>
+        <tr>
+          <td>接受长度（Qwen3-8B 均值）</td>
+          <td>~3.4（16 token 预算）</td>
+          <td>~6.06</td>
+          <td><strong>~7.17</strong></td>
+        </tr>
+        <tr>
+          <td>端到端加速比（均值）</td>
+          <td>~2.0×</td>
+          <td>~4.66×</td>
+          <td><strong>5.49×</strong></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ===== 4. 核心方法 - Domino 框架 ===== -->
+    <h2 id="method">核心方法 — Domino 框架</h2>
+    <p>
+      Domino 的方法论核心是：<strong>将因果依赖建模（causal modeling）从自回归执行（autoregressive execution）中解耦出来</strong>。具体而言，Domino 保留并行 backbone 的高速并行执行特性，同时通过一个轻量级的 Domino Head 在 logit 空间施加因果修正，以极低的额外延迟换取显著的 draft 质量提升。
+    </p>
+
+    <h3 id="method-overview">架构总览</h3>
+    <p>Domino 的完整工作流程如下图所示：</p>
+
+    <pre class="mermaid">
+flowchart TD
+    A["目标模型已验证前缀\n x₁, x₂, ..., xₜ"] --> B["Context Features Cₜ\n（目标模型隐状态）"]
+    A --> C["Anchor Token xₜ\n+ [MASK] × (B-1)"]
+
+    B --> D["Parallel Draft Backbone\n（DFlash架构，5层）\n一次前向传播"]
+    C --> D
+
+    D --> E["Block Hidden States\nH_{t:t+B-1} ∈ ℝ^{B×d}"]
+
+    E --> F["LM Head（冻结）\n并行计算所有位置"]
+    F --> G["Base Logits L^base_i\n（独立，无因果）"]
+
+    E --> H["Domino Head\n（轻量级模块）"]
+    H --> I["GRU 因果编码器\n顺序处理已采样 token 嵌入"]
+    I --> J["因果状态 S_{i-1} ∈ ℝ^{1024}"]
+    J --> K["低秩修正头\nW₂·σ(W₁·[Hᵢ; S_{i-1}])"]
+    K --> L["修正量 ΔLᵢ（logit空间）"]
+
+    G --> M["最终 Logit\nLᵢ = L^base_i + ΔLᵢ"]
+    L --> M
+
+    M --> N["采样 Draft Token x̂_{t+i}"]
+    N -->|"更新 GRU 输入"| I
+
+    N --> O["Draft Block\n[x̂_{t+1}, ..., x̂_{t+B}]"]
+    O --> P["目标模型并行验证\n（一次前向传播）"]
+    P --> Q["接受/拒绝各 token\n输出最终 token 序列"]
+    </pre>
+
+    <figure>
+      <img src="https://arxiv.org/html/2605.29707v1/x3.png" alt="Domino 架构总览图">
+      <figcaption>图3：Domino 架构总览。并行 backbone 产生整个 draft 块的隐状态；Domino head 顺序更新因果状态；修正 logit $c_i$ 叠加到基础 logit $l_i$ 上；最终 token 从 $l_i + c_i$ 中采样。（来源：原文 Figure 3）</figcaption>
+    </figure>
+
+    <h3 id="method-backbone">并行 Draft Backbone</h3>
+    <p>
+      Domino 的并行 backbone 采用 <strong>DFlash 架构</strong>（Block Diffusion for Flash Speculative Decoding），包含 5 个 Transformer 层。给定已验证的前缀 $x_{\leq t}$，backbone 首先从目标模型中提取上下文特征 $C_t$，然后构造一个掩码输入块：
+    </p>
+    <p class="formula-block">
+      $$\tilde{x}_{t:t+B-1} = [x_t, \texttt{[MASK]}, \ldots, \texttt{[MASK]}]$$
+    </p>
+    <p>
+      以 $x_t$ 作为锚点 token，其余 $B-1$ 个位置填充 <code>[MASK]</code>。随后一次前向传播得到整个块的隐状态：
+    </p>
+    <p class="formula-block">
+      $$H_{t:t+B-1} = \mathrm{Backbone}(C_t,\; \mathrm{Embed}(\tilde{x}_{t:t+B-1}))$$
+    </p>
+    <p>
+      再通过冻结的目标模型 LM Head 并行计算每个位置的基础 logit：
+    </p>
+    <p class="formula-block">
+      $$L_i^{\mathrm{base}} = \mathrm{LMHead}(H_i), \quad i = t+1, \ldots, t+B-1$$
+    </p>
+    <p>
+      这一步完全并行，时间复杂度为 $O(1)$（相对于块大小 $B$）。
+    </p>
+
+    <h3 id="method-decoupling">因果解耦的核心思路</h3>
+    <p>
+      并行 backbone 的问题在于：各位置的基础 logit $L_i^{\mathrm{base}}$ 是在 <code>[MASK]</code> 条件下计算的，完全不依赖于已采样的 draft token $x_{t+1}, \ldots, x_{t+i-1}$，因此无法捕获 draft 块内部的因果依赖。
+    </p>
+    <p>
+      Domino 的关键洞察是：<strong>因果依赖信息可以在 logit 空间以残差方式叠加，而无需重新执行昂贵的并行 backbone 前向传播</strong>。具体地，Domino Head 在得到 $L_i^{\mathrm{base}}$ 之后，利用前缀 draft token 的嵌入序列计算一个低秩修正量 $\Delta L_i$，将其叠加到基础 logit 上：
+    </p>
+    <p class="formula-block">
+      $$L_i = L_i^{\mathrm{base}} + \Delta L_i$$
+    </p>
+    <p>
+      这样，最终的 draft 分布既保留了并行 backbone 的语义信息，又融入了前缀 token 的因果依赖，实现了"解耦"。
+    </p>
+    <p>
+      <strong>为什么选择 logit 空间而非 hidden 空间进行修正？</strong>若在 hidden 空间修正，则每次修正后都需要重新运行完整的 LM Head（词表大小通常超过 10 万），重新引入串行瓶颈。在 logit 空间直接施加低秩残差，LM Head 只需运行一次（在基础 logit 计算时），后续的因果修正仅涉及一个维度远小于词表的低秩变换，计算代价极低。
+    </p>
+
+    <!-- ===== 5. 数学推导 ===== -->
+    <h2 id="math">数学推导</h2>
+    <p>
+      本节对 Domino 的核心数学形式进行完整推导，涵盖 draft 分布的建模目标、因果修正的形式化定义，以及训练目标的数学表达。
+    </p>
+
+    <h3 id="math-ar-dist">自回归 Draft 分布的目标</h3>
+    <p>
+      理想的 draft 分布应当尽可能逼近目标模型的真实分布。在自回归框架下，对于 draft 块 $x_{t+1:t+\gamma}$，联合 draft 分布为：
+    </p>
+    <p class="formula-block">
+      $$q_{\mathrm{AR}}(x_{t+1:t+\gamma} \mid x_{\leq t}) = \prod_{i=1}^{\gamma} q(x_{t+i} \mid x_{\lt t+i})$$
+    </p>
+    <p>
+      其中 $x_{\lt t+i} = (x_1, \ldots, x_{t+i-1})$ 包含所有已验证的前缀 token 以及 draft 块中位置 $i$ 之前的 draft token。这一分布完整建模了 draft 块内部的因果依赖，但串行执行代价为 $T_{\mathrm{draft}}^{\mathrm{AR}} \approx \gamma \cdot (t_{\mathrm{net}} + t_{\mathrm{head}})$。
+    </p>
+
+    <h3 id="math-par-dist">并行 Draft 分布及其局限</h3>
+    <p>
+      并行 draft 方案将联合分布近似为各位置独立预测的乘积：
+    </p>
+    <p class="formula-block">
+      $$q_{\mathrm{PAR}}(x_{t+1:t+\gamma} \mid x_{\leq t}) \approx \prod_{i=1}^{\gamma} q_{\mathrm{PAR}}(x_{t+i} \mid x_{\leq t}, \texttt{[MASK]}_{t+1:t+i-1})$$
+    </p>
+    <p>
+      每个位置的条件分布仅以已验证前缀 $x_{\leq t}$ 为条件，忽略了 $x_{t+1}, \ldots, x_{t+i-1}$ 的影响。这导致并行 draft 分布与真实自回归分布之间存在系统性偏差，表现为较低的接受长度 $\tau$。
+    </p>
+
+    <h3 id="math-causal-correction">因果修正公式</h3>
+    <p>
+      Domino 的目标是在并行 backbone 输出的基础上，以最小的计算代价引入因果修正。设第 $i$ 个 draft 位置的 backbone 隐状态为 $H_i \in \mathbb{R}^d$，前缀 draft token 的嵌入序列为 $E_{\leq i-1} = (e_{t+1}, \ldots, e_{t+i-1})$，则：
+    </p>
+    <p>
+      <strong>步骤 1：GRU 因果编码</strong>
+    </p>
+    <p class="formula-block">
+      $$S_{i-1} = \mathrm{GRU}(E_{\leq i-1}), \quad S_{i-1} \in \mathbb{R}^{d_s},\; d_s = 1024$$
+    </p>
+    <p>
+      GRU 顺序处理前缀 draft token 的嵌入，将整个前缀的因果信息压缩为固定维度的状态向量 $S_{i-1}$。
+    </p>
+    <p>
+      <strong>步骤 2：低秩修正头</strong>
+    </p>
+    <p class="formula-block">
+      $$\Delta L_i = W_2\; \sigma\!\left(W_1 [H_i;\; S_{i-1}]\right)$$
+    </p>
+    <p>
+      其中 $[\cdot;\cdot]$ 表示向量拼接，$W_1 \in \mathbb{R}^{r \times (d + d_s)}$，$W_2 \in \mathbb{R}^{|\mathcal{V}| \times r}$，$r = 256$ 为低秩瓶颈维度，$\sigma$ 为 SiLU 激活函数，$|\mathcal{V}|$ 为词表大小。
+    </p>
+    <p>
+      <strong>步骤 3：最终 Draft Logit</strong>
+    </p>
+    <p class="formula-block">
+      $$L_i = L_i^{\mathrm{base}} + \Delta L_i$$
+    </p>
+    <p>
+      最终从 $L_i$ 的 softmax 分布中采样得到第 $i$ 个 draft token $\hat{x}_{t+i}$，并将其嵌入 $e_{t+i}$ 送入 GRU 更新状态，为下一个位置的修正提供输入。
+    </p>
+
+    <h3 id="math-training-loss">训练目标</h3>
+    <p>
+      Domino 的训练目标结合了基础 logit 监督和最终 logit 监督，采用时变权重 $\lambda_t$ 进行加权：
+    </p>
+    <p class="formula-block">
+      $$\mathcal{L} = (1 - \lambda_t)\,\mathcal{L}_{\mathrm{final}} + \lambda_t\,\mathcal{L}_{\mathrm{base}}$$
+    </p>
+    <p>
+      其中 $\mathcal{L}_{\mathrm{final}}$ 为最终 logit（含因果修正）的交叉熵损失，$\mathcal{L}_{\mathrm{base}}$ 为基础 logit（无因果修正）的交叉熵损失。两个损失均采用位置指数衰减权重：
+    </p>
+    <p class="formula-block">
+      $$w_k = \exp(-k/\gamma)$$
+    </p>
+    <p>
+      对 draft 块中第 $k$ 个位置施加权重 $w_k$，使靠前的位置（对接受长度贡献更大）获得更高的训练权重。$\lambda_t$ 从 1 线性退火至 0，实现从"基础锚定"到"因果修正主导"的渐进式训练。
+    </p>
+
+    <!-- ===== 6. Domino Head 设计 ===== -->
+    <h2 id="domino-head">Domino Head 设计</h2>
+    <p>
+      Domino Head 是整个框架中最关键的创新模块，负责将并行 backbone 产生的"无因果"基础 logit 转化为融入前缀依赖的高质量 draft 分布。它由两个子模块串联组成：GRU 因果编码器和低秩修正头。
+    </p>
+
+    <h3 id="dhead-gru">GRU 因果编码器</h3>
+    <p>
+      <strong>是什么：</strong>一个标准的门控循环单元（GRU，Gated Recurrent Unit），隐状态维度为 1024。
+    </p>
+    <p>
+      <strong>为什么用 GRU：</strong>GRU 是一种轻量级的序列建模结构，能够以 $O(i)$ 的时间复杂度将长度为 $i$ 的前缀序列压缩为固定维度的状态向量，且计算开销远低于 Transformer。相比 LSTM，GRU 参数更少，推理速度更快。在 draft 块大小为 16 的设置下，GRU 的顺序展开仅需约 16 次矩阵乘法，而并行 backbone 的一次前向传播涉及数百次矩阵乘法，因此 GRU 的额外开销可以忽略不计。
+    </p>
+    <p>
+      <strong>输入与输出：</strong>GRU 的输入为已采样的 draft token 嵌入序列 $E_{\leq i-1} = (e_{t+1}, \ldots, e_{t+i-1})$，输出为因果状态向量 $S_{i-1} \in \mathbb{R}^{1024}$，编码了"到目前为止已生成了什么"的语义信息。
+    </p>
+    <p>
+      <strong>关键设计选择：</strong>GRU 处理的是 token <em>嵌入</em>（embedding），而非 token ID 或 one-hot 向量。这使得语义相近的 token 在 GRU 状态空间中产生相似的因果状态，增强了泛化能力。
+    </p>
+
+    <h3 id="dhead-lowrank">低秩修正头</h3>
+    <p>
+      <strong>是什么：</strong>一个两层 MLP，中间维度为 256（低秩瓶颈），输出维度为词表大小 $|\mathcal{V}|$，激活函数为 SiLU。
+    </p>
+    <p>
+      <strong>为什么是低秩：</strong>词表大小通常超过 10 万，直接将 $(d + d_s)$ 维向量映射到词表空间的参数量为 $(d + d_s) \times |\mathcal{V}|$，计算代价极高。通过引入低秩瓶颈 $r = 256$，参数量降低为 $(d + d_s) \times r + r \times |\mathcal{V}|$，计算代价显著降低，同时也起到正则化作用，防止修正头过拟合。
+    </p>
+    <p>
+      <strong>为什么在 logit 空间而非 hidden 空间修正：</strong>若在 hidden 空间修正，修正后的 hidden state 需要重新经过 LM Head 才能得到 logit，而 LM Head 本身的计算代价很高（维度为 $d \times |\mathcal{V}|$）。在 logit 空间直接施加残差，LM Head 只需对 backbone hidden state 运行一次，因果修正仅需运行低秩修正头，避免了重复的 LM Head 计算。
+    </p>
+    <p>
+      <strong>参数规模：</strong>Domino 相对于 DFlash 仅增加了 <strong>56M 参数（+5.3%）</strong>，但带来了平均接受长度 <strong>+16.6%</strong> 的提升，参数效率极高。
+    </p>
+
+    <h3 id="dhead-runtime">高效运行时实现</h3>
+    <p>
+      Domino Head 的顺序展开（GRU 逐步处理每个 draft token）在朴素实现下会引入约 2.64 ms 的额外延迟。论文通过以下工程优化将其降低至 <strong>1.20 ms</strong>：
+    </p>
+    <ul>
+      <li><strong>Triton 融合内核（Fused Triton Kernels）：</strong>将 GRU 展开、低秩投影、logit 加法等操作融合为单一 GPU 内核，减少内存带宽消耗和内核启动开销。</li>
+      <li><strong>CUDA Graphs：</strong>将 Domino Head 的计算图静态编译，消除每步的 CPU-GPU 同步开销和内核调度延迟。</li>
+    </ul>
+    <p>
+      最终，Domino 相对于 DFlash 仅增加了 <strong>2.8%</strong> 的总延迟（draft + verify），但接受长度提升了 16.6%，净加速比提升了 12.3%。
+    </p>
+
+    <figure>
+      <img src="https://arxiv.org/html/2605.29707v1/x1.png" alt="延迟分解与性能对比图">
+      <figcaption>图1：左：每步延迟分解（Verify、Draft、LM Head、DHead、Tree），展示 Domino Head 的额外开销极小。右：GSM8K 上三种 draft 模型的接受长度与加速比对比。（来源：原文 Figure 1）</figcaption>
+    </figure>
+
+    <!-- ===== 7. 训练课程 ===== -->
+    <h2 id="curriculum">训练课程 — Base-Anchored Curriculum</h2>
+    <p>
+      Domino 的训练设计面临一个独特挑战：如何稳定地训练一个同时包含并行 backbone 和顺序 Domino Head 的混合架构，使两个模块协同而非相互干扰。论文提出了<strong>基础锚定训练课程（Base-Anchored Training Curriculum）</strong>，分两阶段解决这一问题。
+    </p>
+
+    <h3 id="curr-tf">Teacher-Forced 因果编码</h3>
+    <p>
+      <strong>问题背景：</strong>在训练 Domino Head 时，GRU 需要以 draft token 嵌入为输入。有两种策略：
+    </p>
+    <ul>
+      <li><strong>TTT（Training-Time Testing）：</strong>使用模型自身在训练时采样的 draft token 作为 GRU 输入，模拟推理时的真实条件。</li>
+      <li><strong>TF（Teacher Forcing）：</strong>使用真实标签 token（ground truth）作为 GRU 输入。</li>
+    </ul>
+    <p>
+      <strong>为什么选择 Teacher Forcing：</strong>论文给出了两个关键论据：
+    </p>
+    <ol>
+      <li>训练早期模型生成的 draft token 质量很差，TTT 策略会让 GRU 学习从噪声前缀预测正确 token，造成训练-推理分布不匹配（exposure bias）。</li>
+      <li>投机解码的接受机制天然对齐 Teacher Forcing：位置 $i$ 的 draft token 被接受的前提是位置 $1, \ldots, i-1$ 的 draft token 全部被接受（即全部正确），这正好对应于 GRU 输入为真实前缀的情形。因此 Teacher Forcing 并不会造成训练-推理分布不匹配，反而更准确地建模了推理时的条件分布。</li>
+    </ol>
+    <p>
+      实验验证（见图4右侧）：TF 策略的接受长度（3.96）明显优于 TTT（3.80），且训练更稳定。
+    </p>
+
+    <h3 id="curr-collapse">基础 Logit 坍塌问题</h3>
+    <p>
+      <strong>问题发现：</strong>单独使用 Teacher Forcing 训练时，出现了一个意外的失败模式：Domino Head 的修正能力过强，导致并行 backbone 的基础 logit 质量下降（坍塌）。直觉上，当 Teacher Forcing 提供了高质量的前缀信息时，Domino Head 可以仅凭前缀信息就预测出正确 token，backbone 则退化为仅提供低信息量的隐状态，失去独立预测能力。
+    </p>
+    <p>
+      这一问题在图4左侧有直接体现：未使用课程训练时，backbone 的基础 loss 在训练过程中出现了明显的上升（坍塌），说明 backbone 的独立预测能力被 Domino Head "短路"了。
+    </p>
+
+    <h3 id="curr-solution">课程解决方案</h3>
+    <p>
+      Base-Anchored Curriculum 的核心思路是：<strong>先强制 backbone 学好独立预测，再让 Domino Head 在此基础上进行修正</strong>。通过时变权重 $\lambda_t$ 实现渐进式过渡：
+    </p>
+    <p class="formula-block">
+      $$\mathcal{L} = (1 - \lambda_t)\,\mathcal{L}_{\mathrm{final}} + \lambda_t\,\mathcal{L}_{\mathrm{base}}$$
+    </p>
+
+    <pre class="mermaid">
+graph LR
+    A["训练开始\nλ_t = 1"] -->|"线性退火"| B["训练中期\nλ_t = 0.5"] -->|"继续退火"| C["训练结束\nλ_t = 0"]
+
+    A --> A1["损失 = L_base\n强制 backbone 学习\n独立预测能力"]
+    B --> B1["损失 = 0.5·L_final\n+ 0.5·L_base\n两者协同优化"]
+    C --> C1["损失 = L_final\nDomino Head 主导\n因果修正"]
+    </pre>
+
+    <p>
+      <strong>阶段一（$\lambda_t \approx 1$）：</strong>损失主要由 $\mathcal{L}_{\mathrm{base}}$ 驱动，强制并行 backbone 在没有因果修正帮助的情况下独立学好基础预测分布。这确保了 backbone 不会退化。
+    </p>
+    <p>
+      <strong>阶段二（$\lambda_t \to 0$）：</strong>损失逐渐转移到 $\mathcal{L}_{\mathrm{final}}$，Domino Head 在已经稳定的 backbone 基础上学习残差修正，专注于捕获 backbone 无法建模的因果依赖信息。
+    </p>
+    <p>
+      实验结果（图4右侧）显示，TF + Curriculum 的接受长度（4.19）显著优于单独 TF（3.96）和 TTT（3.80），验证了课程训练的必要性。
+    </p>
+
+    <figure>
+      <img src="https://arxiv.org/html/2605.29707v1/x4.png" alt="训练策略对比图">
+      <figcaption>图4：左：有无 Base-Anchored Curriculum 时 backbone 基础 loss 的训练曲线，无课程时出现明显坍塌。右：TTT、TF、TF+Curriculum 三种策略的平均接受长度对比，灰色虚线为 DFlash 基准。（来源：原文 Figure 4）</figcaption>
+    </figure>
+
+    <!-- ===== 8. 实验结果 ===== -->
+    <h2 id="experiments">实验结果</h2>
+    <p>
+      论文在 Qwen3-4B 和 Qwen3-8B 两个模型上进行了全面评测，涵盖 8 个基准任务（GSM8K、MATH-500、AIME25、HumanEval、MBPP、LiveCodeBench、MT-Bench、Alpaca），以及 Transformers 单卡推理和 SGLang 高并发服务两种后端。
+    </p>
+
+    <h3 id="exp-transformers">Transformers 后端端到端加速比</h3>
+    <p>
+      在 Transformers 后端（单卡、温度=0）的评测中，Domino 在 Qwen3-8B 上取得了 <strong>平均 5.49× 的端到端加速比</strong>，平均接受长度达 7.17 个 token，显著超越所有对比方法。
+    </p>
+
+    <div id="chart-transformers" class="echarts-container" style="height:420px"></div>
+    <script>
+    (function() {
+      var chart = echarts.init(document.getElementById('chart-transformers'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'Transformers 后端加速比对比（Qwen3-8B, T=0）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: ['加速比 (×)', '接受长度 (τ)'], textStyle: { color: '#cdd6f4' }, top: 40 },
+        grid: { left: '4%', right: '4%', bottom: '12%', top: '18%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['GSM8K', 'MATH-500', 'AIME25', 'HumanEval', 'MBPP', 'LiveCodeBench', 'MT-Bench', 'Alpaca'],
+          axisLabel: { color: '#cdd6f4', rotate: 20, fontSize: 11 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: [
+          { type: 'value', name: '加速比 (×)', nameTextStyle: { color: '#89b4fa' }, axisLabel: { color: '#cdd6f4', formatter: '{value}×' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+          { type: 'value', name: '接受长度 (τ)', nameTextStyle: { color: '#a6e3a1' }, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { show: false } }
+        ],
+        series: [
+          {
+            name: '加速比 (×)',
+            type: 'bar',
+            barWidth: '18%',
+            data: [7.92, 7.38, 5.85, 5.89, 5.53, 5.27, 3.29, 2.78],
+            itemStyle: { color: '#89b4fa', borderRadius: [3,3,0,0] },
+            label: { show: true, position: 'top', color: '#89b4fa', fontSize: 10, formatter: '{c}×' }
+          },
+          {
+            name: '接受长度 (τ)',
+            type: 'bar',
+            barWidth: '18%',
+            yAxisIndex: 1,
+            data: [10.03, 9.43, 7.41, 7.39, 7.04, 7.04, 5.18, 3.87],
+            itemStyle: { color: '#a6e3a1', borderRadius: [3,3,0,0] },
+            label: { show: true, position: 'top', color: '#a6e3a1', fontSize: 10 }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <h3 id="exp-compare-methods">方法横向对比（Qwen3-8B, T=0）</h3>
+
+    <div id="chart-methods" class="echarts-container" style="height:380px"></div>
+    <script>
+    (function() {
+      var chart = echarts.init(document.getElementById('chart-methods'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '各方法平均加速比对比（Qwen3-8B, T=0, 16-token budget）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: ['平均加速比 (×)', '平均接受长度 (τ)'], textStyle: { color: '#cdd6f4' }, top: 40 },
+        grid: { left: '4%', right: '4%', bottom: '8%', top: '18%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['EAGLE-3\n(16)', 'EAGLE-3\n(60)', 'DART\n(60)', 'DFlash\n(16)', 'Domino\n(16)'],
+          axisLabel: { color: '#cdd6f4', fontSize: 12 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: [
+          { type: 'value', name: '加速比 (×)', nameTextStyle: { color: '#89b4fa' }, axisLabel: { color: '#cdd6f4', formatter: '{value}×' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } }, max: 7 },
+          { type: 'value', name: '接受长度 (τ)', nameTextStyle: { color: '#a6e3a1' }, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { show: false }, max: 10 }
+        ],
+        series: [
+          {
+            name: '平均加速比 (×)',
+            type: 'bar',
+            barWidth: '25%',
+            data: [
+              { value: 1.97, itemStyle: { color: '#6c7086' } },
+              { value: 2.26, itemStyle: { color: '#6c7086' } },
+              { value: 2.29, itemStyle: { color: '#6c7086' } },
+              { value: 4.66, itemStyle: { color: '#fab387' } },
+              { value: 5.49, itemStyle: { color: '#89b4fa', borderRadius: [3,3,0,0] } }
+            ],
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11, formatter: '{c}×' }
+          },
+          {
+            name: '平均接受长度 (τ)',
+            type: 'bar',
+            barWidth: '25%',
+            yAxisIndex: 1,
+            data: [
+              { value: 2.97, itemStyle: { color: '#45475a' } },
+              { value: 3.41, itemStyle: { color: '#45475a' } },
+              { value: 2.82, itemStyle: { color: '#45475a' } },
+              { value: 6.06, itemStyle: { color: '#f9e2af' } },
+              { value: 7.17, itemStyle: { color: '#a6e3a1', borderRadius: [3,3,0,0] } }
+            ],
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <h3 id="exp-sglang">SGLang 高并发吞吐量对比</h3>
+    <p>
+      在 SGLang 服务后端的高并发测试中，Domino 在低并发（C=2）下实现了最高 <strong>5.1×</strong> 的吞吐量加速比（Qwen3-8B，GSM8K），峰值吞吐量加速比达 <strong>5.8×</strong>。随着并发数增大，加速比下降，这是所有投机解码方法的共性（高并发时 batch 已足够大，推理变为 compute-bound，draft 的收益下降）。
+    </p>
+
+    <div id="chart-sglang" class="echarts-container" style="height:400px"></div>
+    <script>
+    (function() {
+      var chart = echarts.init(document.getElementById('chart-sglang'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'SGLang 吞吐量加速比 vs. 并发数（Qwen3-8B, GSM8K）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['EAGLE-3 (16)', 'EAGLE-3 (60)', 'DFlash (16)', 'Domino (16)'], textStyle: { color: '#cdd6f4' }, top: 40 },
+        grid: { left: '5%', right: '4%', bottom: '10%', top: '20%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['C=2', 'C=4', 'C=8', 'C=16', 'C=32'],
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '吞吐量加速比 (×)',
+          nameTextStyle: { color: '#89b4fa' },
+          axisLabel: { color: '#cdd6f4', formatter: '{value}×' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#313244' } }
+        },
+        series: [
+          { name: 'EAGLE-3 (16)', type: 'line', data: [1.8, 1.7, 1.5, 1.1, 0.8], lineStyle: { color: '#6c7086' }, itemStyle: { color: '#6c7086' }, symbol: 'circle' },
+          { name: 'EAGLE-3 (60)', type: 'line', data: [1.8, 1.3, 0.9, 0.5, 0.4], lineStyle: { color: '#45475a', type: 'dashed' }, itemStyle: { color: '#45475a' }, symbol: 'circle' },
+          { name: 'DFlash (16)', type: 'line', data: [3.7, 3.4, 2.9, 2.2, 1.6], lineStyle: { color: '#fab387' }, itemStyle: { color: '#fab387' }, symbol: 'circle' },
+          { name: 'Domino (16)', type: 'line', data: [5.1, 4.7, 4.1, 3.0, 2.1], lineStyle: { color: '#89b4fa', width: 3 }, itemStyle: { color: '#89b4fa' }, symbol: 'circle', symbolSize: 8 }
+        ]
+      });
+    })();
+    </script>
+
+    <h3 id="exp-ablation">消融实验：Domino Head 的贡献</h3>
+    <p>
+      论文通过消融实验验证了 Domino Head 的独立贡献。在 Qwen3-8B 上，移除 Domino Head 后（退化为纯并行 backbone），各基准任务的平均接受长度从 4.19 降至 3.49，平均加速比从 3.31× 降至 2.84×，提升幅度约 <strong>20%</strong>。
+    </p>
+
+    <div id="chart-ablation" class="echarts-container" style="height:360px"></div>
+    <script>
+    (function() {
+      var chart = echarts.init(document.getElementById('chart-ablation'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'Domino Head 消融：有无 DHead 的加速比对比（Qwen3-8B）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: ['w/o Domino Head', 'w/ Domino Head'], textStyle: { color: '#cdd6f4' }, top: 40 },
+        grid: { left: '4%', right: '4%', bottom: '12%', top: '18%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['GSM8K', 'MATH-500', 'AIME25', 'HumanEval', 'MBPP', 'LiveCodeBench', 'MT-Bench', '平均'],
+          axisLabel: { color: '#cdd6f4', rotate: 15, fontSize: 11 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '加速比 (×)',
+          nameTextStyle: { color: '#89b4fa' },
+          axisLabel: { color: '#cdd6f4', formatter: '{value}×' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#313244' } }
+        },
+        series: [
+          {
+            name: 'w/o Domino Head',
+            type: 'bar',
+            barWidth: '25%',
+            data: [3.17, 3.08, 3.03, 3.04, 2.70, 2.64, 2.21, 2.84],
+            itemStyle: { color: '#45475a', borderRadius: [3,3,0,0] },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 10, formatter: '{c}×' }
+          },
+          {
+            name: 'w/ Domino Head',
+            type: 'bar',
+            barWidth: '25%',
+            data: [3.84, 3.74, 3.47, 3.51, 3.16, 2.98, 2.46, 3.31],
+            itemStyle: { color: '#89b4fa', borderRadius: [3,3,0,0] },
+            label: { show: true, position: 'top', color: '#89b4fa', fontSize: 10, formatter: '{c}×' }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <h3 id="exp-summary-table">主要实验结果汇总</h3>
+    <table>
+      <tr>
+        <th>方法</th>
+        <th>模型</th>
+        <th>后端</th>
+        <th>平均加速比</th>
+        <th>平均接受长度 τ</th>
+        <th>最高单任务加速比</th>
+      </tr>
+      <tr>
+        <td>EAGLE-3 (16)</td>
+        <td>Qwen3-8B</td>
+        <td>Transformers</td>
+        <td>1.97×</td>
+        <td>2.97</td>
+        <td>2.21× (GSM8K)</td>
+      </tr>
+      <tr>
+        <td>EAGLE-3 (60)</td>
+        <td>Qwen3-8B</td>
+        <td>Transformers</td>
+        <td>2.26×</td>
+        <td>3.41</td>
+        <td>2.56× (GSM8K)</td>
+      </tr>
+      <tr>
+        <td>DFlash (16)</td>
+        <td>Qwen3-8B</td>
+        <td>Transformers</td>
+        <td>4.66×</td>
+        <td>6.06</td>
+        <td>6.18× (MATH-500)</td>
+      </tr>
+      <tr>
+        <td><strong>Domino (16)</strong></td>
+        <td>Qwen3-8B</td>
+        <td>Transformers</td>
+        <td><strong>5.49×</strong></td>
+        <td><strong>7.17</strong></td>
+        <td><strong>7.92× (GSM8K)</strong></td>
+      </tr>
+      <tr>
+        <td>DFlash (16)</td>
+        <td>Qwen3-4B</td>
+        <td>Transformers</td>
+        <td>4.70×</td>
+        <td>6.11</td>
+        <td>6.10× (MATH-500)</td>
+      </tr>
+      <tr>
+        <td><strong>Domino (16)</strong></td>
+        <td>Qwen3-4B</td>
+        <td>Transformers</td>
+        <td><strong>5.47×</strong></td>
+        <td><strong>7.08</strong></td>
+        <td><strong>8.02× (GSM8K)</strong></td>
+      </tr>
+      <tr>
+        <td>DFlash (16)</td>
+        <td>Qwen3-8B</td>
+        <td>SGLang (C=2)</td>
+        <td>3.7×</td>
+        <td>—</td>
+        <td>—</td>
+      </tr>
+      <tr>
+        <td><strong>Domino (16)</strong></td>
+        <td>Qwen3-8B</td>
+        <td>SGLang (C=2)</td>
+        <td><strong>5.1×</strong></td>
+        <td>—</td>
+        <td><strong>5.8× (峰值)</strong></td>
+      </tr>
+    </table>
+
+    <figure>
+      <img src="https://arxiv.org/html/2605.29707v1/x2.png" alt="Domino vs DFlash vs EAGLE-3 加速比对比图">
+      <figcaption>图2：Domino、DFlash、EAGLE-3 在 Qwen3-8B 上相对于自回归解码的加速比对比（Transformers 后端）。（来源：原文 Figure 2）</figcaption>
+    </figure>
+
+    <!-- ===== 9. 总结与启发 ===== -->
+    <h2 id="conclusion">总结与启发</h2>
+
+    <h3 id="conc-summary">核心贡献总结</h3>
+    <p>
+      Domino 的核心贡献在于提出了一个优雅的解耦思路：<strong>因果依赖建模不必与自回归执行绑定在一起</strong>。这一洞察打破了长期以来"要么速度（并行），要么质量（自回归）"的二元对立，通过以下三个组件的协同实现了两全其美：
+    </p>
+    <ul>
+      <li><strong>并行 Draft Backbone：</strong>以 $O(1)$ 时间代价完成 draft 块的语义特征提取，提供高质量的基础 logit。</li>
+      <li><strong>Domino Head（GRU + 低秩修正头）：</strong>以极低的额外开销（+2.8% 延迟，+5.3% 参数）将前缀因果信息注入 draft 分布，提升接受长度 16.6%。</li>
+      <li><strong>Base-Anchored Training Curriculum：</strong>通过渐进式训练防止 backbone 坍塌，确保两个模块协同而非相互干扰。</li>
+    </ul>
+
+    <h3 id="conc-insights">研究启发</h3>
+    <p>
+      <strong>1. 解耦思维的普适性：</strong>Domino 的成功揭示了一个更广泛的设计原则——在神经网络设计中，将"建模什么"（causal dependency）与"如何执行"（sequential vs. parallel）解耦，往往能在两个维度上同时取得进展。这一思路可能在其他序列生成任务（如代码补全、结构化预测）中同样适用。
+    </p>
+    <p>
+      <strong>2. Logit 空间残差修正的潜力：</strong>在 logit 空间而非 hidden 空间施加修正，避免了重复运行 LM Head 的计算代价。这一技巧在其他需要对语言模型输出进行后处理修正的场景（如 RAG 的知识注入、安全对齐的约束修正）中值得借鉴。
+    </p>
+    <p>
+      <strong>3. Teacher Forcing 与投机解码的天然契合：</strong>论文指出，投机解码的接受机制（位置 $i$ 被接受的前提是前 $i-1$ 个位置全部正确）天然对应 Teacher Forcing 的训练条件。这一观察为投机解码 draft 模型的训练策略设计提供了新的理论基础。
+    </p>
+    <p>
+      <strong>4. 课程训练防止模块间干扰：</strong>Base-Anchored Curriculum 揭示了一个重要的训练动态：当一个"强"模块（Domino Head 有 Teacher Forcing 加持）与一个"弱"模块（backbone 需要自力更生）共同训练时，强模块可能会"短路"弱模块，导致弱模块退化。通过课程训练逐步引入强模块的监督信号，可以有效防止这一问题。这对于其他混合架构（如 MoE、adapter 微调）的训练设计有参考价值。
+    </p>
+    <p>
+      <strong>5. 局限性：</strong>Domino 目前仅在 Qwen3-4B/8B 上验证，对更大规模模型（如 70B+）的效果尚未报告。此外，Domino Head 的顺序 GRU 展开在 draft 块大小极大时可能成为瓶颈，需要进一步的工程优化。论文也指出，在高并发场景下（C≥16），Domino 的加速优势相对于 DFlash 有所收窄，这是所有 draft-based 方法面临的共性问题。
+    </p>
+
+    <!-- ===== 10. 参考文献 ===== -->
+    <h2 id="references">参考文献</h2>
+    <ol style="font-size:0.9em; line-height:1.9;">
+      <li>Leviathan et al. (2023). <em>Fast Inference from Transformers via Speculative Decoding.</em> ICML 2023.</li>
+      <li>Chen et al. (2023). <em>Accelerating Large Language Model Decoding with Speculative Sampling.</em> arXiv:2302.01318.</li>
+      <li>Cai et al. (2024). <em>Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads.</em> ICML 2024.</li>
+      <li>Li et al. (2024b). <em>EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty.</em> ICML 2024.</li>
+      <li>Li et al. (2024a). <em>EAGLE-2: Faster Inference of Language Models with Dynamic Draft Trees.</em> EMNLP 2024.</li>
+      <li>Li et al. (2025b). <em>EAGLE-3: Scaling Up Inference Acceleration of Large Language Models via Training-Time Test.</em> NeurIPS 2025.</li>
+      <li>Chen et al. (2026). <em>DFlash: Block Diffusion for Flash Speculative Decoding.</em> arXiv:2602.06036.</li>
+      <li>Liu et al. (2026). <em>DART: Diffusion-Inspired Speculative Decoding for Fast LLM Inference.</em> arXiv:2601.19278.</li>
+      <li>Zhao et al. (2025). <em>FR-Spec: Accelerating Large-Vocabulary Language Models via Frequency-Ranked Speculative Sampling.</em> ACL 2025.</li>
+      <li>Ankner et al. (2024). <em>Hydra: Sequentially-Dependent Draft Heads for Medusa Decoding.</em> arXiv:2402.05109.</li>
+      <li>An et al. (2026). <em>PARD: Accelerating LLM Inference with Low-Cost Parallel Draft Model Adaptation.</em> ICLR 2026.</li>
+      <li>Miao et al. (2023). <em>SpecInfer: Accelerating Generative Large Language Model Serving with Tree-Based Speculative Inference and Verification.</em> arXiv:2305.09781.</li>
+      <li>Cho et al. (2014). <em>Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation.</em> EMNLP 2014.</li>
+      <li>Huszár (2015). <em>How (Not) to Train Your Generative Model: Scheduled Sampling, Likelihood, Adversary?</em> arXiv:1511.05101.</li>
+      <li>Qwen Team (2025). <em>Qwen3 Technical Report.</em> arXiv:2505.09388.</li>
+      <li>Yan et al. (2025). <em>Scaling Laws for Speculative Decoding.</em> arXiv:2505.07858.</li>
+      <li>Williams et al. (2026). <em>Speculative Decoding with a Speculative Vocabulary.</em> arXiv:2602.13836.</li>
+      <li>Cobbe et al. (2021). <em>Training Verifiers to Solve Math Word Problems.</em> arXiv:2110.14168.</li>
+      <li>Hendrycks et al. (2021). <em>Measuring Mathematical Problem Solving with the MATH Dataset.</em> arXiv:2103.03874.</li>
+      <li>Chen et al. (2021). <em>Evaluating Large Language Models Trained on Code.</em> arXiv:2107.03374.</li>
+      <li>Austin et al. (2021). <em>Program Synthesis with Large Language Models.</em> arXiv:2108.07732.</li>
+      <li>Jain et al. (2024). <em>LiveCodeBench: Holistic and Contamination Free Evaluation of Large Language Models for Code.</em> arXiv:2403.07974.</li>
+      <li>Zheng et al. (2023). <em>Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena.</em> NeurIPS 2023.</li>
+      <li>Taori et al. (2023). <em>Alpaca: A Strong, Replicable Instruction-Following Model.</em> Stanford CRFM.</li>
+      <li>Singh et al. (2025). <em>OpenAI GPT-5 System Card.</em> arXiv:2601.03267.</li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center; margin-top:2em;">
+      本报告基于 arXiv:2605.29707 生成 &nbsp;·&nbsp; 报告日期：2026-06-05 &nbsp;·&nbsp;
+      <a href="https://arxiv.org/abs/2605.29707" target="_blank">原文链接</a> &nbsp;·&nbsp;
+      <a href="https://github.com/jianuo-huang/Domino" target="_blank">代码仓库</a>
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+
+    // 自动生成 TOC
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // 滚动高亮
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ABot-N1：通用视觉语言导航基础模型阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    td.b { font-weight: 700; color: var(--strong); }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-left: 3px solid var(--heading); border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .tag { display: inline-block; font-size: 0.78em; font-weight: 700; padding: 1px 8px; border-radius: 10px; margin-right: 6px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>ABot-N1：迈向通用视觉语言导航基础模型</h1>
+    <p style="color:#6c7086;">HuggingFace 2026-W29 · 排名 #4 · 93 upvotes · arXiv:2607.10383</p>
+
+    <h2 id="sec1">1. 概述</h2>
+    <table>
+      <tr><th>标题</th><td>ABot-N1: Toward a General Visual Language Navigation Foundation Model</td></tr>
+      <tr><th>核心问题</th><td>视觉语言导航（VLN）基础模型如何同时兼顾<strong>深度空间推理</strong>与<strong>多样具身任务</strong>，并克服单体策略的坐标漂移、长尾语义差与黑箱不可解释三大缺陷。</td></tr>
+      <tr><th>核心方案</th><td>快-慢双架构（dual visual-language signals）：slow vision-language reasoner 做显式 CoT 推理并产出 <strong>pixel goal</strong>（图像空间锚点，作为五类任务的通用接口）；fast action expert 用文本线索 + pixel guidance 生成连续 waypoint。</td></tr>
+      <tr><th>开源地址</th><td><a href="https://amap-cvlab.github.io/ABot-Navigation/ABot-N1/">https://amap-cvlab.github.io/ABot-Navigation/ABot-N1/</a>（含 ABotN-PointBench / ABotN-POIBench 基准）</td></tr>
+      <tr><th>机构归属</th><td>AMAP CV Lab, Alibaba Group（论文首页署名 "AMAP CV Lab / Alibaba Group"；通讯作者邮箱 @alibaba-inc.com；项目负责人 Zedong Chu†、Xiaolong Wu†）。与同系列前作 ABot-N0（arXiv:2602.11598）、SocialNav、POINav、NavForesee 等同源。</td></tr>
+    </table>
+
+    <p>ABot-N1 是面向通用具身导航的 VLN 基础模型，其核心主张是：<strong>把"认知"与"控制"解耦</strong>。现有 generalist navigation foundation model 多采用单体策略（monolithic policy），把观察直接映射到动作，存在两类根本性缺陷——其一，语义推理的慢动态与电机控制的快动态被迫挤在同一个更新周期，造成 spectral mismatch；其二，异构任务在共享参数空间内优化产生 optimization interference（梯度冲突、负迁移）。ABot-N1 用一个 4B 参数的慢系统（基于 Qwen-3.5-4B）做高层审议式推理、产出 CoT 与 pixel goal，再用一个 2B 参数的快系统（基于 Qwen-3.5-2B）做低延迟动作专家、生成连续 waypoint。</p>
+
+    <p>关键设计在于<strong>双模态引导</strong>：慢系统同时输出语言线索（CoT）与图像空间锚点（pixel goal）。无论任务最初是度量坐标、自由指令、物体类别、POI 名称还是目标人物，都被归约成"跟踪 CoT 解释过的像素"。pixel goal 分两种语义槽——<strong>affordance pixel</strong>（当前可前行的安全航点，室内约 3 m、室外约 5 m）与 <strong>target pixel</strong>（目标本身，仅在可见或最终接近时发射）。这一通用接口让快控制器面对一致的输入，与任务复杂度无关。</p>
+
+    <p>实验上，ABot-N1 用单一多任务 checkpoint 在五个 benchmark 上刷新 SOTA：城市级 POI 到达提升 <strong>35.0%</strong>（至 77.3%），复杂室内/室外场景分别达 <strong>95.4% / 92.9%</strong> SR，并在 R2R-CE（SR 70.89%）、OVON object-goal（84.9%）、EVT-Bench person-following（STT 90.1%）上均领先。论文还发布两个新基准 ABotN-PointBench 与 ABotN-POIBench 以补齐城市级导航评测的空白。</p>
+
+    <h2 id="sec2">2. 研究背景与动机</h2>
+
+    <h3 id="sec2-1">2.1 VLN 的任务碎片化与统一化趋势</h3>
+    <p>具身导航是通用物理智能体的基础能力，需要在开放世界中到达精确度量目标、跟随自由指令、搜索开放词表物体、定位 POI、跟踪移动行人。历史上这些能力被割裂研究：point-goal、object-goal、POI-goal、instruction-following、person-following 各自被 task-specific 架构主导，goal interface 各异、训练数据窄、跨任务迁移差，形成难以集成到单一机器人的"专用模型动物园"。近年 NavFoM、ABot-N0 等开始用单一 VLM-based policy 统一多任务，但仍是<strong>单体网络直接吐动作</strong>。</p>
+
+    <h3 id="sec2-2">2.2 单体策略的三大痛点</h3>
+    <p>论文将单体策略从 leaderboard 走向真实部署时暴露的痛点归为三类，并指出它们共享同一个架构根因——<strong>绕过中间推理的单体策略</strong>：</p>
+    <blockquote>
+      <p><span class="tag">To-Point</span> <strong>坐标漂移</strong>：SD 地图路径规划或定位不准，会把 ego-centric 偏移目标漂移到不可行区域（机动车道、花坛），需要显式 traversability 推理才能安全到达。</p>
+      <p><span class="tag orange">To-Target</span> <strong>搜索/接近耦合</strong>：在 object-search 轨迹上端到端微调会侵蚀预训练语义先验；把"搜索"与"接近"耦合，使随机探索与确定性执行纠缠，训练收敛脆弱、失败归因模糊。</p>
+      <p><span class="tag purple">可解释</span> <strong>黑箱不可审计</strong>：观察→动作的直接映射无人类可读决策踪迹，无法区分错误来自感知、推理还是控制模块，阻碍根因分析与安全审计。</p>
+    </blockquote>
+
+    <h3 id="sec2-3">2.3 与相关工作的区别</h3>
+    <p>ABot-N1 沿三条主线定位自身：(i) 从单任务专家走向统一 generalist；(ii) 借鉴自动驾驶、操作与人形机器人领域的 "brain-body decoupling"（Kahneman 双系统：System 2 慢审议 + System 1 快反应，如 NVIDIA GR00T N1）；(iii) 把语言 CoT 与图像空间 grounding 统一进单一导航器。下表对比 ABot-N1 与代表性前驱/同行的关键差异：</p>
+
+    <table>
+      <tr><th>方法（代表）</th><th>架构形态</th><th>系统间接口</th><th>推理表达</th><th>训练后阶段</th></tr>
+      <tr><td>NavFoM / ABot-N0 [77,1]</td><td>单体多任务 VLM policy</td><td>无（端到端 latent）</td><td>无显式 CoT</td><td>SFT 为主</td></tr>
+      <tr><td>StreamVLN [63]、InternVLA-N1 [62]</td><td>slow-fast 上下文建模</td><td>latent context / 隐式</td><td>部分 CoT</td><td>SFT</td></tr>
+      <tr><td>GR00T N1 [43]、Helix [21]</td><td>显式 System1/2 分离</td><td>opaque latent 或 NL sub-goal</td><td>语言为主</td><td>RL（人形/操作）</td></tr>
+      <tr><td>NavCoT [35]、NavGPT-2 [81]、FantasyVLN [82]</td><td>语言 CoT 导航</td><td>文本 sub-goal</td><td>强 CoT</td><td>SFT/CoT tuning</td></tr>
+      <tr><td>PIVOT [42]、VPN [20]、CoT-VLA [79]</td><td>视觉提示 grounding</td><td>image-space 标记</td><td>视觉为主</td><td>SFT</td></tr>
+      <tr><td class="b">ABot-N1（本文）</td><td class="b">慢(4B)-快(2B) 双系统异步耦合</td><td class="b">结构化 pixel goal + CoT（人类可读、可模仿、可 RL）</td><td class="b">CoT + 像素锚点双模态</td><td class="b">SFT + GRPO（reward 对齐下游导航结果）</td></tr>
+    </table>
+    <p>ABot-N1 与上述工作的两个关键区别：(1) 慢快之间不是 opaque latent 或自由文本 sub-goal，而是<strong>结构化 pixel goal + CoT 解释</strong>这一人类可读、可模仿、可在推理层级做 RL 的瓶颈；(2) 慢系统用 GRPO 做后训练，使其推理被<strong>下游导航结果</strong>而非 token 级目标监督。这把 PIVOT/VPN 的"被动用户画点"推广为"主动、推理感知的模型生成点"，并把 NavCoT 式语言推理 grounding 到图像空间。</p>
+
+    <div class="info-card">
+      <p><strong>机构与谱系说明</strong>：论文首页明确署名 <em>AMAP CV Lab, Alibaba Group</em>，通讯邮箱为 chuzedong.czd@alibaba-inc.com 与 huanlu.wxl@alibaba-inc.com，作者按字母序排列，项目负责人为 Zedong Chu† 与 Xiaolong Wu†。该团队同源产出包括 ABot-N0（基础 VLA 导航）、SocialNav（社会感知导航）、POINav（城市级 POI）、NavForesee（VLN 世界模型）、OmniNav、CE-Nav、AstraNav-World 等，ABot-N1 是该谱系在"双系统 + 像素接口 + GRPO 后训练"方向的集成之作。</p>
+    </div>
+
+    <h2 id="sec3">3. 核心方法</h2>
+
+    <h3 id="sec3-1">3.1 方法总览：从观察到 waypoint 的数据流</h3>
+    <p>ABot-N1 把导航器 πθ 分解为两个异步耦合的子网络，共享视觉前端但在容量、频率、职责上差异显著。整体数据流：观察（tri-view RGB + 记忆 + 任务指令）进入慢系统，产出 CoT 与 pixel goal（affordance + target）；快系统以文本线索与像素引导 + 实时观察，经 QFormer + MLP 解码为 H=5 个连续 SE(2) waypoint。</p>
+
+    <pre class="mermaid">
+flowchart LR
+    subgraph OBS["观察输入"]
+      O1["tri-view RGB<br/>左/前/右"]
+      O2["历史记忆帧"]
+      O3["任务指令 g=ℓ<br/>坐标/指令/物体/POI/行人"]
+      O4["本体感知 q_t"]
+    end
+    subgraph SLOW["慢系统 (Qwen-3.5-4B) 低频审议"]
+      S1["CoT 推理<br/>意图分解/语言grounding/社会规范"]
+      S2["pixel goal 生成<br/>affordance + target 像素锚点"]
+    end
+    DUAL["双模态瓶颈<br/>语言 CoT + 图像像素"]
+    subgraph FAST["快系统 (Qwen-3.5-2B) 高频控制"]
+      F1["VLM 编码融合 hidden state h_t"]
+      F2["QFormer 交叉注意力<br/>learnable action query"]
+      F3["MLP 解码连续 waypoint"]
+    end
+    OUT["H=5 连续 SE(2) waypoint<br/>(x,y,sinθ,cosθ,c)"]
+    OBS --> SLOW
+    S1 --> DUAL
+    S2 --> DUAL
+    DUAL --> FAST
+    OBS --> FAST
+    F1 --> F2 --> F3 --> OUT
+    OUT -.闭环重规划.-> OBS
+    </pre>
+
+    <h3 id="sec3-2">3.2 快-慢双架构设计</h3>
+    <p><strong>慢系统（审议式推理器）</strong>：基于 4B 参数 VLM（Qwen-3.5-4B）。设 n 索引其第 n 次调用，每次接收四类输入：(i) 参考记忆 $I^{ref,mem}$（截至本次调用前的轨迹短缓冲历史前视帧）；(ii) 参考观察 $I^{ref}_{tri,1:K}$（本次调用时的三视图 left/front/right）；(iii) 任务规范 $g=\ell$；(iv) 上一次决策 $(C_{n-1}, p_{n-1})$——反馈上次决策以保持时序一致，避免指令跟随/行人跟随中跨周期的矛盾或振荡行为。输出为 $(C_n, p_n)$：CoT 自然语言推理踪迹 + 投影到当前 tri-view 的 pixel goal 集合。</p>
+    <p><strong>快系统（动作专家）</strong>：基于 Qwen-3.5-2B。联合编码四路输入：(i) 当前记忆 $I^{cur,mem}$ 与当前观察 $I^{cur}_{tri,1:K}$（实时捕获）；(ii) 慢系统的 CoT 踪迹 $C_n$ 与 pixel goal $p_n$；(iii) 慢系统参考观察 $I^{ref}_{tri,1:K}$（把 pixel goal 锚定回其原始视觉上下文）；(iv) 任务规范 $g$。骨干产出融合隐状态，可学习 action query $q_{act}$ 经 QFormer 式交叉注意力蒸馏出紧凑查询表示，MLP 头解码为导航输出。</p>
+
+    <pre class="mermaid">
+graph TD
+    A["慢系统 4B<br/>Qwen-3.5-4B"] -->|CoT + pixel goal| B["双模态瓶颈<br/>语言+视觉"]
+    B --> C["快系统 2B<br/>Qwen-3.5-2B"]
+    C --> D["QFormer<br/>action query 交叉注意力"]
+    D --> E["MLP head"]
+    E --> F["H=5 连续 waypoint"]
+    G["实时 tri-view 观察"] --> C
+    H["本体感知 q_t"] --> C
+    A -.异步: 低频.-> A
+    C -.异步: 高频, 缓存上一次慢系统输出.-> C
+    style A fill:#313244,stroke:#89b4fa
+    style C fill:#313244,stroke:#a6e3a1
+    style B fill:#2a2a3e,stroke:#fab387
+    </pre>
+
+    <h3 id="sec3-3">3.3 pixel goal 机制：五类任务的通用接口</h3>
+    <p>pixel goal 是 ABot-N1 的核心设计——一组 ego-centric 视图下的 2D 锚点，定义下一个子目标。它有两种语义风味，存在与否取决于任务与当前状态：</p>
+    <blockquote>
+      <p><span class="tag green">affordance pixel</span> 标记当前可前行的图像空间点，即下一个安全可通行航点（室内约 3 m、室外约 5 m 前方可到达地面）。</p>
+      <p><span class="tag orange">target pixel</span> 标记最终目标本身（物体、POI 入口或被跟踪行人），仅在目标可见或进入最终接近距离时发射。</p>
+    </blockquote>
+    <p>不同任务对这两个槽的实例化方式不同：</p>
+    <table>
+      <tr><th>任务</th><th>affordance pixel</th><th>target pixel</th><th>CoT</th></tr>
+      <tr><td>point-goal</td><td>占用地感知可通行区的下一安全航点</td><td>不发射（度量坐标目标被慢系统内部消费）</td><td>否</td></tr>
+      <tr><td>instruction-following</td><td>真值路径上的近未来可行航点</td><td>接近路线终点时激活</td><td>是（done/current 子指令进度）</td></tr>
+      <tr><td>object-goal</td><td>引导探索</td><td>识别到物体后标记</td><td>是（Target Localization + Path Planning 两块）</td></tr>
+      <tr><td>POI-goal</td><td>同 point-goal，指向入口的下一安全航点</td><td>定位到 POI 物理入口后标记</td><td>否（单次 grounding）</td></tr>
+      <tr><td>person-following</td><td>目标可见时=bbox 底中心；不可见时退化为首个可投影未来航点</td><td>目标可见时=bbox 底中心；不可见时置 null</td><td>否</td></tr>
+    </table>
+    <p>CoT 仅在语义需求高的 instruction-following 与 object-goal 发射；point-goal、POI-goal、person-following 仅依赖 pixel goal。这种设计把"跟踪 CoT 解释过的像素"作为快控制器的一致接口，与输入复杂度无关。</p>
+
+    <h3 id="sec3-4">3.4 CoT 推理结构</h3>
+    <p>慢系统的 CoT 在不同任务承担不同职责。在 instruction-following 中，CoT 推理"指令进度"——刚完成哪个子指令、当前执行哪个，遵循 ABot-N0 的 schema，配合 affordance/target 像素干净地分离长程路径跟踪与终端 grounding，消除单体策略在长指令中段的模糊行为。在 object-goal 中，CoT 分两个命名块：<strong>Target Localization and Key Context</strong>（目标是否可见、相对周围物体与 agent 位姿的空间位置）与 <strong>Path Planning</strong>（到达目标所需的下一步动作）。object-goal 的 CoT 标注采用<strong>数据飞轮</strong>而非一次性标注：高容量 VLM 先播种约 20 K 原始 CoT（覆盖目标可见性、带显式地标引用的空间位置、路径叙述、隐含原子动作），每个种子按其叙述的原子动作序列与 A* 参考的一致性打分，仅高一致性样本进入冷启动集；再用冷启动集微调一个轻量开源 VLM（Qwen-2.5-VL）作为蒸馏标注器，在全轨迹池上回放采集新 CoT，重新打分过滤后反馈细化标注器，循环收敛于约 110 K 高质量 episode，既衰减了播种 VLM 的幻觉，又在生产时完全摆脱对昂贵高容量 VLM 的依赖。</p>
+
+    <h3 id="sec3-5">3.5 waypoint 生成的数学形式</h3>
+    <p>论文把具身导航形式化为目标条件视觉控制。导航器被建模为离散时间 agent，每步接收 ego-centric RGB 观察 $I_t \in \mathbb{R}^{N \times H \times W \times 3}$（N 个相机）与可选本体感知 $q_t$，被任务规范 $g$ 条件化。形式化为目标条件视觉策略：</p>
+    <p>$$\pi_\theta : (g, I_{1:t}, q_{1:t}) \longmapsto a_{t:t+H} \tag{1}$$</p>
+    <p>预测一整块 H 个未来低层命令 $a_{t:t+H} = (a_t, a_{t+1}, \ldots, a_{t+H-1})$。每个命令是一个连续 SE(2) waypoint，带二值完成标志：</p>
+    <p>$$a_i = (x_i, y_i, \sin\theta_i, \cos\theta_i, c_i) \in \mathbb{R}^{4} \times \{0,1\} \tag{2}$$</p>
+    <p>$c_i$ 触发"到达"信号。agent 闭环滚动 πθ，每步从更新观察重规划，直到 $c_i=1$ 或步预算耗尽。<strong>该形式化是 map-free 的</strong>：πθ 既无全局度量地图也无深度或语义分割，所有几何与语义必须从即时 RGB 流提取，匹配真实部署的传感器约束。</p>
+    <p>目标条件 $g$ 实现为自然语言指令 $g=\ell$，单一接口吸收全部五任务而无 per-task 头或定制编码器。为实现大规模泛化，导航器被因子化为 VLM 推理器 $f_\phi$ 与轻量动作策略 $\psi_\xi$：</p>
+    <p>$$s_t = f_\phi(I_{1:t}, \ell) \tag{3}$$</p>
+    <p>$$a_{t:t+H} = \psi_\xi(s_t, I_{1:t}, \ell, q_t) \tag{4}$$</p>
+    <p>其中 $s_t$ 是推理器产出的中间引导信号（其具体形式——latent 特征、解码语言、视觉锚点或其组合——是设计选择）。ABot-N1 把这一因子化实例化为慢-快双系统：慢系统输出为 CoT $C_n$ 与 pixel goal $p_n$：</p>
+    <p>$$(C_n, p_n) = f_{slow}\left(I^{ref,mem},\, I^{ref}_{tri,1:K},\, g,\, C_{n-1},\, p_{n-1}\right) \tag{5}$$</p>
+    <p>快系统融合隐状态与 waypoint 解码：</p>
+    <p>$$h_t = \mathrm{Enc}\left(I^{cur,mem},\, I^{cur}_{tri,1:K},\, C_n,\, p_n,\, I^{ref}_{tri,1:K},\, g\right) \tag{6}$$</p>
+    <p>$$a_{t:t+H} = \mathrm{MLP}\left(\mathrm{QFormer}(q_{act}, h_t)\right) \tag{7}$$</p>
+    <p>其中 $a_{t:t+H}$ 是 $H=5$ 个连续 SE(2) 动作，每个含 2D 位置 $(x_i, y_i)$、航向角编码 $(\sin\theta_i, \cos\theta_i)$ 与二值完成标志 $c_i$，步长室外更大、室内更小以平衡效率与避障。</p>
+
+    <h3 id="sec3-6">3.6 预训练：双系统独立模仿学习</h3>
+    <p>两系统在覆盖全部五任务的异构语料上做监督模仿预训练（共 <strong>30 M 样本</strong>：慢系统高层 13.3 M + 快系统低层 16.4 M）。语料涵盖 Habitat 风格室内仿真、室外驾驶/街景轨迹与真实机器人遥操作。每个 episode 重格式化为 $(g, I_{1:T}, a_{1:T})$ 元组并丰富以 CoT 与 pixel goal 标注。<strong>两系统独立训练</strong>：慢系统学产出 CoT 与 pixel goal，快系统学条件于慢系统输出的连续 waypoint 策略。</p>
+
+    <p><strong>为何能用 smooth-L1 而免于 mode collapse</strong>：在通用 VLN 中，smooth-L1 回归目标众数坍塌臭名昭著——当目标分布多模（如左转 vs 右转似然相当），损失被条件均值最小化，对应两种模式都无效的 averaged 轨迹。业界标准动机是 GMM 头、离散动作 token 或 flow/diffusion 动作头。ABot-N1 仍能用 smooth-L1，得益于双系统因子化：<strong>慢系统已通过 CoT 与 pixel goal（target + affordance）做出离散决策，把未来 waypoint 分布尖锐地集中到主导模</strong>。条件于这些慢系统输出，快策略面临近似单模回归问题，条件均值近似期望轨迹，smooth-L1 既稳定又样本高效。换言之，慢系统大幅减轻了本应由更重的 flow/diffusion 动作头承担的模选择负担。两系统还共用<strong>鲁棒性增强</strong>：喂入噪声注入输入（扰动目标坐标、噪声先验像素预测、模拟异步延迟），学习容忍部署时的不完善上游信号。</p>
+
+    <p>预训练数据的关键来源（每任务均含 slow/fast 双流）：</p>
+    <ul>
+      <li><strong>Point-Goal</strong>（slow ~2.36 M / fast ~6.20 M）：800+ 室内 + 22 室外 3DGS 场景，每场景标注占用地地图。目标室外 5–50 m / 室内 3–20 m。对输入目标做方向感知非均匀扰动（法向至 10 m、切向至 2 m，偏离真值超 30° 则拒绝），让模型在坐标漂移到不可行区域时回退到视觉证据与可走区语义。</li>
+      <li><strong>Instruction-Following</strong>：VLN-CE R2R/RxR（slow ~2.25 M / fast ~2.10 M，约 30 K 参考轨迹，两阶段 Qwen-3.5-27B 标注器分解长指令为子指令并对齐帧范围）+ InteriorGS 辅助流（slow ~2.86 M / fast ~2.57 M，含门穿越、办公塔指令、短程原子动作）。</li>
+      <li><strong>Object-Goal</strong>（slow ~110 K / fast ~2.10 M）：OVON 145 场景 + InteriorGS 长尾类别。A* 生成参考轨迹，slow 显式分离识别与接近。CoT 经数据飞轮收敛于 110 K。</li>
+      <li><strong>POI-Goal</strong>（slow ~3.0 M）：无 3D 仿真器覆盖商业街，仅监督慢系统静态街景标注。三阶段管线：MoGe-V2 单目深度种子标注（~275 K）→ 蒸馏 Qwen-3.5-4B 标注器扩展到 31 M 街景对得 8 M 有效正例 → 合成 tri-view（1 正 2 负）得 2.5 M 正 + 0.5 M 全负。</li>
+      <li><strong>Person-Following</strong>（slow ~2.7 M / fast ~3.4 M）：基于 TrackVLA 在 Habitat 中回放人形运动轨迹，A* 在 1.2/1.5/2.0 m 三种跟随距离规划，含 STT/DT/AT 三类场景。</li>
+    </ul>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: ABot-N1 预训练（双系统独立 SFT）</div>
+      <p><span class="kw">Input:</span> 预训练语料 <span class="var">D</span> = {(g, I_{1:T}, a_{1:T}, C*, p*)}；慢系统骨干 Qwen-3.5-4B；快系统骨干 Qwen-3.5-2B</p>
+      <p><span class="kw">Input:</span> 步长 chunk H=<span class="num">5</span>；相机数 K=<span class="num">3</span>（tri-view）</p>
+      <p><span class="cm"># --- 慢系统：学习产出 CoT 与 pixel goal ---</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> 每个 slow 样本 (I^{ref,mem}, I^{ref}_{tri}, g, C_{n-1}, p_{n-1}) <span class="kw">in</span> D_slow:</p>
+      <p style="padding-left:3em"><span class="var">C_n, p_n</span> = <span class="fn">f_slow</span>(I^{ref,mem}, I^{ref}_{tri}, g, C_{n-1}, p_{n-1})</p>
+      <p style="padding-left:3em"><span class="var">L_slow</span> = <span class="fn">CrossEntropy</span>(C_n, C*) + <span class="fn">CrossEntropy</span>(p_n, p*)   <span class="cm"># CoT token + 像素坐标</span></p>
+      <p style="padding-left:3em"><span class="kw">update</span> ϕ <span class="kw">by</span> ∇L_slow</p>
+      <p><span class="cm"># --- 快系统：学习条件于慢系统输出的连续 waypoint ---</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> 每个 fast 样本 (I^{cur}, I^{ref}, C_n, p_n, g, q_t, a*) <span class="kw">in</span> D_fast:</p>
+      <p style="padding-left:3em"><span class="var">h_t</span> = <span class="fn">Enc</span>(I^{cur,mem}, I^{cur}_{tri}, C_n, p_n, I^{ref}_{tri}, g)</p>
+      <p style="padding-left:3em"><span class="var">a_{t:t+H}}</span> = <span class="fn">MLP</span>(<span class="fn">QFormer</span>(q_act, h_t))   <span class="cm"># H=5 个 SE(2) waypoint</span></p>
+      <p style="padding-left:3em"><span class="var">L_fast</span> = <span class="fn">SmoothL1</span>(position, heading) + <span class="fn">BCE</span>(arrival_flag c_i)</p>
+      <p style="padding-left:3em"><span class="cm"># 鲁棒性增强: 喂入噪声注入输入</span></p>
+      <p style="padding-left:3em"><span class="kw">update</span> ξ <span class="kw">by</span> ∇L_fast</p>
+      <p><span class="kw">return</span> 预训练 <span class="var">f_ϕ</span>, <span class="var">ψ_ξ</span></p>
+    </div>
+
+    <h3 id="sec3-7">3.7 GRPO 后训练：让推理对齐下游导航结果</h3>
+    <p>监督预训练把慢系统输出对齐专家示范，但示范本身有局限：最短路径规划器产出的轨迹常缺安全裕度且忽略隐式社会约束；更根本地，token 级监督不直接优化下游导航结果。为此，论文对慢系统施加 <strong>GRPO</strong>（Group Relative Policy Optimization），把其 pixel-goal 生成建模为一个语言模型策略，其输出被环境接地信号奖励。</p>
+    <p><strong>形式化</strong>：对每个状态 $s = (I^{mem}, I^{cur}_{tri}, g)$，采样 G 个候选 $o^{(i)} = (C^{(i)}, p^{(i)}) \sim \pi_\theta$，用复合奖励 $R^{(i)}$ 打分，构成组相对优势 $A^{(i)} = (R^{(i)} - \mu_R) / (\sigma_R + \varepsilon)$，优化：</p>
+    <p>$$\mathcal{L}_{\mathrm{GRPO}}(\theta) = \mathbb{E}\left[\sum_{i,t} \min\left(\rho^{(i)}_t A^{(i)},\; \mathrm{clip}(\rho^{(i)}_t, 1\pm\varepsilon) A^{(i)}\right) - \beta\, \mathrm{KL}(\pi_\theta \,\|\, \pi_{ref})\right] \tag{8}$$</p>
+    <p>其中 $\rho^{(i)}_t$ 是相对上一策略迭代的 per-token 重要性比。<strong>对参考模型 $\pi_{ref}$ 的 KL 锚定在本设置中不可妥协</strong>：在 CoT+像素联合输出空间的激进探索会迅速产生不可解析字符串，其上每个下游奖励归零、梯度坍塌。</p>
+
+    <p><strong>奖励设计</strong>：复合奖励 $R = w_f R_{format} + w_t R_{target} + w_o R_{safety}$（权重和为 1）针对预训练策略的三类正交失败模式，校准到可比尺度以使组内归一化保持信息量。</p>
+    <ul>
+      <li><span class="tag">Format</span> 二值指示输出是否尊重 per-view JSON schema。$R_{target}$ 与 $R_{safety}$ 以 $R_{format}=1$ 为门，防止早期探索时策略漂离可解析流形。</li>
+      <li><span class="tag green">Target Alignment</span> 各视角匹配分数均值。任一视角缺预测视为逃逸行为，施大惩罚；全视角有效时采用 L2 距离指数衰减：
+      <p>$$R_{target} = \sum_{frame} \alpha_t \exp\left(-\|\hat{p} - p^{\star}\|_2 / \mathrm{scale}\right), \quad frame \in \{front, left, right\} \tag{9}$$</p>
+      <p>其中 $\hat{p}, p^{\star} \in \mathbb{R}^2$ 为各相机视角下预测与真值目标坐标；scale 控制指数核的空间容差；$\alpha$ 是确保各视角均衡贡献的归一化权重。</p></li>
+      <li><span class="tag orange">Safety Clearance</span> 将 $\hat{p}$ 经局部深度图与相机内参反投影到世界系，取各视角最坏 clearance $d$，应用非对称指数：
+      <p>$$R_{safety}(d) = \begin{cases} -\alpha_0, & d \geq d_{safe} \\ -\alpha_o \exp\left(\beta\,(d_{safe} - d)\right), & d \lt d_{safe} \end{cases} \tag{10}$$</p>
+      <p>$d$ 度量到最近不可通行区（含物理障碍、交通违规、非法区如机动车道/施工区）的距离。指数轮廓刻意非对称：安全区平坦（不惩罚合法近距离操作如过门），危险裕量内陡峭（行为纠正最紧迫处）。灾难性结果（解析失败、全面侵入禁区）被钳到大负下限，永远拿最差组内优势。</p></li>
+    </ul>
+
+    <h3 id="sec3-8">3.8 平衡采样：基于梯度各向同性的 5:3:2 配比</h3>
+    <p>GRPO 训练集在 point-goal 预训练语料之上构建：episode 按距不可通行区临近度分层为 Safe/Critical/Danger 区，超出稳定极限的不稳定样本被丢弃，剩余按理论动机的比例采样以保证梯度信号均衡。</p>
+    <p>论文对组内奖励方差的几何性质做分析。设某 prompt 下策略生成 K 条 rollout，$d$ 为机器人到最近不可通行区的距离，组内均值 $\bar{d}$、方差 $\sigma^2_d$。当组均值穿透安全裕量（$\bar{d} \lt d_{safe}$），对非对称指数惩罚做一阶 Taylor 展开：</p>
+    <p>$$R_{safety}(d) \approx R_{safety}(\bar{d}) + \alpha_o \beta \exp\left(\beta(d_{safe} - \bar{d})\right)(d - \bar{d}) \tag{11}$$</p>
+    <p>假设 $\mathrm{Var}(R_{format}) \approx 0$ 并考虑 target-safety 间非零协方差，组内总方差（省略已收敛的 format 项）为：</p>
+    <p>$$\sigma^2_G \approx w^{2}_t\, \mathrm{Var}(R_{target}) + w^{2}_o\, \mathrm{Var}(R_{safety}) + 2 w_t w_o\, \mathrm{Cov}(R_{target}, R_{safety}) \tag{12}$$</p>
+    <p>其中安全项传播的局部方差近似为：</p>
+    <p>$$\mathrm{Var}(R_{safety}) \approx \left[\alpha_o \beta \exp\left(\beta(d_{safe} - \bar{d})\right)\right]^{2} \sigma^{2}_d \tag{13}$$</p>
+    <p>近距操作存在内禀任务冲突，两目标呈强负相关 $\mathrm{Cov}(R_{target}, R_{safety}) = -\rho\,\sigma_{target}\sigma_{safety}$（$\rho \gt 0$）。尽管此负协方差略微抑制局部总方差，式 (13) 的平方导数仍决定：安全奖励方差以 $2\beta$ 速率随侵入深度 $(d_{safe}-\bar{d})$ 指数增长，即便深侵入 prompt 的 $\sigma^2_d$ 本身很小。为防此爆炸方差淹没 target 对齐梯度，梯度各向同性条件要求 target 项方差贡献被稳定阈值 $\gamma \in (0,1)$ 约束：</p>
+    <p>$$w^{2}_t\, \mathrm{Var}(R_{target}) \geq \gamma\, \sigma^{2}_G \tag{14}$$</p>
+    <p>代入式 (12) 得：</p>
+    <p>$$w^{2}_o\, \mathrm{Var}(R_{safety}) - 2 w_t w_o\, \rho\, \sigma_{target}\sigma_{safety} \leq \frac{1-\gamma}{\gamma}\, w^{2}_t\, \mathrm{Var}(R_{target}) \tag{15}$$</p>
+    <p>解此关于 $\sigma_{safety}$ 的二次不等式，可得定义有效 prompt 危险边界的最小允许平均距离 $\bar{d}_{min}$。引入过渡裕量 $\Delta d \gt 0$，剩余 prompt 分三类：<strong>Safe Zone</strong>（$d \geq d_{safe}$，指数惩罚不活跃）；<strong>Critical Zone</strong>（$\bar{d}_{min}+\Delta d \lt d \lt d_{safe}$，方差仍在预算内）；<strong>Danger Zone</strong>（$\bar{d}_{min} \lt d \leq \bar{d}_{min}+\Delta d$，方差逼近容限但陡峭惩罚斜率产生最强方向梯度）。</p>
+    <p>三区需按 GSNR（Gradient Signal-to-Noise Ratio）引导的受控比例混合。各区每样本 GSNR 为 $S_z = |\mu_{\nabla,z}|^2 / \sigma^2_{\nabla,z}$，采样比例须满足复合梯度充分性条件（而非简单方差相等）：</p>
+    <p>$$P_{safe}\cdot S_{safe} + P_{critical}\cdot S_{critical} + P_{danger}\cdot S_{danger} \geq \tau \tag{16}$$</p>
+    <p>其中 $\tau$ 为稳定策略提升的最小阈值。<strong>实验采用结构化采样比 5:3:2</strong>（$P_{safe}:P_{critical}:P_{danger}$）：$P_{safe}=0.5$ 提供主导梯度稳定；$P_{critical}=0.3$ 供给充足边界学习而不超方差预算；$P_{danger}=0.2$ 交付足够高幅值排斥梯度以防止不安全收敛。在 point-goal 上实例化验证 0.5 M episode（zone 分类与过滤后）。</p>
+
+    <p><strong>训练动态与通用性</strong>：为防预训练能力退化，GRPO 数据采集避免偏倚偏好采样，采用 action-balanced batch sampling；显式平衡 $R_{target}$ 与 $R_{safety}$ 幅值以破解两类 reward-hacking 均衡——<em>target withholding</em>（为减安全惩罚而回避目标）与 <em>permanent inaction</em>（零运动零进度）。该因子化按构造是任务无关的：$R_{format}$ 仅依赖输出 schema、$R_{safety}$ 仅依赖场景几何与可走性规则，五任务共享；扩展到 instruction-following/object-goal/person-following 仅需重定义 $R_{target}$（分别为路线终点距离、mask IoU、bbox 中心距离）。</p>
+
+    <h3 id="sec3-9">3.9 异步推理：慢深思不阻塞快控制</h3>
+    <p>慢快系统以不同节拍运行：慢系统低频（受 4B 模型推理成本限制，但足够覆盖导航决策时间尺度的变化）；快系统高频，消费最近慢系统上下文产出平滑响应轨迹。在两次慢系统更新之间，快系统继续用最近可用的 $(C_t, p_t, I^{ref}_{tri})$ 执行，密集跟踪缓存 pixel goal 以桥接稀疏审议更新间的时间空隙。</p>
+
+    <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    participant S as 慢系统 Slow
+    participant C as 缓存上下文
+    participant F as 快系统 Fast
+    participant R as 机器人执行
+    S->>S: 审议输入 触发 (低频)
+    S->>C: 产出 Cn, pn + 参考观察
+    C->>F: 提供缓存引导 (高频, 多周期)
+    F->>F: Enc + QFormer + MLP 解码 H=5 waypoint
+    F->>R: 输出连续 waypoint
+    R-->>F: 实时 tri-view 反馈
+    Note over F,R: 慢系统未更新期间 快系统持续<br/>用缓存 pixel goal 视觉闭环跟踪
+    R-->>S: 累积新观察触发下次审议
+    </pre>
+
+    <h2 id="sec4">4. 实验结果与分析</h2>
+    <p>ABot-N1 在五个核心任务上评测。"ABot-N1"指在全部五任务上协同训练的联合多任务 checkpoint（主模型），"ABot-N1†"指在单任务上微调的变体（体现框架本身的优势）。所有数值取自论文原文表格与分析文字。</p>
+
+    <h3 id="sec4-1">4.1 指令跟随：VLN-CE R2R/RxR（Table 1）</h3>
+    <p>在 Habitat VLN-CE Val-Unseen 上评测 R2R-CE 与 RxR-CE，指标为 NE（导航误差，↓）、OSR（oracle 成功率）、SR、SPL。ABot-N1 仅用 front-left-right tri-view（三固定相机）而非密集 360° 全景，无深度、无里程计。</p>
+    <table>
+      <tr><th>方法</th><th>R2R-CE NE↓</th><th>R2R-CE SR↑</th><th>R2R-CE SPL↑</th><th>RxR-CE NE↓</th><th>RxR-CE SR↑</th><th>RxR-CE SPL↑</th></tr>
+      <tr><td>ETPNav [3]</td><td>4.71</td><td>57.0</td><td>49.0</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>HNR [60]</td><td>4.42</td><td>61.0</td><td>51.0</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>CorrectNav [72]</td><td>4.24</td><td>—</td><td>—</td><td>—</td><td>69.3</td><td>63.3</td></tr>
+      <tr><td>NavFoM [77]</td><td>4.61</td><td>—</td><td>—</td><td>—</td><td>64.4</td><td>56.2</td></tr>
+      <tr><td>NavForesee [38]</td><td>3.94</td><td>—</td><td>OSR 78.4（最高）</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>ABot-N0 [1]</td><td>3.80</td><td>67.0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Qwen-RobotNav-4B [78]</td><td>3.80</td><td>—</td><td>—</td><td>—</td><td class="b">75.2</td><td class="b">65.0</td></tr>
+      <tr><td>ABot-N1†</td><td>3.91</td><td>68.26</td><td>—</td><td>3.43</td><td>70.90</td><td>—</td></tr>
+      <tr><td><strong>ABot-N1</strong></td><td class="b">3.32</td><td class="b">70.89</td><td class="b">67.5</td><td class="b">3.13</td><td>73.85</td><td>63.85</td></tr>
+    </table>
+    <p style="color:#6c7086;font-size:0.85em;">注：论文表格为多列复杂排版，"—"表示原文未在该方法-指标交叉处报告可解析数值。ABot-N1† 的 SR 由原文"R2R SR +2.63、RxR SR +2.95"相对 ABot-N1 反推；ABot-N0 R2R SR 由"+3.9 SR on R2R-CE"反推。</p>
+    <p><strong>分析</strong>：ABot-N1 在 R2R-CE 创 NE(3.32)/SR(70.89)/SPL(67.5) 三项 SOTA，超越包括使用深度+里程计的传感器重方法，仅用 tri-view RGB。NavForesee 保持最高 OSR(78.4%)，ABot-N1 以略微牺牲 OSR 换取显著更高的 SR/SPL，表明更果断的到达而非仅路过目标。RxR-CE 上 ABot-N1 取得最佳 NE(3.13)，SR(73.85)/SPL(63.85) 仅次于 Qwen-RobotNav-4B(75.2/65.0，后者训练于显著更大规模的 in-domain RxR 数据)，但仍超越 CorrectNav(69.3/63.3) 与 NavFoM(64.4/56.2)。多任务 ABot-N1 在两个 split 上均匹配或超过单任务专家 ABot-N1†（R2R SR +2.63、RxR SR +2.95），证明多任务协同训练带来正迁移而非灾难性干扰。</p>
+
+    <h3 id="sec4-2">4.2 物体目标：Short-Horizon OVON（Table 2）</h3>
+    <p>为避免长程 object-goal 评测把"找到物体"与"到达物体"混淆，论文在 OVON Val-Unseen 基础上手标每个目标物体首次可见帧并重锚起始位姿，隔离识别-接近阶段。报告 SR、SPL 与终止时平均 Distance-to-Goal(DTG)。</p>
+    <table>
+      <tr><th>方法</th><th>SR↑</th><th>SPL↑</th><th>DTG↓</th></tr>
+      <tr><td>StreamVLN [63]</td><td>39.7</td><td>15.8</td><td>2.368</td></tr>
+      <tr><td>NaVILA [17]</td><td>55.4</td><td>26.1</td><td>1.811</td></tr>
+      <tr><td>InternVLA-N1 (S2 only) [62]</td><td>58.5</td><td>30.0</td><td>1.441</td></tr>
+      <tr><td>Uni-NaVid [75]</td><td>68.7</td><td>34.5</td><td>1.495</td></tr>
+      <tr><td>ABot-N0 [1]</td><td>73.2</td><td>35.4</td><td>1.442</td></tr>
+      <tr><td>ABot-N1†</td><td class="b">85.5</td><td>50.8</td><td class="b">0.592</td></tr>
+      <tr><td><strong>ABot-N1</strong></td><td>84.9</td><td class="b">51.8</td><td>0.822</td></tr>
+    </table>
+    <p><strong>分析</strong>：ABot-N1 相对 ABot-N0 提升 SR +11.7、SPL +16.4，DTG 从 1.44 m 压缩到 0.82 m（1.8× 缩减，反映 last-meter 精度提升）。单任务 ABot-N1† 进一步把 SR 推到 85.5、DTG 降到 0.59 m。ABot-N1 仅在 SR 上略落后专家 0.6 点，却反超其 SPL(51.8 vs 50.8)。与单体基线(Uni-NaVid、NaVILA)的差距在 DTG/SPL 上最大，印证"把识别(object pixel)与接近(affordance pixel)解耦"移除了单体策略在开放词表目标上的探索-到达纠缠瓶颈。</p>
+
+    <h3 id="sec4-3">4.3 点目标-室外：ABotN-PointBench（Table 3）</h3>
+    <p>室外 split 按 Low(5–20 m)/Medium(20–35 m)/High(35–50 m) 分层，成功判据采用宽松碰撞预算 SR&lt;3col（到达且碰撞事件少于 3 次）。SR 本身作为社会合规性的整体指标——非合规策略（横穿机动车道/进入受限区）必然无法安全到达。</p>
+    <table>
+      <tr><th>方法</th><th>All SR&lt;3col↑</th><th>Low</th><th>Medium</th><th>High</th></tr>
+      <tr><td>GNM [46]</td><td>39.1</td><td>66.7</td><td>32.0</td><td>18.7</td></tr>
+      <tr><td>ViNT [47]</td><td>62.2</td><td>92.0</td><td>50.7</td><td>44.0</td></tr>
+      <tr><td>NoMaD [50]</td><td>56.0</td><td>90.7</td><td>45.3</td><td>32.0</td></tr>
+      <tr><td>CityWalker [40]</td><td>48.9</td><td>73.3</td><td>40.0</td><td>33.3</td></tr>
+      <tr><td>SocialNav [15]</td><td>72.0</td><td>93.3</td><td>64.0</td><td>58.7</td></tr>
+      <tr><td>ABot-N0 [1]</td><td>76.9</td><td>93.3</td><td>72.0</td><td>65.3</td></tr>
+      <tr><td>ABot-N1†</td><td>92.0</td><td>98.7</td><td>90.7</td><td>86.7</td></tr>
+      <tr><td><strong>ABot-N1</strong></td><td class="b">92.9</td><td>96.0</td><td class="b">94.7</td><td class="b">88.0</td></tr>
+    </table>
+    <p><strong>分析</strong>：ABot-N1 达 92.9% 总体 SR，较 ABot-N0 +16.0 SR 并同时提升合规性。分层视角下增益在最难 tier 最显著（High: 88.0 vs 65.3，+22.7 点）——prior 策略缺乏可通行区概念，只跟几何最短路径、横穿车道与禁区而失败；ABot-N1 靠 CoT 引导的 affordance pixel 每步把导航重新 grounding 到最近可通行路径，恢复度量策略无法维持的安全合规轨迹。ABot-N1†(92.0% SR) 已超越全部基线，证实框架优势不依赖多任务数据；完整 ABot-N1 进一步提升 Medium/High，暗示从 object-goal/POI-goal 学到的社会规则语义反哺到 point-goal 合规行为。</p>
+
+    <div id="chart-pointgoal" class="echarts-container" style="height:380px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-pointgoal')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'PointBench 室外分层 SR：ABot-N1 在最难 tier 优势最大', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        legend: { top: 30, textStyle: { color: '#cdd6f4' }, data: ['GNM','ViNT','NoMaD','CityWalker','SocialNav','ABot-N0','ABot-N1'] },
+        grid: { left: '6%', right: '5%', bottom: '8%', top: '22%' },
+        xAxis: { type: 'category', data: ['Low (5-20m)','Medium (20-35m)','High (35-50m)'], axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4' } },
+        yAxis: { type: 'value', name: 'SR↑ (%)', axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#313244' } } },
+        series: [
+          { name: 'GNM', type: 'bar', data: [66.7,32.0,18.7], color: '#f38ba8' },
+          { name: 'ViNT', type: 'bar', data: [92.0,50.7,44.0], color: '#fab387' },
+          { name: 'NoMaD', type: 'bar', data: [90.7,45.3,32.0], color: '#f9e2af' },
+          { name: 'CityWalker', type: 'bar', data: [73.3,40.0,33.3], color: '#a6e3a1' },
+          { name: 'SocialNav', type: 'bar', data: [93.3,64.0,58.7], color: '#94e2d5' },
+          { name: 'ABot-N0', type: 'bar', data: [93.3,72.0,65.3], color: '#89b4fa' },
+          { name: 'ABot-N1', type: 'line', data: [96.0,94.7,88.0], color: '#cba6f7', lineWidth: 3, symbol: 'circle', symbolSize: 9, label: { show: true, color: '#cba6f7', formatter: '{c}' } }
+        ]
+      });
+    </script>
+
+    <h3 id="sec4-4">4.4 点目标-室内：ABotN-PointBench（Table 4）</h3>
+    <p>室内 split 分 Low/High 两层，采用<strong>严格零碰撞</strong>判据 SR&lt;1col（到达且无碰撞事件）。室内场景紧凑且标注精确。</p>
+    <table>
+      <tr><th>方法</th><th>All SR&lt;1col↑</th><th>Low SR</th><th>High SR</th><th>All SPL↑</th></tr>
+      <tr><td>GNM [46]</td><td>26.7</td><td>30.8</td><td>22.5</td><td>26.6</td></tr>
+      <tr><td>ViNT [47]</td><td>27.9</td><td>32.5</td><td>23.3</td><td>27.9</td></tr>
+      <tr><td>NoMaD [50]</td><td>20.0</td><td>20.8</td><td>19.2</td><td>19.6</td></tr>
+      <tr><td>CityWalker [40]</td><td>21.7</td><td>23.3</td><td>20.0</td><td>21.6</td></tr>
+      <tr><td>SocialNav [15]</td><td>42.5</td><td>46.7</td><td>38.3</td><td>42.5</td></tr>
+      <tr><td>ABot-N0 [1]</td><td>89.6</td><td>91.7</td><td>87.5</td><td>85.6</td></tr>
+      <tr><td>ABot-N1†</td><td>90.4</td><td>92.5</td><td>88.3</td><td>89.4</td></tr>
+      <tr><td><strong>ABot-N1</strong></td><td class="b">95.4</td><td class="b">95.0</td><td class="b">95.8</td><td class="b">93.7</td></tr>
+    </table>
+    <p><strong>分析</strong>：严格零碰撞判据下 ABot-N1 达 95.4% SR，较 ABot-N0(89.6%) +5.8 点，增益集中在 High-difficulty 集（95.8 vs 87.5），表明对复杂室内布局的鲁棒泛化。</p>
+
+    <h3 id="sec4-5">4.5 POI 目标：城市级 ABotN-POIBench（Table 5）</h3>
+    <p>成功判据为到达注解入口框 2 m 内(SR&lt;2m)，并报告相对 A* 参考的 SPL。ABotN-POIBench 覆盖 11 个商业区、约 126,398 m²、163 个 POI、>38 M 高斯点、~2.81 M 网格顶点。</p>
+    <table>
+      <tr><th>方法</th><th>SR&lt;2m↑</th><th>SPL↑</th></tr>
+      <tr><td>ViNT [47]</td><td>19.0</td><td>18.2</td></tr>
+      <tr><td>OmniNav (vanilla) [65]</td><td>23.9</td><td>22.4</td></tr>
+      <tr><td>OmniNav (BridgeNav training) [65]</td><td>34.4</td><td>31.5</td></tr>
+      <tr><td>ABot-N0 [1]</td><td>20.9</td><td>17.7</td></tr>
+      <tr><td>POINav [23]</td><td>42.3</td><td>40.3</td></tr>
+      <tr><td>ABot-N1†</td><td>69.9</td><td>59.8</td></tr>
+      <tr><td><strong>ABot-N1</strong></td><td class="b">77.3</td><td class="b">72.6</td></tr>
+    </table>
+    <p><strong>分析</strong>：ABot-N1 把 SR&lt;2m 从 42.3%(POINav) 提到 77.3%(+35.0 点)、SPL 从 40.3% 提到 72.6%(+32.3 点)。ABot-N1† 已达 69.9%/59.8%，证实框架优势本身；完整 ABot-N1 进一步受益于最大的跨任务协同——<strong>POI-goal 只监督慢系统，其快控制器受益于 point-goal 数据，其慢系统受益于 object-goal 式可见性推理</strong>。OmniNav(BridgeNav training) 较 vanilla 提升 10 点但停滞，与其记录的 BridgeNav 大航向偏移起点 rollout 偏差一致；ABot-N1 慢系统训练于 ~3.0 M tri-view 标注（含 0.5 M 硬负例），从构造上避免此轨迹偏差。</p>
+
+    <h3 id="sec4-6">4.6 行人跟随：EVT-Bench（Table 6）</h3>
+    <p>在 Habitat 闭环 EVT-Bench 上评测，三难度：STT（单目标标称跟随）、DT（相似外观行人造成身份混淆）、AT（频繁严重遮挡）。报告 SR、TR（跟踪率）、CR（碰撞率）。SR/TR 越高越好，CR 越低越好。</p>
+    <table>
+      <tr><th>方法</th><th>STT SR↑</th><th>STT TR↑</th><th>DT SR↑</th><th>DT TR↑</th><th>AT SR↑</th><th>AT TR↑</th></tr>
+      <tr><td>Uni-NaVid [75]</td><td>85.0</td><td>80.5</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>NavFoM [77]</td><td>86.0</td><td>81.0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Qwen-RobotNav-8B [78]</td><td>78.6</td><td>89.7</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>ABot-N0 [1]</td><td>87.0</td><td>86.9</td><td>66.7</td><td>75.4</td><td>67.3</td><td>79.5</td></tr>
+      <tr><td>ABot-N1†</td><td>—</td><td>—</td><td>65.2</td><td>72.7</td><td>70.3</td><td>81.1</td></tr>
+      <tr><td><strong>ABot-N1</strong></td><td class="b">90.1</td><td class="b">89.8</td><td class="b">67.4</td><td class="b">84.4</td><td class="b">70.0</td><td class="b">87.8</td></tr>
+    </table>
+    <p><strong>分析</strong>：ABot-N1 在全部 SR 指标领先，并在 DT/AT 的 TR 上领先。STT 达 90.1 SR / 89.8 TR（超 ABot-N0 +3.2 SR / +2.2 TR，CR 4.27 vs 8.54）。最难 AT split 达 70.0 SR / 87.8 TR（+2.7 SR / +8.3 TR），证实非对称像素协议（target pixel 置 null、affordance pixel 退化为首个可投影未来航点）有效硬化严重遮挡下的重识别。最显著增益在 DT：TR 从 75.4 升到 84.4(+9.0)、SR 从 66.7 升到 67.4，表明多任务训练强化了慢系统的身份推理。代价是 DT/AT 上 CR 略高(17.9% vs 11.6%/7.05%)，反映更激进的接近策略——论文指出未来可用后训练中的显式避碰奖励缓解。</p>
+
+    <div id="chart-personfollow" class="echarts-container" style="height:340px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-personfollow')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'EVT-Bench SR：ABot-N1 在三难度上均超 ABot-N0', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        legend: { top: 30, textStyle: { color: '#cdd6f4' }, data: ['ABot-N0','ABot-N1'] },
+        grid: { left: '8%', right: '8%', bottom: '8%', top: '22%' },
+        xAxis: { type: 'category', data: ['STT 单目标','DT 干扰','AT 模糊/遮挡'], axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4' } },
+        yAxis: { type: 'value', name: 'SR↑ (%)', max: 100, axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#313244' } } },
+        series: [
+          { name: 'ABot-N0', type: 'bar', data: [87.0,66.7,67.3], color: '#89b4fa', label: { show: true, color: '#cdd6f4', position: 'top' } },
+          { name: 'ABot-N1', type: 'bar', data: [90.1,67.4,70.0], color: '#a6e3a1', label: { show: true, color: '#cdd6f4', position: 'top' } }
+        ]
+      });
+    </script>
+
+    <h3 id="sec4-7">4.7 跨任务总览与消融分析</h3>
+    <p>下图为五任务主指标上 ABot-N0 与 ABot-N1 的对比（单一多任务 checkpoint）。ABot-N1 在每个任务的主指标上都改进 ABot-N0：R2R-CE +3.9 SR、室外 PointBench +16.0 SR（同时提升合规）、POI-Goal +56.4 SR&lt;2m（77.3 vs 20.9）、Object-Goal +11.7 SR、Person-Following STT +3.2 / AT +2.7 SR。</p>
+    <div id="chart-crosstask" class="echarts-container" style="height:360px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-crosstask')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '五任务主指标：ABot-N0 vs ABot-N1（单一多任务 checkpoint）', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        legend: { top: 30, textStyle: { color: '#cdd6f4' }, data: ['ABot-N0','ABot-N1'] },
+        grid: { left: '7%', right: '5%', bottom: '12%', top: '22%' },
+        xAxis: { type: 'category', data: ['R2R-CE SR','室外 PointBench','室内 PointBench','POI-Goal','Object-Goal','Person-Follow STT'], axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4', interval: 0, rotate: 12 } },
+        yAxis: { type: 'value', name: 'SR↑ (%)', max: 100, axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#313244' } } },
+        series: [
+          { name: 'ABot-N0', type: 'bar', data: [67.0,76.9,89.6,20.9,73.2,87.0], color: '#89b4fa', label: { show: true, color: '#cdd6f4', position: 'top', fontSize: 10 } },
+          { name: 'ABot-N1', type: 'bar', data: [70.89,92.9,95.4,77.3,84.9,90.1], color: '#a6e3a1', label: { show: true, color: '#cdd6f4', position: 'top', fontSize: 10 } }
+        ]
+      });
+    </script>
+
+    <p><strong>消融视角：多任务 vs 单任务专家</strong>。论文未给出组件逐项移除的标准消融表，其消融式分析主要通过 ABot-N1（多任务联合）与 ABot-N1†（单任务微调）的对照体现跨任务迁移性质：</p>
+    <ul>
+      <li><strong>正向跨任务迁移</strong>：ABot-N1 在 point-goal、instruction-following、POI-goal 上匹配或超过单任务专家 ABot-N1†，仅在 object-goal 上微弱落后(0.6 SR)却反超 SPL。这反驳了"异构数据训练 generalist 必然产生灾难性干扰"的常见论断。</li>
+      <li><strong>POI-goal 的跨任务协同最大</strong>：POI-goal 只监督慢系统，快控制器继承 point-goal 执行能力，慢系统继承 object-goal 式可见性推理——这是多任务解耦架构的红利。</li>
+      <li><strong>社会规则反哺</strong>：完整 ABot-N1 在 PointBench Medium/High tier 超过 ABot-N1†，暗示从 object-goal/POI-goal 学到的社会规则语义迁移回 point-goal 合规行为。</li>
+      <li><strong>GRPO 5:3:2 平衡采样</strong>：基于梯度各向同性条件推导的 Safe:Critical:Danger = 5:3:2 配比，是稳定 GRPO 训练的关键——Danger Zone 虽 per-sample GSNR 最低，但其陡峭指数惩罚斜率提供不可替代的硬安全约束方向梯度，batch 平均后噪声部分抵消。</li>
+    </ul>
+
+    <h3 id="sec4-8">4.8 真实世界部署</h3>
+    <p>ABot-N1 部署在自研 <strong>AMap TuTu</strong> 12-DOF 四足机器人上，配全向 LiDAR、RTK-GNSS、270° 水平 FOV 三相机阵列。关键升级：(i) 把此前模块化的感知栈（BEV 占用建图、腿式里程计、障碍过滤）与 VLN 推理管线深度集成为单一板载框架，消除进程间通信开销、降低端到端延迟；(ii) 计算模块从 Jetson Orin NX 升级到 Jetson AGX Orin 64 GB，4× 显存扩展使双慢快 VLN 推理与实时 BEV 感知+运动控制并发运行成为可能。</p>
+    <p><strong>边缘部署方案</strong>：为在边缘设备实时执行，部署为 <strong>10 Hz</strong> 整体控制频率。为在有限算力下保持鲁棒，slow 改用 Qwen-3.5-2B，fast 改用 <strong>306 M 参数 DiT</strong>（视觉观察由 DINOv2-Base 编码）。两系统异步：slow 低频、fast 高频持续用 slow 缓存信息+当前观察跨多个控制周期；slow 产出更新计划后 fast 条件于最新推理结果生成 waypoint。这种解耦调度最大化 Jetson AGX Orin 的 GPU 利用率同时保持 10 Hz 闭环响应。论文给出五任务的定性部署结果（点目标窄路避障/施工区绕行/叉路选择/红绿灯斑马线、物体目标的斑驳树荫长程识别与空间关系推理、POI 的招牌识别+障碍绕行+坡道/楼梯可达性推理、指令跟随的四关键时刻 CoT+像素可视化、行人跟随的干扰/楼梯/拐角）。</p>
+
+    <h2 id="sec5">5. 总结与启发</h2>
+
+    <h3 id="sec5-1">5.1 局限性</h3>
+    <ul>
+      <li><strong>行人跟随的碰撞率上升</strong>：多任务训练使 DT/AT 上 CR 升至 17.9%（vs ABot-N0 的 11.6%/7.05%），反映更激进的接近策略。论文坦承这需未来在后训练中引入显式避碰奖励缓解。</li>
+      <li><strong>GRPO 后训练尚未全任务铺开</strong>：reward 因子化按构造任务无关（$R_{format}$、$R_{safety}$ 跨任务共享，仅 $R_{target}$ 需重定义），但论文<strong>仅在 point-goal 上大规模实例化验证</strong>（0.5 M episode），扩展到 instruction-following/object-goal/person-following 被定位为"度量设计而非算法修改"——尚未实证。</li>
+      <li><strong>RxR-CE 未夺冠</strong>：SR/SPL(73.85/63.85) 仅次于 Qwen-RobotNav-4B(75.2/65.0)，后者训练于显著更大规模 in-domain RxR 数据——暗示在数据密集型任务上，纯架构优势可能被数据规模抵消。</li>
+      <li><strong>仿真-部署架构不一致</strong>：部署版 fast 系统从 2B Qwen 换成 306 M DiT + DINOv2-Base 编码器，与仿真评测版不同——存在 sim-to-real 的架构鸿沟，论文仅给定性部署结果而未给出真实世界的量化指标对照。</li>
+      <li><strong>城市级评测基准的自建依赖</strong>：ABotN-PointBench/POIBench 由作者团队自建，虽然开源，但其室外碰撞预算 SR&lt;3col 的宽松判据被解释为"容忍大尺度占用地标注的边界偏差"，存在降低严格度的风险。</li>
+    </ul>
+
+    <h3 id="sec5-2">5.2 核心洞见与读后评注</h3>
+    <blockquote>
+      <p><strong>洞见一：pixel goal 是比 latent 或自然语言 sub-goal 更优的"脑-体"瓶颈</strong>。ABot-N1 的真正贡献不是"又做了一个 slow-fast 双系统"——这在自动驾驶、人形机器人（GR00T N1、Helix）已成熟——而是把慢快之间的接口<strong>结构化为图像空间像素锚点 + CoT</strong>。这一接口同时满足三个此前难以兼顾的性质：人类可读（可审计、可根因分析）、可模仿（SFT 友好）、可在推理层级做 RL（GRPO 的 reward 直接作用在像素输出上）。相比之下，latent 向量不可读、自由文本 sub-goal 难以被快控制器一致跟踪。把所有异构目标归约为"跟踪 CoT 解释过的像素"是这一架构的精要。</p>
+      <p><strong>洞见二：slow 的离散承诺把 fast 从多模回归救回单模</strong>。论文最优雅的论证是<strong>为何能用 smooth-L1 而免于 mode collapse</strong>：业界用 GMM/离散 token/flow/diffusion 动作头，是因为多模动作分布下 smooth-L1 收敛到无效的条件均值。ABot-N1 论证慢系统的 CoT+pixel goal 已"承诺"了一个离散决策，把未来 waypoint 分布尖锐集中到主导模，使快系统面对近似单模回归。这把"模选择"这个沉重负担从动作头转移到了推理器——是双系统因子化的二阶红利，也是 ABot-N1 能用更轻动作头的前提。</p>
+      <p><strong>洞见三：GRPO 的 5:3:2 是被推导出来而非调出来的</strong>。多数工作把数据平衡当作经验调参，ABot-N1 给出可推导的形式化：从非对称指数安全惩罚的一阶 Taylor 展开出发，建立组内方差传播公式，用梯度各向同性条件解出 Danger Zone 的最小允许距离 $\bar{d}_{min}$，再由 GSNR 复合充分性条件定出 5:3:2。尤其对 Danger Zone 的辩护——per-sample GSNR 最低但其方向梯度不可替代——是对"只留高 GSNR 样本"这一朴素直觉的有力反驳。</p>
+      <p><strong>洞见四：解耦带来数据可独立扩展</strong>。论文结尾点出慢快分离使感知与控制语料可独立扩张而不相互干扰——这是面向 open-world scaling 的关键。POI-goal 的跨任务协同（慢系统受益于 object-goal 可见性推理、快系统受益于 point-goal 执行）是该论断的实证：解耦后，不同任务的"半成品"可以拼装出新能力。</p>
+      <p><strong>读后评注</strong>：ABot-N1 把"通用导航基础模型"的竞争从"谁的数据/参数更大"转向"谁的接口更结构化、谁的因子化更干净"。其代价是工程复杂度——双系统异步调度、双套训练语料、CoT 数据飞轮、GRPO 平衡采样——每一项都是不小的工程负担。可解释性主张虽合理，但论文对"CoT 是否真正因果地改善决策还是事后合理化"未做严格反事实检验（如对比 pixel-goal-only 与 CoT+pixel-goal 的受控消融），这是可解释性叙事的软肋。整体而言，这是 2026 年城市级具身导航领域一份扎实的系统级工作，其 pixel-goal 通用接口与 GRPO 5:3:2 推导是最可能被后续工作复用的两个构件。</p>
+    </blockquote>
+
+    <h2 id="sec6">6. 参考文献（关键文献）</h2>
+    <table>
+      <tr><th>编号</th><th>文献</th><th>相关性</th></tr>
+      <tr><td>[1]</td><td>AMAP CV Lab. <em>ABot-N0: Technical Report on the VLA Foundation Model for Versatile Embodied Navigation</em>. arXiv:2602.11598, 2026.</td><td>直接前作，数据引擎与五任务谱系来源</td></tr>
+      <tr><td>[25]</td><td>Daya Guo et al. <em>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</em>. arXiv:2501.12948, 2025.</td><td>GRPO 算法来源，慢系统后训练基础</td></tr>
+      <tr><td>[42]</td><td>S. Nasiriany et al. <em>PIVOT: Iterative Visual Prompting Elicits Actionable Knowledge for VLMs</em>. ICML 2024.</td><td>视觉提示 grounding 前驱，pixel goal 推广自此</td></tr>
+      <tr><td>[43]</td><td>NVIDIA GEAR Team. <em>GR00T N1: An Open Foundation Model for Generalist Humanoid Robots</em>. arXiv:2503.14734, 2025.</td><td>显式 System1/2 分离的代表，brain-body 哲学来源</td></tr>
+      <tr><td>[58]</td><td>Shaoan Wang et al. <em>TrackVLA: Embodied Visual Tracking in the Wild</em>. arXiv:2505.23189, 2025.</td><td>行人跟随场景与数据生成依据</td></tr>
+      <tr><td>[62]</td><td>Meng Wei et al. <em>InternVLA-N1: Ground Slow, Move Fast — A Dual-System Foundation Model for Generalizable VLN</em>. arXiv:2512.08186, 2025.</td><td>同范式 slow-fast VLN 对照</td></tr>
+      <tr><td>[63]</td><td>Meng Wei et al. <em>StreamVLN: Streaming Vision-and-Language Navigation via SlowFast Context Modeling</em>. arXiv:2507.05240, 2025.</td><td>slow-fast 上下文建模对照基线</td></tr>
+      <tr><td>[77]</td><td>Jiazhao Zhang et al. <em>Embodied Navigation Foundation Model (NavFoM)</em>. arXiv:2509.12129, 2025.</td><td>单体多任务 generalist 对照</td></tr>
+      <tr><td>[14]</td><td>Ziyi Chen et al. <em>SocialNav: Training Human-Inspired Foundation Model for Socially-Aware Embodied Navigation</em>. CVPR 2026, pp. 28796–28806.</td><td>同团队社会感知导航，城市级对照基线</td></tr>
+      <tr><td>[23]</td><td>Ruiyan Gong et al. <em>POINav: Benchmarking and Enhancing Final-Meters Arrival in Real-World VLN</em>. arXiv:2605.28237, 2026.</td><td>同团队 POI 城市级基准与对照</td></tr>
+      <tr><td>[38]</td><td>Fei Liu et al. <em>NavForesee: A Unified Vision-Language World Model for Hierarchical Planning and Dual-Horizon Navigation Prediction</em>. CVPR 2026, pp. 32431–32440.</td><td>同团队 VLN 世界模型，VLN-CE 强基线</td></tr>
+      <tr><td>[78]</td><td>Jiazhao Zhang et al. <em>Qwen-RobotNav Technical Report: A Scalable Navigation Model for an Agentic Navigation System</em>. arXiv:2606.18112, 2026.</td><td>RxR-CE 上的最强对照</td></tr>
+    </table>
+    <hr/>
+    <p style="color:#6c7086;font-size:0.85em;">本报告基于 arXiv:2607.10383v2 全文撰写，所有数值与公式取自原文表格与正文，机构归属依据论文首页署名与通讯邮箱核实。报告由 AI 论文阅读专家生成，仅供研究参考。</p>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Function-Aware FIM Mid-Training — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .info-table td:first-child { width: 120px; color: var(--heading); font-weight: 600; }
+    .best { color: var(--strong); font-weight: 700; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+<h1>Function-Aware Fill-in-the-Middle as Mid-Training for Coding Agent Foundation Models</h1>
+
+<h2 id="sec-overview">1. 概述</h2>
+
+<table class="info-table">
+  <tr><th>标题</th><td>Function-Aware Fill-in-the-Middle as Mid-Training for Coding Agent Foundation Models</td></tr>
+  <tr><th>核心问题</th><td>coding agent 需把外部工具返回值整合进持续推理，而标准从左到右代码预训练只在正向方向暴露该能力——本文在 pretraining 与 post-training 之间补一个 mid-training 阶段，用 function-aware FIM 安装与 agent 循环结构同构的归纳偏置。</td></tr>
+  <tr><th>作者</th><td>Yubo Wang, Jiarong Liang (等贡献), Yuxuan Zhang, Xuye Liu, Cong Wei, Yuyu Zhang, Ping Nie, Wenhu Chen</td></tr>
+  <tr><th>机构</th><td>University of Waterloo · University of British Columbia · NVIDIA · Verdent AI · Vector Institute</td></tr>
+  <tr><th>开源地址</th><td><a href="https://github.com/TIGER-AI-Lab/FIM-Midtraining">https://github.com/TIGER-AI-Lab/FIM-Midtraining</a></td></tr>
+</table>
+
+<p>coding agent 解决真实软件工程问题的能力，过去几乎完全由 post-training 阶段合成 agent 轨迹数据（SWE-Gym、R2E-Gym、SWE-Smith）驱动，而其底座 code LLM 只用 next-token prediction 与随机 span FIM 在互联网级代码上训练。作者指出在 pretraining 与 post-training 之间存在一个<strong>训练时间缺口</strong>：底座模型从未被针对「agentic post-training 之后将要求的条件化结构」显式优化过。本文把这个缺口当作机会，设计一个专门的 mid-training 阶段，在引入 agent 专用数据之前先对齐 agent 相关的归纳偏置。</p>
+
+<p>作者的核心观察是：<strong>agent 的一步（context → action → 外部计算的 return → continuation）与一个函数调用点（pre-call 绑参 → call → callee 计算的 return → post-return 消费）在结构上同构</strong>。这种条件化结构在普通代码中天然以互联网规模存在。据此提出 <strong>function-aware FIM mid-training</strong>：用<strong>程序依赖图（PDG）分析</strong>与<strong>复杂度-可推断性双准则</strong>（complexity–inferability double criterion）挑选被 mask 的函数作为自监督目标，并在 FIM middle span 内嵌入 chain-of-thought rationale，使模型学到「先推理再产出一致代码」的 think-then-act 模式。该方法与 base model 无关（不依赖某个参考模型的预测分数），便于做跨基座泛化分析。</p>
+
+<blockquote>
+<p><strong>关键数字</strong>：968 个去污 GitHub 仓库 → ≈78K 自包含 Python 文件 → ≈400K FIM 样本（320K 单函数 / 60K pair / 20K triple），≈2.6B token（Qwen2.5-Coder tokenizer）。在 Qwen2.5-Coder-Instruct 7B/14B 与 Qwen3-8B 上各做 1 epoch mid-training，随后接现有 agentic post-training 管线不改：</p>
+<ul>
+  <li>SWE-Bench-Verified：<strong>+2.8 / +3.0 / +3.2</strong>（7B / 14B / Qwen3-8B）；</li>
+  <li>SWE-Bench-Lite：<strong>+3.7 / +4.0 / +5.4</strong>（同三模型）；</li>
+  <li>SWE-Smith 配对 7B 上 Verified <strong>+5.3</strong>；</li>
+  <li>仅含 Python 代码的语料还跨域恢复 τ-bench <strong>+3.9</strong>、BFCL <strong>+2.4</strong>、LiveCodeBench <strong>+11.1</strong>。</li>
+</ul>
+</blockquote>
+
+<h2 id="sec-bg">2. 研究背景与动机</h2>
+
+<h3 id="sec-bg-agent">2.1 coding agent 的训练范式与缺口</h3>
+<p>coding agent 已从研究演示走向部署系统。其进展几乎完全由 post-training 阶段合成 agent 轨迹数据的扩展驱动：SWE-Gym、R2E-Gym、SWE-Smith 等 pipeline 在 issue-resolution 任务上策划或合成模仿人类/LLM 行为的轨迹。这些 pipeline 起步的底座通常是<strong>用 next-token prediction（部分加随机 span FIM）在互联网级代码上训练</strong>的 code LLM（Qwen2.5-Coder、DeepSeek-Coder、StarCoder 等）。作者在 pretraining 与 post-training 之间识别出一个「训练时间缺口」：底座模型很少被针对 post-training 之后将要求的条件化结构优化。本文把这个缺口当作机会，设计一个专门的 mid-training 阶段，在引入 agent 专用数据前先对齐 agent 相关的归纳偏置。</p>
+
+<h3 id="sec-bg-fim">2.2 FIM 相关工作与随机 span 的三重不足</h3>
+<p>fill-in-the-middle 目标并不新；现代 code LLM 把随机 span FIM 混进 pretraining。但作者论证随机 span FIM 与 agentic 条件化<strong>对齐不佳</strong>，给出三点理由：</p>
+<ol>
+  <li><strong>span 边界语法上任意</strong>：多数被 mask 的 span 切穿表达式或残缺语句，对函数级依赖的信号很弱；</li>
+  <li><strong>无推理监督</strong>：模型直接填 span，没有镜像 agent「先想再行动」的中间 rationale；</li>
+  <li><strong>目标被 pretraining 溶解</strong>：到 post-training 开始时，FIM 赋予的结构先验已被数万亿无关 token 摊薄。</li>
+</ol>
+<p>本文逐一回应：(i) 用 PDG 分析在<strong>函数粒度</strong>选 mask 目标；(ii) 在 FIM middle span 内嵌入 CoT rationale；(iii) 把目标放在专门的 mid-training 阶段，把信号集中在 agentic post-training 之前。</p>
+
+<h3 id="sec-bg-isomorphism">2.3 结构同构洞察</h3>
+<p>agent 在第 $t$ 步采样 $a_t \sim \pi(a_t \mid h_t)$，观察 $o_{t+1} \sim p(o_{t+1} \mid h_t, a_t)$（由外部过程产生），并条件于整条轨迹继续。这一四元分解——context、action、外部计算的 return、continuation——<strong>正是函数调用点的分解</strong>：建立意图并绑参的 pre-call 代码、调用本身、由当前作用域外代码产生的返回值、消费返回值的下游代码。一个被训练去双向推理函数级依赖的模型，必须学会从 caller 上下文与下游用法重建 callee 行为——这恰是给定 history 与工具返回去预测 agent continuation 所需的同一能力。需强调这是<strong>结构对应而非字面对应</strong>：FIM 训练条件于给定 suffix，而 agent 推理是生成 suffix，但前者诱导的表示应可迁移到后者（论文用实验验证）。</p>
+
+<p>下图中左右两列各四阶段一一对应，构成论文方法成立的同构论证：</p>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph S1["函数调用点 Function call site"]
+        A1["pre-call context<br>绑定参数"] --> A2["call(args)"]
+        A2 --> A3["return value<br>callee 计算"]
+        A3 --> A4["post-return<br>消费返回值"]
+    end
+    subgraph S2["Agent 单步 Agent step"]
+        B1["history h_t"] --> B2["action a_t"]
+        B2 --> B3["observation o_t+1<br>外部工具返回"]
+        B3 --> B4["continuation<br>条件生成"]
+    end
+    A1 -.-> B1
+    A2 -.-> B2
+    A3 -.-> B3
+    A4 -.-> B4
+</pre>
+
+<p>机构归属：本工作由 University of Waterloo、University of British Columbia、NVIDIA、Verdent AI 与 Vector Institute 合作完成；开源在 TIGER-AI-Lab（FIM-Midtraining）。</p>
+
+<h2 id="sec-method">3. 核心方法</h2>
+
+<p>方法总览：从 GitHub 仓库出发，经去污与质量过滤得到自包含 Python 文件；对每个文件解析 AST 构建程序依赖图；用「复杂度 + 可推断性」双准则给候选函数打分；阈值筛选取被 mask 的函数（含单函数与 2-3 函数组）；用 Gemini-3-Flash 生成并过滤 CoT rationale；把 (rationale, body) 填入 FIM middle span 做自监督 mid-training；最后接现有 agentic post-training pipeline 不改。整体流程如下图：</p>
+
+<pre class="mermaid">
+flowchart TD
+    A["GitHub 仓库池<br>968 repos"] --> B["去污 + 质量过滤<br>约 78K self-contained files"]
+    B --> C["AST 解析 + PDG 构建<br>call edges + sibling edges"]
+    C --> D["双准则打分<br>复杂度 H + 可推断性 I"]
+    D --> E["阈值筛选<br>FIM score 大于等于 tau"]
+    E --> F["CoT 增强<br>Gemini-3-Flash 生成 + judge 过滤"]
+    F --> G["FIM mid-training<br>2.6B tokens, 1 epoch, AdamW"]
+    G --> H["Agentic post-training<br>R2E-Gym / SWE-Smith / SWE-Lego"]
+    H --> I["评测<br>SWE-Bench + 跨域基准"]
+</pre>
+
+<h3 id="sec-method-data">3.1 数据收集与去污</h3>
+<p>从 GitHub 策划 968 个 Python 仓库。起点是结合 star 数阈值与十个 topic 查询检索到的 ≈2000 个候选，经人工质量过滤，并移除每个与 SWE-Bench 源仓库重叠的仓库（按仓库名与已知 fork 校验）。为消除测试时泄漏，限制每个仓库仅保留时间戳早于 SWE-Bench-Verified 与 SWE-Bench-Lite 最早 base-commit 的 commit。过滤后语料产出 ≈400K FIM 样本（Qwen2.5-Coder tokenizer 下 ≈2.6B token），其中 320K 单函数、60K pair、20K triple。语料统计见下表：</p>
+
+<table>
+  <tr><th>属性</th><th>值</th></tr>
+  <tr><td>源 GitHub 仓库</td><td>968</td></tr>
+  <tr><td>Topic 类别</td><td>10</td></tr>
+  <tr><td>过滤后自包含 Python 文件</td><td>≈78K</td></tr>
+  <tr><td>FIM 样本总数</td><td>≈400K</td></tr>
+  <tr><td>mid-training token 预算</td><td>≈2.6B</td></tr>
+  <tr><td>单函数 FIM 目标</td><td>≈320K（≈2.0B tokens）</td></tr>
+  <tr><td>多函数目标 (k=2)</td><td>≈60K（≈0.4B tokens）</td></tr>
+  <tr><td>多函数目标 (k=3)</td><td>≈20K（≈0.2B tokens）</td></tr>
+  <tr><td>平均目标 LoC</td><td>≈34</td></tr>
+  <tr><td>带 Gemini-3 CoT 的目标</td><td>100%</td></tr>
+  <tr><td>与 SWE-Bench 源仓库重叠</td><td>0</td></tr>
+</table>
+
+<h3 id="sec-method-pdg">3.2 程序依赖图（PDG）分析</h3>
+<p>对每个文件解析 AST，提取函数节点集 $V$（顶层函数与类方法，用 qualified name 标识）。构造两类边：<strong>调用边</strong> $E_{\mathrm{call}}$（caller→callee）与<strong>兄弟边</strong> $E_{\mathrm{sib}}$（同一类的方法之间，刻画经由共享实例状态而非直接调用流动的类内耦合）。调用解析处理常见 Python 惯用法（直接调用、类实例化、self/cls 方法调用），并采用 short-name fallback 对 qualified-name 索引匹配。下图给出论文 Figure 2 的 calculator 示例 PDG：实线为 call edge，虚线为 sibling edge。</p>
+
+<pre class="mermaid">
+flowchart TD
+    mean["Calculator.mean<br>caller"] -->|"call edge"| total["Calculator.total<br>mask target"]
+    total -->|"call edge"| add["add()<br>helper"]
+    total -->|"call edge"| is_int["is_int()<br>helper"]
+    init["__init__"] -.->|"sibling edge"| total
+    push["push()"] -.->|"sibling edge"| total
+</pre>
+
+<h3 id="sec-method-criteria">3.3 mask 选择双准则与公式</h3>
+<p>对每个 $v \in V$ 定义<strong>复杂度分数</strong> $\hat{H}(v)$，由三个结构量归一化加权和构成：</p>
+
+<p>$$\hat{H}(v) = w_\ell\, \phi(\mathrm{LoC}(v), c_\ell) + w_c\, \phi(\mathrm{CC}(v), c_c) + w_d\, \phi(D(v), c_d),$$</p>
+
+<p>其中 $\mathrm{LoC}$ 为代码行数、$\mathrm{CC}$ 为 McCabe 圈复杂度、$D$ 为控制流最大嵌套深度，归一化函数 $\phi(x, c) = \min(x/c,\, 2)$（软上限）。默认 caps $(c_\ell, c_c, c_d) = (50, 10, 5)$，weights $(w_\ell, w_c, w_d) = (0.4, 0.4, 0.2)$。</p>
+
+<p>继而定义<strong>可推断性分数</strong> $\hat{I}(v)$，聚合五个上下文导出信号，近似 $v$ 的函数体与文件其余部分的互信息：</p>
+
+<p>$$\hat{I}(v) = \alpha\, C_{\mathrm{caller}}(v) + \beta\, C_{\mathrm{callee}}(v) + \gamma\, C_{\mathrm{sig}}(v) + \delta\, C_{\mathrm{doc}}(v) + \varepsilon\, C_{\mathrm{class}}(v).$$</p>
+
+<p>五个分量含义：$C_{\mathrm{caller}}$ 衡量调用点参数特异性、$C_{\mathrm{callee}}$ 统计 $v$ 调用的文件内函数数、$C_{\mathrm{sig}}$ 聚合类型注解与命名描述性、$C_{\mathrm{doc}}$ 标记 docstring 是否存在、$C_{\mathrm{class}}$ 统计类内兄弟方法。默认混合权重 $(\alpha, \beta, \gamma, \delta, \varepsilon) = (0.30, 0.25, 0.20, 0.10, 0.15)$。作者强调每个分量都是<strong>手工设计的代理量</strong>：一个学习到的可预测性分数会把选择耦合到某个参考模型，从而复杂化跨基座泛化分析。</p>
+
+<p>将 $\hat{H}$ 与 $\hat{I}$ 以<strong>调和平均</strong>形式结合，并乘以一侧难度惩罚 $\rho(\Delta(v))$，得最终 FIM 分数：</p>
+
+<p>$$\mathrm{FIM}(v) = \frac{\hat{H}(v)\,\hat{I}(v)}{\hat{H}(v) + \hat{I}(v) + \varepsilon} \cdot \rho(\Delta(v)).$$</p>
+
+<p>调和平均迫使 $\hat{H}$ 与 $\hat{I}$ 同时较大、惩罚失衡；$\rho$ 下权重即便给定完整上下文仍困难的目标（否则是不可学噪声）。其中残差难度 $\Delta(v)$ 与惩罚 $\rho(\Delta)$ 定义为：</p>
+
+<p>$$\Delta(v) = \max\left(0,\, \frac{\hat{H}(v) - \hat{I}(v)}{\hat{H}(v) + \varepsilon}\right) \in [0, 1),$$</p>
+
+<p>$$\rho(\Delta) = \begin{cases} 1, & \Delta \le \tau_d, \\ \exp\left(-\,\frac{(\Delta - \tau_d)^2}{2\sigma^2}\right), & \Delta \gt \tau_d. \end{cases}$$</p>
+
+<p>单函数选择用 $\tau_d = 0.50$、$\sigma = 0.20$，阈值 $\tau_{\mathrm{FIM}} = 0.08$、$\tau_{\hat{H}} = 0.15$。该非对称设计反映目标本身的不对称：平凡易目标已被硬过滤移除，故无需额外奖励高可推断性；而即便有完整上下文仍困难的目标则须被下权重。</p>
+
+<h4 id="sec-method-worked">算例：Calculator.total 的打分走查</h4>
+<p>目标函数为 <code>Calculator.total</code>，其结构量为 LoC = 10、CC = 5、D = 3。代入式 (1)：</p>
+<p>$$w_\ell\,\phi(10,50) = 0.4 \times 0.20 = 0.08,\quad w_c\,\phi(5,10) = 0.4 \times 0.50 = 0.20,\quad w_d\,\phi(3,5) = 0.2 \times 0.60 = 0.12,$$</p>
+<p>$$\hat{H}(\mathrm{total}) = 0.08 + 0.20 + 0.12 = 0.40.$$</p>
+<p>五个可推断性分量：$C_{\mathrm{caller}} = 0.20$（唯一 in-file caller <code>mean</code> 无参调用，$0.60/3$），$C_{\mathrm{callee}} = 0.50$（调用 <code>is_int</code> 与 <code>add</code>，$2/4$），$C_{\mathrm{sig}} = 0.50$（返回类型 $+0.30$、命名 $+0.20$），$C_{\mathrm{doc}} = 0.5$（有 docstring），$C_{\mathrm{class}} = 0.90$（三个兄弟 $3/5$ 加 <code>__init__</code> bonus $+0.30$）；加权和 $\hat{I}(\mathrm{total}) = 0.06+0.13+0.10+0.05+0.14 = 0.48$。残差 $\Delta = \max(0,(0.40-0.48)/0.40) = 0$，故 $\rho = 1$，最终</p>
+<p>$$\mathrm{FIM}(\mathrm{total}) = \frac{0.40 \times 0.48}{0.40 + 0.48} \approx 0.22 \;\ge\; \tau_{\mathrm{FIM}} = 0.08 \;\Rightarrow\; \text{selected}.$$</p>
+
+<h3 id="sec-method-multifunc">3.4 多函数组选择</h3>
+<p>真实代码补丁常跨多个相关函数。为此扩展到 mask $k=2$ 或 $k=3$ 个结构上相连的函数组。组分数在单函数调和平均之上再乘一个<strong>耦合项</strong> $Coup(G)$：</p>
+
+<p>$$\mathrm{FIM}(G) = Coup(G) \cdot \frac{\hat{H}(G)\,\hat{I}(G)}{\hat{H}(G) + \hat{I}(G) + \varepsilon} \cdot \rho_G(\Delta(G)),$$</p>
+
+<p>$$Coup(G) = w_c\,\frac{|E^{\mathrm{call}}_G|}{k(k-1)} + w_s\,\frac{|E^{\mathrm{sib}}_G|}{\binom{k}{2}} + w_{st}\,\mathrm{Jacc}_G,$$</p>
+
+<p>其中 $\hat{H}(G)$ 为组内成员复杂度均值、$\mathrm{Jacc}_G$ 为组内对之间所访问实例属性（<code>self.x</code>）集合的平均 Jaccard 相似度，$(w_c, w_s, w_{st}) = (0.50, 0.20, 0.30)$。关键：$\hat{I}(G)$ 在<strong>联合 mask 假设下重算</strong>——组内 caller/callee/sibling 贡献被排除、成员 docstring 贡献为零，防止组凭组内引用获得虚高分数。八种拓扑模式：$k=2$ 有 caller-callee、co-callee、sibling-coupled、mutual-call；$k=3$ 有 call-chain、hub、fan-in、class-triad。候选组须在 $E_{\mathrm{call}} \cup E_{\mathrm{sib}}$ 中构成连通子图。
+</p>
+
+<h3 id="sec-method-fim">3.5 FIM 训练目标与 CoT 增强</h3>
+<p>对每个被选中目标运行三阶段 pipeline：<strong>Generate</strong>，Gemini-3-Flash 仅看被 mask 的文件，逐步产出 rationale 与候选函数体，<strong>不接触 ground-truth body</strong>；<strong>Filter</strong>，另一个 Gemini-3-Flash judge 就可行性与五个质量维度给 (rationale, candidate body) 打分，保留得分最高的 ≈400K 样本；<strong>Format</strong>，把保留的 pair 放入 FIM middle span，rationale 在 body 之前：</p>
+
+<pre><code class="language-text">&lt;fim_prefix&gt;  prefix
+&lt;fim_suffix&gt;  suffix
+&lt;fim_middle&gt;  rationale  body</code></pre>
+
+<p>模型因此被训练成「先推理、再产出一致代码」，镜像 agent 一步的 think-then-act 结构。<strong>ground-truth body 仅作过滤锚，从不出现在训练目标中</strong>。mid-training 用标准 FIM loss 作用于 middle span（rationale + body），pack 到模型原生上下文长度并使用其原生 FIM sentinel token；超参：AdamW、lr $1.0\times10^{-5}$、cosine、warmup ratio 0.1、weight decay 0.05、1 epoch、有效 batch 128、序列长度 32,768、bf16。</p>
+
+<p>论文用 self-CoT 变体（由被训练模型自身生成 rationale）隔离 FIM 结构贡献与 CoT 蒸馏贡献，见消融 4.3。</p>
+
+<h3 id="sec-method-algo">3.6 训练算法伪代码</h3>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1：单函数 FIM 目标选择（per file）</div>
+  <p><span class="kw">Require:</span> 源文件 <span class="var">s</span>；阈值 <span class="var">τ_d, τ_FIM, τ_Ĥ</span>；文件行数界 <span class="num">[L_min, L_max]</span>；LoC 界 <span class="num">[ℓ_min, ℓ_max]</span></p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> <span class="fn">Lines</span>(<span class="var">s</span>) ∉ <span class="num">[L_min, L_max]</span> <span class="kw">then return</span> ∅ &nbsp;&nbsp;<span class="cm">// file-level pre-filter</span></p>
+  <p style="padding-left:1.5em"><span class="var">T</span> ← <span class="fn">ParseAST</span>(<span class="var">s</span>)</p>
+  <p style="padding-left:1.5em"><span class="var">V, E_call, E_sib</span> ← <span class="fn">BuildPDG</span>(<span class="var">T</span>) &nbsp;&nbsp;<span class="cm">// 调用边 + 兄弟边</span></p>
+  <p style="padding-left:1.5em"><span class="var">C</span> ← ∅</p>
+  <p style="padding-left:1.5em"><span class="kw">for each</span> <span class="var">v ∈ V</span> <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="kw">if</span> <span class="var">v</span> is dunder <span class="kw">or</span> <span class="fn">LoC</span>(<span class="var">v</span>) ∉ <span class="num">[ℓ_min, ℓ_max]</span> <span class="kw">then continue</span></p>
+  <p style="padding-left:3em"><span class="var">Ĥ(v), Î(v)</span> ← <span class="fn">compute complexity, inferability</span> &nbsp;&nbsp;<span class="cm">// Eqs. (1),(2)</span></p>
+  <p style="padding-left:3em"><span class="kw">if</span> <span class="var">Ĥ(v) &lt; τ_Ĥ</span> <span class="kw">then continue</span></p>
+  <p style="padding-left:3em"><span class="var">Δ(v)</span> ← <span class="fn">max</span>(0, (<span class="var">Ĥ(v) − Î(v)</span>) / (<span class="var">Ĥ(v)</span> + ε))</p>
+  <p style="padding-left:3em"><span class="var">FIM(v)</span> ← [<span class="var">Ĥ(v)·Î(v)</span>] / [<span class="var">Ĥ(v) + Î(v)</span> + ε] · <span class="fn">ρ</span>(<span class="var">Δ(v)</span>)</p>
+  <p style="padding-left:3em"><span class="kw">if</span> <span class="var">FIM(v) ≥ τ_FIM</span> <span class="kw">then</span> <span class="var">C</span> ← <span class="var">C</span> ∪ {<span class="var">v</span>}</p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em"><span class="kw">return</span> <span class="var">C</span> &nbsp;&nbsp;<span class="cm">// 按 FIM 降序排序</span></p>
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 2：多函数组 FIM 目标选择（per file，节选）</div>
+  <p><span class="kw">Require:</span> 源文件 <span class="var">s</span>；单函数分数 <span class="var">Ĥ(v), Î(v)</span>；组阈值 <span class="var">τ_coup^G, τ_Ĥ^G, τ_FIM,2^G, τ_FIM,3^G</span>；LoC 比例 cap <span class="num">(θ_2, θ_3)</span>；per-file cap <span class="num">(N_2, N_3)</span></p>
+  <p style="padding-left:1.5em"><span class="var">V, E_call, E_sib</span> ← <span class="fn">BuildPDG</span>(<span class="fn">ParseAST</span>(<span class="var">s</span>))</p>
+  <p style="padding-left:1.5em"><span class="var">G</span> ← ∅</p>
+  <p style="padding-left:1.5em"><span class="kw">for each</span> 拓扑模式 <span class="var">P</span> ∈ {caller-callee, co-callee, sibling-coupled, mutual-call, call-chain, hub, fan-in, class-triad} <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="kw">for each</span> 连通子图 <span class="var">G ⊆ V</span> 匹配 <span class="var">P</span> <span class="kw">do</span></p>
+  <p style="padding-left:4.5em"><span class="kw">if</span> 任一成员未通过 per-function 过滤、LoC 比例超 <span class="num">θ_|G|</span>、<span class="fn">Coup</span>(<span class="var">G</span>) &lt; <span class="var">τ_coup^G</span> 或 <span class="var">Ĥ(G) &lt; τ_Ĥ^G</span> <span class="kw">then continue</span></p>
+  <p style="padding-left:4.5em">在联合 mask 假设下重算 <span class="var">Î(G)</span> &nbsp;&nbsp;<span class="cm">// 排除组内引用；C_doc = 0</span></p>
+  <p style="padding-left:4.5em"><span class="var">Δ(G)</span> ← <span class="fn">max</span>(0, (<span class="var">Ĥ(G) − Î(G)</span>)/(<span class="var">Ĥ(G)</span>+ε))</p>
+  <p style="padding-left:4.5em"><span class="var">FIM(G)</span> ← <span class="fn">Coup</span>(<span class="var">G</span>) · [<span class="var">Ĥ(G)·Î(G)</span>]/[...] · <span class="fn">ρ_G</span>(<span class="var">Δ(G)</span>)</p>
+  <p style="padding-left:4.5em"><span class="kw">if</span> <span class="var">FIM(G) ≥ τ_FIM,|G|^G</span> <span class="kw">then</span> <span class="var">G</span> ← <span class="var">G</span> ∪ {(<span class="var">G, P, FIM(G)</span>)}</p>
+  <p style="padding-left:3em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em">按 <span class="var">FIM(G)</span> 降序排序 <span class="var">G</span></p>
+  <p style="padding-left:1.5em">在非重叠 + per-size cap 下贪心选取，<span class="kw">return</span> <span class="var">S</span></p>
+</div>
+
+<h3 id="sec-method-pipeline">3.7 数据管线</h3>
+<p>完整数据管线（从仓库候选到最终 mid-training 样本）如下，凸显去污时间戳截断与 SWE-Bench 源仓库移除两道防泄漏关卡：</p>
+
+<pre class="mermaid">
+flowchart LR
+    A["约 2000 candidate repos"] --> B["star 数 + 10 topic 查询"]
+    B --> C["968 repos 人工筛选"]
+    C --> D["移除 SWE-Bench 源仓库"]
+    D --> E["时间戳早于 SWE-Bench base-commit"]
+    E --> F["约 78K self-contained Python files"]
+    F --> G["PDG + 双准则打分 + 阈值筛选"]
+    G --> H["400K FIM samples<br>320K single + 60K pair + 20K triple"]
+    H --> I["Gemini-3-Flash CoT 生成"]
+    I --> J["judge 质量过滤"]
+    J --> K["约 400K 最终样本<br>2.6B tokens"]
+</pre>
+
+<h2 id="sec-exp">4. 实验结果与分析</h2>
+
+<h3 id="sec-exp-setup">4.1 实验设置</h3>
+<p><strong>基准</strong>分三组：coding-agent 基准（SWE-Bench-Verified 500、SWE-Bench-Lite 300，为主 in-domain 目标）；非 agent coding 基准（LiveCodeBench、OJBench、FullStackBench-EN，作回归检查）；工具使用与 OOD agent 基准（Terminal-Bench 2.0、τ-bench、BFCL，后两者不含 Python 代码编辑轨迹，测试函数调用归纳偏置是否跨任务族迁移）。</p>
+<p><strong>训练</strong>：对 Qwen2.5-Coder-Instruct 7B/14B 与 Qwen3-8B 在所选 FIM 语料上用标准 FIM loss 做 mid-training，随后不改地接现有 agentic post-training pipeline——R2E-Gym 或 SWE-Smith（Qwen2.5-Coder 系列）、SWE-Lego（Qwen3-8B，训 2 epoch 而非官方 4 epoch 以防过拟合）。</p>
+<p><strong>评测协议</strong>：所有数字为每个 pipeline 最终 checkpoint 上三个独立评测 seed 的均值（表中省略 %，括号内为标准差带）。baseline = base + post-training；ours = base + FIM mid-training + 相同 post-training。FIM-only checkpoint 因指令跟随退化不与 instruction-tuned baseline 公平比较，故每条增益都<strong>存活于后续 post-training</strong>。agent harness 由 post-training pipeline 固定：R2E-Gym 用 OpenHands fork、SWE-Smith 用 SWE-agent、Qwen3-8B 用 OpenHands 直接（SWE-Lego 数据超 Qwen2.5-Coder 32K 上下文）。</p>
+
+<h3 id="sec-exp-main">4.2 主实验：SWE agent 基准</h3>
+<p>Table 1 汇总 in-domain agent 结果。固定 post-training pipeline 为 R2E-Gym 时，FIM mid-training 在 7B-Instruct 上 Verified +2.80、14B-Instruct 上 +3.00，Lite 方向一致（+3.67/+4.00）。两个 Qwen2.5-Coder 尺寸均受益于同一 mid-training 语料与配方，说明结构先验在此家族内<strong>不被更大预训练 checkpoint 吸收</strong>。把 R2E-Gym 换成 SWE-Smith（同一 7B 底座）Verified +5.30，大于 R2E-Gym 下的 +2.80；Lite 上 SWE-Smith 配对仅 +0.50，小于 R2E-Gym 的 +3.67。换到 Qwen3-8B + SWE-Lego，Verified +3.20、Lite +5.40。下表加粗 ours 行：</p>
+
+<table>
+  <tr><th>设置</th><th>SWE-Bench-Verified</th><th>SWE-Bench-Lite</th><th>Average</th></tr>
+  <tr><td>Qwen2.5-Coder-7B-Instruct（无 agent 训练）</td><td>1.80 (±1.30)</td><td>1.00 (±1.00)</td><td>1.40</td></tr>
+  <tr><td>+ R2E-Gym（复现）</td><td>15.00 (±1.50)</td><td>11.33 (±1.20)</td><td>13.17</td></tr>
+  <tr><td>+ R2E-Gym（官方报告）</td><td>19.00 (±1.00)</td><td>11.00 (±0.80)</td><td>15.00</td></tr>
+  <tr><td><strong>+ FIM-Midtrain + R2E-Gym（ours）</strong></td><td><strong class="best">17.80 (±1.40)</strong></td><td><strong class="best">15.00 (±1.10)</strong></td><td><strong class="best">16.40</strong></td></tr>
+  <tr><td>Δ（ours vs 复现）</td><td>+2.80</td><td>+3.67</td><td>+3.24</td></tr>
+  <tr><td>+ SWE-Smith（复现）</td><td>12.30 (±1.20)</td><td>14.20 (±1.40)</td><td>13.25</td></tr>
+  <tr><td>+ SWE-Smith（官方报告）</td><td>15.20</td><td>11.70</td><td>13.45</td></tr>
+  <tr><td><strong>+ FIM-Midtrain + SWE-Smith（ours）</strong></td><td><strong class="best">17.60 (±1.30)</strong></td><td>14.70 (±1.00)</td><td><strong class="best">16.15</strong></td></tr>
+  <tr><td>Δ（ours vs 复现）</td><td>+5.30</td><td>+0.50</td><td>+2.90</td></tr>
+  <tr><td>Qwen2.5-Coder-14B-Instruct（无 agent 训练）</td><td>4.00 (±1.60)</td><td>2.70 (±1.00)</td><td>3.35</td></tr>
+  <tr><td>+ R2E-Gym（复现）</td><td>26.20 (±1.40)</td><td>18.00 (±1.10)</td><td>22.10</td></tr>
+  <tr><td>+ R2E-Gym（官方报告）</td><td>26.80 (±1.40)</td><td>20.67 (±0.70)</td><td>23.74</td></tr>
+  <tr><td><strong>+ FIM-Midtrain + R2E-Gym（ours）</strong></td><td><strong class="best">29.20 (±1.50)</strong></td><td><strong class="best">22.00 (±1.20)</strong></td><td><strong class="best">25.60</strong></td></tr>
+  <tr><td>Δ（ours vs 复现）</td><td>+3.00</td><td>+4.00</td><td>+3.50</td></tr>
+  <tr><td>Qwen3-8B（无 agent 训练）</td><td>7.60 (±1.20)</td><td>5.80 (±0.90)</td><td>6.70</td></tr>
+  <tr><td>+ SWE-Lego（复现）</td><td>31.80 (±1.00)</td><td>27.30 (±1.10)</td><td>29.55</td></tr>
+  <tr><td><strong>+ FIM-Midtrain + SWE-Lego（ours）</strong></td><td><strong class="best">35.00 (±1.50)</strong></td><td><strong class="best">32.70 (±1.30)</strong></td><td><strong class="best">33.85</strong></td></tr>
+  <tr><td>Δ（ours vs 复现）</td><td>+3.20</td><td>+5.40</td><td>+4.30</td></tr>
+</table>
+
+<div id="chart-main" class="echarts-container" style="height:340px"></div>
+<script>
+echarts.init(document.getElementById('chart-main')).setOption({
+  backgroundColor: '#2a2a3e',
+  title: { text: 'FIM Mid-Training 在 SWE-Bench 上的增益（Δ，百分点）', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+  tooltip: { trigger: 'axis' },
+  legend: { data: ['Verified', 'Lite'], top: 28, textStyle: { color: '#cdd6f4' } },
+  grid: { left: '8%', right: '5%', bottom: '12%', top: '22%' },
+  xAxis: { type: 'category', data: ['7B+R2E-Gym', '7B+SWE-Smith', '14B+R2E-Gym', 'Qwen3-8B+SWE-Lego'], axisLabel: { color: '#cdd6f4' } },
+  yAxis: { type: 'value', name: 'Δ (pp)', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+  series: [
+    { name: 'Verified', type: 'bar', data: [2.80, 5.30, 3.00, 3.20], itemStyle: { color: '#89b4fa' }, label: { show: true, color: '#cdd6f4', position: 'top' } },
+    { name: 'Lite', type: 'bar', data: [3.67, 0.50, 4.00, 5.40], itemStyle: { color: '#a6e3a1' }, label: { show: true, color: '#cdd6f4', position: 'top' } }
+  ]
+});
+</script>
+
+<h3 id="sec-exp-preserve">4.3 能力保持与跨域迁移</h3>
+<p>任务专用 post-training 会侵蚀底座已有能力。论文在 14B 上额外评六个基准（R2E-Gym 作 post-training 数据集做受控对比）。R2E-Gym 单独相对 Instruct 上限降低每个非 agent 与工具使用基准：LiveCodeBench −13.10、BFCL −7.40、FullStackBench-EN −6.08、τ-bench −2.30、OJBench −2.40；六基准均值下降 4.81——agent 论文很少强调的隐含代价。加入 FIM mid-training 后，LiveCodeBench 恢复 +11.10、τ-bench +3.90、BFCL +2.40、Terminal +1.25、OJBench +1.94、FSB-EN +0.53；六基准均值从 16.04 升至 19.56（+3.52）。由于 mid-training 语料仅含 Python 代码、无工具使用数据，τ-bench 与 BFCL 的跨域恢复是<strong>函数调用/工具调用同构</strong>的直接证据。</p>
+
+<table>
+  <tr><th>设置</th><th>LiveCode</th><th>OJBench</th><th>FSB-EN</th><th>Terminal</th><th>τ-bench</th><th>BFCL</th><th>Avg</th></tr>
+  <tr><td>Instruct Model（上限参考）</td><td>37.20</td><td>5.20</td><td>53.80</td><td>0.00</td><td>5.70</td><td>23.20</td><td>20.85</td></tr>
+  <tr><td>+ R2E-Gym</td><td>24.10</td><td>2.80</td><td>47.72</td><td>2.41</td><td>3.40</td><td>15.80</td><td>16.04</td></tr>
+  <tr><td><strong>+ FIM Mid-Train + R2E-Gym（ours）</strong></td><td><strong class="best">35.20</strong></td><td><strong class="best">4.74</strong></td><td><strong class="best">48.25</strong></td><td><strong class="best">3.66</strong></td><td><strong class="best">7.30</strong></td><td><strong class="best">18.20</strong></td><td><strong class="best">19.56</strong></td></tr>
+  <tr><td>Δ（vs R2E-Gym only）</td><td>+11.10</td><td>+1.94</td><td>+0.53</td><td>+1.25</td><td>+3.90</td><td>+2.40</td><td>+3.52</td></tr>
+</table>
+
+<div id="chart-preserve" class="echarts-container" style="height:360px"></div>
+<script>
+echarts.init(document.getElementById('chart-preserve')).setOption({
+  backgroundColor: '#2a2a3e',
+  title: { text: '14B 能力保持与跨域迁移（R2E-Gym post-training）', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+  tooltip: { trigger: 'axis' },
+  legend: { data: ['Instruct 上限', '+ R2E-Gym', '+ FIM + R2E-Gym'], top: 28, textStyle: { color: '#cdd6f4' } },
+  grid: { left: '7%', right: '5%', bottom: '12%', top: '22%' },
+  xAxis: { type: 'category', data: ['LiveCode', 'OJBench', 'FSB-EN', 'Terminal', 'τ-bench', 'BFCL'], axisLabel: { color: '#cdd6f4' } },
+  yAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+  series: [
+    { name: 'Instruct 上限', type: 'bar', data: [37.20, 5.20, 53.80, 0.00, 5.70, 23.20], itemStyle: { color: '#6c7086' } },
+    { name: '+ R2E-Gym', type: 'bar', data: [24.10, 2.80, 47.72, 2.41, 3.40, 15.80], itemStyle: { color: '#f38ba8' } },
+    { name: '+ FIM + R2E-Gym', type: 'bar', data: [35.20, 4.74, 48.25, 3.66, 7.30, 18.20], itemStyle: { color: '#a6e3a1' } }
+  ]
+});
+</script>
+
+<h3 id="sec-exp-ablation">4.4 消融实验</h3>
+<p>在 Qwen2.5-Coder-7B-Instruct + R2E-Gym 上、共享无 mid-training baseline 与受控 200K 目标预算下做三组消融。所有块的绝对值低于主表配方（主表用全量语料），<strong>比较对象是块内相对排序而非绝对值</strong>。</p>
+
+<p><strong>Block A：CoT 来源</strong>（选择固定为 Full）。完全去掉 rationale（no CoT）已把均值抬升 +1.18——约为 Gemini-3 增益 2.43 的一半，直接证据表明 function-aware FIM 信号在加入推理监督前已做实质工作。用被训练模型自身生成 rationale（self-CoT）达 14.85，恢复 2.43 点差距中的 1.68；归因于 frontier teacher 的残余 0.75 点真实但有限。<strong>该配方不是伪装的蒸馏 pipeline</strong>。</p>
+
+<table>
+  <tr><th>Block A — CoT 来源</th><th>Verified</th><th>Lite</th><th>Average</th></tr>
+  <tr><td>w/o mid-train（baseline）</td><td>15.00</td><td>11.33</td><td>13.17</td></tr>
+  <tr><td>+ FIM, no CoT</td><td>16.10</td><td>12.60</td><td>14.35</td></tr>
+  <tr><td>+ FIM, self-CoT（Qwen2.5-Coder-7B-Instruct）</td><td>16.40</td><td>13.30</td><td>14.85</td></tr>
+  <tr><td><strong>+ FIM, Gemini-3-Flash CoT</strong></td><td><strong class="best">17.00</strong></td><td><strong class="best">14.20</strong></td><td><strong class="best">15.60</strong></td></tr>
+</table>
+
+<p><strong>Block B：函数选择算法</strong>（CoT 固定 Gemini-3-Flash）。Random 设下限 13.95，Gemini-selected 达 15.05：frontier 判断「mask 哪个函数」有帮助但不充分。PDG only 达 14.85；在其上加 $\hat{H}$ 或 $\hat{I}$ 分别达 15.05 与 15.35——内在难度与上下文可恢复性各自在结构过滤之外有贡献。组合（Full）达 15.60，确认 $\hat{H}$ 与 $\hat{I}$ 非冗余。</p>
+
+<table>
+  <tr><th>Block B — 函数选择算法</th><th>Verified</th><th>Lite</th><th>Average</th></tr>
+  <tr><td>w/o mid-train（baseline）</td><td>15.00</td><td>11.33</td><td>13.17</td></tr>
+  <tr><td>Random</td><td>15.30</td><td>12.60</td><td>13.95</td></tr>
+  <tr><td>Gemini-selected</td><td>16.40</td><td>13.70</td><td>15.05</td></tr>
+  <tr><td>PDG only</td><td>16.10</td><td>13.60</td><td>14.85</td></tr>
+  <tr><td>PDG + 复杂度（Ĥ）</td><td>16.50</td><td>13.60</td><td>15.05</td></tr>
+  <tr><td>PDG + 可推断性（Î）</td><td>16.70</td><td>14.00</td><td>15.35</td></tr>
+  <tr><td><strong>Full（PDG + Ĥ + Î）</strong></td><td><strong class="best">17.00</strong></td><td><strong class="best">14.20</strong></td><td><strong class="best">15.60</strong></td></tr>
+</table>
+
+<div id="chart-ablation-b" class="echarts-container" style="height:320px"></div>
+<script>
+echarts.init(document.getElementById('chart-ablation-b')).setOption({
+  backgroundColor: '#2a2a3e',
+  title: { text: 'Block B：函数选择算法对比（200K 预算，Average）', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+  tooltip: { trigger: 'axis' },
+  grid: { left: '8%', right: '8%', bottom: '15%', top: '18%' },
+  xAxis: { type: 'category', data: ['baseline', 'Random', 'Gemini-sel', 'PDG only', 'PDG+Ĥ', 'PDG+Î', 'Full'], axisLabel: { color: '#cdd6f4' } },
+  yAxis: { type: 'value', min: 12, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+  series: [{ type: 'bar', data: [13.17, 13.95, 15.05, 14.85, 15.05, 15.35, 15.60],
+    itemStyle: { color: function(p){ return p.dataIndex === 6 ? '#a6e3a1' : (p.dataIndex === 0 ? '#6c7086' : '#89b4fa'); } },
+    label: { show: true, color: '#cdd6f4', position: 'top' } }]
+});
+</script>
+
+<p><strong>Block C：mask 粒度</strong>（选择 Full，CoT 固定 Gemini-3-Flash）。加 15% pair 目标把均值从 15.60 抬到 15.90；改用 5% triple 目标基本中性（15.70）；完整 80%/15%/5% 混合达 16.10。与 §5 分析一致：训练跨函数依赖对 gold patch 跨多函数的任务 disproportionately 有帮助，但更大组的边际收益随耦合在联合 mask 下更难维持而递减。</p>
+
+<table>
+  <tr><th>Block C — mask 粒度</th><th>Verified</th><th>Lite</th><th>Average</th></tr>
+  <tr><td>w/o mid-train（baseline）</td><td>15.00</td><td>11.33</td><td>13.17</td></tr>
+  <tr><td>Single-function only</td><td>17.00</td><td>14.20</td><td>15.60</td></tr>
+  <tr><td>85% single + 15% pair (k=2)</td><td>17.20</td><td>14.60</td><td>15.90</td></tr>
+  <tr><td>95% single + 5% triple (k=3)</td><td>17.00</td><td>14.40</td><td>15.70</td></tr>
+  <tr><td><strong>80% single + 15% pair + 5% triple</strong></td><td><strong class="best">17.40</strong></td><td><strong class="best">14.80</strong></td><td><strong class="best">16.10</strong></td></tr>
+</table>
+
+<h3 id="sec-exp-behavior">4.5 行为分析：增益从哪里来</h3>
+<p>在 14B + R2E-Gym 上对比 post-training-only 与 ours。<strong>负观察恢复</strong>：若任一工具输出匹配错误模式（stack trace、「No replacement was performed」、shell 错误等），该轨迹含负观察。两 checkpoint 含负观察轨迹比例基本一致（88.8% vs 91.8%），但<strong>恢复率</strong>（含错误轨迹中仍以通过 patch 终止的比例）从 24.8% 升至 28.8%（+4.0 pp，+16% 相对）——正是本文框架预测 mid-training 应支撑的能力：在外部返回与模型先验矛盾后仍能富成效地继续。mid-training 还把 agent 推向<strong>iterate-and-verify 策略</strong>：每个已解任务的编辑数从 3.3 升至 7.4、轨迹长度从 15.1 升至 23.6 步；search 动作占比 15.3%→11.0%，execute_bash 19.5%→24.6%。</p>
+
+<table>
+  <tr><th>设置（14B + R2E-Gym）</th><th>Recovery rate (%)</th><th>Edits / solved</th><th>Steps / solved</th><th>Pass (%)</th></tr>
+  <tr><td>+ R2E-Gym</td><td>24.8</td><td>3.3</td><td>15.1</td><td>26.2</td></tr>
+  <tr><td><strong>+ FIM-Midtrain + R2E-Gym</strong></td><td><strong class="best">28.8</strong></td><td>7.4</td><td>23.6</td><td><strong class="best">29.2</strong></td></tr>
+</table>
+
+<p><strong>增益集中于多函数推理</strong>：按 gold patch 形状分层 500 个 Verified 任务。在 88 个 gold patch 修改单文件 ≥2 函数的任务上，baseline 解 13.6%、ours 解 22.7%，绝对增益 +9.1 pp——是 341 个单函数任务上 +2.1 pp 的 <strong>4 倍以上</strong>。多文件任务（n=71）未被差异性帮助（两边均约 11.3%），归因于粒度不匹配：本文 FIM 在文件内函数级操作。<strong>+15-task 增益主要由 no-patch 失败模式崩塌驱动</strong>：no-patch 失败从每轮约 11 降至约 1（一个数量级），而 patch-error 基本持平（约 227→227）。这与 FIM 信号直接相关：FIM 下模型总被条件化为在 prefix 与 suffix 之间产出非空 token span，这一倾向存活过 post-training。</p>
+
+<h2 id="sec-summary">5. 总结与启发</h2>
+
+<h3 id="sec-summary-limits">5.1 局限性</h3>
+<p>论文在 Section 6 明确列出四点局限，框定其主张：</p>
+<ol>
+  <li><strong>仅 Python 语料与评测</strong>：mid-training 语料与 in-domain agent 基准均仅 Python；跨语言证据仅间接来自 FullStackBench-EN（§4.3），向 Java/C++/Rust 的迁移留待未来。</li>
+  <li><strong>CoT 依赖 teacher</strong>：默认配方依赖 Gemini-3-Flash；CoT 来源消融表明自生成 rationale 可恢复大部分增益，但完全开源复现需一个可比强度的开源 teacher。</li>
+  <li><strong>跨基座验证有限</strong>：跨基座证据仅来自单一非 Qwen2.5-Coder 配置（Qwen3-8B + SWE-Lego），它同时改变了 post-training pipeline；结论是「不绑定某一 pretraining/post-training 组合」而非「保证跨所有 base 家族迁移」。</li>
+  <li><strong>模块化假设</strong>：function-aware FIM 预设模块化代码；在单块脚本、生成代码或 notebook 上 pipeline 产出更少合格目标，该区域未被系统研究。</li>
+</ol>
+
+<h3 id="sec-summary-insights">5.2 核心洞见与读后评注</h3>
+<ol>
+  <li><strong>「结构同构」是廉价且可扩展的自监督信号源</strong>。作者没有合成新轨迹，而是把普通源代码里天然存在的函数调用点当作 agent action-observation-continuation 循环的互联网级类比。这把「agent 能力」从一个需要昂贵 post-training 数据的属性，降格为一个可在 mid-training 用自监督安装的结构先验——成本只有 2.6B token、1 epoch、单机 8×H100。</li>
+  <li><strong>选择「mask 什么」比「用多强的 teacher」更关键</strong>。Block B 表明函数选择算法是主导杠杆：Random 设底 13.95、Gemini-selected 15.05，而 Full 达 15.60。frontier teacher 对「选哪个函数」有判断但不充分；真正起作用的是 PDG 结构 + Ĥ/Î 双准则。这对工业实践意义重大：一个 base-model-agnostic、手工设计的可预测性代理，比调用 frontier 模型选目标更便宜且更可复现。</li>
+  <li><strong>FIM 结构本身做实质工作，不是蒸馏</strong>。Block A 去掉所有 rationale 仍 +1.18（占 Gemini-3 全增益近半），self-CoT 恢复 1.68/2.43。说明增益主要来自「函数级双向条件化」这一结构目标，CoT 只是放大器。这回应了「是不是变相蒸馏 frontier 模型」的质疑。</li>
+  <li><strong>能力侵蚀是被低估的 post-training 代价</strong>。R2E-Gym 单独在六基准上均值掉 4.81 点，agent 论文很少报告。mid-training 把均值恢复 +3.52，且仅用 Python-only 语料就跨域恢复 τ-bench/BFCL——这是函数调用同构<strong>存活过 post-training</strong>的最直接证据，也是本文最有说服力的实验之一。</li>
+  <li><strong>失效模式分析揭示机制</strong>：增益不是「学到了新能力」，而是<strong>改变了停止策略</strong>。no-patch 失败从约 11 降到约 1，因为 FIM 训练让模型总在 prefix/suffix 间产出非空 span。这把「agent 不再过早放弃」解释为一种训练时安装的生成倾向，而非推理能力提升——更细粒度、也更可信。</li>
+  <li><strong>多函数单文件是同构论证的最直接检验</strong>。增益在多函数单文件任务上 +9.1 pp（4× 于单函数），恰是 function-aware FIM 直接训练的跨 caller-callee/sibling 依赖结构；多文件不获益则暴露当前粒度局限，自然指向「跨文件函数对」的未来工作。</li>
+</ol>
+
+<h2 id="sec-refs">6. 参考文献</h2>
+<p>下列为本报告所依据的关键文献（节选自论文 References，编号与原文一致）：</p>
+<ol class="refs">
+  <li>[2] Bavarian et al. <em>Efficient Training of Language Models to Fill in the Middle.</em> 2022. — FIM 目标的奠基工作。</li>
+  <li>[11] Gong et al. <em>Structure-aware Fill-in-the-Middle Pretraining for Code.</em> arXiv:2506.00204, 2025. — AST-FIM，结构感知 mask 的前驱，在 real-edit FIM 上报 +5 pts。</li>
+  <li>[12] Gong et al. <em>AST-T5: Structure-aware Pretraining for Code Generation and Understanding.</em> arXiv:2401.03003, 2024. — AST 子树 mask。</li>
+  <li>[20] Hui et al. <em>Qwen2.5-Coder Technical Report.</em> 2024. — 本文 7B/14B 底座与 tokenizer。</li>
+  <li>[22] Jain et al. <em>R2E-Gym: Procedural Environments and Hybrid Verifiers for Scaling Open-Weights SWE Agents.</em> 2025. — 主要 post-training pipeline 之一。</li>
+  <li>[23] Jimenez et al. <em>SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</em> ICLR 2023. — 主 in-domain 基准与去污源仓库。</li>
+  <li>[33] Roziere et al. <em>Code Llama: Open Foundation Models for Code.</em> 2023. — context-length generalization 的 mid-training staging 哲学来源。</li>
+  <li>[34] Sun et al. <em>Bridging Developer Instructions and Code Completion through Instruction-aware FIM.</em> arXiv:2509.24637, 2025. — 在 FIM tuple加 developer-comment slot。</li>
+  <li>[35] Tao et al. <em>SWE-Lego: Pushing the Limits of Supervised Fine-Tuning for Software Issue Resolving.</em> 2026. — Qwen3-8B 的 post-training pipeline。</li>
+  <li>[36] Tu et al. <em>A Survey on LLM Mid-training.</em> arXiv:2510.23081, 2025. — mid-training 阶段综述。</li>
+  <li>[44] Yang et al. <em>SWE-smith: Scaling Data for Software Engineering Agents.</em> 2025. — 第二条 post-training pipeline。</li>
+</ol>
+
+<hr>
+<p style="color:#6c7086;font-size:0.85em">本报告基于 arXiv:2607.12463v2 全文撰写，所有数值、公式、算法均来自原文；实验表中加粗值为 ours 最优配置。计算资源：单机 8×NVIDIA H100 80GB，全量复制约 5,760 GPU-hours（约 30 天）。</p>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    // 自动生成目录
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    // 滚动高亮
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

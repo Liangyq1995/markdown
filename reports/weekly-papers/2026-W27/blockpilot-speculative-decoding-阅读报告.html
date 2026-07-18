@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BlockPilot 阅读报告 — 实例自适应推测解码策略</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; } a { color: var(--link); } strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; } li { margin: 0.3em 0; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>BlockPilot：实例自适应的扩散推测解码策略学习</h1>
+    <p><span class="tag">推测解码</span><span class="tag orange">扩散LLM</span><span class="tag green">推理加速</span><span class="tag purple">4.20×速度</span></p>
+    <p style="color:#6c7086;font-size:0.9em;">arXiv: 2606.31315 · 2026-06-30 · HuggingFace本周 #7 (78 upvotes)</p>
+
+    <table>
+      <tr><th>标题</th><td>BlockPilot: Instance-Adaptive Policy Learning for Diffusion-based Speculative Decoding</td></tr>
+      <tr><th>核心问题</th><td>在扩散模型推测解码中，动态预测每个输入样本的最优块大小，而非使用固定块大小</td></tr>
+      <tr><th>测试模型</th><td>Qwen3-4B（扩散语言模型）</td></tr>
+    </table>
+
+    <h2 id="overview">1. 核心问题与动机</h2>
+    <p>扩散式语言模型（Diffusion LM，如 MDLM、Plaid）与自回归 LLM 不同，它们在"块（Block）"为单位进行解码——每次并行预测 $k$ 个 token，然后接受或拒绝整个块。这种<strong>推测解码（Speculative Decoding）</strong>策略中，块大小 $k$ 是关键超参数。</p>
+    <p>现有方法使用<strong>固定块大小</strong>——但作者通过实验发现，不同输入样本的最优块大小差异显著：有的样本在 $k=8$ 时接受率最高，有的在 $k=3$ 时最佳。固定 $k$ 必然是次优的。</p>
+    <blockquote>
+      关键观察：最优块大小的分布集中在训练块大小附近，形成低维结构化决策空间——这使得用一个轻量策略网络预测最优 $k$ 成为可能。
+    </blockquote>
+
+    <h2 id="background">2. 背景：扩散推测解码</h2>
+    <pre class="mermaid">
+flowchart LR
+    A["输入 Prompt<br>Prefilling Stage"] --> B["生成块草稿<br>Draft Block of k tokens<br>并行预测"]
+    B --> C["验证模型评分<br>Verifier Scores"]
+    C --> D{"接受率检查<br>Accept Rate >= threshold?"}
+    D -->|"是"| E["接受此块<br>Accept Block"]
+    D -->|"否"| F["拒绝并回退<br>Reject and Fallback<br>减小 k"]
+    E & F --> G["继续下一块"]
+
+    style B fill:#2a2a3e,stroke:#89b4fa
+    style C fill:#2a2a3e,stroke:#fab387
+    </pre>
+
+    <h2 id="method">3. BlockPilot 方法</h2>
+    <h3>核心思路：一次预测，全程使用</h3>
+    <p>BlockPilot 在 <strong>Prefilling 阶段结束时</strong>，从 prefilling 的隐层表征中<strong>一次性预测最优块大小</strong> $k^*$，然后在整个生成过程中使用该 $k^*$：</p>
+    <p>$$k^{*} = \arg\max_{k \in \mathcal{K}} \pi_\phi(k | h_{\text{prefill}})$$</p>
+    <p>其中 $h_{\text{prefill}}$ 是 prefilling 阶段的汇聚表征，$\pi_\phi$ 是轻量策略网络（参数量极小），$\mathcal{K}$ 是候选块大小集合。</p>
+
+    <h3>策略网络设计</h3>
+    <ul>
+      <li>输入：prefilling 阶段的最后一层 CLS token 表征</li>
+      <li>网络：2-layer MLP（轻量，总参数 &lt;1M）</li>
+      <li>输出：候选块大小集合上的概率分布</li>
+      <li>训练：通过大量样本统计最优 $k^*$ 作为标签，监督训练策略网络</li>
+    </ul>
+    <p>由于预测只在 prefilling 结束时进行一次，<strong>额外推理开销接近零</strong>。</p>
+
+    <h2 id="experiment">5. 实验结果</h2>
+    <div id="chart-speedup" class="echarts-container" style="height:280px"></div>
+
+    <table>
+      <tr><th>方法</th><th>接受长度（Acceptance Length）</th><th>加速比（T=1）</th></tr>
+      <tr><td>固定块大小（最优固定 k）</td><td>4.51</td><td>3.62×</td></tr>
+      <tr><td>动态块大小（随机搜索）</td><td>5.12</td><td>3.89×</td></tr>
+      <tr><td><strong>BlockPilot（本文）</strong></td><td><strong>5.92</strong></td><td><strong>4.20×</strong></td></tr>
+    </table>
+
+    <p>在 Qwen3-4B 扩散语言模型上，BlockPilot 实现了 <strong>4.20× 推理加速</strong>，平均接受长度达到 5.92（每次接受近6个 token）。</p>
+
+    <h2 id="ablation">6. 消融实验与关键发现</h2>
+    <ul>
+      <li><strong>最优块大小的样本差异验证</strong>：对100个不同任务样本，最优 $k$ 从2到12不等，标准差约3.5——说明固定 $k$ 的确是重大优化机会</li>
+      <li><strong>Prefilling 表征的预测力</strong>：仅用 prefilling 表征即可预测最优 $k$，准确率约78%（Top-2 hit rate 92%）</li>
+      <li><strong>温度的影响</strong>：更高温度（T=1）下块大小差异更大，BlockPilot 的相对增益更显著</li>
+      <li><strong>策略网络轻量验证</strong>：2-layer MLP 与 Transformer 头性能相近，复杂度低得多</li>
+    </ul>
+
+    <h2 id="limitation">7. 局限性</h2>
+    <ul>
+      <li>需要收集大量样本的最优 $k$ 统计数据来训练策略网络</li>
+      <li>当前仅在 Qwen3-4B 上验证，对更大扩散 LM 的泛化性未知</li>
+      <li>固定"整个生成过程使用同一 $k$"的假设在超长生成中可能次优</li>
+    </ul>
+
+    <h2 id="insight">8. 核心洞见与读后评注</h2>
+    <blockquote>
+      <strong>关键洞见</strong>：推测解码中的块大小不是全局超参数，而是样本级参数。利用 prefilling 阶段信息预测样本最优策略，是一种无开销的动态优化手段，具有广泛的应用潜力。
+    </blockquote>
+    <p>BlockPilot 的思路与自回归解码中的 Speculative Decoding 有本质不同：它不只是用草稿模型加速，而是在推测策略层面进行实例级自适应。这种"元决策"（meta-decision）思路——在推理开始时用轻量网络决定后续策略——在 LLM 推理优化中是相对新颖的角度。</p>
+    <p>从系统角度，如果将此思路扩展，prefilling 阶段的信息可以用来预测更多推理策略：如推理步数、是否开启树搜索、采样温度等。这或许是一个值得深入研究的方向。</p>
+
+    <h2 id="ref">参考文献</h2>
+    <ul>
+      <li>[1] Hao Zhang et al. <em>BlockPilot: Instance-Adaptive Policy Learning for Diffusion-based Speculative Decoding</em>. arXiv:2606.31315, 2026.</li>
+      <li>[2] Chen et al. <em>Accelerating Large Language Model Decoding with Speculative Sampling</em>. 2023.</li>
+      <li>[3] Nie et al. <em>Masked Diffusion Language Models are Fast and Scalable Learners</em>. 2025.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const chart = echarts.init(document.getElementById('chart-speedup'));
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '推测解码加速比对比', textStyle: { color: '#89b4fa' } },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: ['固定块大小', '动态随机搜索', 'BlockPilot'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', min: 3, max: 5, axisLabel: { color: '#cdd6f4', formatter: '{value}×' } },
+      series: [{ type: 'bar', data: [3.62, 3.89, 4.20], itemStyle: { color: (p) => ['#45475a','#89b4fa','#a6e3a1'][p.dataIndex] }, label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}×' } }]
+    });
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id; a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

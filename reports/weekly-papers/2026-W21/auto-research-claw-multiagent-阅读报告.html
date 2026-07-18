@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoResearchClaw 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    em { color: #f9e2af; font-style: normal; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.8em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+    .badge { display: inline-block; background: var(--heading); color: #1e1e2e; font-weight: 700; font-size: 0.8em; padding: 2px 8px; border-radius: 10px; margin-right: 6px; }
+    .badge-green { background: var(--strong); }
+    .badge-orange { background: #fab387; }
+    .badge-purple { background: #cba6f7; }
+    .callout { background: #2a2a3e; border-left: 4px solid var(--heading); border-radius: 0 6px 6px 0; padding: 14px 18px; margin: 1.2em 0; }
+    .callout-warn { border-left-color: #fab387; }
+    .callout-success { border-left-color: var(--strong); }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .highlight-row td { background: #2d3250 !important; font-weight: 600; }
+    .check { color: var(--strong); }
+    .cross { color: #f38ba8; }
+    .partial { color: #fab387; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<!-- ─────────────── 标题区 ─────────────── -->
+<h1>AutoResearchClaw：自强化自主科研与人机协同框架</h1>
+<p style="color:#6c7086; font-size:0.9em;">arXiv: 2605.20025 &nbsp;|&nbsp; 2026-05-19 (v2: 2026-05-23) &nbsp;|&nbsp; cs.AI &nbsp;|&nbsp;
+<span class="badge badge-orange">Upvotes 185</span>
+<a href="https://github.com/aiming-lab/AutoResearchClaw" target="_blank">GitHub: aiming-lab/AutoResearchClaw</a>
+</p>
+
+<!-- ─────────────── 1. 论文信息表 ─────────────── -->
+<h2>1. 论文信息总览</h2>
+<table>
+  <tr><th style="width:140px">标题</th><td>AutoResearchClaw: Self-Reinforcing Autonomous Research with Human-AI Collaboration</td></tr>
+  <tr><th>核心问题</th><td>现有自主科研系统采用线性单智能体流水线，遇到执行失败即停止、跨次运行无法积累经验，如何构建<strong>可迭代、可自愈、可验证、可进化</strong>的多智能体自主研究框架？</td></tr>
+  <tr><th>主要贡献</th><td>提出 AutoResearchClaw：五大核心机制 + ARC-Bench 基准 + 七模式 HITL 消融实验</td></tr>
+  <tr><th>机构</th><td>UNC-Chapel Hill（主导）、UC Santa Cruz、CMU、NUS、UC Berkeley、Rutgers、NEC Labs、Meta、Stanford、Google、UW、Recrusive.com 等 12 所机构，36 位作者</td></tr>
+  <tr><th>代表性作者</th><td>Jiaqi Liu, Shi Qiu（共同一作）; Caiming Xiong, James Zou, Cihang Xie, Huaxiu Yao（通讯/资深）</td></tr>
+  <tr><th>核心结果</th><td>ARC-Bench（25 主题实验阶段基准）上超越 AI Scientist v2 <strong>54.7%</strong>；CoPilot 模式端到端论文接受率 <strong>87.5%</strong></td></tr>
+  <tr><th>开源地址</th><td><a href="https://github.com/aiming-lab/AutoResearchClaw">https://github.com/aiming-lab/AutoResearchClaw</a></td></tr>
+</table>
+
+<!-- ─────────────── 2. 核心问题与动机 ─────────────── -->
+<h2>2. 核心问题与动机</h2>
+
+<h3>2.1 自主 AI 科研的三大根本挑战</h3>
+<p>LLM 已能完成假设生成、代码实验、论文撰写等单环节任务，但真实科研是一个<strong>迭代闭环</strong>，而非从"想法"到"论文"的直线流程。现有系统在三个维度上存在根本性缺陷：</p>
+
+<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin:1.2em 0;">
+  <div class="callout">
+    <strong>挑战 1：单视角假设确认偏差</strong>
+    <p style="margin-top:6px; font-size:0.92em;">同一个 LLM 既提出假设又评估假设，缺乏结构性激励去否定自身想法。单智能体推理趋向于确认其初始判断，难以发现方案弱点。</p>
+  </div>
+  <div class="callout">
+    <strong>挑战 2：执行失败即终止</strong>
+    <p style="margin-top:6px; font-size:0.92em;">现有系统将实验失败视为终止信号，丢弃所有中间产物。真实研究中，失败本身包含诊断信息，是指导下一步的宝贵依据，而非终点。</p>
+  </div>
+  <div class="callout">
+    <strong>挑战 3：跨次运行无记忆</strong>
+    <p style="margin-top:6px; font-size:0.92em;">每次运行从零开始，重复上次已踩过的坑。缺乏跨轮次的经验积累机制，导致效率低下，也无法从历史错误中学习并建立防护。</p>
+  </div>
+</div>
+
+<h3>2.2 三个挑战的相互耦合</h3>
+<p>作者指出，三大挑战<strong>并非相互独立</strong>——更优质的假设减少了执行阶段的重大调整需求；更健壮的执行保留了可指导分析的中间结果；历史经验的注入则同时改善假设生成和实验设计。因此，需要在一个<strong>统一框架</strong>中同步解决三者，而非逐一修补。</p>
+
+<blockquote>
+"Automating scientific discovery requires more than generating papers from ideas. Real research is iterative: hypotheses are challenged from multiple perspectives, experiments fail and inform the next attempt, and lessons accumulate across cycles."<br>
+—— 论文摘要
+</blockquote>
+
+<!-- ─────────────── 3. 背景与相关工作 ─────────────── -->
+<h2>3. 背景与相关工作</h2>
+
+<h3>3.1 主流自主科研系统对比</h3>
+<p>下表复现自论文 Table 1，展示了当前六大主流系统在核心能力维度上的覆盖情况：</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>能力维度</th>
+      <th>AI Scientist v2</th>
+      <th>AI Co-Scientist</th>
+      <th>Agent Laboratory</th>
+      <th>MLR-Copilot</th>
+      <th>ResearchAgent</th>
+      <th><strong>AutoResearchClaw</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>端到端流水线</td><td class="check">✓</td><td class="partial">∼</td><td class="cross">✗</td><td class="partial">∼</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>真实实验执行</td><td class="check">✓</td><td class="cross">✗</td><td class="partial">∼</td><td class="check">✓</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>多智能体辩论</td><td class="cross">✗</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>自愈修复机制</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>Pivot/Refine 循环</td><td class="cross">✗</td><td class="partial">∼</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>跨轮次演化</td><td class="cross">✗</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>引用验证</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>结果可验证性</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>HITL 闸门</td><td class="cross">✗</td><td class="cross">✗</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>沙盒安全隔离</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="check"><strong>✓</strong></td></tr>
+    <tr><td>开源</td><td class="check">✓</td><td class="cross">✗</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check"><strong>✓</strong></td></tr>
+  </tbody>
+</table>
+
+<h3>3.2 关键前驱工作简析</h3>
+<ul>
+  <li><strong>AI Scientist / v2（Lu et al. 2025; Yamada et al. 2025）</strong>：端到端生成完整论文，但依赖单智能体推理，执行失败即中止，每次从零重启，缺少跨运行记忆。</li>
+  <li><strong>AI Co-Scientist（Gottweis et al. 2025）</strong>：引入多智能体辩论验证假设，但<em>不执行真实实验</em>，仅停留在假设探索层面。</li>
+  <li><strong>Agent Laboratory（Schmidgall et al. 2025）</strong>：允许用户定义反馈频率，报告发现人工参与每阶段可改善质量，但未验证结果真实性、未跨轮次积累经验。</li>
+  <li><strong>MLR-Copilot（Li et al. 2024）</strong>：面向机器学习研究，支持人工在执行阶段介入，但无自愈或演化机制。</li>
+  <li><strong>Reflexion / Self-Refine</strong>：单轮内自我改善，不支持跨 episode 持久化经验。</li>
+  <li><strong>SkillRL / EvolveR</strong>：跨任务持久技能库，但不针对科研场景的假设-实验循环。</li>
+</ul>
+
+<!-- ─────────────── 4. 系统架构总览 ─────────────── -->
+<h2>4. 系统架构总览</h2>
+
+<h3>4.1 三阶段 23 步流水线</h3>
+<p>AutoResearchClaw 将全流程组织为三大阶段（<strong>Discovery → Experimentation → Writing</strong>），共 23 个形式化步骤，每步声明 JSON 输入/输出契约并支持基于检查点的断点续运行。五大机制贯穿所有阶段。</p>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph DISC["Phase A-C  Discovery"]
+        S1["1 Topic Init\nSMART goal"] --> S2["2 Problem\nDecompose"]
+        S2 --> S3["3-4 Literature\nCollect"]
+        S3 --> S4["5 Literature\nScreen"]
+        S4 --> S5["6 Knowledge\nExtract"]
+        S5 --> S6["7 Synthesis\nGap analysis"]
+    end
+
+    subgraph HYP["Phase D  Hypothesis"]
+        S7["8 Hypothesis Gen\nDebate Panel 1\nInnovator / Pragmatist / Contrarian"]
+        S8["9 Experiment Design\nexp_plan.yaml"]
+        S7 --> S8
+    end
+
+    subgraph EXP["Phase E-F  Experimentation"]
+        S9["10 Code Generation\nBeast / Agent / Legacy cascade"]
+        S10["11 Resource Planning"]
+        S11["12 Experiment Run\nDocker sandbox"]
+        S12["13 Iterative Refine\nSelf-Healing"]
+        S13["14 Result Analysis\nDebate Panel 2\nOptimist / Skeptic / Methodologist"]
+        S14["15 Research Decision\nProceed / Refine / Pivot"]
+        S9 --> S10 --> S11 --> S12 --> S13 --> S14
+    end
+
+    subgraph WRITE["Phase G-H  Writing"]
+        S15["16 Paper Outline"]
+        S16["17 Paper Draft\nVerified registry tables"]
+        S17["18 Peer Review"]
+        S18["19 Paper Revision"]
+        S19["20 Quality Gate"]
+        S20["21 Knowledge Archive\nCross-run lesson store"]
+        S21["22 Export Publish\nLaTeX + BibTeX"]
+        S22["23 Citation Verify\n4-layer API"]
+        S15 --> S16 --> S17 --> S18 --> S19 --> S20 --> S21 --> S22
+    end
+
+    DISC --> HYP --> EXP
+    S14 -->|Pivot| S7
+    S14 -->|Refine| S9
+    S14 -->|Proceed| WRITE
+
+    HITL["HITL Gates\n7 Intervention Modes"]
+    EVOL["Cross-Run Evolution\nTime-decayed lesson store"]
+
+    HITL -.->|"Gate-Only checkpoints"| S4
+    HITL -.->|"CoPilot high-leverage"| S7
+    HITL -.->|"CoPilot high-leverage"| S8
+    HITL -.->|"CoPilot high-leverage"| S13
+    HITL -.->|"Quality gate"| S19
+    EVOL -.->|"Inject lessons"| S7
+    EVOL -.->|"Inject lessons"| S9
+    EVOL -.-> S20
+</pre>
+
+<h3>4.2 五大机制交互关系</h3>
+<pre class="mermaid">
+flowchart LR
+    D["Multi-Agent Debate\nImproves hypothesis quality\nand result analysis"]
+    H["Self-Healing Executor\nPivot / Refine loop\nKeeps pipeline moving"]
+    V["Verifiable Reporting\nNumeric registry\n4-layer citation check"]
+    C["Human-in-the-Loop\n7 intervention modes\nSmartPause"]
+    E["Cross-Run Evolution\nTime-decayed lessons\nFuture safeguards"]
+
+    D -->|"Better hypotheses\nfewer major pivots"| H
+    H -->|"Preserved artifacts\nricher evidence"| V
+    V -->|"Grounded claims\ntrust for HITL"| C
+    C -->|"Expert feedback\nas high-quality lessons"| E
+    E -->|"Injected lessons\nconstrains hypotheses"| D
+    H -->|"Failure records\nbecome lessons"| E
+</pre>
+
+<!-- ─────────────── 5. 关键技术详解 ─────────────── -->
+<h2>5. 关键技术详解</h2>
+
+<!-- 5.1 多智能体辩论 -->
+<h3>5.1 多智能体辩论机制</h3>
+<p>AutoResearchClaw 在流水线的<strong>两个关键节点</strong>（假设生成阶段 Stage 8、结果分析阶段 Stage 14）启动结构化辩论面板。每个面板由 $K=3$ 个角色互补的智能体 + 1 个综合者构成。</p>
+
+<p><strong>假设阶段辩论面板（ML 场景）：</strong></p>
+<ul>
+  <li><span class="badge">Innovator</span> 提出跨领域类比、挑战常规假设的高风险方向</li>
+  <li><span class="badge badge-orange">Pragmatist</span> 评估硬件与时间预算下的可行性，过滤不切实际方案</li>
+  <li><span class="badge badge-purple">Contrarian</span> 主动寻找弱点与混淆因素，充当"反驳者"</li>
+</ul>
+
+<p><strong>综合产出：</strong>2-4 个可证伪假设，每个附带可测性标准与所需基线列表。</p>
+
+<p><strong>结果分析阶段辩论面板（ML 场景）：</strong></p>
+<ul>
+  <li><span class="badge">Optimist</span> 挖掘有力发现，阐述正面贡献</li>
+  <li><span class="badge badge-orange">Skeptic</span> 质疑统计显著性，标记潜在混淆</li>
+  <li><span class="badge badge-purple">Methodologist</span> 评估可复现性，检查数据泄露风险</li>
+</ul>
+
+<p>HEP-ph（高能物理）场景下角色自动替换为 Theorist / Phenomenologist / Experimentalist，实现域适配。</p>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant Coord as Coordinator
+    participant Inn as Innovator
+    participant Prag as Pragmatist
+    participant Cont as Contrarian
+    participant Synth as Synthesizer
+
+    Coord->>Inn: Provide topic and context
+    Coord->>Prag: Provide topic and context
+    Coord->>Cont: Provide topic and context
+
+    Inn-->>Coord: High-risk hypothesis H1
+    Prag-->>Coord: Feasible hypothesis H2
+    Cont-->>Coord: Skeptical hypothesis H3
+
+    Coord->>Inn: Review H2, H3 - find weaknesses
+    Coord->>Prag: Check H1 feasibility under budget
+    Coord->>Cont: Challenge H2 assumptions
+
+    Inn-->>Coord: H2 needs clarification on scope
+    Prag-->>Coord: H1 exceeds GPU budget, suggest pruning
+    Cont-->>Coord: H3 confound: dataset bias risk
+
+    Coord->>Synth: Integrate all perspectives
+    Synth-->>Coord: 2-4 falsifiable hypotheses with testability criteria
+    Note over Synth,Coord: Each hypothesis: testability criteria + required baselines
+</pre>
+
+<!-- 5.2 自愈执行器 -->
+<h3>5.2 自愈执行器与 Pivot/Refine 循环</h3>
+<p>实验失败在真实科研中是常态。AutoResearchClaw 将失败视为<strong>诊断信息</strong>而非终止信号，通过级联代码生成 + 沙盒隔离 + Pivot/Refine 决策循环保持流水线持续运转。</p>
+
+<h4 style="color:var(--heading); margin:1em 0 0.4em;">级联代码生成策略</h4>
+<p>系统以六维评分函数计算实验复杂度标量 $c \in [0, 1]$：</p>
+<p>$$c = f(\text{arch\_depth},\ \text{file\_count},\ \text{domain\_difficulty},\ \text{dep\_chains},\ \text{hist\_failure\_rate},\ \text{cf\_complexity})$$</p>
+<p>当 $c \gt \tau$（论文设 $\tau = 0.6$）时，调用外部 AI 编码智能体（Beast Mode）；当 $c \leq \tau$ 时使用内置多阶段 CodeAgent（先生成每文件蓝图 → 按依赖顺序生成代码 → AST 派生摘要维护跨文件一致性）；任意一层失败自动降级到下一层。</p>
+
+<h4 style="color:var(--heading); margin:1em 0 0.4em;">三阶段网络隔离沙盒</h4>
+<ul>
+  <li><strong>Phase 0</strong>：开启网络，用于依赖安装</li>
+  <li><strong>Phase 1</strong>：开启网络，用于数据获取</li>
+  <li><strong>Phase 2</strong>：<em>完全断网</em>，实验执行期间防止结果外泄和预计算结果下载</li>
+</ul>
+<p>度量汇报通过只读评估器（evaluation harness）独占进行——生成代码无法重定义自身的测量基础设施，从根本上杜绝结果造假。</p>
+
+<h4 style="color:var(--heading); margin:1em 0 0.4em;">Pivot/Refine 决策流程</h4>
+
+<pre class="mermaid">
+flowchart TD
+    A["Execute Experiment in Sandbox\nPhase 2: Network disabled"] --> B{Execution outcome?}
+
+    B -->|Success| C["Collect results.json\nRun evaluation harness"]
+    C --> D{Result quality?}
+    D -->|"Strong evidence\nSupports hypothesis"| PROC["Proceed\nMove to Result Analysis Stage 14"]
+    D -->|"Weak results\nDirection still sound"| REF["Refine Decision"]
+    D -->|"Degenerate / collapsed\nFundamental flaw"| PIV["Pivot Decision"]
+
+    B -->|Runtime error| E["Parse failure signature\nIdentify error type"]
+    E --> F["Generate targeted fix\nRepair budget tracking"]
+    F -->|nr &lt; Nr| A
+    F -->|nr >= Nr| G{Direction viable?}
+    G -->|Yes| REF
+    G -->|No| PIV
+
+    REF["Refine\nAdjust experimental setup\nRetry with fix"] -->|nr &lt; Nr| A
+    REF -->|nr >= Nr| PIV
+
+    PIV["Pivot\nnp &lt; Np: Return to Stage 8\nRecord failure as new evidence"] -->|np &lt; Np| HYP["Stage 8: Hypothesis Gen\nFailure informs new hypothesis"]
+    PIV -->|np >= Np| FAIL["Mark topic as failed\nExtract lessons for Evolution"]
+
+    style PROC fill:#2d3250,stroke:#89b4fa
+    style FAIL fill:#2d1a1a,stroke:#f38ba8
+    style PIV fill:#2d2a1a,stroke:#fab387
+    style REF fill:#1a2d1a,stroke:#a6e3a1
+</pre>
+
+<div class="callout callout-success">
+<strong>关键洞见：</strong>允许失败可恢复（Recoverable failure）使系统得以追求<em>更高风险的假设</em>。在脆弱执行模型下会被放弃的大胆方向，在自愈框架下得以持续推进。
+</div>
+
+<!-- 5.3 可验证结果报告 -->
+<h3>5.3 可验证结果报告</h3>
+<p>LLM 生成的论文面临两类完整性威胁：<strong>捏造实验数字</strong>与<strong>幻觉引用</strong>。AutoResearchClaw 在两个粒度上设置确定性验证闸门。</p>
+
+<table>
+  <thead>
+    <tr><th style="width:160px">机制</th><th>实现细节</th><th>违规处理</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>数字注册表</strong></td>
+      <td>实验运行期间构建白名单注册表：每个条件的均值、标准差、每个随机种子的独立测量值。撰写阶段预构建的 LaTeX 表格<em>仅</em>从注册表填充并直接注入生成提示；生成后，验证器重新提取所有数字声明并逐条比对注册表（按条件范围比对，防止跨条件假阳性）</td>
+      <td>严格章节（摘要、结果、实验）中无法匹配注册表的数字触发<strong>文档拒绝</strong>；其他章节替换为可见占位符</td>
+    </tr>
+    <tr>
+      <td><strong>四层引用验证</strong></td>
+      <td>① DOI 解析（CrossRef）→ ② 模糊标题匹配（OpenAlex）→ ③ arXiv ID 查找 → ④ Semantic Scholar 兜底；最后用 LLM 相关性分类器将每条引用归入 Verified / Suspicious / Hallucinated</td>
+      <td>Hallucinated 类引用在文稿定稿前<strong>全部删除</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- 5.4 HITL 七种模式 -->
+<h3>5.4 Human-in-the-Loop 七种介入模式</h3>
+<p>完全自动化在关键决策点会损失质量；逐步监督则消除了自动化的效率收益。有用区域在两个极端之间：<em>人类专业判断在少数高杠杆决策点最有价值</em>，而非均匀分布在全流水线。AutoResearchClaw 提供七种模式供研究者灵活选择。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:150px">模式</th>
+      <th>介入点数</th>
+      <th>触发位置</th>
+      <th>设计目标</th>
+      <th>实验结果（端到端，10题）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Full-Auto</strong><br><span style="color:#6c7086;font-size:0.85em">全自动</span></td>
+      <td style="text-align:center">0</td>
+      <td>——</td>
+      <td>完全无人工介入，测量系统设计的基础性能</td>
+      <td>Valid 8/10, Mean Q <strong>4.03</strong>, Accept <strong>25%</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Gate-Only</strong><br><span style="color:#6c7086;font-size:0.85em">闸门模式</span></td>
+      <td style="text-align:center">3</td>
+      <td>文献筛选（Stage 5）、实验设计（Stage 9）、最终质量审查（Stage 20）</td>
+      <td>最小人工介入下的有效改善；成本效益最优的中间方案</td>
+      <td>Valid <strong>10/10</strong>, Mean Q <strong>5.03</strong>, Accept <strong>50%</strong></td>
+    </tr>
+    <tr class="highlight-row">
+      <td><strong>CoPilot</strong><br><span style="color:#6c7086;font-size:0.85em">协驾模式</span></td>
+      <td style="text-align:center">6</td>
+      <td>假设共创（Idea Workshop）、实验设计审查（Baseline Navigator）、结果解读、论文协作撰写（Paper Co-Writer）、同行评审、质量闸门</td>
+      <td>在 6 个高杠杆决策点集中专家判断，早期修复可行性、后期保障声明忠实性</td>
+      <td>Valid 8/10, Mean Q <strong style="color:#a6e3a1">7.27</strong>, Accept <strong style="color:#a6e3a1">87.5%</strong> ← 最优</td>
+    </tr>
+    <tr>
+      <td><strong>Thorough</strong><br><span style="color:#6c7086;font-size:0.85em">全程可见</span></td>
+      <td style="text-align:center">8</td>
+      <td>所有阶段边界（无需逐步审批，提供可见性）</td>
+      <td>研究者全程可见但不干预每个子步骤</td>
+      <td>Valid 7/10, Mean Q <strong>4.86</strong>, Accept <strong>42.9%</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Step-by-Step</strong><br><span style="color:#6c7086;font-size:0.85em">逐步审批</span></td>
+      <td style="text-align:center">23</td>
+      <td>每个阶段均需显式审批</td>
+      <td>最大监督力度的基准对照；揭示过度监督的代价</td>
+      <td>Valid 10/10, Mean Q <strong>5.19</strong>, Accept <strong>50%</strong>, 29次介入</td>
+    </tr>
+    <tr>
+      <td><strong>Pre-Experiment</strong><br><span style="color:#6c7086;font-size:0.85em">实验前介入</span></td>
+      <td style="text-align:center">3</td>
+      <td>文献筛选、假设生成（Stage 8）、实验设计（Stage 9）——仅早期流水线</td>
+      <td>消融：隔离早期阶段介入的贡献（修复研究设计可行性）</td>
+      <td>Valid 8/10, Mean Q <strong>4.28</strong>, Accept <strong>37.5%</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Post-Experiment</strong><br><span style="color:#6c7086;font-size:0.85em">实验后介入</span></td>
+      <td style="text-align:center">3</td>
+      <td>结果分析（Stage 14）、论文草稿（Stage 17）、质量闸门（Stage 20）——仅后期流水线</td>
+      <td>消融：隔离后期阶段介入的贡献（保障声明忠实性）</td>
+      <td>Valid 6/10, Mean Q <strong>5.08</strong>, Accept <strong>50%</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 style="color:var(--heading); margin:1em 0 0.4em;">SmartPause 自适应暂停机制</h4>
+<p>SmartPause 是 HITL 系统内嵌的动态介入机制，独立于七种固定模式。系统在每个阶段监测估计不确定性：当不确定性超过学习阈值时自动暂停并呈现给研究者。阈值根据历史审批模式自适应调整——研究者频繁覆盖的阶段更频繁暂停；审批率持续高的阶段自主推进。</p>
+
+<!-- 5.5 跨轮次演化 -->
+<h3>5.5 跨轮次演化机制</h3>
+<p>跨轮次演化是 AutoResearchClaw"自强化（Self-Reinforcing）"名称的来源。系统维护一个<strong>持久化经验库</strong>，将过去每次运行的失败转化为未来运行的防护。</p>
+
+<h4 style="color:var(--heading); margin:1em 0 0.4em;">经验提取与注入</h4>
+<p>每次运行结束后，系统从四个来源提取结构化经验：修复尝试记录、Pivot/Refine 决策历史、HITL 闸门反馈、验证结果报告。每条经验记录：类别（category）、严重性分数 $s(l) \in (0, 1]$、推荐缓解措施。</p>
+
+<h4 style="color:var(--heading); margin:1em 0 0.4em;">时间衰减权重公式</h4>
+<p>新运行开始时，相关经验按类别检索并以时间衰减权重排序：</p>
+
+<p>$$w(l) = s(l) \cdot \exp\left( -\ln 2 \cdot \frac{\Delta t}{T_{1/2}} \right)$$</p>
+
+<p>其中 $\Delta t$ 为经验记录时刻至当前的时间间隔，$T_{1/2}$ 为半衰期超参数（默认 30 天），控制历史经验影响力的衰减速率。</p>
+
+<div class="callout">
+<ul>
+  <li>近期失败对后续运行形成<strong>强约束</strong>（权重接近 $s(l)$）</li>
+  <li>已完成、成功的研究方向逐渐<strong>淡出</strong>（权重随时间指数衰减）</li>
+  <li>以<strong>自然语言覆盖层</strong>注入提示，无需模型微调，适用于任意 LLM 后端</li>
+</ul>
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1 — AutoResearchClaw 主流程（含跨轮次演化）</div>
+  <p><span class="kw">Input:</span> Research idea <span class="var">I</span>, lesson store <span class="var">L</span>, max pivots <span class="num">Np=2</span>, max refines <span class="num">Nr=10</span></p>
+  <p><span class="kw">Ensure:</span> Verified paper <span class="var">P</span>, updated lesson store <span class="var">L'</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Stage 1: Domain detection and lesson injection</span></p>
+  <p style="padding-left:1.5em">Detect hardware profile; detect domain <span class="var">D</span> via cascade (override → keyword → LLM)</p>
+  <p style="padding-left:1.5em">Select prompt bank <span class="var">B(D)</span>; inject relevant lessons from <span class="var">L</span> with time-decayed weights</p>
+  <p style="padding-left:1.5em">Scope topic; retrieve &amp; screen literature; synthesise knowledge cards</p>
+  <p style="padding-left:1.5em"><span class="var">np</span> ← <span class="num">0</span></p>
+  <p style="padding-left:1.5em"><span class="kw">repeat</span></p>
+  <p style="padding-left:3em"><span class="cm">// Debate Panel 1: Hypothesis generation</span></p>
+  <p style="padding-left:3em"><span class="fn">[Debate]</span> K=3 agents (Innovator/Pragmatist/Contrarian) → hypotheses <span class="var">H</span></p>
+  <p style="padding-left:3em">Design experiments from <span class="var">H</span>; score complexity <span class="var">c</span>; select generator (Beast→Agent→Legacy)</p>
+  <p style="padding-left:3em">Validate code: AST checks, import verification, ablation-identity detection</p>
+  <p style="padding-left:3em"><span class="var">nr</span> ← <span class="num">0</span></p>
+  <p style="padding-left:3em"><span class="kw">repeat</span></p>
+  <p style="padding-left:4.5em">Execute in Docker sandbox (3-phase network isolation)</p>
+  <p style="padding-left:4.5em"><span class="kw">while</span> experiment fails and repair budget remains <span class="kw">do</span></p>
+  <p style="padding-left:6em">Parse failure signature; generate targeted fix; re-execute</p>
+  <p style="padding-left:4.5em"><span class="kw">end while</span></p>
+  <p style="padding-left:4.5em"><span class="cm">// Debate Panel 2: Result analysis</span></p>
+  <p style="padding-left:4.5em"><span class="fn">[Debate]</span> K=3 agents (Optimist/Skeptic/Methodologist) → result analysis</p>
+  <p style="padding-left:4.5em">Decide <span class="var">d</span> ∈ {Proceed, Refine, Pivot}; <span class="var">nr</span> ← <span class="var">nr</span> + <span class="num">1</span></p>
+  <p style="padding-left:3em"><span class="kw">until</span> <span class="var">d</span> ≠ Refine or <span class="var">nr</span> ≥ <span class="num">Nr</span></p>
+  <p style="padding-left:3em"><span class="var">np</span> ← <span class="var">np</span> + <span class="num">1</span></p>
+  <p style="padding-left:1.5em"><span class="kw">until</span> <span class="var">d</span> ≠ Pivot or <span class="var">np</span> ≥ <span class="num">Np</span></p>
+  <p style="padding-left:1.5em">Build verified registry <span class="var">R</span>; draft paper with tables from <span class="var">R</span>; review → revise</p>
+  <p style="padding-left:1.5em">Verify numeric claims; verify citations via 4-layer API</p>
+  <p style="padding-left:1.5em"><span class="cm">// Cross-run evolution: update lesson store</span></p>
+  <p style="padding-left:1.5em">Extract lessons; update <span class="var">L</span> → <span class="var">L'</span> with time-decayed weights <span class="fn">w(l)</span></p>
+  <p><span class="kw">return</span> <span class="var">P</span>, verification reports, <span class="var">L'</span></p>
+</div>
+
+<!-- ─────────────── 6. 实验结果 ─────────────── -->
+<h2>6. 实验结果</h2>
+
+<h3>6.1 ARC-Bench 基准设计</h3>
+<p>论文引入 <strong>ARC-Bench</strong>，一个专注于实验阶段的新基准：</p>
+<ul>
+  <li><strong>ML 核心集（ML01–ML25）</strong>：25 个机器学习主题，覆盖表格 ML、优化、降维、NLP、AutoML、GP 核、主题模型、半监督学习、动力学系统、异常检测、特征选择、因果发现、排序学习等</li>
+  <li><strong>科学领域扩展集（20 主题）</strong>：高能物理（P01–P10）、系统生物学（B01–B07）、统计学（S01–S03）</li>
+  <li><strong>评分维度</strong>：代码开发（CD）: 代码执行（CE）: 结果分析（RA）= 25:25:50，RA 双倍权重因其最能体现科学推理质量</li>
+  <li><strong>评估严格性</strong>：两个独立智能体审阅者并行运行严格评判，分歧超过 $|\Delta| \gt 0.20$ 时重新裁决</li>
+</ul>
+
+<h3>6.2 实验阶段基准对比（Table 2）</h3>
+<div id="chart-main" class="echarts-container" style="height:360px"></div>
+<script>
+echarts.init(document.getElementById('chart-main')).setOption({
+  backgroundColor: '#2a2a3e',
+  title: { text: 'ARC-Bench 实验阶段评分（25题，CD:CE:RA=25:25:50）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 10 },
+  tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+  legend: { data: ['代码开发 CD', '代码执行 CE', '结果分析 RA', '综合得分'], textStyle: { color: '#cdd6f4' }, bottom: 0 },
+  grid: { top: 50, left: 60, right: 30, bottom: 55 },
+  xAxis: {
+    type: 'category',
+    data: ['ARC\n(CoPilot)', 'ARC\n(Full-Auto)', 'AIDE-ML', 'AI Scientist v2'],
+    axisLabel: { color: '#cdd6f4', interval: 0 }
+  },
+  yAxis: { type: 'value', min: 0, max: 1, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+  series: [
+    { name: '代码开发 CD', type: 'bar', barGap: '10%', data: [0.968, 0.938, 0.958, 0.712], itemStyle: { color: '#89b4fa' } },
+    { name: '代码执行 CE', type: 'bar', data: [0.578, 0.562, 0.415, 0.442], itemStyle: { color: '#89dceb' } },
+    { name: '结果分析 RA', type: 'bar', data: [0.523, 0.442, 0.336, 0.261], itemStyle: { color: '#cba6f7' } },
+    { name: '综合得分', type: 'bar', data: [0.648, 0.596, 0.511, 0.419], itemStyle: { color: '#a6e3a1' } }
+  ]
+});
+</script>
+
+<table>
+  <thead>
+    <tr><th>框架</th><th>代码开发 CD</th><th>代码执行 CE</th><th>结果分析 RA</th><th>综合得分</th><th>vs. AI Sci.v2</th></tr>
+  </thead>
+  <tbody>
+    <tr class="highlight-row"><td><strong>AutoResearchClaw (CoPilot)</strong></td><td><strong>0.968</strong></td><td><strong>0.578</strong></td><td><strong>0.523</strong></td><td><strong>0.648</strong></td><td><strong>+54.7%</strong></td></tr>
+    <tr><td>AutoResearchClaw (Full-Auto)</td><td>0.938</td><td>0.562</td><td>0.442</td><td>0.596</td><td>+42.2%</td></tr>
+    <tr><td>AIDE-ML</td><td>0.958</td><td>0.415</td><td>0.336</td><td>0.511</td><td>+21.9%</td></tr>
+    <tr><td>AI Scientist v2</td><td>0.712</td><td>0.442</td><td>0.261</td><td>0.419</td><td>基准线</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-success">
+<strong>结果分析（RA）差距最显著：</strong>AutoResearchClaw (CoPilot) 的 RA 得分 0.523 对比 AI Scientist v2 的 0.261，相对提升 <strong>100.4%</strong>。这一维度评估结论是否与假设对齐、表格数字是否有据可查、局限性是否诚实报告——直接体现了多智能体结果阶段辩论和验证注册表的核心价值。
+</div>
+
+<h3>6.3 跨领域覆盖（Table 4）</h3>
+<table>
+  <thead>
+    <tr><th>框架</th><th>系统生物学 B01-B07</th><th>统计学 S01-S03</th><th>高能物理 P01-P10</th><th>综合（20题）</th></tr>
+  </thead>
+  <tbody>
+    <tr class="highlight-row"><td><strong>AutoResearchClaw (CoPilot)</strong></td><td><strong>0.912</strong></td><td><strong>0.898</strong></td><td><strong>0.489</strong></td><td><strong>0.867</strong></td></tr>
+    <tr><td>AIDE-ML</td><td><span class="cross">✗ 安装失败</span></td><td>0.452</td><td><span class="cross">✗ 安装失败</span></td><td>0.090</td></tr>
+    <tr><td>AI Scientist v2</td><td><span class="cross">✗ 安装失败</span></td><td>0.418</td><td><span class="cross">✗ 安装失败</span></td><td>0.084</td></tr>
+  </tbody>
+</table>
+
+<p>AIDE-ML 和 AI Scientist v2 在高能物理和系统生物学任务上因无法安装所需专业软件栈（MadGraph5、COBRApy 等）产出为零。AutoResearchClaw 通过领域特定沙盒智能体（搭载相应技能包）弥补了这一差距。</p>
+
+<!-- ─────────────── 7. 消融实验 ─────────────── -->
+<h2>7. 消融实验</h2>
+
+<h3>7.1 HITL 介入深度消融</h3>
+<p>在 10 个 ARC-Bench 主题上运行七种介入模式端到端评估（想法到完整论文），论文质量 1–10 分，接受线为 5 分。</p>
+
+<div id="chart-hitl" class="echarts-container" style="height:360px"></div>
+<script>
+(function(){
+  var chart = echarts.init(document.getElementById('chart-hitl'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'HITL 七种模式端到端对比（10题）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 10 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['论文质量均值（1-10）', '接受率（%）'], textStyle: { color: '#cdd6f4' }, bottom: 0 },
+    grid: { top: 50, left: 60, right: 30, bottom: 55 },
+    xAxis: {
+      type: 'category',
+      data: ['Full-Auto\n(0次)', 'Pre-Exp\n(3次)', 'Gate-Only\n(3次)', 'Post-Exp\n(3次)', 'Thorough\n(8次)', 'Step-by-Step\n(23次)', 'CoPilot\n(6次)'],
+      axisLabel: { color: '#cdd6f4', interval: 0, fontSize: 11 }
+    },
+    yAxis: [
+      { type: 'value', name: '质量分', min: 0, max: 10, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+      { type: 'value', name: '接受率%', min: 0, max: 100, axisLabel: { color: '#cdd6f4', formatter: '{value}%' } }
+    ],
+    series: [
+      {
+        name: '论文质量均值（1-10）', type: 'bar', yAxisIndex: 0,
+        data: [
+          { value: 4.03, itemStyle: { color: '#89b4fa' } },
+          { value: 4.28, itemStyle: { color: '#89b4fa' } },
+          { value: 5.03, itemStyle: { color: '#89b4fa' } },
+          { value: 5.08, itemStyle: { color: '#89b4fa' } },
+          { value: 4.86, itemStyle: { color: '#89b4fa' } },
+          { value: 5.19, itemStyle: { color: '#89b4fa' } },
+          { value: 7.27, itemStyle: { color: '#a6e3a1' } }
+        ]
+      },
+      {
+        name: '接受率（%）', type: 'line', yAxisIndex: 1,
+        data: [25.0, 37.5, 50.0, 50.0, 42.9, 50.0, 87.5],
+        lineStyle: { color: '#fab387', width: 2 },
+        itemStyle: { color: '#fab387' },
+        symbol: 'circle', symbolSize: 8
+      }
+    ]
+  });
+})();
+</script>
+
+<div class="callout callout-warn">
+<strong>关键发现：更多介入并不单调提升质量。</strong>
+CoPilot（6次介入）达到最高质量均值 7.27 和接受率 87.5%；Step-by-Step（23次介入）仅达 5.19 / 50%。原因：Step-by-Step 在非关键阶段的"批准"操作引入噪声却无信息增量，而 CoPilot 将专家判断集中在边际影响最大的节点。
+</div>
+
+<h3>7.2 组件贡献消融（Table 5）</h3>
+
+<div id="chart-ablation" class="echarts-container" style="height:320px"></div>
+<script>
+(function(){
+  var chart = echarts.init(document.getElementById('chart-ablation'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '组件消融实验（Full-Auto 模式，best-of-3，10题）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 10 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['完成题数/10', '论文质量均值', '接受数/完成数'], textStyle: { color: '#cdd6f4' }, bottom: 0 },
+    grid: { top: 50, left: 60, right: 30, bottom: 55 },
+    xAxis: {
+      type: 'category',
+      data: ['Full ARC', 'w/o Debate', 'w/o Self-Heal', 'w/o Evolution', 'w/o Verify', 'w/o Debate\n+Heal'],
+      axisLabel: { color: '#cdd6f4', interval: 0 }
+    },
+    yAxis: { type: 'value', min: 0, max: 10, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: '完成题数/10', type: 'bar', data: [10, 10, 6, 9, 10, 4], itemStyle: { color: '#89b4fa' } },
+      { name: '论文质量均值', type: 'bar', data: [5.62, 4.25, 4.83, 5.14, 5.48, 3.47], itemStyle: { color: '#a6e3a1' } },
+      { name: '接受数/完成数', type: 'bar', data: [3, 1, 1, 2, 5, 0], itemStyle: { color: '#fab387' } }
+    ]
+  });
+})();
+</script>
+
+<table>
+  <thead>
+    <tr><th>配置</th><th>完成题数</th><th>质量均值</th><th>接受数</th><th>数据捏造</th><th>主要影响</th></tr>
+  </thead>
+  <tbody>
+    <tr class="highlight-row"><td><strong>Full AutoResearchClaw</strong></td><td>10/10</td><td><strong>5.62</strong></td><td>3/10</td><td class="cross">无</td><td>基准线</td></tr>
+    <tr><td>w/o Debate</td><td>10/10</td><td>4.25 (−1.37)</td><td>1/10</td><td class="cross">无</td><td>质量最大贡献者；Pragmatist 缺失 → 假设不可行；Skeptic 缺失 → 结论过度乐观</td></tr>
+    <tr><td>w/o Self-Healing</td><td>6/10 (−4)</td><td>4.83</td><td>1/6</td><td class="cross">无</td><td>完成率最大贡献者；第一个未恢复的运行时错误即终止，存活主题偏向简单题</td></tr>
+    <tr><td>w/o Evolution</td><td>9/10 (−1)</td><td>5.14 (−0.48)</td><td>2/10</td><td class="cross">无</td><td>中等可靠性损失；主要作用是避免已知失败模式，而非提升质量上限</td></tr>
+    <tr><td>w/o Verification ‡</td><td>10/10</td><td>5.48‡</td><td>5/10‡</td><td class="check">3篇含捏造数据</td><td>验证闸门是科学完整性的最后防线；去除后接受率虚增，人工审查发现数字无据可查</td></tr>
+    <tr><td>w/o Debate &amp; Healing</td><td>4/10 (−6)</td><td>3.47 (−2.15)</td><td>0/4</td><td class="cross">无</td><td>超加性交互：辩论生成高风险假设，自愈保障其能执行完成；两者同时缺失崩溃最严重</td></tr>
+  </tbody>
+</table>
+
+<p>‡ 注：去掉验证闸门后接受率数字因含捏造数据而虚高，不具参考价值。</p>
+
+<div class="callout">
+<strong>超加性交互（Super-additive interaction）：</strong>同时去除辩论与自愈使完成率降至 4/10，质量降至 3.47，接受率降为 0。这种超加性源于机制的相互依赖：辩论催生高风险假设需要自愈保驾护航；自愈修复的实验若基于拙劣假设则毫无价值。
+</div>
+
+<!-- ─────────────── 8. 核心洞见与读后评注 ─────────────── -->
+<h2>8. 核心洞见与读后评注</h2>
+
+<h3>8.1 "精准介入"原则：颠覆全自动化的直觉</h3>
+<p>本文最具颠覆性的发现是：<strong>介入次数与质量并非单调正相关</strong>。CoPilot（6次介入，质量 7.27，接受率 87.5%）全面胜过 Step-by-Step（23次介入，质量 5.19，接受率 50%）。这从经验上证明了一个重要设计原则——</p>
+<blockquote>
+精准定位高杠杆决策点（high-leverage decision points），在这些节点集中专家判断，其效果优于均匀分布的全程监督。
+</blockquote>
+<p>这对 AI 系统设计有广泛启发：<em>系统应帮助人类识别"哪里的判断最重要"，而非简单地在更多地方请求人类确认</em>。SmartPause 机制正是这一原则的自适应实现。</p>
+
+<h3>8.2 失败是信息而非终点：执行哲学的转变</h3>
+<p>传统系统将失败视为错误状态并中止，AutoResearchClaw 的 Pivot/Refine 设计将失败纳入正常研究循环。这实际上是将科学研究的内在逻辑编码入系统设计：<em>失败的实验仍然产出信息——关于方向不可行的信息</em>。组件消融数据佐证了这一点：去除自愈后完成率从 10/10 降至 6/10，即使给予 3 次重试机会也如此。</p>
+
+<h3>8.3 可验证性的代价与价值</h3>
+<p>验证消融揭示了一个深刻的权衡：去除验证闸门后接受率从 3/10 升至 5/10——表面上更好，但人工审查发现其中 3 篇含有捏造数字。<strong>验证闸门是科学完整性的最后防线，其代价（降低表观接受率）正是真实科学标准的价值</strong>。这是自主科研系统安全性的关键设计考量。</p>
+
+<h3>8.4 跨领域泛化：领域适配的架构选择</h3>
+<p>通过沙盒化领域特定智能体（HEP 采用 MadGraph/Pythia8 技能包，生物学采用 COBRApy/BiGG 技能包），AutoResearchClaw 实现了跨领域科研覆盖。竞品因无法安装专业软件栈而在物理和生物任务上得分为零。这种"顶层协调器无需领域知识"的模块化设计是一个可扩展的架构范式。</p>
+
+<h3>8.5 T10 案例的警示：执行成功 ≠ 研究成功</h3>
+<p>案例研究（Topic T10）揭示了一个微妙陷阱：Full-Auto 成功生成了完整论文、通过了数字验证（因为零值是真实测量值），但所有 8 种交叉验证策略均塌缩到相同的零偏差输出——论文无法支持任何实质性比较。<strong>执行成功（代码跑通、数字真实）≠ 研究成功（结论有实质意义）</strong>。这说明当前评估框架的天花板在于语义层面的结果质量，而非执行层面的完整性。</p>
+
+<h3>8.6 不足与开放问题</h3>
+<ul>
+  <li><strong>LLM 后端依赖</strong>：实验使用 GPT-5.3-codex，结论对其他 LLM 后端的可移植性需验证</li>
+  <li><strong>评估可重复性</strong>：ARC-Bench 评分依赖 LLM 法官，虽有双盲裁决机制，但仍引入非确定性噪声</li>
+  <li><strong>演化机制的长期效果</strong>：跨轮次演化在长期大规模运行下是否会导致经验库过拟合或产生路径依赖，尚无实验验证</li>
+  <li><strong>成本与延迟</strong>：多智能体辩论 + 四层引用验证的计算开销论文未详细分析</li>
+  <li><strong>SmartPause 阈值学习</strong>：自适应阈值的收敛速度与初始偏差未见消融实验</li>
+</ul>
+
+<!-- ─────────────── 9. 参考文献 ─────────────── -->
+<h2>9. 参考文献</h2>
+<ul style="font-size:0.9em; line-height:1.7;">
+  <li>Lu et al. (2025). The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery. <em>ICLR 2025</em>.</li>
+  <li>Yamada et al. (2025). The AI Scientist-v2: Workshop-level automated scientific discovery via agentic tree search. <em>arXiv:2504.08066</em>.</li>
+  <li>Gottweis et al. (2025). Towards an AI Co-Scientist. <em>arXiv:2502.18864</em>.</li>
+  <li>Schmidgall et al. (2025a). Agent Laboratory: Using LLM Agents as Research Assistants. <em>arXiv:2501.04227</em>.</li>
+  <li>Schmidgall et al. (2025b). AgentRxiv: Towards Collaborative Autonomous Research. <em>arXiv:2503.18102</em>.</li>
+  <li>Li et al. (2024). MLR-Copilot: Autonomous Machine Learning Research Based on LLM Agents. <em>arXiv:2408.14033</em>.</li>
+  <li>Tang et al. (2025). AI-Researcher: Automating Scientific Research through Multi-Agent Collaboration. <em>NeurIPS 2025</em>.</li>
+  <li>Jiang et al. (2025). AIDE: AI-Driven Exploration in the Space of Code. <em>arXiv:2502.13138</em>.</li>
+  <li>Du et al. (2024). Improving Factuality and Reasoning via Multiagent Debate. <em>ICML 2024</em>.</li>
+  <li>Hong et al. (2024). MetaGPT: Meta Programming for a Multi-Agent Collaborative Framework. <em>ICLR 2024</em>.</li>
+  <li>Wu et al. (2024). AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation. <em>COLM 2024</em>.</li>
+  <li>Shinn et al. (2023). Reflexion: Language Agents with Verbal Reinforcement Learning. <em>NeurIPS 2023</em>.</li>
+  <li>Madaan et al. (2023). Self-Refine: Iterative Refinement with Self-Feedback. <em>NeurIPS 2023</em>.</li>
+  <li>Xia et al. (2026). SkillRL: Evolving Agents via Recursive Skill-Augmented Reinforcement Learning. <em>arXiv:2602.08234</em>.</li>
+  <li>Qiu et al. (2026). An End-to-End Architecture for Collider Physics and Beyond. <em>arXiv:2603.14553</em>.</li>
+  <li>Boiko et al. (2023). Emergent Autonomous Scientific Research Capabilities of LLMs. <em>Nature</em> 624:570–578.</li>
+  <li>Romera-Paredes et al. (2024). Mathematical Discoveries from Program Search with LLMs. <em>Nature</em> 625:468–475.</li>
+  <li>Tian et al. (2025). ScienceAgentBench: Toward Rigorous Assessment of Language Agents. <em>ICLR 2025</em>.</li>
+  <li>Chan et al. (2024). MLE-bench: Evaluating Machine Learning Agents. <em>arXiv:2410.07095</em>.</li>
+  <li>Natarajan et al. (2025). Human-in-the-Loop or AI-in-the-Loop? Automate or Collaborate? <em>AAAI 2025</em>.</li>
+  <li>Gaddipati et al. (2025). AIssistant: Human-AI Collaborative Review and Perspective Research Workflows. <em>arXiv:2509.12282</em>.</li>
+  <li>Shao et al. (2025a). OmniScientist: Toward a Co-Evolving Ecosystem of Human and AI Scientists. <em>arXiv:2511.16931</em>.</li>
+  <li>Shao et al. (2025b). SciSciGPT: Advancing Human-AI Collaboration in the Science of Science. <em>Nature Computational Science</em>.</li>
+</ul>
+
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  hljs.highlightAll();
+  // 自动生成目录
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  // 滚动高亮
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

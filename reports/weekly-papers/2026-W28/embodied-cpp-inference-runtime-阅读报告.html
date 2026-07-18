@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Embodied.cpp 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .tag { display:inline-block; font-size:0.78em; font-weight:700; padding:1px 7px; border-radius:10px; margin-right:4px; }
+    .tag.blue { background:#89b4fa; color:#1e1e2e; }
+    .tag.orange { background:#fab387; color:#1e1e2e; }
+    .tag.green { background:#a6e3a1; color:#1e1e2e; }
+    .tag.purple { background:#cba6f7; color:#1e1e2e; }
+    .info-table th { width: 160px; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>Embodied.cpp：面向异构机器人的便携式具身 AI 模型推理运行时</h1>
+    <p style="color:#6c7086;">HuggingFace 2026-W28 第 10 名（upvotes 53） · 东南大学 SAIL Lab PhysicalAI System Group 等</p>
+
+    <table class="info-table">
+      <tr><th>标题</th><td>Embodied.cpp: A Portable Inference Runtime of Embodied AI Models on Heterogeneous Robots</td></tr>
+      <tr><th>核心问题</th><td>现有推理运行时面向请求-响应式 LLM/VLM 服务，无法满足具身部署的「闭环多速率执行 + batch-1 低延迟 + 可扩展具身接口」三大运行时契约，本文提出统一 C++ 运行时填补该空白。</td></tr>
+      <tr><th>模型覆盖</th><td>VLA（HY-VLA、pi0.5）与 WAM（LingBot-VA Transformer 块基准）</td></tr>
+      <tr><th>开源地址</th><td><a href="https://github.com/SEU-PAISys/Embodied.cpp">https://github.com/SEU-PAISys/Embodied.cpp</a></td></tr>
+    </table>
+
+    <h2 id="sec-overview">1. 概述</h2>
+    <p>具身 AI 模型已从早期的 VLA（Vision-Language-Action）扩展到 WAM（World-Action Model），但<strong>实际部署却长期碎片化</strong>：每个模型家族都自带一套 Python 研究代码、特定后端假设与大量机器人侧 glue code，异构边缘设备（Jetson、RK 系、x86 边缘盒子、工作站级机器人）上几乎要为每个新模型重建软件栈。</p>
+    <p>作者通过对代表性 VLA 与 WAM 的架构分析，提炼出一条<strong>共享执行路径</strong>，并将其组织为五层架构：<code>input adapters → sequence builders → backbone execution → head plugins → deployment adapters</code>。Embodied.cpp 在此基础上提供三大能力——<strong>模块化多速率执行、延迟优先的融合推理、可扩展的算子与 I/O 支持</strong>，使一套后端抽象即可贯穿异构设备、机器人与仿真器。</p>
+    <blockquote>核心结论：HY-VLA 与 pi0.5 的 C++ 部署分别取得 <strong>100.0%</strong> 与 <strong>91.0%</strong> 任务成功率；LingBot-VA 单块 Transformer 经 Q4_K 量化后显存从 <strong>312.2 MiB → 88.1 MiB</strong>，且 MAE &lt; 3.3×10⁻²、cosine &gt; 9.997×10⁻¹。</blockquote>
+
+    <h2 id="sec-bg">2. 研究背景与动机</h2>
+
+    <h3 id="sec-bg-contract">2.1 具身部署改变了「运行时契约」</h3>
+    <p>传统 LLM/VLM 服务假设：同步请求-响应路径、统一 token 接口、面向吞吐的大批量优化。而具身推理<strong>活在闭环控制过程内部</strong>，与机器人/仿真器侧存在依赖。即便有强 checkpoint，仍需被缝合进 Python 研究代码、后端专属推理路径、手写传感器封装与平台专属控制逻辑。论文据此提炼出具身推理运行时必须满足的三大要求：</p>
+    <ul>
+      <li><strong>多速率执行（Multi-rate execution）</strong>：感知编码器、Transformer backbone、预测分支、动作头可能需在同一控制回路内以不同频率运行（层级式 VLA、快慢分离 VLA 与近期 WAM 中日益常见）。</li>
+      <li><strong>延迟优先的闭环控制（Latency-first closed-loop control）</strong>：优化目标不是吞吐而是稳定闭环控制——低延迟、低抖持、异构边缘硬件上的高效 batch-1 执行。</li>
+      <li><strong>可扩展的具身接口（Extensible embodied interfaces）</strong>：超越固定 token I/O，吸收自定义算子、具身多模态输入，以及从动作块到预测未来等异构输出。</li>
+    </ul>
+
+    <h3 id="sec-bg-taxonomy">2.2 具身模型架构谱系</h3>
+    <p>论文将在线具身模型分为 VLA 与 WAM 两大族，并按内部推理结构进一步细分。下表整理自原文 Table 1。</p>
+    <table>
+      <tr><th>族</th><th>子类型</th><th>架构特征</th><th>结构</th><th>代表模型</th></tr>
+      <tr><td rowspan="4">VLA</td><td>AR-Token VLA</td><td>单一 backbone 自回归生成动作 token</td><td>Monolithic</td><td>OpenVLA、RT-2</td></tr>
+      <tr><td>VLM-Backboned VLA</td><td>共享预训练 VLM 喂给连续动作头</td><td>Modular</td><td>Octo、pi0、pi0.5、MuseVLA</td></tr>
+      <tr><td>Hierarchical VLA</td><td>高层规划器产出子目标，喂给底层控制器</td><td>Modular</td><td>Hi Robot、GeneralVLA、RT-H、Gemini Robotics 1.5</td></tr>
+      <tr><td>Asynchronous VLA</td><td>解耦模块以不同速率通过缓冲协调</td><td>Modular</td><td>GR00T N1、Fast-in-Slow、DAM-VLA</td></tr>
+      <tr><td rowspan="4">WAM</td><td>Predict-then-Act WAM</td><td>显式世界模型先预测未来状态，下游动作专家消费</td><td>Modular</td><td>UniPi</td></tr>
+      <tr><td>Unified AR-Modeling WAM</td><td>未来世界与动作在同一自回归 token 空间联合生成</td><td>Monolithic</td><td>WorldVLA、LingBot-VA</td></tr>
+      <tr><td>Shared-Backbone WAM</td><td>世界建模与动作生成共享 backbone，辅助块可异速</td><td>Modular</td><td>DreamZero、Fast-WAM、Cosmos Policy、UWM</td></tr>
+      <tr><td>Latent-space WAM</td><td>预测紧凑潜在未来/子目标，供动作专家消费</td><td>Modular</td><td>LaWAM、Being-H0.7</td></tr>
+    </table>
+    <p>三条对运行时设计的启示：<strong>(1) 结构组织已成为一等公民</strong>——许多新系统应被理解为交互的规划器/backbone/世界模型/动作模块；<strong>(2) 中间状态成为显式运行时对象</strong>——子目标、缓冲上下文、预测未来、潜在未来不再是隐藏细节；<strong>(3) 时序结构日益由模型定义</strong>，运行时必须支持有状态多组件编排，而非假设统一同步请求-响应路径。</p>
+
+    <h3 id="sec-bg-gap">2.3 现有运行时的缺口</h3>
+    <p>通用运行时（llama.cpp、ONNX Runtime、SGLang、vLLM-Omni）覆盖了共享执行底座，但面向请求-响应、统一接口；仿真平台（ManiSkill、LIBERO、Isaac Sim）是训练/评测工具而非推理运行时；最接近的 <strong>vla.cpp</strong> 将 7 种 VLA 架构统一进一个 C++ 运行时，但<strong>仅 VLA 中心</strong>。下表（原文 Table 2）从「模型族覆盖」与「部署能力」两个角度量化缺口。</p>
+    <table>
+      <tr><th>系统</th><th>VLA</th><th>WAM</th><th>Modular</th><th>Edge</th><th>Hetero. HW</th><th>Robot</th><th>Simulator</th></tr>
+      <tr><td>llama.cpp</td><td>✗</td><td>✗</td><td>✗</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td></tr>
+      <tr><td>ONNX Runtime</td><td>◦</td><td>◦</td><td>◦</td><td>✓</td><td>✓</td><td>△</td><td>✗</td></tr>
+      <tr><td>SGLang</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+      <tr><td>vLLM-Omni</td><td>◦</td><td>◦</td><td>△</td><td>✓</td><td>✗</td><td>△</td><td>✗</td></tr>
+      <tr><td>vla.cpp</td><td>✓</td><td>✗</td><td>△</td><td>✓</td><td>△</td><td>△</td><td>△</td></tr>
+      <tr><td><strong>Embodied.cpp（本文）</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td></tr>
+    </table>
+    <p style="color:#6c7086;font-size:0.88em;">✓ 原生支持 · ◦ 需大量定制集成 · △ 有限/部分支持 · ✗ 不支持</p>
+    <p>结论：现有系统要么是缺乏一等具身模型支持的通用运行时，要么是仅专精单一模型族的具身运行时；<strong>同时支持 VLA+WAM、并落地边缘/异构硬件/机器人/仿真器的运行时仍属空白</strong>。</p>
+
+    <h2 id="sec-method">3. 核心方法</h2>
+
+    <h3 id="sec-method-arch">3.1 五层便携推理运行时架构</h3>
+    <p>Embodied.cpp 将共享执行路径拆为五层，部署边界保持统一、内部保持可扩展。下图给出整体数据流与五大子系统（Mermaid）。</p>
+    <pre class="mermaid">
+flowchart LR
+    subgraph IN["输入侧"]
+        A1[Camera]
+        A2[Force/Tactile]
+        A3[IMU]
+        A4[Dataset LIBERO/DROID/RT-X]
+    end
+    subgraph L1["Layer 1: Input Adapters"]
+        IA["类型化具身接口<br>图像/语言/本体感知/历史/力触"]
+    end
+    subgraph L2["Layer 2: Sequence Builders"]
+        SB["构建多模态序列<br>缓冲复用/上下文拼接"]
+    end
+    subgraph L3["Layer 3: Backbone Execution"]
+        BE["共享 Transformer 主干<br>VLA / WAM / 未来变体"]
+    end
+    subgraph L4["Layer 4: Head Plugins"]
+        HP["动作头/流匹配扩散头<br>世界预测头/动作专家"]
+    end
+    subgraph L5["Layer 5: Deployment Adapters"]
+        DA["输出适配器<br>仿真器 / 真机栈"]
+    end
+    subgraph OUT["输出侧"]
+        O1[Simulator]
+        O2[Real Robot]
+    end
+    subgraph CAP["三大运行时能力"]
+        C1[Modular Multi-rate Execution]
+        C2[Batch-1 Hetero. HW Execution]
+        C3[Embodied AI Kernel Warehouse]
+    end
+    A1 --> IA
+    A2 --> IA
+    A3 --> IA
+    A4 --> IA
+    IA --> SB --> BE --> HP --> DA
+    DA --> O1
+    DA --> O2
+    C1 -.支撑.-> BE
+    C2 -.支撑.-> BE
+    C3 -.支撑.-> BE
+    </pre>
+    <p>五层职责：<strong>输入适配器</strong>吸收在线传感器流与离线数据集样本（相机、力/触觉、IMU、基准数据集）经同一类型化具身接口进入；<strong>序列构建器</strong>负责多模态序列拼装、缓冲复用与上下文管理；<strong>backbone 执行</strong>是可托管 VLA、WAM 及未来变体的共享执行区；<strong>头部插件</strong>把动作头、流匹配/扩散头、世界预测头、动作专家变为可插拔模块；<strong>部署适配器</strong>把运行时输出桥接到仿真器与真机软件栈，使部署边界保持稳定。</p>
+
+    <h3 id="sec-method-multirate">3.2 模块化多速率执行</h3>
+    <p>针对「不同模块刷新频率不同」的现实——感知栈可低频刷新、预测分支仅在需要未来估计时运行、动作头需以更高控制频率执行——Embodied.cpp 暴露<strong>显式执行单元、可插拔模块、共享状态/特征池与可配置刷新策略</strong>，使各组件以不同速率运行而无需强行统一为单条同步路径。下图为一个典型异步/层级式 VLA 的多速率调度示意。</p>
+    <pre class="mermaid">
+sequenceDiagram
+    participant P as Perception (低频)
+    participant B as Backbone (中频)
+    participant W as Predict Branch (按需)
+    participant H as Action Head (高频)
+    participant R as Robot/Sim
+    P->>B: 视觉/语言特征 (写入 feature pool)
+    B->>W: 触发未来估计 (按需)
+    W-->>B: 预测未来/潜在状态
+    B->>H: 中间表示 (buffered)
+    loop 高频控制循环
+        H->>R: 动作块 / 动作向量
+        R-->>H: 本体感知反馈
+    end
+    Note over P,H: 不同模块按各自刷新策略运行, 通过 buffered state 协调
+    </pre>
+
+    <h3 id="sec-method-latency">3.3 延迟优先的融合执行</h3>
+    <p>面向 batch-1、低延迟、低抖持的稳定控制，Embodied.cpp 优先保证控制性能，同时支持 <strong>graph replay、buffer reuse、算子融合、后端专属分发、精细 host-device 数据搬运</strong>，以在异构设备上实现高效小批量推理。其延迟模型可形式化为：</p>
+    <p>$$ T_{\text{step}} \;=\; T_{\text{parse}} \;+\; T_{\text{stage}} \;+\; T_{\text{compute}} \;+\; T_{\text{post}} $$</p>
+    <p>其中 $T_{\text{compute}}$ 为后端纯计算耗时（Table 4 仅测该项），其余为请求解析、张量暂存、输出后处理等服务侧开销。延迟优先策略要求在 $T_{\text{compute}}$ 与其余项上同时做融合与复用优化，而非仅压单点。<strong>摊销步延迟</strong>则反映动作块带来的控制频率收益：</p>
+    <p>$$ T_{\text{step, amortized}} \;=\; \frac{T_{\text{inf}}}{C} \;+\; T_{\text{overhead}} $$</p>
+    <p>其中 $C$ 为 action chunk 长度。pi0.5 采用 $C=50$ 的长动作块使摊销步延迟显著低于 HY-VLA（$C=20$），与 Table 3 数值一致。</p>
+
+    <h3 id="sec-method-backend">3.4 异构后端与算子/量化策略</h3>
+    <p>Embodied.cpp 通过<strong>单一后端抽象</strong>同时联合使用 CPU、GPU、NPU 等异构设备（区别于仅在 backend 间切换）。下层「具身 AI 算子仓库」收集可复用算子与模型专属 kernel，使新具身范式无需重建周边运行时即可落地。量化方面，WAM 侧采用 <strong>GGUF Q4_K</strong>（4-bit 块量化，K-Quants）替代 PyTorch BF16 权重，以大幅压缩常驻权重显存。量化误差用 MAE 与 cosine similarity 衡量：</p>
+    <p>$$ \text{MAE} \;=\; \frac{1}{N}\sum_{i=1}^{N} \left| \hat{y}_i - y_i \right|, \qquad \cos(\hat{y}, y) \;=\; \frac{\hat{y}^{\top} y}{\lVert \hat{y}\rVert \, \lVert y\rVert} $$</p>
+    <p>其中 $y$ 为 BF16 原始块输出，$\hat{y}$ 为 Q4_K 量化块输出，$N$ 为采样数（实验取 100 个随机输入）。</p>
+
+    <h3 id="sec-method-algo">3.5 五层执行调度伪代码</h3>
+    <p>论文未给出形式化 Algorithm 伪代码，下述 algo-box 依据论文五层架构与多速率调度描述整理而成，用于说明运行时主循环逻辑（非原文逐字）。</p>
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Embodied.cpp 多速率闭环执行（据五层架构整理）</div>
+      <p><span class="kw">Input:</span> 传感器流 <span class="var">S</span> = {相机, 力/触觉, IMU, ...}; 各模块刷新策略 <span class="var">policy</span>[m]; 动作块长度 <span class="num">C</span></p>
+      <p><span class="kw">Output:</span> 持续输出动作块至机器人/仿真器</p>
+      <p style="padding-left:1.5em"><span class="cm">// Layer 1-2: 输入适配 + 序列构建（低频刷新）</span></p>
+      <p style="padding-left:1.5em"><span class="kw">while</span> control_loop_active <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="kw">if</span> <span class="fn">due</span>(<span class="var">perception</span>, <span class="var">policy</span>) <span class="kw">then</span></p>
+      <p style="padding-left:4.5em"><span class="var">feat</span> ← <span class="fn">InputAdapter</span>(<span class="var">S</span>)   <span class="cm">// Layer 1</span></p>
+      <p style="padding-left:4.5em"><span class="var">seq</span>  ← <span class="fn">SequenceBuilder</span>(<span class="var">feat</span>, <span class="var">buffer</span>)   <span class="cm">// Layer 2, 复用缓冲</span></p>
+      <p style="padding-left:4.5em"><span class="cm">// Layer 3: backbone 执行（batch-1, 融合后端分发）</span></p>
+      <p style="padding-left:4.5em"><span class="var">repr</span> ← <span class="fn">Backbone</span>(<span class="var">seq</span>, backend=hetero_dispatch)</p>
+      <p style="padding-left:4.5em"><span class="kw">if</span> future_estimation_needed <span class="kw">then</span>   <span class="cm">// 按需触发预测分支</span></p>
+      <p style="padding-left:6em"><span class="var">repr</span> ← <span class="fn">PredictBranch</span>(<span class="var">repr</span>)</p>
+      <p style="padding-left:4.5em"><span class="kw">end</span></p>
+      <p style="padding-left:3em"><span class="kw">end</span></p>
+      <p style="padding-left:3em"><span class="cm">// Layer 4: 头部插件（高频控制率）</span></p>
+      <p style="padding-left:3em"><span class="kw">for</span> t = 1 <span class="kw">to</span> <span class="num">C</span> <span class="kw">do</span></p>
+      <p style="padding-left:4.5em"><span class="var">act</span>[t] ← <span class="fn">HeadPlugin</span>(<span class="var">repr</span>, t)   <span class="cm">// 动作头/流匹配扩散头</span></p>
+      <p style="padding-left:3em"><span class="kw">end</span></p>
+      <p style="padding-left:3em"><span class="cm">// Layer 5: 部署适配器</span></p>
+      <p style="padding-left:3em"><span class="fn">DeploymentAdapter</span>.<span class="fn">emit</span>(<span class="var">act</span>) → 机器人/仿真器</p>
+      <p style="padding-left:1.5em"><span class="kw">end</span></p>
+    </div>
+
+    <h2 id="sec-exp">4. 实验结果与分析</h2>
+    <p>论文给出两类证据：两 VLA 模型（HY-VLA、pi0.5）的闭环结果，以及 LingBot-VA 的初步 WAM 微基准。<strong>完整的 LingBot-VA 闭环结果未纳入</strong>，因为完整模型在受限本地边缘设备上尚未稳定。</p>
+
+    <h3 id="sec-exp-vla">4.1 VLA 闭环部署（Table 3）</h3>
+    <table>
+      <tr><th>部署模型</th><th>Backbone</th><th>Action Chunk</th><th>成功率 (%)</th><th>Step (ms)</th><th>Inf. (ms)</th><th>VRAM (MiB)</th></tr>
+      <tr><td>HY-VLA</td><td>Hunyuan-VL</td><td>20</td><td><strong>100.0</strong> [83.9, 100.0]</td><td>735.9</td><td>1340.3</td><td>6850</td></tr>
+      <tr><td>pi0.5</td><td>PaliGemma</td><td>50</td><td>91.0 [86, 94]</td><td><strong>56.85</strong></td><td><strong>266.6</strong></td><td><strong>6546</strong></td></tr>
+    </table>
+    <p>两者均能正确经 C++ 运行时运行并保持任务行为。HY-VLA 在 RoboTwin <code>place_empty_cup</code> 任务上达 <strong>100.0%</strong> 成功率，但因采用更大的 Hunyuan-VL backbone、三视角输入与视频历史/MEM 视觉路径，延迟更高；pi0.5 采用更轻的 PaliGemma backbone 与更长动作块（$C=50$），摊销步成本显著降低。下方 ECharts 直观对比两者的延迟与显存。</p>
+    <div id="chart-vla" class="echarts-container" style="height:360px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-vla')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'HY-VLA vs pi0.5 部署指标对比', textStyle:{color:'#89b4fa'}, left:'center' },
+        legend: { data: ['摊销步延迟 Step (ms)','推理延迟 Inf. (ms)','峰值显存 VRAM (MiB)'], top: 28, textStyle:{color:'#cdd6f4'} },
+        tooltip: { trigger: 'axis' },
+        grid: { left: 60, right: 70, top: 80, bottom: 40 },
+        xAxis: { type: 'category', data: ['HY-VLA','pi0.5'], axisLabel:{color:'#cdd6f4'} },
+        yAxis: [
+          { type: 'value', name: '延迟 (ms)', axisLabel:{color:'#cdd6f4'} },
+          { type: 'value', name: '显存 (MiB)', axisLabel:{color:'#cdd6f4'} }
+        ],
+        series: [
+          { name:'摊销步延迟 Step (ms)', type:'bar', data:[735.9, 56.85], itemStyle:{color:'#fab387'} },
+          { name:'推理延迟 Inf. (ms)', type:'bar', data:[1340.3, 266.6], itemStyle:{color:'#89b4fa'} },
+          { name:'峰值显存 VRAM (MiB)', type:'bar', yAxisIndex:1, data:[6850, 6546], itemStyle:{color:'#a6e3a1'} }
+        ]
+      });
+    </script>
+    <p style="color:#6c7086;font-size:0.88em;">注：成功率因分属不同任务/配置不直接可比，故未纳入此图，见表格加粗值。</p>
+
+    <h3 id="sec-exp-wam">4.2 WAM 单块量化微基准（Table 4）</h3>
+    <table>
+      <tr><th>推理运行时</th><th>量化</th><th>Latency/block (ms)</th><th>Memory/block (MiB)</th><th>MAE ↓</th><th>Cosine ↑</th></tr>
+      <tr><td>Python original</td><td>BF16</td><td>3.236</td><td>312.2</td><td><strong>0</strong></td><td><strong>1</strong></td></tr>
+      <tr><td>Embodied.cpp</td><td>Q4_K</td><td><strong>3.171</strong></td><td><strong>88.1</strong></td><td>&lt; 3.3×10⁻²</td><td>&gt; 9.997×10⁻¹</td></tr>
+    </table>
+    <p>对 LingBot-VA 首个 Transformer 块，C++ Q4_K 路径相比 PyTorch BF16 基线：<strong>常驻权重显存 312.2 → 88.1 MiB（约降至 28.2%，节省 71.8%）</strong>，单块延迟略有改善（3.236 → 3.171 ms），同时 MAE 控制在 3.3×10⁻² 以下、cosine 高于 9.997×10⁻¹。延迟测量在 warmup 后进行，仅含单块后端计算，排除请求解析、张量暂存、输出后处理等服务侧开销。下图为显存压缩效果。</p>
+    <div id="chart-wam" class="echarts-container" style="height:320px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-wam')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'LingBot-VA 单块显存对比（MiB）', textStyle:{color:'#89b4fa'}, left:'center' },
+        tooltip: { trigger: 'item', formatter: '{b}: {c} MiB' },
+        grid: { left: 60, right: 40, top: 60, bottom: 40 },
+        xAxis: { type: 'category', data: ['Python BF16','Embodied.cpp Q4_K'], axisLabel:{color:'#cdd6f4'} },
+        yAxis: { type: 'value', name: 'MiB', axisLabel:{color:'#cdd6f4'} },
+        series: [{
+          type: 'bar',
+          data: [
+            { value: 312.2, itemStyle:{color:'#fab387'} },
+            { value: 88.1,  itemStyle:{color:'#a6e3a1'} }
+          ],
+          label: { show: true, position: 'top', color:'#cdd6f4', formatter:'{c} MiB' },
+          barWidth: '40%'
+        }]
+      });
+    </script>
+
+    <h2 id="sec-ablation">5. 消融与关键发现</h2>
+    <p>论文本版未提供系统化的逐模块消融实验，但其对比性结果本身已构成若干关键发现：</p>
+    <ul>
+      <li><strong>Backbone 规模主导延迟与显存</strong>：HY-VLA（Hunyuan-VL，三视角 + 视频历史）vs pi0.5（PaliGemma）对比表明，在统一 C++ 运行时下，延迟与显存仍取决于 backbone 大小、视觉输入复杂度与动作块策略，而非运行时本身——说明运行时做到了「不引入额外开销」。</li>
+      <li><strong>动作块长度 $C$ 显著影响摊销步延迟</strong>：$C=50$ 的 pi0.5 摊销步延迟（56.85 ms）远低于 $C=20$ 的 HY-VLA（735.9 ms），与 $T_{\text{step, amortized}} = T_{\text{inf}}/C + T_{\text{overhead}}$ 一致。</li>
+      <li><strong>Q4_K 量化显存收益巨大且精度漂移极小</strong>：显存降至 28.2%，cosine &gt; 0.9997，证明 C++ 量化路径可在几乎无损精度下承载 WAM 侧 Transformer 组件。</li>
+      <li><strong>延迟测量口径</strong>：Table 4 仅含 $T_{\text{compute}}$，排除服务侧开销，这是评估运行时内核质量而非端到端服务的合理选择。</li>
+    </ul>
+
+    <h2 id="sec-takeaway">6. 总结与启发</h2>
+    <p>论文核心论点：<strong>具身部署正收敛到一条共享执行路径</strong>，尽管模型族持续分化。Embodied.cpp 把公共路径当作基础设施、把分歧部分当作插件，五层架构使交互模式、I/O 语义、目标与部署边界保持显式，同时跨范式复用同一 backbone 执行路径。随新具身变体涌现，「稳定内核 + 可插拔任务组件」的分离价值将持续放大。</p>
+    <p>对本领域的启发：</p>
+    <ul>
+      <li><span class="tag blue">系统设计</span>具身运行时应以「闭环控制契约」为第一性原理，而非简单扩展 LLM 服务；多速率、batch-1 低延迟、可扩展接口三者缺一不可。</li>
+      <li><span class="tag green">工程实践</span>五层分层 + 后端抽象 + 算子仓库的组合，使新模型/新硬件的接入成本从「重建软件栈」降为「写插件」。</li>
+      <li><span class="tag orange">量化部署</span>GGUF Q4_K 在 WAM Transformer 块上展现了「显存大降、精度几乎不损」的工程价值，为边缘部署 WAM 提供可行路径。</li>
+      <li><span class="tag purple">局限</span>当前 WAM 仅为单块微基准，完整 LingBot-VA 闭环尚未稳定；缺乏端到端延迟对比与系统化消融，结论的普适性仍待更大规模验证。</li>
+    </ul>
+
+    <h2 id="sec-limit">7. 局限性</h2>
+    <ul>
+      <li>WAM 评测仅限 LingBot-VA 单个 Transformer 块，非完整模型闭环，且作者明确说明完整模型在受限边缘设备上尚未稳定。</li>
+      <li>实验仅覆盖 2 个 VLA 模型与 1 个 WAM 块基准，模型多样性有限；未与 vla.cpp 等同类系统做直接端到端性能对比。</li>
+      <li>Table 4 延迟仅含后端计算，未报告端到端服务延迟（含 $T_{\text{parse}}/T_{\text{stage}}/T_{\text{post}}$），实际部署延迟可能更高。</li>
+      <li>异构硬件「联合使用」（Hetero. HW ✓）的具体调度策略与实测数据在论文中未展开。</li>
+    </ul>
+
+    <h2 id="sec-ref">8. 参考文献（节选）</h2>
+    <ul>
+      <li>[1] OpenVLA. arXiv:2406.09246, 2024.</li>
+      <li>[2] Pi0. arXiv:2410.24164, 2024.</li>
+      <li>[3] Pi0.5. arXiv:2504.16054, 2025.</li>
+      <li>[4] GR00T N1. arXiv:2503.14734, 2025.</li>
+      <li>[5] LingBot-VA (Causal World Modeling for Robot Control). arXiv:2601.21998, 2026.</li>
+      <li>[6] World Action Models: The Next Frontier in Embodied AI. arXiv:2605.12090, 2026.</li>
+      <li>[13] llama.cpp. GitHub, 2023–2026.</li>
+      <li>[14] ONNX Runtime Documentation.</li>
+      <li>[15] SGLang.</li>
+      <li>[16] vLLM-Omni.</li>
+      <li>[40] vla.cpp: A Unified Inference Runtime for VLA Models. arXiv:2606.08094, 2026.</li>
+      <li>[41] Pie: A Programmable Serving System for Emerging LLM Applications. SOSP 2025.</li>
+      <li>[42] FlashRT (Execution-State Capsules). arXiv:2606.20537, 2026.</li>
+    </ul>
+    <p style="color:#6c7086;font-size:0.85em;">本报告数据均摘自论文原文 Table 1–4 与正文；公式依据论文描述（延迟模型、MAE/cosine 定义）整理，Algorithm 1 系据五层架构整理的示意伪代码（论文未给出形式化伪代码）。</p>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector('a[href=\"#' + e.target.id + '\"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

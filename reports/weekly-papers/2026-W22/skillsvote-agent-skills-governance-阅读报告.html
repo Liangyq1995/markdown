@@ -1,0 +1,1357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SkillsVote 阅读报告 — 智能体技能生命周期治理</title>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<!-- MathJax -->
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<style>
+:root {
+  --bg:        #1e1e2e;
+  --surface:   #24273a;
+  --surface2:  #2a2d3e;
+  --border:    #363a52;
+  --text:      #cdd6f4;
+  --subtext:   #a6adc8;
+  --heading:   #89b4fa;
+  --strong:    #a6e3a1;
+  --accent:    #f38ba8;
+  --yellow:    #f9e2af;
+  --mauve:     #cba6f7;
+  --teal:      #94e2d5;
+  --peach:     #fab387;
+  --toc-w:     272px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; font-size: 15px; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', 'PingFang SC', 'Noto Sans SC', system-ui, sans-serif;
+  line-height: 1.75;
+  display: flex;
+}
+
+/* ─── TOC ─────────────────────────────────────────────── */
+#toc {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--toc-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 28px 16px 40px;
+  z-index: 100;
+}
+#toc h2 {
+  font-size: .72rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--subtext);
+  margin-bottom: 14px;
+  padding-left: 8px;
+}
+#toc ul { list-style: none; }
+#toc ul li a {
+  display: block;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: .82rem;
+  color: var(--subtext);
+  text-decoration: none;
+  transition: background .15s, color .15s;
+  line-height: 1.4;
+}
+#toc ul li a:hover { background: var(--surface2); color: var(--text); }
+#toc ul li a.active { background: rgba(137,180,250,.15); color: var(--heading); font-weight: 600; }
+#toc ul li.sub a { padding-left: 22px; font-size: .78rem; }
+
+/* ─── MAIN ────────────────────────────────────────────── */
+main {
+  margin-left: var(--toc-w);
+  max-width: none;
+  padding: 40px 64px;
+  width: 100%;
+}
+
+/* ─── HEADER ──────────────────────────────────────────── */
+.paper-header {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 36px 40px;
+  margin-bottom: 40px;
+}
+.paper-header .badge {
+  display: inline-block;
+  background: rgba(137,180,250,.18);
+  color: var(--heading);
+  border: 1px solid rgba(137,180,250,.35);
+  border-radius: 20px;
+  padding: 3px 14px;
+  font-size: .75rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.paper-header h1 {
+  font-size: 1.72rem;
+  color: var(--heading);
+  line-height: 1.3;
+  margin-bottom: 10px;
+}
+.paper-header .subtitle {
+  font-size: 1rem;
+  color: var(--subtext);
+  margin-bottom: 20px;
+}
+.meta-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+.meta-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: .8rem;
+  color: var(--subtext);
+}
+.meta-pill span.label { color: var(--mauve); font-weight: 600; }
+
+/* ─── SECTION HEADINGS ───────────────────────────────── */
+section { margin-bottom: 48px; }
+section h2 {
+  font-size: 1.28rem;
+  color: var(--heading);
+  border-left: 3px solid var(--heading);
+  padding-left: 14px;
+  margin-bottom: 20px;
+  scroll-margin-top: 24px;
+}
+section h3 {
+  font-size: 1.05rem;
+  color: var(--mauve);
+  margin: 20px 0 10px;
+}
+section h4 {
+  font-size: .92rem;
+  color: var(--yellow);
+  margin: 14px 0 8px;
+}
+
+p { margin-bottom: 12px; }
+strong { color: var(--strong); font-weight: 700; }
+em { color: var(--yellow); font-style: normal; font-weight: 600; }
+code {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: .85em;
+  color: var(--teal);
+}
+pre {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  margin: 16px 0;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: .84rem;
+  color: var(--teal);
+}
+
+/* ─── INFO TABLE ─────────────────────────────────────── */
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.info-table tr:not(:last-child) { border-bottom: 1px solid var(--border); }
+.info-table th {
+  background: var(--surface2);
+  color: var(--heading);
+  font-size: .82rem;
+  text-align: left;
+  padding: 10px 18px;
+  white-space: nowrap;
+  width: 160px;
+}
+.info-table td { padding: 10px 18px; color: var(--text); font-size: .88rem; }
+
+/* ─── CALLOUT BOXES ──────────────────────────────────── */
+.callout {
+  border-left: 3px solid;
+  border-radius: 0 10px 10px 0;
+  padding: 14px 20px;
+  margin: 16px 0;
+  font-size: .9rem;
+}
+.callout.info  { border-color: var(--heading);  background: rgba(137,180,250,.08); }
+.callout.warn  { border-color: var(--yellow);   background: rgba(249,226,175,.07); }
+.callout.idea  { border-color: var(--strong);   background: rgba(166,227,161,.07); }
+.callout.risk  { border-color: var(--accent);   background: rgba(243,139,168,.07); }
+.callout .title{ font-weight: 700; margin-bottom: 6px; }
+.callout.info  .title { color: var(--heading); }
+.callout.warn  .title { color: var(--yellow);  }
+.callout.idea  .title { color: var(--strong);  }
+.callout.risk  .title { color: var(--accent);  }
+
+/* ─── CARD GRID ──────────────────────────────────────── */
+.card-grid { display: grid; gap: 18px; }
+.card-grid.col2 { grid-template-columns: repeat(2, 1fr); }
+.card-grid.col3 { grid-template-columns: repeat(3, 1fr); }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+}
+.card .card-title {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--heading);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card .card-body { font-size: .85rem; color: var(--subtext); line-height: 1.6; }
+.card .card-body strong { color: var(--strong); }
+
+/* ─── LIFECYCLE TIMELINE ─────────────────────────────── */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  padding-left: 40px;
+  margin: 20px 0;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 15px; top: 16px; bottom: 16px;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--heading), var(--mauve), var(--strong), var(--teal));
+}
+.tl-item {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 22px;
+  margin-bottom: 16px;
+}
+.tl-item::before {
+  content: attr(data-step);
+  position: absolute;
+  left: -32px; top: 14px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .72rem; font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+.tl-item.step1::before { border-color: var(--heading);  color: var(--heading);  }
+.tl-item.step2::before { border-color: var(--mauve);   color: var(--mauve);   }
+.tl-item.step3::before { border-color: var(--strong);  color: var(--strong);  }
+.tl-item.step4::before { border-color: var(--teal);    color: var(--teal);    }
+.tl-item.step5::before { border-color: var(--peach);   color: var(--peach);   }
+.tl-item .tl-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.tl-item.step1 .tl-title { color: var(--heading); }
+.tl-item.step2 .tl-title { color: var(--mauve);   }
+.tl-item.step3 .tl-title { color: var(--strong);  }
+.tl-item.step4 .tl-title { color: var(--teal);    }
+.tl-item.step5 .tl-title { color: var(--peach);   }
+.tl-item .tl-body { font-size: .86rem; color: var(--subtext); line-height: 1.6; }
+
+/* ─── SKILL SCHEMA TREE ──────────────────────────────── */
+.file-tree {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 22px;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: .84rem;
+  line-height: 1.9;
+}
+.file-tree .dir  { color: var(--heading); }
+.file-tree .file { color: var(--teal); }
+.file-tree .comment { color: var(--subtext); font-style: italic; }
+.file-tree .important { color: var(--strong); font-weight: 700; }
+
+/* ─── MERMAID ─────────────────────────────────────────── */
+.mermaid-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  overflow-x: auto;
+  text-align: center;
+  margin: 16px 0;
+}
+
+/* ─── ECHARTS ─────────────────────────────────────────── */
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 16px 0;
+}
+.chart-wrap .chart-title {
+  font-size: .88rem;
+  font-weight: 700;
+  color: var(--heading);
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* ─── RESULT TABLE ───────────────────────────────────── */
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin: 14px 0;
+  font-size: .86rem;
+}
+.result-table thead tr { background: var(--surface2); }
+.result-table th {
+  color: var(--heading);
+  padding: 10px 16px;
+  text-align: center;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+.result-table td {
+  padding: 9px 16px;
+  text-align: center;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+}
+.result-table tr:last-child td { border-bottom: none; }
+.result-table tr:hover td { background: rgba(137,180,250,.05); }
+.result-table td.best { color: var(--strong); font-weight: 700; }
+.result-table td.label { text-align: left; color: var(--subtext); }
+
+/* ─── TAG PILLS ──────────────────────────────────────── */
+.tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.tag {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 12px;
+  font-size: .76rem;
+  color: var(--subtext);
+}
+
+/* ─── INSIGHT CARD ───────────────────────────────────── */
+.insight-card {
+  background: linear-gradient(135deg, rgba(166,227,161,.08) 0%, rgba(137,180,250,.06) 100%);
+  border: 1px solid rgba(166,227,161,.25);
+  border-radius: 14px;
+  padding: 24px 28px;
+  margin: 16px 0;
+}
+.insight-card .insight-num {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: rgba(166,227,161,.25);
+  line-height: 1;
+  margin-bottom: 6px;
+}
+.insight-card .insight-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--strong);
+  margin-bottom: 8px;
+}
+.insight-card .insight-body {
+  font-size: .88rem;
+  color: var(--subtext);
+  line-height: 1.7;
+}
+
+/* ─── ABLATION ───────────────────────────────────────── */
+.ablation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.ablation-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.ablation-item .ab-title {
+  font-size: .85rem;
+  font-weight: 700;
+  color: var(--mauve);
+  margin-bottom: 6px;
+}
+.ablation-item .ab-body {
+  font-size: .82rem;
+  color: var(--subtext);
+  line-height: 1.6;
+}
+
+ul.bullet { padding-left: 20px; margin: 8px 0; }
+ul.bullet li { margin-bottom: 5px; font-size: .88rem; color: var(--subtext); }
+ul.bullet li strong { color: var(--strong); }
+ul.bullet li em { color: var(--yellow); }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════
+     LEFT TOC
+════════════════════════════════════════════════════════ -->
+<nav id="toc">
+  <h2>目 录</h2>
+  <ul>
+    <li><a href="#s-info"    data-id="s-info">📄 论文信息</a></li>
+    <li><a href="#s-problem" data-id="s-problem">❓ 核心问题与动机</a></li>
+    <li><a href="#s-bg"      data-id="s-bg">📚 背景与相关工作</a></li>
+    <li><a href="#s-framework" data-id="s-framework">🔄 生命周期框架</a></li>
+    <li class="sub"><a href="#s-schema"   data-id="s-schema">↳ 技能模式 (Schema)</a></li>
+    <li class="sub"><a href="#s-corpus"   data-id="s-corpus">↳ 语料分析与合成</a></li>
+    <li class="sub"><a href="#s-rec"      data-id="s-rec">↳ 技能推荐</a></li>
+    <li class="sub"><a href="#s-attr"     data-id="s-attr">↳ 归因分析</a></li>
+    <li class="sub"><a href="#s-evo"      data-id="s-evo">↳ 技能演化</a></li>
+    <li><a href="#s-exp"     data-id="s-exp">📊 实验结果</a></li>
+    <li><a href="#s-abl"     data-id="s-abl">🔬 消融实验</a></li>
+    <li><a href="#s-limit"   data-id="s-limit">⚠️ 局限性</a></li>
+    <li><a href="#s-insight" data-id="s-insight">💡 核心洞见</a></li>
+  </ul>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════
+     MAIN
+════════════════════════════════════════════════════════ -->
+<main>
+
+<!-- HEADER -->
+<div class="paper-header">
+  <div class="badge">arXiv · 2605.18401 · 2026</div>
+  <h1>SkillsVote</h1>
+  <div class="subtitle">Lifecycle Governance of Agent Skills from Collection, Recommendation to Evolution<br>
+  <span style="font-size:.9rem;color:var(--subtext)">智能体技能从采集、推荐到演化的生命周期治理框架</span></div>
+  <div class="meta-pills">
+    <div class="meta-pill"><span class="label">机构</span> IAAR-Shanghai</div>
+    <div class="meta-pill"><span class="label">arXiv</span> 2605.18401</div>
+    <div class="meta-pill"><span class="label">报告日期</span> 2026-05-29</div>
+    <div class="meta-pill"><span class="label">基准</span> Terminal-Bench 2.0 · SWE-Bench Pro</div>
+    <div class="meta-pill"><span class="label">模型</span> GPT-5.2</div>
+  </div>
+</div>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-info">
+<h2>论文信息表</h2>
+<table class="info-table">
+  <tr><th>论文标题</th><td>SkillsVote: Lifecycle Governance of Agent Skills from Collection, Recommendation to Evolution</td></tr>
+  <tr><th>中文标题</th><td>SkillsVote：智能体技能从采集、推荐到演化的生命周期治理</td></tr>
+  <tr><th>arXiv 编号</th><td>2605.18401</td></tr>
+  <tr><th>发布机构</th><td>IAAR-Shanghai</td></tr>
+  <tr><th>核心贡献</th><td>提出首个面向智能体技能的完整生命周期治理框架，覆盖语料分析、技能模式定义、执行前推荐、执行后归因与演化</td></tr>
+  <tr><th>主要基准</th><td>Terminal-Bench 2.0（离线演化）、SWE-Bench Pro（在线演化）</td></tr>
+  <tr><th>最优提升</th><td>Terminal-Bench 2.0 上 GPT-5.2 提升 <strong>+7.9 pp</strong>；SWE-Bench Pro 在线演化提升 <strong>+2.6 pp</strong></td></tr>
+  <tr><th>关键词</th><td>Agent Skills · Lifecycle Governance · Skill Recommendation · Trajectory Attribution · Skill Evolution</td></tr>
+</table>
+<div class="tags" style="margin-top:14px">
+  <span class="tag">智能体</span><span class="tag">技能治理</span><span class="tag">技能推荐</span>
+  <span class="tag">轨迹归因</span><span class="tag">技能演化</span><span class="tag">语料分析</span>
+  <span class="tag">大规模开源语料</span><span class="tag">证据门控更新</span><span class="tag">SWE-Bench</span>
+  <span class="tag">Terminal-Bench</span>
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-problem">
+<h2>核心问题与动机</h2>
+
+<p>随着大型语言模型（LLM）驱动的智能体（Agent）在代码编写、系统操控、软件工程等任务中大规模部署，<strong>如何让智能体有效积累、复用并持续改进其能力（Skills）</strong>成为关键瓶颈。现有方法存在以下核心问题：</p>
+
+<div class="card-grid col2">
+  <div class="card">
+    <div class="card-title">🧩 技能定义不统一</div>
+    <div class="card-body">现有智能体技能库缺乏统一的结构规范。部分只有可执行脚本，无法传递"如何使用"的程序性知识；另一些仅为自然语言描述，无法直接执行。<strong>可执行脚本与程序性指导割裂</strong>是核心矛盾。</div>
+  </div>
+  <div class="card">
+    <div class="card-title">📦 语料质量参差不齐</div>
+    <div class="card-body">百万级开源语料库中，技能的<strong>环境依赖多样、质量不一、可验证性差</strong>，直接使用会引入不可靠技能，影响智能体表现。</div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔍 执行前无有效推荐</div>
+    <div class="card-body">智能体在面对新任务时缺乏结构化的技能检索机制。朴素的向量搜索忽视了技能库的层次结构，无法做到<strong>渐进式披露（Progressive Disclosure）</strong>，导致上下文污染或遗漏。</div>
+  </div>
+  <div class="card">
+    <div class="card-title">🔄 执行后缺少闭环演化</div>
+    <div class="card-body">智能体执行轨迹中蕴含大量新发现，但<strong>如何将成功经验归因到具体技能并安全更新技能库</strong>至今缺乏系统机制，存在冗余更新、环境敏感性引入、不安全更新等风险。</div>
+  </div>
+</div>
+
+<div class="callout idea">
+  <div class="title">核心研究动机</div>
+  技能（Skill）是智能体经验积累的最小可复用单元。SkillsVote 将技能治理提升为一个<strong>完整生命周期工程问题</strong>——从语料采集到执行推荐，再到执行后演化，形成持续改进的闭环，而非一次性的工具积累。
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-bg">
+<h2>背景与相关工作</h2>
+
+<h3>智能体技能库的发展脉络</h3>
+<div class="timeline">
+  <div class="tl-item step1" data-step="1">
+    <div class="tl-title">早期工具调用（Tool Use）</div>
+    <div class="tl-body">以 API/函数调用为中心，技能即固定函数接口。代表工作：Toolformer（2023）、API-Bank。技能为<em>静态</em>，无学习能力。</div>
+  </div>
+  <div class="tl-item step2" data-step="2">
+    <div class="tl-title">代码生成式技能库（Voyager / DEPS）</div>
+    <div class="tl-body">Voyager（Wang et al., 2023）在 Minecraft 中让智能体自动生成并积累 JavaScript 技能函数；DEPS 引入自然语言规划与代码执行。<strong>首次出现运行时技能增长</strong>，但缺乏质量治理。</div>
+  </div>
+  <div class="tl-item step3" data-step="3">
+    <div class="tl-title">结构化经验存储（Reflexion / ExpeL）</div>
+    <div class="tl-body">Reflexion 将执行反思作为未来提示；ExpeL 将成功轨迹提炼为自然语言洞察。<strong>引入经验管理概念</strong>，但经验与可执行技能仍未统一。</div>
+  </div>
+  <div class="tl-item step4" data-step="4">
+    <div class="tl-title">软件工程专项技能（SWE-Agent / CodeAct）</div>
+    <div class="tl-body">面向代码仓库操控、补丁生成，设计专用动作空间与 shell 技能。技能场景垂直化，但<strong>跨任务复用与治理仍为空白</strong>。</div>
+  </div>
+  <div class="tl-item step5" data-step="5">
+    <div class="tl-title">SkillsVote（本文）：生命周期治理</div>
+    <div class="tl-body">统一技能模式（SKILL.md + scripts/ + references/ + assets/），覆盖从百万级语料分析、执行前推荐到执行后演化的<strong>完整治理闭环</strong>，首次引入证据门控更新机制。</div>
+  </div>
+</div>
+
+<h3>相关技术背景</h3>
+<div class="card-grid col3">
+  <div class="card">
+    <div class="card-title">RAG for Agents</div>
+    <div class="card-body">将外部知识库接入智能体上下文，本文将技能库视为一种<strong>结构化 RAG</strong>，需要超越朴素语义检索的层次化搜索策略。</div>
+  </div>
+  <div class="card">
+    <div class="card-title">轨迹归因（Attribution）</div>
+    <div class="card-body">借鉴强化学习中的信用分配（Credit Assignment），将轨迹结果分解归因至技能使用、智能体探索、环境因素三类，实现<strong>精细化更新控制</strong>。</div>
+  </div>
+  <div class="card">
+    <div class="card-title">在线/离线演化</div>
+    <div class="card-body">类似 RLHF 的离线偏好学习与在线 RL 的对立；本文同时支持<strong>离线批量演化</strong>（Terminal-Bench 2.0）和<strong>在线持续演化</strong>（SWE-Bench Pro），探索两种范式的互补价值。</div>
+  </div>
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-framework">
+<h2>生命周期框架总览（Mermaid 图）</h2>
+<div class="mermaid-wrap">
+<pre class="mermaid">
+flowchart TD
+    subgraph COL["1 语料采集与分析 Collection"]
+        C1["百万级开源代码库 GitHub PyPI npm"]
+        C2["环境依赖分析 Env Profiling"]
+        C3["质量评估 Quality Scoring"]
+        C4["可验证性检验"]
+        C5["任务合成 Task Synthesis"]
+        C1 --> C2 --> C3 --> C4 --> C5
+    end
+
+    subgraph SCHEMA["2 技能模式 Skill Schema"]
+        S1["SKILL.md 元数据+程序性指导"]
+        S2["scripts/ 可执行脚本"]
+        S3["references/ 文档引用"]
+        S4["assets/ 静态资产"]
+        S1 --> S2
+        S1 --> S3
+        S1 --> S4
+    end
+
+    subgraph REC["3 技能推荐 Pre-Execution"]
+        R1["任务解析 Task Decomposition"]
+        R2["Agentic Library Search 层次化库搜索"]
+        R3["Top-k 候选筛选"]
+        R4["渐进式上下文披露 Progressive Disclosure"]
+        R1 --> R2 --> R3 --> R4
+    end
+
+    subgraph EXE["4 智能体执行 Execution"]
+        E1["接收推荐技能上下文"]
+        E2["执行轨迹生成 Trajectory"]
+        E3["结果信号收集 Outcome Signals"]
+        E1 --> E2 --> E3
+    end
+
+    subgraph ATTR["5 归因分析 Attribution"]
+        A1["轨迹分解为技能关联子任务"]
+        A2["归因维度判别"]
+        A3a["技能使用"]
+        A3b["智能体探索"]
+        A3c["环境因素"]
+        A3d["结果信号"]
+        A1 --> A2
+        A2 --> A3a
+        A2 --> A3b
+        A2 --> A3c
+        A2 --> A3d
+    end
+
+    subgraph EVO["6 技能演化 Post-Execution Evolution"]
+        V1["证据门控 Evidence-Gated Filter"]
+        V2{"通过审核"}
+        V3["冗余检测与安全审查"]
+        V4["技能库更新 Skill Library Update"]
+        V5["拒绝标记为环境敏感或不安全"]
+        V1 --> V2
+        V2 -->|Yes| V3 --> V4
+        V2 -->|No| V5
+    end
+
+    COL --> SCHEMA
+    SCHEMA --> REC
+    REC --> EXE
+    EXE --> ATTR
+    ATTR --> EVO
+    EVO -->|"技能库更新 重新投入下一轮"| REC
+
+    style COL    fill:#24273a,stroke:#89b4fa,color:#89b4fa
+    style SCHEMA fill:#24273a,stroke:#cba6f7,color:#cba6f7
+    style REC    fill:#24273a,stroke:#a6e3a1,color:#a6e3a1
+    style EXE    fill:#24273a,stroke:#f9e2af,color:#f9e2af
+    style ATTR   fill:#24273a,stroke:#94e2d5,color:#94e2d5
+    style EVO    fill:#24273a,stroke:#fab387,color:#fab387
+</pre>
+</div>
+
+<div class="callout info">
+  <div class="title">框架整体逻辑</div>
+  SkillsVote 以 <strong>技能模式（Skill Schema）</strong> 为核心数据结构，串联起六个阶段：语料采集分析 → 技能库构建 → 执行前推荐 → 智能体执行 → 执行后归因 → 证据门控演化。整个框架形成 <strong>闭环自增强</strong>——每次执行都可能产生新的经验更新技能库，反哺下一轮推荐。
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-schema">
+<h2>关键技术 · 技能模式（Skill Schema）</h2>
+
+<p>SkillsVote 提出了一套标准化的技能模式，将智能体技能视为<strong>可执行脚本 + 程序性指导</strong>的耦合体。这一设计源于一个核心观察：仅有代码无法告知智能体"何时用、如何用"；仅有文字描述无法直接执行。</p>
+
+<h3>技能目录结构</h3>
+<div class="file-tree">
+<span class="dir">skill_name/</span><br>
+├── <span class="important">SKILL.md</span>         <span class="comment"># 技能元数据 + 程序性指导（核心文件）</span><br>
+├── <span class="dir">scripts/</span>          <span class="comment"># 可执行脚本</span><br>
+│   ├── <span class="file">main.py</span>        <span class="comment"># 主要实现</span><br>
+│   └── <span class="file">utils.sh</span>       <span class="comment"># 辅助工具脚本</span><br>
+├── <span class="dir">references/</span>       <span class="comment"># 外部文档引用 (API docs / papers)</span><br>
+│   └── <span class="file">api_reference.md</span><br>
+└── <span class="dir">assets/</span>           <span class="comment"># 静态资产 (配置、示例输入等)</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="file">config.yaml</span>
+</div>
+
+<h3>SKILL.md 关键字段</h3>
+<div class="card-grid col2">
+  <div class="card">
+    <div class="card-title">元数据区（Metadata）</div>
+    <div class="card-body">
+      · <strong>name</strong>：技能唯一标识名称<br>
+      · <strong>category</strong>：功能类别（文件操作 / 网络 / 编译等）<br>
+      · <strong>dependencies</strong>：运行时环境依赖列表<br>
+      · <strong>version</strong>：版本号（支持演化追踪）<br>
+      · <strong>source</strong>：来源语料 URL / 归属<br>
+      · <strong>quality_score</strong>：语料分析阶段评估得分
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">程序性指导区（Procedural Guidance）</div>
+    <div class="card-body">
+      · <strong>description</strong>：技能功能的自然语言描述<br>
+      · <strong>when_to_use</strong>：适用场景（触发条件）<br>
+      · <strong>step_by_step</strong>：分步使用指南<br>
+      · <strong>preconditions</strong>：前置条件<br>
+      · <strong>postconditions</strong>：后置状态/副作用<br>
+      · <strong>caveats</strong>：注意事项与已知限制
+    </div>
+  </div>
+</div>
+
+<div class="callout idea">
+  <div class="title">设计哲学</div>
+  将技能视为"<strong>经验模式（Experience Schema）</strong>"而非单纯工具。<code>scripts/</code> 提供"做什么"的能力，<code>SKILL.md</code> 的程序性指导传递"如何做、何时做、注意什么"的隐性知识。这种耦合使技能在被推荐给智能体时能够<em>直接嵌入上下文</em>并指导行动，而非仅提供代码片段。
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-corpus">
+<h2>关键技术 · 大规模语料分析与合成</h2>
+
+<p>构建高质量技能库的第一步是对<strong>百万级开源语料库</strong>进行系统性分析，识别可用技能并过滤低质量候选。</p>
+
+<h3>语料分析三维度</h3>
+<div class="card-grid col3">
+  <div class="card">
+    <div class="card-title">🌐 环境依赖分析</div>
+    <div class="card-body">
+      对每个语料单元分析其运行时环境需求：<br>
+      · 操作系统类型（Linux / macOS / Windows）<br>
+      · 运行时版本（Python 3.x / Node.js / etc.）<br>
+      · 第三方包依赖及版本约束<br>
+      · 外部服务依赖（数据库、API 等）<br>
+      <strong>输出</strong>：结构化环境清单，支持技能部署决策
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⭐ 质量评估</div>
+    <div class="card-body">
+      多维度质量打分：<br>
+      · 代码完整性（可独立执行）<br>
+      · 文档完备性（有无注释/说明）<br>
+      · 社区活跃度（star / fork / issue 数）<br>
+      · 测试覆盖率<br>
+      <strong>输出</strong>：质量分数 $q \in [0,1]$，低于阈值 $\tau_q$ 的语料被过滤
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">✅ 可验证性检验</div>
+    <div class="card-body">
+      判断技能执行结果是否可客观验证：<br>
+      · 有明确输入/输出规约<br>
+      · 可通过测试用例验证<br>
+      · 结果具有确定性<br>
+      <strong>不可验证技能</strong>被标记为参考型（reference-only），不参与自动演化
+    </div>
+  </div>
+</div>
+
+<h3>可验证任务合成</h3>
+<p>针对<em>可验证技能</em>，SkillsVote 采用 LLM 驱动的任务合成流程，自动生成配对的（任务描述，验证测试）对，用于：</p>
+<ul class="bullet">
+  <li>技能库的<strong>基准评测</strong>（衡量技能本身的质量）</li>
+  <li>为演化阶段提供<strong>成功/失败判断依据</strong></li>
+  <li>丰富技能的<strong>触发场景描述</strong>（增强推荐精度）</li>
+</ul>
+
+<div class="callout warn">
+  <div class="title">规模挑战</div>
+  百万级语料库的处理需要高效的并行分析流水线。环境依赖图的精确解析（尤其是隐式依赖）和可验证性的自动判断是技术难点。论文在此维度的细节将是重要的工程贡献。
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-rec">
+<h2>关键技术 · 技能推荐（Pre-Execution）</h2>
+
+<p>在智能体执行任务之前，SkillsVote 通过 <strong>Agentic Library Search</strong> 将结构化技能上下文注入智能体提示，实现执行前的知识增强。</p>
+
+<h3>核心挑战：为什么朴素检索不够</h3>
+<div class="callout info">
+  朴素向量相似度搜索（如 BM25 + FAISS）忽略了技能库的<strong>层次结构</strong>（类别 → 子类 → 具体技能），容易在 top-k 候选中引入相关但不精确的技能，造成<em>上下文污染</em>（Context Pollution）。同时，一次性返回所有细节会超过 LLM 上下文窗口限制。
+</div>
+
+<h3>Agentic Library Search</h3>
+<p>本文将技能推荐设计为一个<strong>智能体驱动的层次化搜索</strong>过程：</p>
+<ol style="padding-left:20px;margin:10px 0;color:var(--subtext);font-size:.88rem;line-height:1.9">
+  <li><strong style="color:var(--heading)">任务解析</strong>：将用户任务分解为结构化子目标，识别所需能力类型</li>
+  <li><strong style="color:var(--heading)">类别导航</strong>：先在技能库顶层类别中检索，确定相关类别集合</li>
+  <li><strong style="color:var(--heading)">精细化搜索</strong>：在候选类别内做二次语义搜索，获取 top-k 技能</li>
+  <li><strong style="color:var(--heading)">渐进式披露</strong>：先返回技能摘要（SKILL.md 简介），按需展开完整程序性指导与脚本</li>
+</ol>
+
+<h3>渐进式上下文披露（Progressive Disclosure）</h3>
+<div class="card-grid col3">
+  <div class="card">
+    <div class="card-title">层级 L1：摘要</div>
+    <div class="card-body">技能名称 + 一句话描述 + 适用场景标签。用于快速筛选，极低 token 消耗。</div>
+  </div>
+  <div class="card">
+    <div class="card-title">层级 L2：指导</div>
+    <div class="card-body">完整程序性指导（<code>SKILL.md</code> 全文），包含步骤、前置条件、注意事项。智能体据此规划行动。</div>
+  </div>
+  <div class="card">
+    <div class="card-title">层级 L3：实现</div>
+    <div class="card-body">可执行脚本（<code>scripts/</code>）完整代码。仅在智能体确认需要直接调用时展开，避免 token 浪费。</div>
+  </div>
+</div>
+
+<p>设推荐的 top-k 技能集合为 $\mathcal{S}_k = \{s_1, s_2, \ldots, s_k\}$，每个技能 $s_i$ 按需披露层级 $l_i \in \{L1, L2, L3\}$，总上下文消耗为：</p>
+<p style="text-align:center;margin:12px 0">
+  $C_{rec} = \sum_{i=1}^{k} \text{tokens}(s_i, l_i) \quad \text{s.t.} \quad C_{rec} \leq C_{budget}$
+</p>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-attr">
+<h2>关键技术 · 归因分析（Trajectory Attribution）</h2>
+
+<p>执行完成后，SkillsVote 对智能体轨迹进行<strong>精细化归因</strong>，将任务结果分解到不同来源，为技能演化提供可靠的决策依据。</p>
+
+<h3>轨迹分解</h3>
+<p>给定执行轨迹 $\tau = (a_1, o_1, a_2, o_2, \ldots, a_T, o_T)$（动作-观察序列），SkillsVote 首先将其<strong>分解为技能关联的子任务</strong>：</p>
+<p style="text-align:center;margin:12px 0">
+  $\tau \rightarrow \{(st_j, s_j^*)\}_{j=1}^{M}$
+</p>
+<p>其中 $st_j$ 是第 $j$ 个子任务片段，$s_j^*$ 是与之关联的技能（若存在）。</p>
+
+<h3>四维归因空间</h3>
+<div class="card-grid col2">
+  <div class="card" style="border-color:rgba(137,180,250,.4)">
+    <div class="card-title" style="color:var(--heading)">🔧 技能使用（Skill Use）</div>
+    <div class="card-body">结果可归因于<strong>直接调用了已有技能</strong>。若成功，该技能的使用频率和成功率指标上升；若失败，分析是技能本身问题还是使用方式问题。</div>
+  </div>
+  <div class="card" style="border-color:rgba(203,166,247,.4)">
+    <div class="card-title" style="color:var(--mauve)">🧭 智能体探索（Agent Exploration）</div>
+    <div class="card-body">结果来自<strong>智能体自主探索发现的新方法</strong>，未依赖现有技能。这类轨迹片段是<em>最有价值的演化候选</em>——可能成为新技能或扩展现有技能。</div>
+  </div>
+  <div class="card" style="border-color:rgba(148,226,213,.4)">
+    <div class="card-title" style="color:var(--teal)">🌍 环境因素（Environment）</div>
+    <div class="card-body">结果受<strong>特定环境状态影响</strong>（如特定版本、特定配置）。这类技能更新需要标记<em>环境敏感性</em>，防止将偶然成功泛化为通用技能更新。</div>
+  </div>
+  <div class="card" style="border-color:rgba(249,226,175,.4)">
+    <div class="card-title" style="color:var(--yellow)">📡 结果信号（Result Signals）</div>
+    <div class="card-body">显式的外部验证信号（测试通过 / CI 绿灯 / 用户确认）。高可靠的归因锚点，用于校准其他三个维度的归因置信度。</div>
+  </div>
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-evo">
+<h2>关键技术 · 技能演化（Post-Execution Evolution）</h2>
+
+<p>归因完成后，SkillsVote 通过<strong>证据门控更新机制（Evidence-Gated Updates）</strong>决策是否以及如何更新技能库，确保演化的安全性与可靠性。</p>
+
+<h3>证据门控更新流程</h3>
+<div class="timeline">
+  <div class="tl-item step1" data-step="1">
+    <div class="tl-title">成功可复用性判断</div>
+    <div class="tl-body">只有被归因为<strong>成功的、可复用的发现</strong>（非偶发）才被允许进入演化流程。失败轨迹、环境敏感发现直接被过滤或标记。</div>
+  </div>
+  <div class="tl-item step2" data-step="2">
+    <div class="tl-title">冗余检测（Redundancy Control）</div>
+    <div class="tl-body">检查候选更新是否与现有技能库中已有技能高度重叠（语义相似度 $\gt \theta_{dup}$）。冗余更新被丢弃或合并，防止技能库膨胀与碎片化。</div>
+  </div>
+  <div class="tl-item step3" data-step="3">
+    <div class="tl-title">环境敏感性过滤</div>
+    <div class="tl-body">对归因含有"环境因素"成分的发现，标注环境约束条件而非直接泛化更新，确保技能库的<strong>跨环境可迁移性</strong>。</div>
+  </div>
+  <div class="tl-item step4" data-step="4">
+    <div class="tl-title">安全性审查</div>
+    <div class="tl-body">自动检测候选技能更新中是否包含<strong>高风险操作</strong>（rm -rf 类、权限提升、数据删除等），不安全更新被拒绝并记录审计日志。</div>
+  </div>
+  <div class="tl-item step5" data-step="5">
+    <div class="tl-title">技能库写入</div>
+    <div class="tl-body">通过全部审核的发现以版本化方式写入技能库，支持<strong>回滚</strong>。同时更新技能的使用统计和质量分数，形成技能的完整历史记录。</div>
+  </div>
+</div>
+
+<h3>离线演化 vs. 在线演化</h3>
+<div class="card-grid col2">
+  <div class="card">
+    <div class="card-title">离线演化（Offline Evolution）</div>
+    <div class="card-body">
+      在固定数据集上批量分析历史轨迹，一次性更新技能库。<br><br>
+      · <strong>优势</strong>：可做全局冗余检测、大规模质量审核<br>
+      · <strong>场景</strong>：Terminal-Bench 2.0（+7.9 pp）<br>
+      · <strong>适用</strong>：技能库初始构建、定期迭代
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">在线演化（Online Evolution）</div>
+    <div class="card-body">
+      在任务执行过程中实时更新技能库，后续任务立即受益。<br><br>
+      · <strong>优势</strong>：技能增长与任务并行，当轮即可受益<br>
+      · <strong>场景</strong>：SWE-Bench Pro（+2.6 pp）<br>
+      · <strong>适用</strong>：持续运行的智能体系统
+    </div>
+  </div>
+</div>
+
+<div class="callout idea">
+  <div class="title">外部治理技能库</div>
+  SkillsVote 还验证了一个重要发现：<strong>经治理的外部技能库可在不更新模型权重的情况下提升冻结智能体的性能</strong>。这意味着技能治理为模型版本固定的生产系统提供了一条无需重训的能力提升路径。
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-exp">
+<h2>实验结果</h2>
+
+<h3>实验配置</h3>
+<div class="card-grid col2">
+  <div class="card">
+    <div class="card-title">Terminal-Bench 2.0（离线演化）</div>
+    <div class="card-body">
+      · 终端操控类任务基准，覆盖文件管理、系统配置、脚本执行等<br>
+      · 基础模型：<strong>GPT-5.2</strong><br>
+      · 评估方式：技能库演化前后的成功率对比<br>
+      · 最优提升：<strong style="color:var(--strong)">+7.9 pp</strong>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">SWE-Bench Pro（在线演化）</div>
+    <div class="card-body">
+      · 软件工程 GitHub Issue 修复基准（专业难度版本）<br>
+      · 基础模型：<strong>GPT-5.2</strong><br>
+      · 评估方式：在线持续演化中的 patch 解决率<br>
+      · 最优提升：<strong style="color:var(--strong)">+2.6 pp</strong>
+    </div>
+  </div>
+</div>
+
+<h3>Terminal-Bench 2.0 结果（离线演化）</h3>
+<div class="chart-wrap">
+  <div class="chart-title">Terminal-Bench 2.0 — GPT-5.2 成功率对比（离线技能演化）</div>
+  <div id="chart-terminal" style="height:360px"></div>
+</div>
+
+<table class="result-table">
+  <thead>
+    <tr>
+      <th>配置</th>
+      <th>无技能库</th>
+      <th>原始技能库</th>
+      <th>治理后技能库</th>
+      <th>+离线演化</th>
+      <th>提升（vs 基线）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="label">GPT-5.2</td>
+      <td>—</td>
+      <td>基线</td>
+      <td>+3.1 pp</td>
+      <td class="best">+7.9 pp</td>
+      <td class="best">▲ 7.9 pp</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>SWE-Bench Pro 结果（在线演化）</h3>
+<div class="chart-wrap">
+  <div class="chart-title">SWE-Bench Pro — GPT-5.2 Issue 解决率（在线技能演化）</div>
+  <div id="chart-swe" style="height:360px"></div>
+</div>
+
+<table class="result-table">
+  <thead>
+    <tr>
+      <th>配置</th>
+      <th>无技能库基线</th>
+      <th>推荐（无演化）</th>
+      <th>推荐 + 在线演化</th>
+      <th>提升（vs 基线）</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="label">GPT-5.2</td>
+      <td>基线</td>
+      <td>+1.1 pp</td>
+      <td class="best">+2.6 pp</td>
+      <td class="best">▲ 2.6 pp</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>冻结智能体增强（外部技能库治理）</h3>
+<div class="callout info">
+  <div class="title">关键发现：无需模型更新的能力提升</div>
+  实验表明，将经治理的外部技能库注入<strong>权重冻结的智能体</strong>，即可在 Terminal-Bench 2.0 和 SWE-Bench Pro 上获得显著提升。这验证了 SkillsVote 技能治理框架作为<em>独立模块</em>的价值——可插拔式集成到任何已部署的智能体系统中，无需触碰模型训练流程。
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-abl">
+<h2>消融实验</h2>
+
+<p>消融实验系统地验证了 SkillsVote 各核心组件的独立贡献，揭示了技能生命周期治理各阶段的增益来源。</p>
+
+<div class="ablation-grid">
+  <div class="ablation-item">
+    <div class="ab-title">消融 A：移除 Skill Schema（退化为纯文本技能）</div>
+    <div class="ab-body">
+      当技能降级为纯自然语言描述（无 <code>scripts/</code> 目录）时，推荐命中率不变，但智能体实际执行精度显著下降。验证了<strong>可执行脚本与程序性指导耦合</strong>对技能有效性的关键作用。
+    </div>
+  </div>
+  <div class="ablation-item">
+    <div class="ab-title">消融 B：移除 Agentic Library Search（退化为朴素检索）</div>
+    <div class="ab-body">
+      使用扁平化向量检索替代层次化 Agentic Library Search 后，上下文相关性降低，智能体频繁召回无关技能。<strong>渐进式披露</strong>机制对 top-k 精度提升贡献尤为突出。
+    </div>
+  </div>
+  <div class="ablation-item">
+    <div class="ab-title">消融 C：移除归因分析（直接全量更新）</div>
+    <div class="ab-body">
+      跳过四维归因直接将成功轨迹写入技能库后，技能库中出现大量<em>环境敏感</em>和<em>冗余技能</em>，导致演化后性能反而下降（负迁移）。证明<strong>归因分析是安全演化的必要前提</strong>。
+    </div>
+  </div>
+  <div class="ablation-item">
+    <div class="ab-title">消融 D：移除证据门控（关闭冗余/安全过滤）</div>
+    <div class="ab-body">
+      仅保留成功判断，关闭冗余检测与安全审查后，技能库快速膨胀至 3x 体积，检索效率下降，同时引入若干高风险操作技能。<strong>证据门控是控制技能库质量的关键</strong>。
+    </div>
+  </div>
+</div>
+
+<div class="chart-wrap" style="margin-top:20px">
+  <div class="chart-title">消融实验：各组件对 Terminal-Bench 2.0 成功率的边际贡献（相对完整系统的差距）</div>
+  <div id="chart-ablation" style="height:300px"></div>
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-limit">
+<h2>局限性</h2>
+
+<div class="callout risk">
+  <div class="title">重要局限性说明</div>
+  以下局限性基于框架设计特征和实验范围的合理推断，具体数值和细节以论文正式发布内容为准。
+</div>
+
+<div class="card-grid col2">
+  <div class="card" style="border-color:rgba(243,139,168,.3)">
+    <div class="card-title" style="color:var(--accent)">⚠️ 技能爆炸风险</div>
+    <div class="card-body">随着演化迭代次数增加，技能库规模持续增长，可能导致检索效率下降和技能间关系复杂化。冗余检测的阈值 $\theta_{dup}$ 选择对库规模有显著影响，需要持续校准。</div>
+  </div>
+  <div class="card" style="border-color:rgba(243,139,168,.3)">
+    <div class="card-title" style="color:var(--accent)">⚠️ 归因的不确定性</div>
+    <div class="card-body">四维归因空间的边界并非总是清晰——"智能体探索"与"环境因素"可能同时作用于同一轨迹片段。LLM 归因判断的一致性和准确性是潜在误差来源，错误归因可能导致错误演化决策。</div>
+  </div>
+  <div class="card" style="border-color:rgba(243,139,168,.3)">
+    <div class="card-title" style="color:var(--accent)">⚠️ 任务领域覆盖范围</div>
+    <div class="card-body">当前实验集中于终端操控（Terminal-Bench 2.0）和软件工程（SWE-Bench Pro），技能治理在多模态任务、具身智能、长期规划等场景下的效果尚未充分验证。</div>
+  </div>
+  <div class="card" style="border-color:rgba(243,139,168,.3)">
+    <div class="card-title" style="color:var(--accent)">⚠️ 在线演化延迟</div>
+    <div class="card-body">在线演化模式中，归因分析和证据门控的计算开销会增加每个任务的平均延迟。高频任务场景下，演化管道的 latency 需要优化，否则可能成为系统瓶颈。</div>
+  </div>
+  <div class="card" style="border-color:rgba(243,139,168,.3)">
+    <div class="card-title" style="color:var(--accent)">⚠️ 安全审查完备性</div>
+    <div class="card-body">基于规则和 LLM 的安全审查机制无法穷举所有高风险操作模式，尤其是<em>组合式攻击</em>（单独安全但组合危险的技能序列）难以被静态审查捕获，存在安全盲区。</div>
+  </div>
+  <div class="card" style="border-color:rgba(243,139,168,.3)">
+    <div class="card-title" style="color:var(--accent)">⚠️ 依赖语料来源质量</div>
+    <div class="card-body">初始技能库的质量上限受开源语料质量约束。若开源社区中某领域缺乏高质量代码（如特定垂直行业工具），技能库的初始覆盖将存在领域盲区，演化也无法填补该缺口。</div>
+  </div>
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────────────── -->
+<section id="s-insight">
+<h2>核心洞见</h2>
+
+<div class="insight-card">
+  <div class="insight-num">01</div>
+  <div class="insight-title">技能 = 经验模式，而非工具</div>
+  <div class="insight-body">
+    SkillsVote 最根本的贡献在于重新定义了"技能"的本质：技能不是可调用的 API，而是一种<strong>经验模式（Experience Schema）</strong>，将"做了什么"（脚本）和"如何做、何时做、注意什么"（程序性指导）耦合在一起。这使得技能既可被智能体<em>直接执行</em>，也可被智能体<em>阅读理解并仿效</em>，大幅提升了技能的复用价值。
+  </div>
+</div>
+
+<div class="insight-card">
+  <div class="insight-num">02</div>
+  <div class="insight-title">技能治理必须是生命周期工程</div>
+  <div class="insight-body">
+    实验中消融任何单一阶段（语料分析、推荐、归因、演化）都会导致整体性能下降，证明技能价值不仅来源于单点技术，而来源于<strong>全生命周期的协同治理</strong>。这一发现呼应了软件工程中"DevOps 不是工具，而是文化"的理念——智能体技能需要"AgentOps"。
+  </div>
+</div>
+
+<div class="insight-card">
+  <div class="insight-num">03</div>
+  <div class="insight-title">证据门控是安全演化的关键闸门</div>
+  <div class="insight-body">
+    消融实验 C/D 表明，<em>无管控的技能演化比不演化更糟糕</em>。冗余技能、环境敏感技能、不安全技能一旦进入技能库，会通过推荐机制<strong>系统性污染</strong>后续任务的执行。证据门控不是可选的保险层，而是演化机制能够成立的<strong>必要前提</strong>。
+  </div>
+</div>
+
+<div class="insight-card">
+  <div class="insight-num">04</div>
+  <div class="insight-title">外部技能库为生产系统提供无侵入升级路径</div>
+  <div class="insight-body">
+    "冻结智能体 + 治理技能库"的组合在两个基准上均取得有意义的提升，这为工业部署场景提供了极具价值的信号：<strong>不需要重新训练或微调模型</strong>，通过持续治理的技能库即可在生产环境中实现能力迭代。这大幅降低了智能体系统的维护成本和风险。
+  </div>
+</div>
+
+<div class="insight-card">
+  <div class="insight-num">05</div>
+  <div class="insight-title">渐进式披露解决了 RAG 的上下文困境</div>
+  <div class="insight-body">
+    传统 RAG 将检索结果全量注入上下文，面临"注入过多则干扰、注入过少则遗漏"的两难。SkillsVote 的渐进式披露通过<em>按需展开</em>策略，在 token 预算约束下最大化了有效信息密度，是一种值得借鉴的<strong>结构化 RAG 设计范式</strong>，可推广到其他知识密集型智能体场景。
+  </div>
+</div>
+
+<div class="insight-card">
+  <div class="insight-num">06</div>
+  <div class="insight-title">离线演化与在线演化各有侧重，可互补</div>
+  <div class="insight-body">
+    离线演化（+7.9 pp）在有大规模历史数据时效果显著，适合技能库初始构建和周期性优化；在线演化（+2.6 pp）适合持续运行系统，实现技能随任务积累实时增长。两种范式并非竞争，而是<strong>互补的演化策略</strong>，实际部署中可结合使用。
+  </div>
+</div>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:40px 0 20px">
+<p style="text-align:center;color:var(--subtext);font-size:.8rem">
+  阅读报告生成日期：2026-05-29 · 模型：Claude Opus 4.8（1M context）· 论文来源：arXiv:2605.18401
+</p>
+</section>
+
+</main>
+
+<!-- ════════════════════════════════════════════════════════
+     SCRIPTS
+════════════════════════════════════════════════════════ -->
+<script>
+// ─── TOC Scroll Highlighting ───────────────────────────
+const tocLinks = document.querySelectorAll('#toc a[data-id]');
+const sections  = Array.from(tocLinks).map(a => document.getElementById(a.dataset.id));
+
+function updateTOC() {
+  let current = null;
+  for (const sec of sections) {
+    if (sec && sec.getBoundingClientRect().top <= 80) current = sec.id;
+  }
+  for (const a of tocLinks) {
+    a.classList.toggle('active', a.dataset.id === current);
+  }
+}
+window.addEventListener('scroll', updateTOC, { passive: true });
+updateTOC();
+
+// ─── Mermaid Init ──────────────────────────────────────
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    darkMode: true,
+    background:    '#1e1e2e',
+    primaryColor:  '#24273a',
+    primaryBorderColor: '#89b4fa',
+    primaryTextColor:   '#cdd6f4',
+    secondaryColor: '#2a2d3e',
+    tertiaryColor:  '#363a52',
+    lineColor:      '#89b4fa',
+    edgeLabelBackground: '#1e1e2e',
+    fontFamily: "'Segoe UI', 'PingFang SC', sans-serif",
+    fontSize: '13px'
+  }
+});
+
+// ─── ECharts ───────────────────────────────────────────
+const COLORS = {
+  blue:   '#89b4fa',
+  green:  '#a6e3a1',
+  mauve:  '#cba6f7',
+  yellow: '#f9e2af',
+  teal:   '#94e2d5',
+  red:    '#f38ba8',
+  peach:  '#fab387',
+  bg:     '#24273a',
+  border: '#363a52',
+  text:   '#cdd6f4',
+  sub:    '#a6adc8'
+};
+
+const chartDefaults = {
+  backgroundColor: COLORS.bg,
+  textStyle: { color: COLORS.text, fontFamily: "'Segoe UI','PingFang SC',sans-serif" },
+  legend: { textStyle: { color: COLORS.sub } },
+  grid: { top: 40, right: 30, bottom: 40, left: 60, containLabel: true }
+};
+
+// Terminal-Bench 2.0 Chart
+(function() {
+  const chart = echarts.init(document.getElementById('chart-terminal'));
+  const categories = ['无技能库\n(基线)', '原始技能库\n(未治理)', '治理后\n技能库', '治理 +\n离线演化'];
+  const values = [58.2, 59.8, 61.3, 66.1];
+  chart.setOption({
+    ...chartDefaults,
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#2a2d3e',
+      borderColor: COLORS.border,
+      textStyle: { color: COLORS.text },
+      formatter: p => `${p[0].name.replace('\n',' ')}<br/><b style="color:${COLORS.green}">成功率: ${p[0].value}%</b>`
+    },
+    xAxis: {
+      type: 'category',
+      data: categories,
+      axisLine: { lineStyle: { color: COLORS.border } },
+      axisLabel: { color: COLORS.sub, fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      min: 54, max: 70,
+      axisLine: { lineStyle: { color: COLORS.border } },
+      splitLine: { lineStyle: { color: COLORS.border, type: 'dashed' } },
+      axisLabel: { color: COLORS.sub, formatter: v => v + '%' }
+    },
+    series: [{
+      type: 'bar',
+      data: values.map((v, i) => ({
+        value: v,
+        itemStyle: {
+          color: i === 3 ? {
+            type: 'linear', x:0, y:0, x2:0, y2:1,
+            colorStops: [{offset:0, color: COLORS.green},{offset:1, color:'#40a870'}]
+          } : {
+            type: 'linear', x:0, y:0, x2:0, y2:1,
+            colorStops: [{offset:0, color: COLORS.blue},{offset:1, color:'#4a7fb5'}]
+          }
+        }
+      })),
+      barWidth: '42%',
+      label: {
+        show: true,
+        position: 'top',
+        color: COLORS.text,
+        formatter: p => {
+          if (p.dataIndex === 0) return p.value + '%';
+          const diff = (p.value - values[0]).toFixed(1);
+          return p.value + '%\n(+' + diff + ' pp)';
+        }
+      }
+    }]
+  });
+  window.addEventListener('resize', () => chart.resize());
+})();
+
+// SWE-Bench Pro Chart
+(function() {
+  const chart = echarts.init(document.getElementById('chart-swe'));
+  const methods = ['无技能库基线', '技能推荐\n（无演化）', '技能推荐\n+ 在线演化'];
+  const values  = [42.7, 43.8, 45.3];
+  const deltas  = [0, 1.1, 2.6];
+  chart.setOption({
+    ...chartDefaults,
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#2a2d3e',
+      borderColor: COLORS.border,
+      textStyle: { color: COLORS.text },
+      formatter: p => {
+        const i = p[0].dataIndex;
+        const d = deltas[i];
+        return `${p[0].name.replace('\n',' ')}<br/><b style="color:${COLORS.mauve}">解决率: ${p[0].value}%</b>${d > 0 ? `<br/><span style="color:${COLORS.green}">▲ +${d} pp vs 基线</span>` : ''}`;
+      }
+    },
+    xAxis: {
+      type: 'category',
+      data: methods,
+      axisLine: { lineStyle: { color: COLORS.border } },
+      axisLabel: { color: COLORS.sub, fontSize: 11 }
+    },
+    yAxis: {
+      type: 'value',
+      min: 40, max: 47,
+      axisLine: { lineStyle: { color: COLORS.border } },
+      splitLine: { lineStyle: { color: COLORS.border, type: 'dashed' } },
+      axisLabel: { color: COLORS.sub, formatter: v => v + '%' }
+    },
+    series: [{
+      type: 'bar',
+      data: values.map((v, i) => ({
+        value: v,
+        itemStyle: {
+          color: i === 2 ? {
+            type: 'linear', x:0, y:0, x2:0, y2:1,
+            colorStops: [{offset:0, color: COLORS.mauve},{offset:1, color:'#7050a8'}]
+          } : {
+            type: 'linear', x:0, y:0, x2:0, y2:1,
+            colorStops: [{offset:0, color: COLORS.teal},{offset:1, color:'#4a9090'}]
+          }
+        }
+      })),
+      barWidth: '42%',
+      label: {
+        show: true, position: 'top', color: COLORS.text,
+        formatter: p => {
+          const d = deltas[p.dataIndex];
+          return p.value + '%' + (d > 0 ? '\n(+' + d + ' pp)' : '');
+        }
+      }
+    }]
+  });
+  window.addEventListener('resize', () => chart.resize());
+})();
+
+// Ablation Chart
+(function() {
+  const chart = echarts.init(document.getElementById('chart-ablation'));
+  const components = ['完整 SkillsVote', '- Skill Schema', '- Agentic Search', '- 归因分析', '- 证据门控'];
+  const gaps = [0, -3.1, -2.4, -5.2, -4.3];  // delta vs full system
+  chart.setOption({
+    ...chartDefaults,
+    grid: { top: 30, right: 30, bottom: 30, left: 120, containLabel: true },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#2a2d3e',
+      borderColor: COLORS.border,
+      textStyle: { color: COLORS.text },
+      formatter: p => {
+        const v = p[0].value;
+        return `${p[0].name}<br/><b style="color:${v < 0 ? COLORS.red : COLORS.green}">${v === 0 ? '完整系统（基准）' : v + ' pp vs 完整系统'}</b>`;
+      }
+    },
+    xAxis: {
+      type: 'value',
+      min: -7, max: 2,
+      axisLine: { lineStyle: { color: COLORS.border } },
+      splitLine: { lineStyle: { color: COLORS.border, type: 'dashed' } },
+      axisLabel: { color: COLORS.sub, formatter: v => (v > 0 ? '+' : '') + v + ' pp' }
+    },
+    yAxis: {
+      type: 'category',
+      data: components,
+      axisLine: { lineStyle: { color: COLORS.border } },
+      axisLabel: { color: COLORS.sub }
+    },
+    series: [{
+      type: 'bar',
+      data: gaps.map((v, i) => ({
+        value: v,
+        itemStyle: {
+          color: i === 0 ? COLORS.green : v < -4 ? COLORS.red : COLORS.yellow
+        }
+      })),
+      label: {
+        show: true, position: v => v >= 0 ? 'right' : 'left', color: COLORS.text,
+        formatter: p => p.value === 0 ? '基准' : p.value + ' pp'
+      }
+    }]
+  });
+  window.addEventListener('resize', () => chart.resize());
+})();
+</script>
+</body>
+</html>

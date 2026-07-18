@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Boogu-Image-0.1：提升开源统一多模态理解与生成 — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    h4 { color: var(--strong); font-size: 1.0em; margin: 1.1em 0 0.3em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.9em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    .best { color: var(--strong); font-weight: 700; }
+    .boogu { background: rgba(137,180,250,0.10); }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 7px; border-radius: 10px; background: var(--heading); color: #1e1e2e; }
+    .tag.green { background: #a6e3a1; }
+    .tag.orange { background: #fab387; }
+    .tag.purple { background: #cba6f7; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .info-card h4 { margin-top: 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+<h1>Boogu-Image-0.1：提升开源统一多模态理解与生成</h1>
+
+<p><span class="tag">多模态生成</span> <span class="tag green">统一理解与生成</span> <span class="tag orange">开源</span> <span class="tag purple">Agentic 推理时扩展</span></p>
+
+<h2 id="sec-1">1. 概述</h2>
+
+<table>
+  <tr><th>标题</th><td>Boogu-Image-0.1: Boosting Open-Source Unified Multimodal Understanding and Generation</td></tr>
+  <tr><th>核心问题</th><td>在受限算力预算下，如何让开源统一多模态理解与生成模型族（Base/Turbo/Edit/Edit-Turbo）在高质量文生图、快速推理、指令编辑与中英双语文字渲染上接近闭源系统（Nano-Banana-Pro、GPT-Image-2），并把"系统级集成"能力下放到单一开源体系。</td></tr>
+  <tr><th>机构</th><td>Boogu Team — 主 affiliation 为 Huawei 人工智能实验室（莱布尼茨所，香港），合作机构含香港大学 (HKU)、香港科技大学 (HKUST)、香港理工大学 (PolyU)、香港城市大学 (CityU)、香港中文大学 (CUHK)、南京大学。</td></tr>
+  <tr><th>开源地址</th><td><a href="https://github.com/Boogu-Project/Boogu-Image">https://github.com/Boogu-Project/Boogu-Image</a>（权重、代码、配方均以 Apache 2.0 发布）</td></tr>
+  <tr><th>arXiv</th><td>2607.13125（2026-07-14）</td></tr>
+</table>
+
+<h3>1.1 总体介绍</h3>
+
+<p>Boogu-Image-0.1 是一个开源的统一多模态理解与生成模型族，包含 <strong>Base / Turbo / Edit / Edit-Turbo</strong> 四类变体，覆盖高质量文生图 (T2I)、快速推理、指令式图像编辑 (TI2I) 与中英双语文字渲染四类核心能力。论文的核心论点是：闭源系统（如 Nano-Banana-Pro、GPT-Image-2）的强大表现来自<strong>系统级集成</strong>而非单一模型，其内部实践大多不公开；Boogu 团队证明，只要在<strong>模型理解能力、数据质量、训练管线</strong>三条轴线上做针对性改进，并叠加 <strong>agentic inference-time scaling</strong>（由 Deepseek-V4-Flash 驱动的智能体重写 prompt、路由模型、做 reflection），即便在<strong>高度受限的算力预算</strong>下也能大幅提升生成与编辑性能。</p>
+
+<div class="info-card">
+<p><strong>关键数字（原文）：</strong></p>
+<ul>
+  <li>整个训练管线仅使用 <strong>2.0862 亿（208.62M）</strong>张唯一图像；</li>
+  <li>基础模型理论训练成本仅约 <strong>40 万美元（$400K）</strong>；</li>
+  <li>Boogu Syllabus 仅含 <strong>21.62M</strong> 唯一样本，按预设权重上采样到 <strong>47.19M</strong>，性能即显著超过训练于 <strong>187M</strong> 原始开源数据的模型；</li>
+  <li>DiT 基础模型约 <strong>10B（10,292.56M）</strong>可训练参数，叠加可选 Prompt Tuning Transformer 后为 <strong>11,022.55M</strong>；</li>
+  <li>在 Boogu Arena 上，Boogu 系列在开源梯队中全面领先，仅次于闭源前沿 GPT-Image-2（Elo 1196）与 Nano-Banana-Pro（Elo 1087）；Boogu-Turbo-Thinking 达 Elo 1048。</li>
+</ul>
+</div>
+
+<p>论文将"理解 (understanding)"提升为与数据质量、训练配方、推理管线并列的<strong>一等设计目标</strong>，并提出图像生成正从 Text-to-Image 迈向 <strong>Requirement-to-Image</strong> 范式：用户不再满足于单一描述性 prompt，而期望模型解读复杂意图、隐式约束、多层级指令与跨模态上下文线索。围绕这一目标，Boogu 把理解分解为三个互补维度——<strong>理解用户意图</strong>（text encoder + prompt rewriter）、<strong>理解训练图像</strong>（caption 策略）、<strong>理解任务复杂度</strong>（inference-time 模型路由）——分别针对当前 T2I 管线中不同来源的误差。</p>
+
+<h2 id="sec-2">2. 研究背景与动机</h2>
+
+<h3>2.1 统一多模态理解与生成的演进</h3>
+
+<p>论文在 Appendix B 系统梳理了视觉合成从孤立生成任务走向集成多模态框架的轨迹，可分为四条脉络：</p>
+
+<ul>
+  <li><strong>Text-to-Image 扩散模型</strong>：扩散模型 [DDPM] 奠基，LDM 与 DALL-E 2 确立了高保真文本条件生成范式；DALL-E 3 通过 recaption 数据集提升 prompt 遵从；架构从 U-Net 转向 Transformer（DiT）解锁可扩展性，SD3 的 rectified flow 与 Sora 的视频生成进一步推动，最终汇聚为闭源的 Nano-Banana 系列与 ChatGPT Images 系列。</li>
+  <li><strong>可控生成与编辑</strong>：ControlNet 引入辅助条件以尊重空间线索（深度/姿态）；InstructPix2Pix 开创指令驱动编辑，无需复杂手工掩膜。</li>
+  <li><strong>视觉-语言模型 (VLM)</strong>：LLaVA 将 ViT 与 LLM 对齐；Ovis、Qwen-VL 系列精化结构对齐与视觉推理，支持高分辨率输入。</li>
+  <li><strong>统一多模态生成</strong>：OmniGen / OmniGen2 率先在单一框架内原生处理多种生成与编辑任务；闭源 Nano-Banana 系列通过 interleaved prompt 引入推理引导合成；开源 Qwen-Image、Z-Image 将深度视觉理解与可扩展高效生成结合。</li>
+</ul>
+
+<h3>2.2 闭源系统级集成 vs 单一模型</h3>
+
+<p>论文反复强调一个判断：闭源系统的强大来自<strong>系统级集成</strong>而非单一模型。观察到的事实线索包括：GPT-Image-2 生成"a beautiful girl"这类极简 prompt 时，耗时可达 Z-Image-Turbo 的 <strong>100 倍</strong>——这一延迟先验暗示其内部存在一个稳健的理解模块去仔细分析与拆解用户指令。Boogu 早期架构曾尝试用 72B VLM 驱动 10B DiT（VLM 冻结、仅训 DiT），但训练与推理开销过高，开源社区难以复现。最终采用<strong>解耦的算力高效范式</strong>：中等规模 VLM（如 32B）作为 Instruction Reasoner 处理复杂逻辑，轻量 VLM（8B）作为 Instruction Encoder 提取隐藏状态作为 DiT 的条件信号，显著降低训练与推理成本。</p>
+
+<h3>2.3 相关工作对比</h3>
+
+<table>
+  <tr><th>代表系统</th><th>类型</th><th>关键特征</th><th>与 Boogu 的关系</th></tr>
+  <tr><td>GPT-Image-2 / ChatGPT Images</td><td>闭源</td><td>系统级集成、推理引导、高延迟先验</td><td>追赶目标；推理耗时约 100× 于 Z-Image-Turbo</td></tr>
+  <tr><td>Nano-Banana-Pro / Nano-Banana-2.0</td><td>闭源</td><td>interleaved prompt 推理引导合成</td><td>部分领域对标对象；人类评测中真实编辑仍领先 Boogu</td></tr>
+  <tr><td>Seedream 4.x / 5.0-Lite</td><td>闭源</td><td>重美学 RL、肖像一致年轻化</td><td>Boogu 刻意避免重美学 RL 以保留分布多样性</td></tr>
+  <tr><td>Qwen-Image / Qwen-Image-2.0</td><td>开源 (Apache)</td><td>外挂 LLM 重写指令、十亿级数据</td><td>指令编码器更强 VLM 的趋势同向；Boogu 用更少数据追平</td></tr>
+  <tr><td>Z-Image</td><td>开源</td><td>单流 DiT、高效</td><td>Boogu Turbo 的效率对标</td></tr>
+  <tr><td>Hunyuan-Image / Krea2 / Lens</td><td>开源</td><td>十亿级预训练数据</td><td>Boogu 仅 208.62M 即超越（数据质量优先）</td></tr>
+  <tr><td>FLUX.1 / FLUX.2</td><td>开源/非商用</td><td>Boogu 直接复用其 VAE (FLUX.1-dev)</td><td>VAE 重建误差成为细节瓶颈</td></tr>
+  <tr><td>OmniGen / OmniGen2</td><td>开源</td><td>原生统一多任务框架</td><td>统一架构先驱；Boogu 采用 dual/single-stream DiT</td></tr>
+</table>
+
+<blockquote>Boogu 的核心动机：把闭源系统赖以强大的"系统级集成"拆解为可复现的开源组件——理解模块、数据课程、agentic 推理时扩展——并在受限算力下证明其有效。</blockquote>
+
+<h2 id="sec-3">3. 核心方法</h2>
+
+<h3 id="sec-3-0">3.0 方法总览：训练与推理流程</h3>
+
+<p>Boogu 的完整流程横跨<strong>训练侧</strong>（数据课程 → 解耦架构 → 渐进式分辨率/任务课程 → Turbo 蒸馏加速）与<strong>推理侧</strong>（agentic 理解 → 模型路由 → 推理时技术注入）。下图刻画了从 Base 到 Turbo、再到 Edit/Edit-Turbo 的训练管线与 agentic 推理时扩展链路。</p>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph DATA["数据侧（Boogu Syllabus）"]
+        D1["公开语料<br/>COYO / DataComp / PixelProse / BLIP-3o / OmniCorpus"]
+        D2["按人类先验拆解<br/>21.62M 唯一样本 → 上采样 47.19M"]
+        D3["缺陷显式标注<br/>水印/噪点/模糊/过曝 → 纳入可控生成"]
+        D4["汉字枚举<br/>3500 常用字 × ≥300 次曝光"]
+        D1 --> D2 --> D3
+        D2 --> D4
+    end
+
+    subgraph TRAIN["训练侧（渐进式课程）"]
+        T1["512×512 T2I<br/>187M 开源数据"]
+        T2["1024×1024 T2I<br/>60M 开源 + 47M Syllabus"]
+        T3["2048×2048 T2I (Base)<br/>原生 2K，Rectified 时间偏移"]
+        T4["2048×2048 TI2I (Edit)<br/>11M T2I + 11M 编辑"]
+        T1 --> T2 --> T3 --> T4
+    end
+
+    subgraph ARCH["解耦架构（理解 + 生成）"]
+        A1["Instruction Reasoner<br/>32B VLM，冻结"]
+        A2["Instruction Encoder<br/>Qwen3-VL-8B，冻结"]
+        A3["Prompt Tuning Transformer<br/>可选，3 层 32 token"]
+        A4["DiT 10B<br/>8 dual-stream + 32 single-stream"]
+        A1 --> A2 --> A3 --> A4
+    end
+
+    subgraph TURBO["Turbo 加速"]
+        TU1["Base 模型"]
+        TU2["Turbo 蒸馏<br/>少步快速推理"]
+        TU3["Edit-Turbo<br/>编辑侧加速"]
+        TU1 --> TU2
+        TU1 --> TU4["Edit 模型"] --> TU3
+    end
+
+    subgraph INFER["Agentic 推理时扩展（Deepseek-V4-Flash 驱动）"]
+        I1["用户请求"]
+        I2["Agentic Prompt Rewriting<br/>推理式翻译，非增强"]
+        I3["Model Router<br/>按难度路由 Base/Turbo"]
+        I4["Reflection / Best-of-N<br/>推理时质量提升"]
+        I5["高保真输出"]
+        I1 --> I2 --> I3 --> I4 --> I5
+    end
+
+    DATA --> TRAIN
+    ARCH --> TRAIN
+    TRAIN --> TURBO
+    TURBO --> INFER
+
+    classDef data fill:#313244,stroke:#89b4fa,color:#cdd6f4;
+    classDef train fill:#1a1a2e,stroke:#a6e3a1,color:#cdd6f4;
+    classDef arch fill:#2a2a3e,stroke:#cba6f7,color:#cdd6f4;
+    classDef turbo fill:#2a2a3e,stroke:#fab387,color:#cdd6f4;
+    classDef infer fill:#313244,stroke:#89dceb,color:#cdd6f4;
+    class D1,D2,D3,D4 data;
+    class T1,T2,T3,T4 train;
+    class A1,A2,A3,A4 arch;
+    class TU1,TU2,TU3,TU4 turbo;
+    class I1,I2,I3,I4,I5 infer;
+</pre>
+
+<p>上图揭示了 Boogu 的三大协同改进轴：<strong>(1) 理解</strong>（解耦架构 + agentic 重写）、<strong>(2) 数据质量</strong>（Syllabus 课程 + 缺陷显式标注 + 汉字枚举）、<strong>(3) 训练与推理管线</strong>（渐进式课程 + Turbo 蒸馏 + 推理时扩展）。下文逐一展开。</p>
+
+<h3 id="sec-3-1">3.1 模型架构：解耦的"理解 + 生成"</h3>
+
+<p>Boogu 采用解耦架构，把"理解"与"生成"分到不同模块，既保留了强理解能力又控制了算力。其宏架构（Appendix B.2）由三部分构成：</p>
+
+<h4>3.1.1 Instruction Reasoner（指令推理器）</h4>
+<p>使用中等规模 VLM（如 32B）处理复杂逻辑理解，对输入文本指令（经 chat template + system prompt 格式化）做<strong>全面分析、拆解与重写</strong>，输出结构化、无歧义的条件 prompt。编辑场景下额外拼接参考图像。系统根据是否有视觉输入自动判定任务模态：无参考图 → T2I 任务 + T2I system prompt；有参考图 → 编辑任务 + 编辑 system prompt。</p>
+
+<h4>3.1.2 Instruction Encoder（指令编码器）+ 图像生成</h4>
+<p>Instruction Encoder 本质是一个 Autoregressive Transformer（即 VLM，采用 <strong>Qwen3-VL-8B-Instruct</strong>），其子模块包括：</p>
+<ul>
+  <li><strong>Text Tokenizer & Embedding Table</strong>：将重写后的指令 tokenize 并投影为 embedding 序列；</li>
+  <li><strong>ViT</strong>：编码参考图像到与文本 prompt 同一潜空间（下采样到 384×384 防止序列过长）；无参考图时 ViT 被旁路，即为纯 T2I；</li>
+  <li><strong>System Prompt</strong>：按任务类型自适应构建；</li>
+  <li><strong>Prompt Tuning Transformer（可选）</strong>：极轻量可训练模块（<strong>3 层、仅 32 个可训练 prompt token、causal mask</strong>），输出 prepended 到 Encoder 输入序列；因 Encoder 训练时冻结，该模块在数学上对 Encoder 输出隐藏态序列的 embedding 分布做全局调制，使其更好对齐 DiT 所需语义空间。</li>
+</ul>
+
+<h4>3.1.3 DiT（Diffusion Transformer）</h4>
+<p>DiT 子模块含 VAE（采用 <strong>FLUX.1-dev VAE</strong>，将参考图映射到潜空间）、Embedder/Refiner（线性投影 + 轻量 2 层 Transformer，指令/参考图/噪声各有独立 Embedder 与 Refiner）、以及 <strong>dual-stream + single-stream 堆叠</strong>：</p>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph DS["Dual-Stream Layers × Nd=8"]
+        DS1["Instruction Stream<br/>左流：指令残差 + 全模态注意力<br/>强调指令建模"]
+        DS2["Image Stream<br/>右流：图像自注意力<br/>含噪声潜变量 + 参考图"]
+        DS1 <--> DS2
+    end
+    subgraph SS["Single-Stream Layers × Ns=32"]
+        SS1["融合表示<br/>模态无关统一参数<br/>QKV 共享"]
+    end
+    REF["Refiner 输出<br/>指令流 / 图像流"] --> DS
+    DS --> SS --> OUT["VAE Decoder<br/>输出图像"]
+    TIME["Time Embedding<br/>调制 scale/shift"] -.-> DS
+    TIME -.-> SS
+</pre>
+
+<p><strong>Dual-Stream Layer</strong>（Appendix B.3.1）的设计精髓：左右两流都根植于整体理解，但左流强调指令模态（含指令残差连接的全模态注意力），右流强调图像模态（图像 token 内部自注意力 + 整体增强）。两流融合后输出既基于整体理解又分别强调指令/图像。该层有 <strong>三组独立 QKV 投影</strong>，分别用于：文本模态、用于整体增强的图像模态、图像模态内部自注意力。<strong>Single-Stream Layer</strong>（B.3.2）将两流最终隐藏态合并为统一表示，做模态无关的全面融合分析（指令与图像共享 QKV 等参数）。两层均采用 <strong>sandwich norm + 调制机制</strong>，bold 线为主路径（残差连接，仅保留则退化为恒等映射），细线为分支路径（注意力/调制等复杂计算，在合适节点并入主路径）。</p>
+
+<div class="info-card">
+<h4>架构超参一览（Table 10）</h4>
+<table>
+  <tr><th>参数</th><th>值</th><th>参数</th><th>值</th></tr>
+  <tr><td>Patch Size</td><td>2</td><td>Single-Stream Layers</td><td>32</td></tr>
+  <tr><td>Input Channels</td><td>16</td><td>Dual-Stream Layers</td><td>8</td></tr>
+  <tr><td>Hidden Size</td><td>3360</td><td>Refiner Layers</td><td>2</td></tr>
+  <tr><td>Attention Heads</td><td>28</td><td>KV Heads</td><td>7</td></tr>
+  <tr><td>FFN Multiple Of</td><td>256</td><td>RoPE Axes Dims</td><td>[40, 40, 40]</td></tr>
+  <tr><td>VAE Model</td><td>FLUX.1-dev</td><td>3D RoPE</td><td>是</td></tr>
+  <tr><td>Instruction Encoder</td><td>Qwen3-VL-8B-Instruct</td><td>Prompt Tuning（可选）</td><td>3 层 / 32 token / causal</td></tr>
+  <tr><td>Base DiT 可训练参数</td><td><strong>10,292.56M (~10B)</strong></td><td>含 Prompt Tuning 总参数</td><td><strong>11,022.55M</strong></td></tr>
+</table>
+<p>推理采样可用 Flow Matching 标准一阶 Euler 法，或 DPM-Solver++ 等快速 ODE 求解器。</p>
+</div>
+
+<h3 id="sec-3-2">3.2 训练目标与公式</h3>
+
+<p>Boogu 的生成主干基于 <strong>Flow Matching / Rectified Flow</strong>（Lipman et al.；SD3；Lumina 系列），在潜空间内训练。其核心训练目标包含 <strong>logit-normal 时间步采样 + resolution-dependent 动态时间偏移 (dynamic time shifting)</strong>。下面按原文完整还原这套公式，并给出 Boogu 针对 2K 原生训练提出的<strong>修正版动态时间偏移</strong>。</p>
+
+<h4>3.2.1 标准 logit-normal 采样</h4>
+<p>标准 logit-normal 时间步采样为：</p>
+<p>$$t = \mathrm{Sigmoid}(u) = \frac{1}{1 + e^{-u}}; \quad u \sim \mathcal{N}(0, 1)$$</p>
+<p>其中 $t$ 为扩散时间步（Boogu 设定中 $t \to 0$ 表示高噪声态，$t \to 1$ 表示干净样本）。</p>
+
+<h4>3.2.2 动态时间偏移（resolution-dependent）</h4>
+<p>为建模潜 token 数 $n_T$ 对时间步分布的影响，用两个参考点 $(x_1, y_1)$、$(x_2, y_2)$ 校准线性插值得到 shift 因子：</p>
+<p>$$\mu(n_T) = k \cdot n_T + b, \quad k = \frac{y_2 - y_1}{x_2 - x_1}, \quad b = y_1 - k \cdot x_1$$</p>
+<p>其中 $n_T$ 为分辨率相关的潜空间 token 数。偏移后的时间步：</p>
+<p>$$t_{\mathrm{shift}} = \tau\left(t;\, \mu(n_T), \sigma\right) = \frac{t^{\sigma}}{t^{\sigma} + e^{\mu(n_T)} \cdot (1-t)^{\sigma}}; \quad \sigma \gt 0$$</p>
+<p>该操作本质上是 logit 空间的仿射变换：</p>
+<p>$$\mathrm{logit}(t_{\mathrm{shift}}) = \log\left(\frac{t_{\mathrm{shift}}}{1 - t_{\mathrm{shift}}}\right) = \sigma \cdot \mathrm{logit}(t) - \mu(n_T)$$</p>
+<p>当 $\sigma = 1$ 时退化为纯平移 $-\mu(n_T)$。更大的 $\mu(n_T)$（更高分辨率图像诱导）会把整体分布推向更小的 $t$。</p>
+
+<h4>3.2.3 修正版动态时间偏移（Rectified Dynamic Time Shifting）</h4>
+<p>Boogu 是最早原生 2K 训练的开源模型之一，作者发现标准动态偏移在 2K 下产生<strong>过挤压效应 (over-squeezing)</strong>：偏移过度降低训练时信噪比，拖慢收敛、早期生成出现噪声伪影。设 $(x_1,y_1)=(256,0.5)$、$(x_2,y_2)=(4096,1.15)$ 时，2K（16384 tokens）下中位数从 1K 的 0.24 坍缩至 0.04。Boogu 采用简单有效的<strong>钳制 (clamp) 有效 token 数</strong>方案：</p>
+<p>$$\tilde{\mu}(n_T) = \mu\left(\min(n_T, n_{\mathrm{cap}})\right) = \min\left(\mu(n_T),\, \mu(n_{\mathrm{cap}})\right)$$</p>
+<p>其中 $n_{\mathrm{cap}} = 4096$（即 1K 分辨率区间）。超出 1K 区间后不再施加额外时间偏移，直接继承 1K 上调好的偏移行为并扩展到 2K。通过分位函数刻画 $t_{\mathrm{shift}}$ 分布：</p>
+<p>$$P_q = Q_{t_{\mathrm{shift}}}(q;\, \mu(n_T), \sigma) = \mathrm{Sigmoid}\left(\sigma \cdot \Phi^{-1}(q) - \mu(n_T)\right); \quad q \in (0,1),\, \sigma \gt 0$$</p>
+<p>其中 $\Phi(x) = \int_{-\infty}^{x} \frac{1}{\sqrt{2\pi}} e^{-s^2/2}\, ds$ 为标准正态 CDF，默认 $\sigma=1$。该修正消除了过挤压伪影，无需重新拟合 $(\alpha,\beta)$（对比对数曲线 $\tilde{\mu}(n_T)=\alpha\log(n_T)+\beta$ 方案，后者仍是单调曲线且需拟合优化）。</p>
+
+<h4>3.2.4 Classifier-Free Guidance 与 BOG（见 3.6 节）</h4>
+<p>条件生成采用 CFG。在概率流 ODE 框架下，前向加噪等价于确定性 ODE：</p>
+<p>$$dx_t = -\sigma(t)\,\nabla_{x_t}\log p_t(x_t)\, d\sigma(t) = -\frac{\dot{\sigma}(t)}{\sigma(t)}\nabla_{x_t}\log p_t(x_t)\, dt$$</p>
+<p>生成即从 $t=0$（纯噪声 $p_0 = \mathcal{N}(0, \sigma^2_{\max}I)$）到 $t=1$（干净数据 $p_1 = p_{\mathrm{data}}$）数值积分该 ODE。不可解析的 score 由 DiT $D_\theta(x_t, t, c)$ 近似。</p>
+
+<h3 id="sec-3-3">3.3 数据质量与去重策略</h3>
+
+<p>Boogu 的数据哲学可概括为"<strong>足够的数据并不够 (Just Enough Data Is Not Enough)</strong>"——单纯数据量远不足以训练 SOTA 模型，必须以人类先验组织成结构化课程。其数据策略包含若干反直觉但效果显著的设计。</p>
+
+<h4>3.3.1 头部冗余数据无用论</h4>
+<p>互联网数据呈严重长尾分布：热门概念可用数据比稀有概念多数量级。以地标为例（Figure 21），埃菲尔铁塔的搜索热度远超其余。作者论证：头部数据的冗余对训练无必要，超过某点后对已充分覆盖概念的额外样本收益递减。这为<strong>数据均衡化</strong>提供依据——但仅在算力受限时才值得（否则均衡化构建成本可能超过直接训练非均衡数据的成本）。</p>
+
+<h4>3.3.2 显式标注缺陷，而非过滤缺陷数据</h4>
+<p>与 Qwen-Image、Z-Image、JoyAI-Image 等强调过滤带可见伪影图像的做法不同，Boogu 主张：欠曝、构图差、模糊、水印等<strong>次优数据不应被完全丢弃</strong>，只要配以详尽准确 caption 即可保留。通过显式描述所有视觉与逻辑内容及其具体缺陷（如详述水印存在、模糊确切性质），这些图像可按适当比例纳入训练集，使模型不仅学会基础视觉模式，还理解"负向视觉元素"，获得更全面、可控的生成能力。原文例示四类常见伪影（水印 / 弱光彩色噪点 / 运动模糊 / 严重过曝）配以点名缺陷的 caption。</p>
+
+<h4>3.3.3 Boogu Syllabus：人类先验课程</h4>
+<p>作者援引三条视觉理解研究的关键洞见：(1) 模型能力相对训练数据呈严重长尾分布；(2) 多模态模型需<strong>指数级数据曝光</strong>才能掌握一个概念（zero-shot 性能仅随指数增长的相似数据曝光线性增长）；(3) 单纯放大参数无法补偿未见数据类型。T2I（维度扩展任务）比视觉理解（维度压缩任务）对数据与训练要求更严苛。据此提出三条数据策展原则：</p>
+<ul>
+  <li><strong>系统化细粒度拆解</strong>：像物理教科书把知识拆为热力学/电动力学等分支一样，把数据拆解为细粒度、逻辑互联的组件，构成结构化课程；</li>
+  <li><strong>全面覆盖</strong>：理想情况下，任何所需能力都不应落在计划范围之外；必须主动为每个目标能力策展数据，而非指望模型靠规模"顿悟"；"训练时没见过猫，就认为它生成不了猫"；</li>
+  <li><strong>每类充足数据</strong>：每个细粒度域需足够数据量，确保达到曝光阈值。</li>
+</ul>
+<p>Boogu Syllabus 最终含 <strong>21.62M 唯一样本</strong>，训练时按预设权重上采样到 <strong>47.19M</strong>。宏观分布（Figure 25）：design 34.9%、people 34.7%、general 17.0%、object/style/scene/animal 各 3.4%–3.7%、unknown 0.7%。微观上 design 被细分为 poster/text rare/product poster design/diagram slides/logo 等多子类，反映其多面性（精确排版、logo/海报设计、构图）。仅靠这 47.19M（远小于 187M 开源数据），性能即显著超越（见 Table 8）。</p>
+
+<h4>3.3.4 汉字词汇枚举：≥300 次曝光</h4>
+<p>为提升视觉文字渲染（尤其汉字），提出基于词汇枚举的系统化数据构建策略，远比无方向数据增强有效。经验发现：模型几乎无法渲染<strong>未见汉字</strong>，每个字形至少需 <strong>300 次训练曝光</strong>才能准确生成。资源受限无法枚举全部汉字词汇时，优先覆盖 <strong>3500 个最常用现代汉字</strong>（现代汉语常用字表）。确保每个字至少出现 300 次后，模型即可满足日常中文文字渲染需求。Table 9 显示针对性 SFT 后 LongTextBench(ZH) 从 <strong>0.9055 → 0.9538</strong>。</p>
+
+<h4>3.3.5 质量优于数量：开源数据不保证高性能</h4>
+<p>初始预训练阶段混合公开语料（COYO、DataComp、PixelProse、BLIP-3o 单图文对 + OmniCorpus 交错图文）。实验证明<strong>仅靠开源数据（187M）会给性能设下严格天花板</strong>：开源语料普遍存在语义噪声、事实错误、严重数据重复，且 caption 简短浅薄，缺乏高保真生成所需的细粒度属性、空间关系与稠密图文对齐，且严重偏向通用网页内容，缺乏高质量领域特定（科学/逻辑/本地化）数据。要追平专有前沿模型，必须超越公开数据集，构建精密数据精炼管线、高质量合成数据与专家级策展。</p>
+
+<h4>3.3.6 文化偏见难以靠 SFT 修复</h4>
+<p>作者识别出跨文化语境的能力差距：模型习得西方概念（如白人特征）比东方概念更容易，根源在大规模开源预训练数据的西方中心偏见。实验发现即便 SFT 阶段引入大规模高质量中文数据集也无法完全纠正——基础世界观与文化关联在大规模预训练阶段建立，下游 SFT 仅触及行为对齐表面，不根本改变潜表示空间。结论：<strong>文化多样性必须在预训练阶段解决</strong>，而非作为微调的事后补救。</p>
+
+<h3 id="sec-3-4">3.4 Agentic Inference-Time Scaling（推理时扩展）</h3>
+
+<p>Boogu 不把模型当作被动的 text-to-image 映射，而是用 agent 在推理时注入理解。该 agent 由 <strong>Deepseek-V4-Flash</strong> 驱动，执行三类操作：<strong>(1) agentic prompt rewriting</strong>（重写 prompt）、<strong>(2) model selection</strong>（在 Base/Turbo 等变体间路由）、<strong>(3) inference-time techniques</strong>（如 Reflection）。Figure 1 显示，注入的理解能力越多，模型性能逐步提升（Raw Model → +Prompt Enhance → +Best-of-N → +Reflection → Agentic Model）。</p>
+
+<h4>3.4.1 Agentic Prompt Rewriter：翻译者而非增强者</h4>
+<p>现有 prompt rewriter 的两大局限：(1) 输出过长，引入冗余或幻觉细节偏离原意并推高推理成本；(2) 单次前向，无法在重写前对模糊/组合指令做推理。Boogu 采用<strong>推理式 prompt rewriter</strong>，把重写视为推理过程而非单次变换——解读用户意图、消歧、产出忠实且作用域适当的指令。其四大能力维度：</p>
+<ul>
+  <li><strong>Reasoning</strong>：间接指定目标的 prompt（如"会下蛋且产奶的动物"、"$7\times8$ 的结果"）需多步推理才能确定可视主体，rewriter 将隐式描述解析为可渲染指令；</li>
+  <li><strong>Counting</strong>：生成模型在精确计数上 notoriously 不可靠，rewriter 显式枚举实例（把"五个苹果"扩展为结构化、位置感知的描述）缓解计数错误；</li>
+  <li><strong>NSFW prompts</strong>：不安全请求在重写阶段即被识别并净化，提供可解释的内容审核第一道防线；</li>
+  <li><strong>Text rendering</strong>：用户加文字意图常模糊或格式不精确（如"加标题"未指定确切文字/风格），rewriter 解析为明确、结构良好、固定精确字符串与位置的规范，显著提升渲染准确性与视觉质量。</li>
+</ul>
+<p><strong>核心设计原则：rewriter 应被恒等变换下界约束</strong>——当用户 prompt 已清晰、规范、无冲突时，rewriter 应几乎不变地保留，而非 compulsively 扩写。这样重写只会帮忙、不会伤害：最坏情况逐字保留原意，更好情况消解歧义/欠规范/冲突。这正是"翻译者"与"增强者"的区别：前者仅在意图不清时干预，后者无条件改变输入。</p>
+
+<p><strong>缩放规律（Figure 18a）</strong>：用不同 thinking 模型做重写，advantage score 随模型规模增长（0.8B→0.71, 2B→0.98, 4B→1.31, 9B→1.53, 27B→1.80, 122B→1.59, 397B→2.16）。更强世界知识与推理 → 更连贯、意图忠实、上下文感知的重写。122B（MoE）相对 27B 的回落可能归因 MoE 架构或路由行为，但整体趋势不变。<strong>技能维度（Figure 18b）</strong>：为 Counting/Infographic/Reasoning/NSFW/Scene-Text 引入专属 PE 技能后，对应维度 advantage score 均提升，Infographic(2.33) 与 Scene-Text(5.93) 增益最显著。NSFW 分数低于 1 是因不安全 prompt 被有意净化。</p>
+
+<p>advantage score 定义为：</p>
+<p>$$S_{\mathrm{adv}} = \left(\frac{N_{\mathrm{win}} + N_{\mathrm{good\,tie}}}{N_{\mathrm{tie}} + N_{\mathrm{bad\,tie}}}\right) \Big/ \left(\frac{N_{\mathrm{lose}} + N_{\mathrm{good\,tie}}}{N_{\mathrm{tie}} + N_{\mathrm{bad\,tie}}}\right)$$</p>
+<p>$S_{\mathrm{adv}} \gt 1$ 表示相对 baseline 有优势。</p>
+
+<p>作者还强调：不同 T2I 模型需要不同的 prompt rewriter——各模型在不同轴注入人类偏好（有的偏真实、有的偏插画/美学），训练时采用不同 caption 策略（期待不同风格结构的输入）。为某模型 caption 分布调优的 rewriter 对另一模型可能产生 OOD 输入而劣化输出。因此<strong>在相同 prompt 下比较两模型常不公平</strong>，有意义比较应为每个模型配其适配的 prompt。</p>
+
+<h4>3.4.2 Model Router：为任务选对模型</h4>
+<p>如同人类画家完成简单速写与复杂构图耗时差异巨大，Boogu 用 agent 决定调用哪个模型以控制质量-效率权衡。GPT-Image-2 生成"a beautiful girl"可比 Z-Image-Turbo 慢 100×；Boogu 系列内 Turbo 与 Base 输出常难以区分，但推理成本差 <strong>50–100 倍</strong>。据此，agent 按估计难度把请求路由到最合适变体：简单请求给轻量 Turbo，复杂需求留给重 Base。类似思路见 LLM 路由框架 FrugalGPT、RouteLLM、Hybrid-LLM。</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm（概念）：Agentic Inference-Time Scaling</div>
+  <p><span class="kw">Input:</span> 用户请求 <span class="var">req</span>；模型变体集 <span class="var">{Base, Turbo, Edit, Edit-Turbo}</span>；agent 骨干 <span class="var">Deepseek-V4-Flash</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤 1：agentic prompt 重写（推理式翻译）</span></p>
+  <p style="padding-left:1.5em"><span class="var">prompt'</span> = <span class="fn">Reasoner.rewrite</span>(<span class="var">req</span>)  <span class="cm">// 消歧/计数/NSFW/文字规范，恒等下界</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤 2：估计任务复杂度并路由</span></p>
+  <p style="padding-left:1.5em"><span class="var">difficulty</span> = <span class="fn">Agent.estimate</span>(<span class="var">prompt'</span>)</p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> <span class="var">difficulty</span> == <span class="num">simple</span>: <span class="var">model</span> = <span class="fn">Turbo</span>  <span class="cm">// 快速、低成本</span></p>
+  <p style="padding-left:1.5em"><span class="kw">else if</span> <span class="var">difficulty</span> == <span class="num">hard</span>: <span class="var">model</span> = <span class="fn">Base</span>  <span class="cm">// 高保真</span></p>
+  <p style="padding-left:1.5em"><span class="kw">else if</span> <span class="fn">is_edit</span>(<span class="var">req</span>): <span class="var">model</span> = <span class="fn">Edit</span> / <span class="fn">Edit-Turbo</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤 3：生成 + 可选推理时技术</span></p>
+  <p style="padding-left:1.5em"><span class="var">img</span> = <span class="fn">model.generate</span>(<span class="var">prompt'</span>)</p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> <span class="fn">need_reflection</span>(<span class="var">req</span>): <span class="var">img</span> = <span class="fn">Reflection.improve</span>(<span class="var">img</span>, <span class="var">prompt'</span>)  <span class="cm">// 含 Best-of-N</span></p>
+  <p><span class="kw">return</span> <span class="var">img</span></p>
+</div>
+
+<h3 id="sec-3-5">3.5 Turbo 加速机制</h3>
+
+<p>Boogu 系列通过<strong>Turbo 蒸馏</strong>实现快速推理：Base 模型（高保真但慢）经蒸馏得到 Turbo 变体（少步快速推理），编辑侧对应 Edit-Turbo。Figure 1 右侧展示推理时间-质量权衡：放大推理时间带来更高 T2I 生成质量。变体谱系包括 Boogu-Image-0.1-Turbo → Turbo-PE → Turbo-Thinking → Pro，沿推理时间轴逐级提升质量。关键权衡：Turbo 在中短文本渲染（≤100 字符/词）上与 Base 难以区分，但在<strong>超密集文本</strong>场景会引入可见伪影，此时推荐部署专为 2K 高保真密集文本优化的 Base 模型。</p>
+
+<h3 id="sec-3-6">3.6 Boosted Orthogonal Guidance (BOG)</h3>
+
+<p>BOG 是一种<strong>免训练、推理时</strong>的 DiT 文生图方法，针对 CFG 在大 guidance scale $\omega$ 下出现的过饱和、色调扁平、过平滑等失效模式。其核心洞见源自 APG：guidance 更新可分解为平行与正交于模型预测流的两分量，BOG 强调保信息的正交分量以避免色彩炸裂与纹理塌缩。<strong>关键创新</strong>：不再把 DiT 每步预测视为展平的高维向量，而是当作与图像空间结构对齐的 <strong>2D 矩阵</strong>（shape $[B,C,H,W]$ 中 $[H,W]$ 是有意义网格），呼应矩阵感知优化器（如 Muon）。对该矩阵施加正交化近似，作为结构化归一化，不仅控幅度更丰富行列方向，保留更多空间维度的有效变异（更高有效秩）。</p>
+
+<h4>3.6.1 矩阵归一化 MNorm</h4>
+<p>设 $D \in \mathbb{R}^{m\times n}$（$m \geq n$），做 SVD：$D = U\Sigma V^\top$，$\Sigma = \mathrm{diag}(\sigma_1,\dots,\sigma_n)$。定义标量函数（输入为奇异值索引 $i$ 与奇异值 $\sigma_i$）：</p>
+<p>$$\sigma'_i = \mathrm{norm}(\sigma_i, i) \in \left\{\,\mathrm{Sigmoid}(\sigma_i),\ \lambda\cdot\frac{\exp(\sigma_i/\tau)}{\sum_{j=1}^{n}\exp(\sigma_j/\tau)},\ \dots,\ 1\,\right\}$$</p>
+<p>矩阵归一化：</p>
+<p>$$\mathrm{MNorm}(D) = U \cdot \mathrm{diag}\left(\mathrm{norm}(\sigma_1,1),\dots,\mathrm{norm}(\sigma_n,n)\right) \cdot V^\top$$</p>
+<p>当 $\mathrm{norm}(\sigma_i,i)=1$ 时，$\mathrm{MNorm}(D)$ 等价于 $D$ 的最优正交（半正交）近似：</p>
+<p>$$\mathrm{MNorm}(D) = \arg\min_{O \in \mathbb{R}^{m\times n}} \left\{\|O - D\|_F \;\middle|\; O^\top O = I_n \text{ 或 } OO^\top = I_m\right\}$$</p>
+<p>实践中不必显式算 SVD，可用 <strong>Newton-Schulz 迭代</strong>（Muon 风格，batched GEMM）估计。最优性的证明（Appendix C.4）通过将 $\min\|D-O\|_F^2$ 化为 $\max\,\mathrm{tr}(O^\top D)$，用 Von Neumann 迹不等式得界 $\sum_i \sigma_i$，并在 $O^\star = UV^\top$ 取等。</p>
+
+<h4>3.6.2 平行-正交分解 (POD)</h4>
+<p>CFG 在每步把 DiT 输出修正为：</p>
+<p>$$D_{\mathrm{CFG}}(x_t,t,c) = D_\theta(x_t,t,c_\emptyset) + \omega\left(D_\theta(x_t,t,c) - D_\theta(x_t,t,c_\emptyset)\right) = D_\theta(x_t,t,c) + (\omega-1)\,\Delta D_{\theta,x_t,t}$$</p>
+<p>记 $\Delta D := \Delta D_{\theta,x_t,t} \in \mathbb{R}^{H\times W}$，$D^{(c)} := D_\theta(x_t,t,c)$。以条件输出矩阵的列向量 $D^{(c)}_{[:,j]}$ 为参考方向，对 $\Delta D$ 各列做 Gram-Schmidt 式平行-正交分解：</p>
+<p>$$\Delta D^{\|}_{[:,j]} = \mathrm{Parall}\left(\Delta D_{[:,j]},\, D^{(c)}_{[:,j]}\right) = \frac{{D^{(c)}_{[:,j]}}^\top \Delta D_{[:,j]}}{\|D^{(c)}_{[:,j]}\|_2^2}\, D^{(c)}_{[:,j]}$$</p>
+<p>$$\Delta D^{\perp}_{[:,j]} = \mathrm{Ortho}\left(\Delta D_{[:,j]},\, D^{(c)}_{[:,j]}\right) = \Delta D_{[:,j]} - \Delta D^{\|}_{[:,j]}$$</p>
+<p>对每列得 $\Delta D^{\|}_{\mathrm{col}}, \Delta D^{\perp}_{\mathrm{col}} \in \mathbb{R}^{H\times W}$；对每行同理得 $\Delta D^{\|}_{\mathrm{row}}, \Delta D^{\perp}_{\mathrm{row}}$。合并：</p>
+<p>$$\Delta D_{\mathrm{pod}} = \mathrm{POD}(\Delta D, D^{(c)}) = \lambda_c \cdot \left(\Delta D^{\perp}_{\mathrm{col}} + \mu\,\Delta D^{\|}_{\mathrm{col}}\right) + \lambda_r \cdot \left(\Delta D^{\perp}_{\mathrm{row}} + \mu\,\Delta D^{\|}_{\mathrm{row}}\right)$$</p>
+<p>其中 $\lambda_c = \frac{W}{H+W+\zeta}$、$\lambda_r = \frac{H}{H+W+\zeta}$（$\zeta$ 为小常数），超参 $\mu \leq 1$（如 0, 0.1, 0.25）以在大 $\omega$ 时缓解过饱和。</p>
+
+<h4>3.6.3 Rolling-Sum 动量</h4>
+<p>受优化中动量启发，推理时引入轨迹"惯性"：</p>
+<p>$$\Delta D^{(i)} = \mathrm{RollSumUpdate}(\Delta D, i) = \eta\,\Delta D^{(i)} + \rho\,\Delta D^{(i-1)}, \quad \Delta D^{(0)} = 0$$</p>
+<p>默认 $\eta=0.9$、$\rho=0.1$。这与 APG 的"反向动量"（$\rho \lt 0$）相反——作者经验发现 $\rho \lt 0$ 会导致 $\Delta D^{(i)}$ 在向量场中跨迭代方向抖动。</p>
+
+<h4>3.6.4 完整 BOG 单步算法</h4>
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: Single Step of Boosted Orthogonal Guidance (BOG)</div>
+  <p><span class="kw">Input:</span> 推理步 <span class="var">i</span>；当前潜态 <span class="var">x_t</span>；条件 <span class="var">c</span>；无条件态 <span class="var">c_empty</span>；guidance scale <span class="num">ω</span></p>
+  <p><span class="kw">Output:</span> BOG 修正后的预测 <span class="var">D_BOG(i)</span></p>
+  <p style="padding-left:1.5em"><span class="num">1:</span> <span class="var">t</span> ← <span class="fn">scheduler</span>(<span class="var">i</span>)  <span class="cm">// 取连续扩散时间步</span></p>
+  <p style="padding-left:1.5em"><span class="num">2:</span> <span class="var">ΔD(c)(i)</span> ← <span class="fn">D_θ</span>(<span class="var">x_t, t, c</span>);  <span class="var">ΔD(c_empty)(i)</span> ← <span class="fn">D_θ</span>(<span class="var">x_t, t, c_empty</span>)  <span class="cm">// 计算 DiT 预测</span></p>
+  <p style="padding-left:1.5em"><span class="num">3:</span> <span class="var">ΔD(i)</span> ← <span class="var">ΔD(c)(i)</span> − <span class="var">ΔD(c_empty)(i)</span>  <span class="cm">// 原始 guidance 方向</span></p>
+  <p style="padding-left:1.5em"><span class="num">4:</span> <span class="var">ΔD(i)</span> ← <span class="fn">RollSumUpdate</span>(<span class="var">ΔD(i), i</span>)  <span class="cm">// 动量</span></p>
+  <p style="padding-left:1.5em"><span class="num">5:</span> <span class="var">ΔD(i)</span> ← <span class="fn">MNorm</span>(<span class="var">ΔD(i)</span>)  <span class="cm">// 矩阵归一化，保留空间秩</span></p>
+  <p style="padding-left:1.5em"><span class="num">6:</span> <span class="var">ΔD(i)</span> ← <span class="fn">POD</span>(<span class="var">ΔD(i), ΔD(c)(i)</span>)  <span class="cm">// 平行-正交分解，弱化平行分量</span></p>
+  <p style="padding-left:1.5em"><span class="num">7:</span> <span class="var">D_BOG(i)</span> ← <span class="var">ΔD(c)(i)</span> + (<span class="num">ω−1</span>)·<span class="var">ΔD(i)</span>  <span class="cm">// 最终 BOG 张量</span></p>
+  <p style="padding-left:1.5em"><span class="num">8:</span> <span class="kw">return</span> <span class="var">D_BOG(i)</span></p>
+</div>
+
+<p><strong>BOG Interval $\Delta_{\mathrm{BOG}}$</strong>：BOG 会增加结构扭曲概率、降低文字渲染成功率，故作为可选模块。引入超参 $\Delta_{\mathrm{BOG}}$：每隔 $\Delta_{\mathrm{BOG}}$ 步应用 BOG，其余步用标准 CFG。如 10 步去噪中 $\Delta_{\mathrm{BOG}}=2$ 表示偶数步 (2,4,6,8,10) 用 BOG、奇数步用标准 CFG；$\Delta_{\mathrm{BOG}}=1$ 为全程 BOG。推荐默认 $\Delta_{\mathrm{BOG}}=2$，显著缓解上述伪影，代价是略微损失 BOG 式摄影质感。</p>
+
+<h4>3.6.5 关键消融：身份记忆阈值与 RL 谨慎使用</h4>
+<p><strong>身份记忆</strong>（Figure 29）：将志愿者（陈国轩）170 张日常照片（中英 × 短长描述 = 4 种 caption）过采样到 11,628 张（5814/语言），混入 12.6M SFT 数据（占 ~0.13%）。128 设备、global batch 1024、500 步 warmup 后 constant lr=1e-4。约 5k 步开始出现可辨认面部特征，8k–9k 步完全可辨认——即<strong>约 4500 次语言匹配曝光</strong>可让模型稳健记忆一个完全未见的人类身份。Flow Matching 模型倾向于学习这些变体的平均表示（受试者体重 70→80kg 期间变化被平均化）。</p>
+<p><strong>谨慎使用 RL</strong>（Figure 30）：重美学 RL 会把输出分布塌缩到窄域（如 Seedream 肖像一致地漂亮年轻）。给 prompt"一位六十岁的中国女性"，重美学 RL 模型产出精致妆容、理想化特征，而 Boogu 产出更自然真实的结果。作者强调 RL 驱动的分布塑形不是弱点而是合法产品策略，只是与 Boogu 最大化多样性的目标冲突。因此 Boogu 刻意避免重美学 RL，把人类偏好嵌入<strong>理解系统</strong>而非不可逆地烤进生成器，让风格（含人脸属性）在推理时灵活可控、保留生成器底层多样性。RL 仅用于不损害多样性的定向问题（解剖畸变、文字渲染），因 RL 训练算力开销显著（reward 推理、重复采样、额外优化步）。</p>
+
+<h4>3.6.6 指令编码器缩放：更强 LLM → 更强文生图</h4>
+<p>把指令编码器视作 T2I 模型的"传感器 (sensor)"：它定义了系统可用信息的上界。弱编码器会在与图像 token 交互前丢弃重要信息，且因编码器训练时冻结，该限制贯穿训练与推理——任何推理时计算都无法恢复输入端丢失的信息。Table 7 显示，固定训练数据/超参/DiT（1B）仅缩放冻结编码器，GenEval 单调提升：<strong>Qwen3-1.7B → 0.6034，Qwen3-4B → 0.6251，Qwen3-14B → 0.6477</strong>，无饱和。收益不来自参数量本身而来自编码器理解与编码指令的能力。考虑开源可及性，最终采用 <strong>Qwen3-VL-8B</strong> 平衡质量与部署成本。</p>
+
+<h2 id="sec-4">4. 实验结果与分析</h2>
+
+<h3 id="sec-4-1">4.1 评测方法学：为何重构开源评测</h3>
+
+<p>Boogu 团队首先论证了一个重要前提：<strong>公共基准已不可靠地反映真实能力</strong>。Figure 5 把六个近期 T2I 模型在 LMArena Elo（人类偏好）与 GenEval/DPG-Bench 分数对比，观察到明显<strong>排名倒置</strong>——人类偏好最强的 GPT-Image-2 在两个基准上仅排中游。作者自身模型也如此：GenEval 上某 SANA-VAE 配置达 0.92，而部署的更强模型仅 0.85。归因三点：(1) 多数公共基准不反映真实应用场景，在受限合成条件下评估孤立能力，与生产使用背离；(2) 主流基准接近饱和，顶尖模型近天花板，压缩比较动态范围，小分差不具统计意义（受方差/prompt 格式/基准特定过拟合驱动）；(3) 数据污染与测试集泄露普遍，大规模预训练语料常纳入公共评测集，分数反映记忆而非泛化。</p>
+
+<p>为此 Boogu 自建 <strong>Boogu Arena</strong>：忠实模拟 Arena pipeline 的 prompt 设计与盲配对决。prompt 空间分三类（照片级与电影感、文字渲染、风格化艺术），每类约 400 个细粒度子场景关键词，由强 VLM 沿 prompt 长度（短中长 3:4:3）与用户画像（27 角色，初/中/专 5:3:2）两轴实例化（两轴耦合而非独立抽取），共产出 1200 双语 prompt。测试时随机选一种语言并跨模型共享，每模型每 prompt 仅评一次（随机种子）。采用加权逆频率策略的样本选择与模型配对，收集超 4000 票，经 Bradley-Terry 模型聚合为 Elo。<strong>Boogu Arena 与 LMArena 一致性：Pearson r=0.986、Spearman ρ=1.0</strong>，证明其忠实复现大规模公开人类偏好投票建立的排名。</p>
+
+<h3 id="sec-4-2">4.2 主实验：Boogu Arena Elo（T2I）</h3>
+
+<p>在 Boogu Arena 上比较 2 个开源 baseline（Z-Image-Turbo、HiDream-O1-Image）与 5 个闭源（GPT-Image-2、Nano-Banana-Pro、Seedream-5.0-Lite、Qwen-Image-Max-2025-12-30、Qwen-Image-2.0-2026-03-03）。Boogu 模型在所有类别中一致主导开源梯队，仅被顶尖闭源（GPT-Image-2、Nano-Banana-Pro）超越。在照片级/风格化内容上，Boogu-Turbo-Thinking 大幅缩小与闭源前沿的差距；文字渲染上 thinking 变体明显优于非 thinking（因文字生成高度 prompt 敏感，thinking 显式包含待渲染精确文字）。</p>
+
+<table>
+  <tr><th>模型</th><th>类型</th><th>Overall Elo</th><th>照片级&电影</th><th>文字渲染</th><th>风格化艺术</th></tr>
+  <tr><td>GPT-Image-2</td><td>闭源</td><td class="best">1196</td><td class="best">1137</td><td class="best">1246</td><td class="best">1298</td></tr>
+  <tr><td>Nano-Banana-Pro</td><td>闭源</td><td>1087</td><td>1119</td><td>1103</td><td>985</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Image-0.1-Turbo-Thinking</strong></td><td>开源</td><td>1048</td><td>1056</td><td>1029</td><td>1060</td></tr>
+  <tr><td>Seedream-5.0-Lite</td><td>闭源</td><td>1032</td><td>1028</td><td>1017</td><td>1086</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Image-0.1-Turbo</strong></td><td>开源</td><td>1021</td><td>1020</td><td>1008</td><td>1030</td></tr>
+  <tr><td>Qwen-Image-Max-2025-12-30</td><td>闭源</td><td>988</td><td>1010</td><td>1028</td><td>958</td></tr>
+  <tr><td>Z-Image-Turbo</td><td>开源</td><td>960</td><td>918</td><td>902</td><td>969</td></tr>
+  <tr><td>Qwen-Image-2.0-2026-03-03</td><td>闭源</td><td>946</td><td>951</td><td>996</td><td>868</td></tr>
+  <tr><td>HiDream-O1-Image</td><td>开源</td><td>868</td><td>850</td><td>889</td><td>985</td></tr>
+</table>
+
+<div id="chart-arena" class="echarts-container" style="height:420px"></div>
+<script>
+  echarts.init(document.getElementById('chart-arena')).setOption({
+    backgroundColor: '#2a2a3e',
+    legend: { top: 10, textStyle: { color: '#cdd6f4' } },
+    tooltip: { trigger: 'axis' },
+    grid: { left: 130, right: 30, top: 60, bottom: 30 },
+    xAxis: { type: 'value', name: 'Elo 分数', min: 800, max: 1300, axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#cdd6f4'}, splitLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'category', data: ['HiDream-O1','Qwen-Image-2.0','Z-Image-Turbo','Qwen-Image-Max','Boogu-Turbo','Seedream-5.0-Lite','Boogu-Turbo-Thinking','Nano-Banana-Pro','GPT-Image-2'].reverse(), axisLabel: { color: '#cdd6f4', fontSize: 11 } },
+    series: [
+      { name: 'Overall', type: 'bar', data: [868,946,960,988,1021,1032,1048,1087,1196].reverse(), itemStyle: { color: '#89b4fa' }, label: { show: true, position: 'right', color:'#cdd6f4', fontSize: 10 } }
+    ]
+  });
+</script>
+
+<h3 id="sec-4-3">4.3 Qwen-Image-Bench（中英双语）</h3>
+
+<p>Qwen-Image-Bench 是 Boogu 冻结 T2I 开发后发布的高质量基准，受数据泄露影响小，被视为现代图像生成模型的可靠测试床。<strong>Boogu-Image-0.1-Base-Thinking 在所有开源模型中取得最佳 Overall</strong>：中文 <strong>53.57</strong>、英文 <strong>53.73</strong>，超越 Qwen-Image-2512、HunyuanImage-3.0 等强开源 baseline。thinking 变体增益在 Creativity 维度最显著（中文 Base 48.62 → Base-Thinking 56.74，+8 分），与理解驱动设计一致。两语言趋势稳定，双语能力稳健。</p>
+
+<table>
+  <tr><th>模型（中文 Overall ↑）</th><th>License</th><th>Quality</th><th>Aesthetics</th><th>Alignment</th><th>Realism</th><th>Creativity</th><th>Overall</th></tr>
+  <tr><td>GPT-Image-2</td><td>闭源</td><td class="best">58.65</td><td class="best">67.53</td><td class="best">65.85</td><td class="best">57.38</td><td class="best">75.23</td><td class="best">64.69</td></tr>
+  <tr><td>Nano-Banana-2.0</td><td>闭源</td><td>54.77</td><td>61.08</td><td>62.40</td><td>54.28</td><td>67.05</td><td>59.82</td></tr>
+  <tr><td>Nano-Banana-Pro</td><td>闭源</td><td>55.67</td><td>60.26</td><td>61.25</td><td>54.07</td><td>66.23</td><td>59.45</td></tr>
+  <tr><td>Qwen-Image-2.0-Pro</td><td>闭源</td><td>54.39</td><td>58.67</td><td>59.28</td><td>51.83</td><td>64.94</td><td>57.84</td></tr>
+  <tr><td>Seedream-5.0-Lite</td><td>闭源</td><td>52.55</td><td>58.40</td><td>58.90</td><td>51.92</td><td>65.29</td><td>57.22</td></tr>
+  <tr><td>FLUX-2-Max</td><td>闭源</td><td>53.64</td><td>56.85</td><td>57.35</td><td>49.35</td><td>56.50</td><td>55.33</td></tr>
+  <tr><td>GPT-Image-1</td><td>闭源</td><td>52.34</td><td>55.09</td><td>56.28</td><td>48.14</td><td>55.78</td><td>54.07</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Base-Thinking</strong></td><td>Apache-2.0</td><td>50.58</td><td>55.20</td><td>55.99</td><td>47.35</td><td>56.74</td><td><strong>53.57</strong></td></tr>
+  <tr class="boogu"><td><strong>Boogu-Turbo-Thinking</strong></td><td>Apache-2.0</td><td>50.89</td><td>54.36</td><td>56.28</td><td>47.67</td><td>53.33</td><td>53.13</td></tr>
+  <tr><td>Qwen-Image-2512</td><td>Apache-2.0</td><td>51.76</td><td>54.74</td><td>52.72</td><td>45.59</td><td>50.19</td><td>52.06</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Turbo</strong></td><td>Apache-2.0</td><td>50.90</td><td>54.25</td><td>53.54</td><td>45.59</td><td>51.14</td><td>51.99</td></tr>
+  <tr><td>HunyuanImage-3.0</td><td>闭源</td><td>51.24</td><td>53.50</td><td>52.91</td><td>46.11</td><td>48.91</td><td>51.53</td></tr>
+  <tr><td>Imagen-4.0-Ultra</td><td>闭源</td><td>50.41</td><td>53.14</td><td>52.00</td><td>44.31</td><td>48.62</td><td>50.96</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Base</strong></td><td>Apache-2.0</td><td>50.16</td><td>52.25</td><td>50.72</td><td>44.74</td><td>47.94</td><td>49.23</td></tr>
+  <tr><td>Qwen-Image</td><td>Apache-2.0</td><td>48.44</td><td>50.15</td><td>49.18</td><td>43.16</td><td>44.67</td><td>48.26</td></tr>
+  <tr><td>GLM-Image</td><td>Apache-2.0</td><td>49.26</td><td>50.32</td><td>47.90</td><td>43.16</td><td>45.23</td><td>48.19</td></tr>
+</table>
+
+<div id="chart-qwen" class="echarts-container" style="height:380px"></div>
+<script>
+  echarts.init(document.getElementById('chart-qwen')).setOption({
+    backgroundColor: '#2a2a3e',
+    legend: { top: 8, textStyle: { color: '#cdd6f4' } },
+    tooltip: { trigger: 'axis' },
+    grid: { left: 150, right: 40, top: 60, bottom: 30 },
+    xAxis: { type: 'value', name: 'Overall 分数', min: 47, max: 66, axisLabel:{color:'#cdd6f4'}, nameTextStyle:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#45475a'}} },
+    yAxis: { type: 'category', data: ['GLM-Image','Qwen-Image','Boogu-Base','Imagen-4-Ultra','HunyuanImage-3.0','Qwen-2512','Boogu-Turbo','Boogu-Turbo-Thinking','Boogu-Base-Thinking','GPT-Image-1','FLUX-2-Max','Seedream-5.0-Lite','Qwen-2.0-Pro','Nano-Banana-Pro','Nano-Banana-2.0','GPT-Image-2'].reverse(), axisLabel:{color:'#cdd6f4', fontSize:10} },
+    series: [
+      { name: '中文 Overall', type: 'bar', data: [48.19,48.26,49.23,50.96,51.53,52.06,51.99,53.13,53.57,54.07,55.33,57.22,57.84,59.45,59.82,64.69].reverse(), itemStyle:{color:'#89b4fa'}, label:{show:true,position:'right',color:'#cdd6f4',fontSize:9} },
+      { name: '英文 Overall', type: 'bar', data: [47.86,48.48,48.89,51.00,51.32,51.08,52.42,51.61,53.73,54.24,56.14,57.80,57.90,59.33,59.59,65.23].reverse(), itemStyle:{color:'#a6e3a1'}, label:{show:true,position:'right',color:'#cdd6f4',fontSize:9} }
+    ]
+  });
+</script>
+
+<h3 id="sec-4-4">4.4 LongText-Bench（长文本渲染）</h3>
+
+<p>Boogu 在开源模型中取得顶尖文字渲染性能，中文尤其强：<strong>Boogu-Turbo-Thinking 以 0.985 排第二</strong>，仅次于闭源 Seedream-4.5。但该基准主要测短序列（&lt;100 字符）OCR 级准确度，未充分捕捉密集排版的整体视觉质量——密集文本下 Base 比 Turbo 排版更连贯（Turbo 虽分数相当但在密集区引入可见伪影）。</p>
+
+<table>
+  <tr><th>模型</th><th>License</th><th>AVG ↑</th><th>EN ↑</th><th>ZH ↑</th></tr>
+  <tr><td>Seedream-4.5</td><td>闭源</td><td class="best">0.988</td><td class="best">0.989</td><td>0.987</td></tr>
+  <tr><td>HiDream-O1-Image</td><td>MIT</td><td>0.979</td><td>0.979</td><td>0.978</td></tr>
+  <tr><td>ERNIE-Image-PE</td><td>Apache-2.0</td><td>0.973</td><td>0.980</td><td>0.966</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Turbo-Thinking</strong></td><td>Apache-2.0</td><td>0.971</td><td>0.957</td><td><strong>0.985</strong></td></tr>
+  <tr><td>GLM-Image</td><td>Apache-2.0</td><td>0.966</td><td>0.952</td><td>0.979</td></tr>
+  <tr><td>Nano-Banana-2.0</td><td>闭源</td><td>0.965</td><td>0.981</td><td>0.949</td></tr>
+  <tr><td>JoyAI-Image</td><td>Apache-2.0</td><td>0.963</td><td>0.963</td><td>0.963</td></tr>
+  <tr><td>Seedream-5.0-Lite</td><td>闭源</td><td>0.962</td><td>0.961</td><td>0.963</td></tr>
+  <tr><td>Qwen-Image-2512</td><td>Apache-2.0</td><td>0.961</td><td>0.956</td><td>0.965</td></tr>
+  <tr><td>GPT-Image-2</td><td>闭源</td><td>0.961</td><td>0.960</td><td>0.961</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Turbo</strong></td><td>Apache-2.0</td><td>0.961</td><td>0.944</td><td>0.977</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Base</strong></td><td>Apache-2.0</td><td>0.961</td><td>0.952</td><td>0.969</td></tr>
+  <tr><td>Qwen-Image</td><td>Apache-2.0</td><td>0.945</td><td>0.943</td><td>0.946</td></tr>
+  <tr><td>Seedream-4.0</td><td>闭源</td><td>0.924</td><td>0.921</td><td>0.926</td></tr>
+  <tr><td>Z-Image-Turbo</td><td>Apache-2.0</td><td>0.922</td><td>0.917</td><td>0.926</td></tr>
+  <tr><td>GPT-Image-1 [High]</td><td>闭源</td><td>0.788</td><td>0.956</td><td>0.619</td></tr>
+</table>
+
+<h3 id="sec-4-5">4.5 GenEval / DPG-Bench（仅作参考）</h3>
+
+<p>因 GenEval、DPG-Bench 与真实人类偏好差距显著（见 4.1），Boogu 不将其作为主评测，仅作历史连续性参考。值得注意的是：Boogu-Base 在 GenEval Overall 达 0.85（高于 GPT-Image-2 的 0.89 接近），但作者再次强调该基准与人类偏好背离。DPG-Bench 上 HiDream-O1 以 89.83 居首，Boogu-Turbo(88.35) 接近闭源 Seedream-4.5(88.63)。</p>
+
+<table>
+  <tr><th>GenEval Overall ↑</th><th>License</th><th>分数</th></tr>
+  <tr><td>HiDream-O1-Image</td><td>Apache</td><td class="best">0.90</td></tr>
+  <tr><td>GPT-Image-2</td><td>闭源</td><td>0.89</td></tr>
+  <tr><td>FLUX.2 [Dev]</td><td>非商用</td><td>0.87</td></tr>
+  <tr><td>Qwen-Image</td><td>Apache</td><td>0.87</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Base</strong></td><td>Apache</td><td>0.85</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Turbo</strong></td><td>Apache</td><td>0.84</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Turbo-Think</strong></td><td>Apache</td><td>0.84</td></tr>
+  <tr><td>Seedream-4.0</td><td>闭源</td><td>0.84</td></tr>
+  <tr><td>Seedream-3.0</td><td>闭源</td><td>0.83</td></tr>
+  <tr><td>Z-Image-Turbo</td><td>Apache</td><td>0.66</td></tr>
+</table>
+<p style="font-size:0.85em;color:#6c7086">注：GenEval 含 Single Obj / Two Obj / Counting / Colors / Position / Attribute 子项，受篇幅限制仅列 Overall；Boogu 系列在 Single Obj 达 1.00、Counting 0.88、Attribute 0.83。论文明确这些结果仅供参考。</p>
+
+<h3 id="sec-4-6">4.6 ImgEdit-Bench（图像编辑）</h3>
+
+<p><strong>Boogu-Image-0.1-Edit-Thinking 在所有评测模型中取得最佳 Overall 4.64</strong>，超越 JoyAI-Image-Edit (4.57)、FireRed-Image-Edit (4.56) 等强开源编辑器，以及 Seedream-5.0-Lite (4.42)、Nano-Banana-Pro (4.37) 等闭源。子任务层面在 Remove (4.85)、Hybrid (4.26)、Action (4.83) 排第一。Thinking 变体相对 Base 一致提升（4.64 vs 4.51），Extract 提升最大（4.32 vs 3.69），说明显式推理有助于模型在生成前解析与定位复杂编辑指令。</p>
+
+<p><strong>但作者谨慎提示</strong>：尽管 Edit-Thinking 在 ImgEdit-Bench Overall 最高，作者团队自身人类评测发现 Nano-Banana-Pro 在真实编辑场景优于 Boogu（尽管基准分更低 4.37 vs 4.64）。这倒置源于 ImgEdit-Bench 主要依赖 VLM 自动评估，而当前 VLM 在细粒度视觉理解上有限，分数是人类偏好的不完美代理，基准会压缩真实质量差距、奖励满足指令级检查却忽略细微感知缺陷的输出。</p>
+
+<table>
+  <tr><th>ImgEdit-Bench</th><th>License</th><th>Add</th><th>Adjust</th><th>Extract</th><th>Replace</th><th>Remove</th><th>BG</th><th>Style</th><th>Hybrid</th><th>Action</th><th>Overall</th></tr>
+  <tr class="boogu"><td><strong>Boogu-Edit-Thinking</strong></td><td>Apache</td><td>4.69</td><td>4.66</td><td><strong>4.32</strong></td><td>4.65</td><td><strong>4.85</strong></td><td>4.46</td><td>4.60</td><td><strong>4.26</strong></td><td><strong>4.83</strong></td><td class="best">4.64</td></tr>
+  <tr><td>JoyAI-Image-Edit</td><td>Apache</td><td>4.76</td><td>4.58</td><td>3.69</td><td>4.75</td><td>4.46</td><td>4.53</td><td>4.65</td><td>4.32</td><td>4.69</td><td>4.57</td></tr>
+  <tr><td>FireRed-Image-Edit</td><td>Apache</td><td>4.71</td><td>4.75</td><td>3.42</td><td>4.60</td><td>4.45</td><td>4.44</td><td>4.73</td><td>4.65</td><td>4.71</td><td>4.56</td></tr>
+  <tr class="boogu"><td><strong>Boogu-Edit</strong></td><td>Apache</td><td>4.69</td><td>4.66</td><td>3.69</td><td>4.65</td><td>4.46</td><td>4.36</td><td>4.57</td><td>4.09</td><td>4.81</td><td>4.51</td></tr>
+  <tr><td>Qwen-Image-Edit-2511</td><td>Apache</td><td>4.62</td><td>4.65</td><td>3.83</td><td>4.66</td><td>4.39</td><td>4.50</td><td>4.69</td><td>4.07</td><td>4.82</td><td>4.51</td></tr>
+  <tr><td>LongCat-Image-Edit</td><td>MIT</td><td>4.70</td><td>4.66</td><td>3.01</td><td>4.65</td><td>4.38</td><td>4.41</td><td>4.66</td><td>4.04</td><td>4.69</td><td>4.45</td></tr>
+  <tr><td>Seedream-5.0-Lite</td><td>闭源</td><td>4.65</td><td>4.53</td><td>3.83</td><td>4.37</td><td>4.60</td><td>4.34</td><td>4.70</td><td>3.91</td><td>4.69</td><td>4.42</td></tr>
+  <tr><td>Nano-Banana-Pro</td><td>闭源</td><td>4.60</td><td>4.53</td><td>3.68</td><td>4.37</td><td>4.33</td><td>4.32</td><td>4.65</td><td>3.75</td><td>4.71</td><td>4.37</td></tr>
+  <tr><td>FLUX.2-Dev</td><td>闭源</td><td>4.55</td><td>4.44</td><td>2.68</td><td>4.57</td><td>4.26</td><td>4.34</td><td>4.62</td><td>3.64</td><td>4.26</td><td>4.35</td></tr>
+  <tr><td>Seedream-4.5</td><td>闭源</td><td>4.54</td><td>4.44</td><td>2.97</td><td>4.50</td><td>4.13</td><td>3.91</td><td>4.34</td><td>3.56</td><td>4.07</td><td>4.32</td></tr>
+  <tr><td>Qwen-Image-Edit-2509</td><td>Apache</td><td>4.66</td><td>4.50</td><td>3.42</td><td>4.66</td><td>4.41</td><td>4.34</td><td>4.63</td><td>4.04</td><td>4.71</td><td>4.31</td></tr>
+  <tr><td>Seedream-4.0</td><td>闭源</td><td>4.57</td><td>4.53</td><td>3.89</td><td>4.46</td><td>4.16</td><td>4.37</td><td>4.48</td><td>3.71</td><td>4.09</td><td>4.30</td></tr>
+  <tr><td>Nano-Banana</td><td>闭源</td><td>4.60</td><td>4.45</td><td>3.23</td><td>4.46</td><td>3.75</td><td>4.26</td><td>4.39</td><td>3.46</td><td>3.91</td><td>4.29</td></tr>
+  <tr><td>Step1X-Edit-v1.2</td><td>Apache</td><td>4.75</td><td>4.50</td><td>2.97</td><td>4.56</td><td>4.26</td><td>3.64</td><td>4.34</td><td>3.23</td><td>4.04</td><td>3.95</td></tr>
+</table>
+
+<div id="chart-edit" class="echarts-container" style="height:380px"></div>
+<script>
+  echarts.init(document.getElementById('chart-edit')).setOption({
+    backgroundColor: '#2a2a3e',
+    legend: { top: 8, textStyle: { color: '#cdd6f4' } },
+    tooltip: { trigger: 'axis' },
+    grid: { left: 140, right: 40, top: 60, bottom: 30 },
+    xAxis: { type: 'value', name: '分数', min: 3.9, max: 4.7, axisLabel:{color:'#cdd6f4'}, nameTextStyle:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#45475a'}} },
+    yAxis: { type: 'category', data: ['Step1X-Edit','Nano-Banana','Seedream-4.0','Qwen-Edit-2509','Seedream-4.5','FLUX.2-Dev','Nano-Banana-Pro','Seedream-5.0-Lite','LongCat-Edit','Qwen-Edit-2511','Boogu-Edit','FireRed-Edit','JoyAI-Edit','Boogu-Edit-Thinking'].reverse(), axisLabel:{color:'#cdd6f4', fontSize:10} },
+    series: [
+      { name: 'Overall', type: 'bar', data: [3.95,4.29,4.30,4.31,4.32,4.35,4.37,4.42,4.45,4.51,4.51,4.56,4.57,4.64].reverse(), itemStyle:{color: function(p){ return p.dataIndex===13 ? '#a6e3a1' : '#89b4fa'; }}, label:{show:true,position:'right',color:'#cdd6f4',fontSize:9} }
+    ]
+  });
+</script>
+
+<h3 id="sec-4-7">4.7 消融实验</h3>
+
+<h4>4.7.1 指令编码器缩放（Table 7）</h4>
+<p>固定 DiT 1B、训练数据、超参，仅缩放冻结指令编码器，GenEval 单调提升：</p>
+<div id="chart-encoder" class="echarts-container" style="height:320px"></div>
+<script>
+  echarts.init(document.getElementById('chart-encoder')).setOption({
+    backgroundColor: '#2a2a3e',
+    grid: { left: 60, right: 40, top: 40, bottom: 50 },
+    xAxis: { type: 'category', data: ['Qwen3-1.7B','Qwen3-4B','Qwen3-14B'], axisLabel:{color:'#cdd6f4'} },
+    yAxis: { type: 'value', name: 'GenEval 分数', min: 0.58, max: 0.66, axisLabel:{color:'#cdd6f4'}, nameTextStyle:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#45475a'}} },
+    tooltip: { trigger: 'axis' },
+    series: [{ type: 'line', data: [0.6034,0.6251,0.6477], smooth: true, itemStyle:{color:'#a6e3a1'}, lineStyle:{color:'#a6e3a1',width:3}, areaStyle:{color:'rgba(166,227,161,0.15)'}, label:{show:true,color:'#cdd6f4'} }]
+  });
+</script>
+<p style="font-size:0.85em;color:#6c7086">最终部署采用 Qwen3-VL-8B（平衡质量与开源可及性）。</p>
+
+<h4>4.7.2 Prompt Rewriter 缩放与技能（Figure 18）</h4>
+<div id="chart-rewriter" class="echarts-container" style="height:340px"></div>
+<script>
+  echarts.init(document.getElementById('chart-rewriter')).setOption({
+    backgroundColor: '#2a2a3e',
+    legend: { top: 8, textStyle:{color:'#cdd6f4'} },
+    tooltip: { trigger: 'axis' },
+    grid: { left: 60, right: 30, top: 50, bottom: 45 },
+    xAxis: { type: 'category', data: ['0.8B','2B','4B','9B','27B','122B','397B'], name: '模型规模', axisLabel:{color:'#cdd6f4'}, nameTextStyle:{color:'#cdd6f4'} },
+    yAxis: { type: 'value', name: 'Advantage Score', min: 0, max: 2.5, axisLabel:{color:'#cdd6f4'}, nameTextStyle:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#45475a'}} },
+    series: [{ name: 'Thinking 模型', type: 'bar', data: [0.71,0.98,1.31,1.53,1.80,1.59,2.16], itemStyle:{color:'#89b4fa'}, label:{show:true,position:'top',color:'#cdd6f4',fontSize:9}, markLine:{ data:[{yAxis:1}], lineStyle:{color:'#fab387',type:'dashed'}, label:{formatter:'No-Thinking\nBaseline', color:'#fab387'} } }]
+  });
+</script>
+
+<h4>4.7.3 数据消融：Boogu Syllabus vs 开源数据（Table 8）</h4>
+<p>相同模型与训练设置下，Boogu Syllabus 在三个基准上全面超越 187M 原始开源数据：</p>
+<table>
+  <tr><th>训练数据</th><th>Qwen-Image-Bench (CN+EN) ↑</th><th>LongText EN ↑</th><th>LongText ZH ↑</th></tr>
+  <tr><td>Open-source Data (187M)</td><td>48.45</td><td>0.828</td><td>0.952</td></tr>
+  <tr class="boogu"><td><strong>+ Boogu Syllabus (47.19M)</strong></td><td class="best">53.65</td><td class="best">0.869</td><td class="best">0.969</td></tr>
+</table>
+
+<h4>4.7.4 汉字目标曝光 SFT（Table 9）</h4>
+<table>
+  <tr><th>SFT 优化</th><th>LongTextBench (ZH) ↑</th></tr>
+  <tr><td>Before</td><td>0.9055</td></tr>
+  <tr class="boogu"><td><strong>After（每字 ≥300 次曝光）</strong></td><td class="best">0.9538</td></tr>
+</table>
+
+<h3 id="sec-4-8">4.8 训练管线超参（Table 11）</h3>
+<p>训练遵循<strong>渐进式课程</strong>：先低分辨率后高分辨率，先 T2I 后微调为 TI2I 编辑模型。共四阶段：</p>
+<table>
+  <tr><th>阶段</th><th>训练数据</th><th>Max Output Pixels</th><th>Max Side Length</th><th>Global Batch</th><th>LR</th><th>SNR 策略</th></tr>
+  <tr><td>512×512 T2I</td><td>Open-Source 187M</td><td>262,144</td><td>800</td><td>2048</td><td>1e-4</td><td>Dynamic Logit Normal</td></tr>
+  <tr><td>1024×1024 T2I</td><td>60M 开源 + 47M Syllabus</td><td>1,048,576</td><td>2048</td><td>2048</td><td>1e-4</td><td>Dynamic Logit Normal</td></tr>
+  <tr class="boogu"><td><strong>2048×2048 T2I (Base)</strong></td><td>Boogu Syllabus 47M</td><td>4,194,304</td><td>4096</td><td>1024</td><td>3e-5</td><td><strong>Rectified Dynamic Logit Normal</strong></td></tr>
+  <tr class="boogu"><td><strong>2048×2048 TI2I (Edit)</strong></td><td>11M T2I + 11M TI2I</td><td>4,194,304</td><td>4096</td><td>1024</td><td>3e-5</td><td>Rectified Dynamic Logit Normal</td></tr>
+</table>
+<p>TI2I 阶段构造约 22M 混合样本：11.29M 纯 T2I（取自 47.19M Syllabus）+ 10.70M 编辑样本（由初始 2.50M TI2I 数据集增广）。故编辑模型经<strong>混合分辨率 + 混合任务</strong>训练优化。通用配置：Adam β1/β2=0.9/0.95、weight decay 0.01、max grad norm 1.0、bf16 混合精度、gradient checkpointing 开启、sharding 用 HYBRID_SHARD / HYBRID_SHARD_ZERO2、constant-with-warmup 学习率。</p>
+
+<h2 id="sec-5">5. 总结与启发</h2>
+
+<h3 id="sec-5-1">5.1 局限性</h3>
+<ul>
+  <li><strong>世界知识差距</strong>：在需大量常识与领域知识（艺术风格、地标、公众人物、商业产品）的任务上仍落后领先闭源系统，且该差距难以可靠度量，实际可能超过报告分数所示。</li>
+  <li><strong>文字渲染语言受限</strong>：目前仅优化中文与英文。</li>
+  <li><strong>人体结构</strong>：多人交互、重度遮挡或非典型视角下可能出现解剖不一致（扭曲的手与肢体）。</li>
+  <li><strong>VAE 瓶颈</strong>：采用开源 FLUX.1 VAE，其重建误差进一步瓶颈化小脸/肢体/文字等细粒度细节，原生 2K 生成仅部分缓解。</li>
+  <li><strong>评测可信度</strong>：作者自身反复警示 ImgEdit-Bench 等 VLM 评测与人类偏好倒置（Nano-Banana-Pro 基准分更低却人类更优），静态基准饱和且与真实场景背离。</li>
+  <li><strong>BOG 代价</strong>：增强电影质感但增加结构扭曲概率、降低文字渲染成功率，故作可选模块并需 BOG Interval 调节。</li>
+</ul>
+
+<h3 id="sec-5-2">5.2 核心洞见与读后评注</h3>
+
+<h4>洞见 1：理解是生成的上界，编码器是传感器</h4>
+<p>Boogu 把"理解"提升为一等设计目标，并把指令编码器类比为"传感器"——它定义系统可用信息的上界。Table 7 的消融给出干净证据：固定一切只换冻结编码器，GenEval 从 1.7B 的 0.6034 单调升至 14B 的 0.6477，无饱和。这意味着<strong>开源 T2I 模型的瓶颈往往不在生成器而在文本理解</strong>。更深层的是：因编码器训练时冻结，输入端丢失的信息"任何下游推理时计算都无法恢复"——这是对"靠 inference-time scaling 救场"思路的有力反驳：理解能力的缺失是<strong>不可由推理时计算补偿</strong>的，必须在模型/数据侧前置解决。</p>
+
+<h4>洞见 2：数据课程 > 数据规模，人类先验是关键</h4>
+<p>Boogu 仅用 208.62M 唯一图像（基础模型 ~$400K）即追平用十亿级数据的开源同行，核心在于<strong>Boogu Syllabus 课程</strong>（21.62M 唯一 → 47.19M 上采样）显著优于 187M 原始开源数据。这与"指数曝光"洞见一致：zero-shot 仅随指数增长曝光线性提升。读后评注：这挑战了 scaling-law 的朴素外推——<strong>在受限算力下，结构化课程是比堆数据更高效的杠杆</strong>，但前提是算力受限（否则均衡化构建成本可能超过直接训非均衡数据）。这是对中小团队最有价值的可操作结论。</p>
+
+<h4>洞见 3：缺陷即信号，过滤是浪费</h4>
+<p>反直觉但有力：水印/模糊/过曝等"坏数据"不应过滤，而应配以显式点名缺陷的 caption 纳入训练。这让模型不仅学视觉模式，还理解"负向元素"，获得可控生成能力。这与可控生成社区"用负面 prompt/ControlNet 显式建模缺陷"的思路同源，但 Boogu 把它前移到<strong>数据策展阶段</strong>。评注：这是把"数据清洗"从"减法"转为"加标注"的范式转变，对低成本训练尤其实用。</p>
+
+<h4>洞见 4：Agentic 推理时扩展是闭源优势的可复现分解</h4>
+<p>Boogu 用 Deepseek-V4-Flash 驱动的 agent 做推理时重写、路由、reflection，把闭源系统的"系统级集成"拆解为开源可复现组件。关键设计是 prompt rewriter 的<strong>恒等下界</strong>——已清晰 prompt 不改写，只消歧不增强——使重写"只会帮忙不会伤害"。评注：这把"prompt 工程"从用户负担转移到系统内部，但用数学化下界保证不退化，是工程上很优雅的保证。Figure 18 的 rewriter 缩放规律（到 397B 仍升）也说明：<strong>重写能力的天花板不在重写管线而在骨干 VLM 的世界知识与推理</strong>——这是开源-闭源差距的具体映射。</p>
+
+<h4>洞见 5：评测方法论本身就是贡献</h4>
+<p>Boogu 对评测的反思极具价值：GPT-Image-2 人类偏好最强却在 GenEval/DPG-Bench 仅中游；自建 Boogu Arena 与 LMArena 达 Pearson r=0.986、Spearman ρ=1.0。更难得的是作者<strong>主动警示自家高分基准的不可信</strong>——ImgEdit-Bench 上 Edit-Thinking 4.64 居首，但作者坦承人类评测 Nano-Banana-Pro 更优。这种"不自卖自夸"的评测诚实度在技术报告中罕见。评注：论文提出的"单 baseline A/B vs 开源能力前沿"、"质量-延迟 Pareto 前沿"、"ImageNet-like 训练/测试分离 T2I 基准"等主张，是对整个 T2I 评测生态的建设性提案。</p>
+
+<h4>洞见 6：2K 原生训练的陷阱与修正</h4>
+<p>Boogu 是最早原生 2K 训练的开源模型之一，发现标准动态时间偏移在 2K 下"过挤压"——中位数从 1K 的 0.24 坍缩至 0.04，拖慢收敛。修正方案极简：钳制有效 token 数 $n_{\mathrm{cap}}=4096$，直接继承 1K 调好的偏移。评注：这是典型的"高分辨率新工程问题"——很多在 1K 上验证的标准配方在高分辨率下失效，需重新审视。该发现与修正对后续 2K/4K 开源训练有直接参考价值。</p>
+
+<h4>洞见 7：BOG 把 CFG 看作矩阵而非向量</h4>
+<p>BOG 的理论新意在于：把 DiT 每步预测从展平向量重新看作 $[H,W]$ 空间矩阵，用 SVD/Newton-Schulz 做矩阵归一化保留空间有效秩，再用平行-正交分解弱化导致过饱和的平行分量。这呼应 Muon 等矩阵感知优化器。评注：这是把"优化器的矩阵几何直觉"迁移到"推理时 guidance"的有趣跨界，且 Von Neumann 迹不等式给出了最优半正交近似的严格证明。<strong>零训练、无显著开销</strong>即获更丰富微结构、更深色调、更连贯电影光感，是高性价比的推理时增强。代价（结构扭曲、文字渲染降）通过 BOG Interval 调节，工程上可控。</p>
+
+<h4>洞见 8：RL 的边界——多样性 vs 平均质量</h4>
+<p>Boogu 刻意避免重美学 RL（Seedream 式肖像一致漂亮年轻），把人类偏好嵌入理解系统而非不可逆烤进生成器。评注：这揭示了一个被低估的 trade-off——<strong>对齐提升平均质量同时收窄可达分布</strong>。Boogu 选择保留多样性（"六十岁中国女性"产出自然而非精致妆容），把 RL 限定在解剖畸变/文字渲染等不损多样性的定向问题。这是对"RLHF 一律提升"叙事的有益修正，对追求生成多样性的开源社区有指导意义。</p>
+
+<h3 id="sec-5-3">5.3 未来方向（原文呼吁社区共建）</h3>
+<ul>
+  <li><strong>更透明忠实的评测</strong>：静态基准已饱和且误导，即便统治基准也未必保证真实效能；真正效用在于忠实翻译复杂多面意图（多轮可编辑、身份一致、长上下文 prompt 遵从）。</li>
+  <li><strong>突破开源数据瓶颈</strong>：公共数据集语义噪声普遍、缺乏认知深度，设下严格天花板；追平前沿需转向高保真数据合成与专家级策展。</li>
+  <li><strong>更强 agentic 图像生成</strong>：推理时注入理解已有效，但当前 agentic 管线仍浅，在更紧的推理-生成循环、自验证、工具使用上有大量空间，推动生成从被动映射走向主动规划、批评、精炼自身输出的系统。</li>
+</ul>
+
+<h2 id="sec-6">6. 参考文献</h2>
+
+<p>以下为论文中与本文报告讨论最相关的关键文献（按主题归类）：</p>
+<ol>
+  <li>Boogu Team. <em>Boogu-Image-0.1: Boosting Open-Source Unified Multimodal Understanding and Generation.</em> arXiv:2607.13125, 2026. <a href="https://arxiv.org/abs/2607.13125">arXiv</a></li>
+  <li>OpenAI. <em>Introducing ChatGPT Images 2.0 (GPT-Image-2).</em> 2026. <a href="https://openai.com/index/introducing-chatgpt-images-2-0/">link</a></li>
+  <li>Google. <em>Introducing Nano Banana Pro.</em> 2025. <a href="https://blog.google/innovation-and-ai/products/nano-banana-pro/">link</a></li>
+  <li>ByteDance Seed Team. <em>Seedream 5.0 Lite / Seedream 4.5 / Seedream 4.0.</em> 2026. <a href="https://seed.bytedance.com/en/blog/deeper-thinking-more-accurate-generation-introducing-seedream-5-0-lite">link</a></li>
+  <li>Wu et al. <em>Qwen-Image Technical Report / Qwen-Image-2.0 Technical Report.</em> arXiv:2508.02324 / arXiv:2605.10730, 2025–2026. <a href="https://arxiv.org/abs/2508.02324">arXiv</a></li>
+  <li>Z-Image Team. <em>Z-Image: An Efficient Image Generation Foundation Model with Single-Stream Diffusion Transformer.</em> arXiv:2511.22699, 2025. <a href="https://arxiv.org/abs/2511.22699">arXiv</a></li>
+  <li>Peebles & Xie. <em>Scalable Diffusion Models with Transformers (DiT).</em> arXiv:2212.09748, 2023. <a href="https://arxiv.org/abs/2212.09748">arXiv</a></li>
+  <li>Lipman et al. <em>Flow Matching for Generative Modeling.</em> arXiv:2210.02747, 2023. <a href="https://arxiv.org/abs/2210.02747">arXiv</a></li>
+  <li>Esser et al. <em>Scaling Rectified Flow Transformers for High-Resolution Image Synthesis (SD3).</em> ICML 2024. <a href="https://arxiv.org/abs/2403.03206">arXiv</a></li>
+  <li>Ho & Salimans. <em>Classifier-Free Diffusion Guidance.</em> NeurIPS 2021 Workshop. <a href="https://openreview.net/forum?id=qw8AKxfYbI">link</a></li>
+  <li>Sadat et al. <em>Eliminating Oversaturation and Artifacts of High Guidance Scales (APG).</em> arXiv:2410.02416, 2025. <a href="https://arxiv.org/abs/2410.02416">arXiv</a></li>
+  <li>Jordan et al. <em>Muon: An Optimizer for Hidden Layers in Neural Networks.</em> 2024. <a href="https://kellerjordan.github.io/posts/muon/">link</a></li>
+  <li>Bai et al. <em>Qwen3-VL Technical Report.</em> arXiv:2511.21631, 2025. <a href="https://arxiv.org/abs/2511.21631">arXiv</a></li>
+  <li>Li et al. <em>Qwen-Image-Bench: From Generation to Creation in Text-to-Image Evaluation.</em> arXiv:2605.28091, 2026. <a href="https://arxiv.org/abs/2605.28091">arXiv</a></li>
+  <li>Huang et al. <em>Agentic Prompt Enhancer (APE) for Image Generation and Editing.</em> arXiv:2606.00204, 2026. <a href="https://arxiv.org/abs/2606.00204">arXiv</a></li>
+  <li>Li et al. <em>Reflect-DiT: Inference-Time Scaling via In-Context Reflection.</em> ICCV 2025. <a href="https://arxiv.org/abs/2507.22058">arXiv</a></li>
+  <li>Udandarao et al. <em>No "Zero-Shot" Without Exponential Data: Pretraining Concept Frequency Determines Multimodal Model Performance.</em> arXiv:2404.04125, 2024. <a href="https://arxiv.org/abs/2404.04125">arXiv</a></li>
+  <li>Zheng et al. <em>Chatbot Arena (LMArena): An Open Platform for Evaluating LLMs by Human Preference.</em> arXiv:2403.04132, 2024. <a href="https://arxiv.org/abs/2403.04132">arXiv</a></li>
+</ol>
+
+<hr>
+<p style="color:#6c7086;font-size:0.85em">本阅读报告基于论文原文 (arXiv:2607.13125) 全文撰写，所有数据、公式、表格数值均来自原文，未编造。报告生成于 2026-W29 HuggingFace 论文榜（排名 3，110 upvotes）。</p>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    // 自动生成目录
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    // 滚动高亮
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

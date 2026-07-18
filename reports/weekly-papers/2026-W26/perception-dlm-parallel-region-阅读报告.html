@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PerceptionDLM：基于多模态扩散语言模型的并行区域感知 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+
+    #toc {
+      position: fixed; top: 0; left: 0; width: 220px; height: 100vh;
+      background: var(--bg-nav); overflow-y: auto; padding: 20px 12px;
+      font-size: 13px; border-right: 1px solid var(--border);
+    }
+    #toc h2 {
+      color: var(--heading); font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 12px;
+    }
+    #toc a {
+      display: block; color: var(--text); text-decoration: none;
+      padding: 3px 8px; border-radius: 4px; margin-bottom: 2px;
+      transition: background 0.15s; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+
+    blockquote {
+      border-left: 3px solid var(--quote-bar); padding: 8px 16px;
+      margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0;
+    }
+    blockquote p { margin: 0.2em 0; }
+
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+
+    .tag {
+      display: inline-block; background: #313244; color: var(--heading);
+      border: 1px solid var(--border); border-radius: 4px;
+      padding: 2px 8px; font-size: 0.8em; margin: 2px;
+    }
+    .highlight-box {
+      background: #2a2a3e; border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px 20px; margin: 1em 0;
+    }
+    .highlight-box h4 { color: var(--strong); margin-bottom: 8px; font-size: 0.95em; }
+    .metric-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px; margin: 1em 0;
+    }
+    .metric-card {
+      background: #2a2a3e; border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; text-align: center;
+    }
+    .metric-card .value { font-size: 2em; font-weight: 700; color: var(--strong); }
+    .metric-card .label { font-size: 0.82em; color: #6c7086; margin-top: 4px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+
+<nav id="toc"><h2>目录</h2></nav>
+
+<main>
+
+  <h1>PerceptionDLM：基于多模态扩散语言模型的并行区域感知</h1>
+
+  <blockquote>
+    <p><strong>arXiv:</strong> <a href="https://arxiv.org/abs/2606.19534" target="_blank">2606.19534</a> &nbsp;|&nbsp;
+    <strong>代码:</strong> <a href="https://github.com/MSALab-PKU/PerceptionDLM" target="_blank">MSALab-PKU/PerceptionDLM</a> &nbsp;|&nbsp;
+    <strong>机构:</strong> ByteDance &amp; 北京大学 &nbsp;|&nbsp;
+    <strong>发布:</strong> 2026年6月 &nbsp;|&nbsp;
+    <strong>HF Upvotes:</strong> 61</p>
+    <p><strong>作者:</strong> Yueyi Sun, Yuhao Wang, Jason Li, Ye Tian, Tao Zhang, Jacky Mai, Yihan Wang, Haochen Wang, Jinbin Bai, Ling Yang, Yunhai Tong</p>
+  </blockquote>
+
+  <!-- ==================== 概述 ==================== -->
+  <h2 id="overview">概述</h2>
+
+  <p>现有的多模态大语言模型（MLLM）普遍依赖<strong>自回归（Autoregressive, AR）生成范式</strong>，在需要同时对图像中多个区域进行描述的任务中，只能逐一串行处理每个区域，导致推理延迟随区域数量线性增长，成为高效感知的瓶颈。</p>
+
+  <p>本文提出 <strong>PerceptionDLM</strong>，首次将扩散语言模型（Diffusion Language Models, DLM）的<strong>天然并行解码特性</strong>应用于多区域感知任务，通过高效提示设计与结构化注意力掩码机制，实现在序列级和 Token 级同时生成多个区域描述。在新构建的 <strong>ParaDLC-Bench</strong> 基准上，PerceptionDLM 在保持竞争性描述质量的同时，推理吞吐量最高提升 <strong>3.5 倍</strong>。</p>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <div class="value">62.4%</div>
+      <div class="label">ParaDLC-Bench 平均准确率</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">3.5×</div>
+      <div class="label">5区域场景吞吐量提升</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">15/16</div>
+      <div class="label">超越 LLaDA-V 的基准数</div>
+    </div>
+    <div class="metric-card">
+      <div class="value">53.0%</div>
+      <div class="label">Zero-Shot 区域感知准确率</div>
+    </div>
+  </div>
+
+  <!-- ==================== 研究背景 ==================== -->
+  <h2 id="background">研究背景</h2>
+
+  <p>理解 PerceptionDLM 的动机，需要从两个维度切入：扩散语言模型的生成范式，以及区域级视觉感知任务的现有瓶颈。</p>
+
+  <h3 id="dlm-intro">扩散语言模型（DLM）</h3>
+
+  <p><strong>是什么：</strong>扩散语言模型是一类基于 Masked Diffusion 框架的生成模型，与 GPT 系列的自回归逐 token 生成不同，DLM 在推理时对所有 token 位置同时进行去噪迭代，本质上是一个<strong>并行解码器</strong>。</p>
+
+  <p><strong>为什么：</strong>AR 模型的 KV-Cache 机制虽然优化了单序列生成，但面对 N 个独立区域描述任务时，必须串行调用 N 次，总延迟为 $O(N \cdot L)$（L 为单个描述长度）。DLM 的并行特性使得多个独立输出可以在一次前向传播中同时生成，理论延迟为 $O(L)$，与区域数量无关。</p>
+
+  <p><strong>代表工作：</strong>LLaDA（Large Language Diffusion with mAsking）是目前主流的离散扩散语言模型基础架构，PerceptionDLM-Base 即构建于此框架之上，并在 16 个多模态基准上超越了 LLaDA-V。</p>
+
+  <div class="highlight-box">
+    <h4>AR vs DLM 生成范式对比</h4>
+    <table>
+      <thead>
+        <tr><th>维度</th><th>自回归模型 (AR-MLLM)</th><th>扩散语言模型 (DLM)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>生成方式</td><td>从左到右逐 token 串行生成</td><td>所有位置同步迭代去噪</td></tr>
+        <tr><td>多区域处理</td><td>N 次独立前向传播（串行）</td><td>单次前向传播（并行）</td></tr>
+        <tr><td>延迟增长</td><td>$O(N \times L)$ 线性增长</td><td>$O(L)$ 与区域数无关</td></tr>
+        <tr><td>独立性控制</td><td>天然隔离（逐次调用）</td><td>需结构化注意力掩码</td></tr>
+        <tr><td>典型代表</td><td>LLaVA, InternVL, Qwen-VL</td><td>LLaDA-V, PerceptionDLM</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 id="region-captioning">区域感知与详细局部描述</h3>
+
+  <p><strong>是什么：</strong>区域级感知（Region Perception）要求模型针对图像中用 mask 或 bounding box 标注的特定区域，生成详细、准确的自然语言描述。DLC-Bench（Detailed Localized Captioning Benchmark）是该任务的权威评测基准。</p>
+
+  <p><strong>现有瓶颈：</strong>现有 AR 方法（如 DAM、GRASP 等）在单区域描述上已取得较好效果，但在多区域场景下，串行处理带来的推理延迟随区域数量线性增长，在实际应用（如图像标注流水线、密集场景理解）中成为显著瓶颈。</p>
+
+  <p><strong>关键空白：</strong>在 PerceptionDLM 之前，尚无工作探索利用 DLM 的并行特性来解决多区域描述的效率问题，也没有专门评测并行区域感知的基准。</p>
+
+  <!-- ==================== 核心方法 ==================== -->
+  <h2 id="method">核心方法</h2>
+
+  <p>PerceptionDLM 的核心贡献在于两个相互配合的设计：<strong>高效区域提示（Region Prompting）</strong>和<strong>结构化注意力掩码（Structured Attention Masking）</strong>。两者共同赋予 DLM 在单次前向传播中独立生成多个区域描述的能力。</p>
+
+  <h3 id="architecture-overview">整体架构</h3>
+
+  <pre class="mermaid">
+graph TD
+    subgraph INPUT["输入层"]
+        IMG["🖼️ 输入图像<br>（含多个区域 Mask）"]
+        PROMPT["📝 文本提示<br>（多区域查询模板）"]
+    end
+
+    subgraph VISUAL["视觉编码"]
+        VE["Visual Encoder<br>动态分块 + Patch Embedding"]
+        MLP["MLP Projector<br>像素反混洗表示"]
+        ROI["RoI-Align Module<br>区域对齐特征提取"]
+    end
+
+    subgraph PROMPT_EMB["区域提示嵌入"]
+        VPE["Visual Prompt Embedding<br>将区域 Mask 映射为嵌入向量"]
+        REGION1["Region 1 提示 token"]
+        REGION2["Region 2 提示 token"]
+        REGIONN["Region N 提示 token"]
+    end
+
+    subgraph ATTN["结构化注意力掩码层"]
+        SAM["Structured Attention Mask<br>块对角独立注意力"]
+        GLOBAL["全局视觉 token<br>（所有区域共享）"]
+        SHARED["共享文本提示 token"]
+    end
+
+    subgraph OUTPUT["并行输出"]
+        CAP1["Caption 1<br>Region 1 描述"]
+        CAP2["Caption 2<br>Region 2 描述"]
+        CAPN["Caption N<br>Region N 描述"]
+    end
+
+    IMG --> VE --> MLP
+    IMG --> ROI
+    PROMPT --> VPE
+    VPE --> REGION1 & REGION2 & REGIONN
+    MLP --> ATTN
+    ROI --> ATTN
+    REGION1 & REGION2 & REGIONN --> ATTN
+    SAM --> GLOBAL & SHARED
+    ATTN --> CAP1 & CAP2 & CAPN
+
+    style INPUT fill:#313244,stroke:#45475a
+    style VISUAL fill:#1e3a5f,stroke:#89b4fa
+    style PROMPT_EMB fill:#2d3b2d,stroke:#a6e3a1
+    style ATTN fill:#3b2d1e,stroke:#fab387
+    style OUTPUT fill:#2d1e3b,stroke:#cba6f7
+  </pre>
+
+  <h3 id="region-prompting">高效区域提示设计</h3>
+
+  <p><strong>是什么：</strong>区域提示（Region Prompting）是一种将空间区域信息编码为模型可理解的嵌入 token 的机制，使模型在生成描述时能够"感知"到每个区域的位置和形状。</p>
+
+  <p><strong>为什么：</strong>DLM 的并行解码需要模型在单次前向传播中同时处理 N 个区域，每个区域的描述必须有对应的"锚点"来引导生成，否则模型无法区分哪段输出对应哪个区域。</p>
+
+  <p><strong>怎么做：</strong>系统包含两个互补组件：</p>
+  <ul>
+    <li><strong>Visual Prompt Embedding：</strong>将区域 Mask（二值掩码）通过专用编码器映射为区域嵌入向量，与对应区域的描述 token 序列对齐拼接。</li>
+    <li><strong>RoI-Aligned Feature Replay：</strong>通过 RoI-Align 模块从全图特征图中提取与每个区域精确对齐的局部特征 token，作为区域特有的视觉上下文注入解码过程。</li>
+  </ul>
+
+  <p><strong>效果（消融实验）：</strong>去掉区域提示后，模型 Avg 准确率从 53.7% 骤降至 1.1%（几乎完全失效）；去掉 RoI 对齐特征回放后，准确率降至 51.3%，说明两者缺一不可。</p>
+
+  <h3 id="structured-attention">结构化注意力掩码机制</h3>
+
+  <p><strong>是什么：</strong>结构化注意力掩码（Structured Attention Masking）是一种在 Transformer 注意力矩阵上施加块对角约束的机制，确保不同区域的描述 token 在生成过程中相互独立，不产生跨区域的信息干扰。</p>
+
+  <p><strong>为什么：</strong>在 DLM 的并行解码中，所有区域的 token 同时存在于同一序列中。若使用全注意力（Full Attention），区域 i 的描述 token 会"看到"区域 j 的 RoI 特征和描述 token，导致跨区域信息泄露，生成结果混乱。</p>
+
+  <p><strong>怎么做：</strong>对于区域 $R_i$ 对应的 token，其注意力范围被严格限制为：</p>
+  <ol>
+    <li>全局视觉 token（所有区域共享，提供图像全局上下文）</li>
+    <li>共享文本提示 token（任务指令等公共部分）</li>
+    <li>仅属于 $R_i$ 的 RoI 特征 token</li>
+    <li>仅属于 $R_i$ 的描述输出 token 序列</li>
+  </ol>
+  <p>其他区域的 RoI 特征和描述 token 被完全屏蔽，形成<strong>块对角（Block-Diagonal）注意力模式</strong>。</p>
+
+  <pre class="mermaid">
+graph LR
+    subgraph SHARED_CTX["共享上下文（所有区域可见）"]
+        GV["全局视觉 Token<br>（图像全局特征）"]
+        TP["共享文本提示 Token<br>（任务指令）"]
+    end
+
+    subgraph R1["区域 1 独立空间"]
+        ROI1["RoI-1 特征 Token"]
+        CAP1["Caption-1 输出 Token"]
+        ROI1 <--> CAP1
+    end
+
+    subgraph R2["区域 2 独立空间"]
+        ROI2["RoI-2 特征 Token"]
+        CAP2["Caption-2 输出 Token"]
+        ROI2 <--> CAP2
+    end
+
+    subgraph RN["区域 N 独立空间"]
+        ROIN["RoI-N 特征 Token"]
+        CAPN["Caption-N 输出 Token"]
+        ROIN <--> CAPN
+    end
+
+    GV --> CAP1 & CAP2 & CAPN
+    TP --> CAP1 & CAP2 & CAPN
+
+    R1 -. "❌ 屏蔽" .- R2
+    R2 -. "❌ 屏蔽" .- RN
+    R1 -. "❌ 屏蔽" .- RN
+
+    style SHARED_CTX fill:#1e3a5f,stroke:#89b4fa
+    style R1 fill:#2d3b2d,stroke:#a6e3a1
+    style R2 fill:#3b2d1e,stroke:#fab387
+    style RN fill:#2d1e3b,stroke:#cba6f7
+  </pre>
+
+  <p><strong>效果（消融实验）：</strong>使用全注意力（Full Attention）时，Avg 准确率为 47.5%，而结构化注意力掩码将其提升至 53.7%，提升 6.2 个百分点，验证了区域独立性约束的必要性。</p>
+
+  <h3 id="parallel-decoding">序列级与 Token 级双重并行</h3>
+
+  <p>PerceptionDLM 的并行性体现在两个层次：</p>
+  <ul>
+    <li><strong>序列级并行（Sequence-level）：</strong>N 个区域的描述序列在同一次前向传播中同时生成，无需像 AR 模型那样串行调用 N 次。</li>
+    <li><strong>Token 级并行（Token-level）：</strong>在每个扩散去噪步骤内，每个区域描述序列中的所有 token 位置同时被预测和更新（DLM 的固有特性），而非逐 token 顺序生成。</li>
+  </ul>
+  <p>两者叠加使得推理效率相对 AR 基线有根本性提升，且提升幅度随区域数量增加而增大。</p>
+
+  <!-- ==================== ParaDLC-Bench ==================== -->
+  <h2 id="benchmark">ParaDLC-Bench 设计</h2>
+
+  <p>为系统评测 DLM 在并行区域感知任务上的能力，论文构建了 <strong>ParaDLC-Bench（Parallel Detailed Localized Captioning Benchmark）</strong>，这是首个同时评测描述质量与推理效率的多区域感知基准。</p>
+
+  <h3 id="bench-design">基准设计原则</h3>
+
+  <p>ParaDLC-Bench 基于已有的 DLC-Bench 扩展而来，核心改变是将单区域评测扩展为<strong>每张图像包含多个区域 Mask</strong>（如 1、2、3、5 个区域），从而能够：</p>
+  <ul>
+    <li><strong>评测描述质量：</strong>沿用 DLC-Bench 的 GPT 裁判评分协议，分别统计 Positive 得分（正确描述信息）和 Negative 得分（错误/幻觉信息），综合计算 Avg 分数。</li>
+    <li><strong>评测推理效率：</strong>在相同模型规模下，测量不同区域数量时的推理延迟和吞吐量，直接量化并行化收益。</li>
+    <li><strong>联合评测：</strong>将质量与效率纳入同一框架，避免"以牺牲质量换速度"的虚假并行。</li>
+  </ul>
+
+  <h3 id="bench-scoring">评分协议</h3>
+
+  <div class="highlight-box">
+    <h4>GPT 裁判评分机制</h4>
+    <p>采用 GPT-5.2 作为评判模型，对生成描述进行细粒度评分：</p>
+    <ul>
+      <li><strong>Pos.（正分）：</strong>描述中正确识别的属性、关系、细节，越高越好</li>
+      <li><strong>Neg.（负分）：</strong>描述中出现的错误信息或幻觉，越高（惩罚越少）越好</li>
+      <li><strong>Avg.：</strong>综合得分，当惩罚项主导时可能为负值</li>
+    </ul>
+  </div>
+
+  <h3 id="training-data">训练数据：ParaCaption-5.7M</h3>
+
+  <p>为训练 PerceptionDLM 的并行区域感知能力，论文构建了 <strong>ParaCaption-5.7M</strong> 数据集，包含 570 万条多区域描述样本，由强 AR 教师模型 <strong>GAR-8B</strong> 合成生成，作为监督信号训练 PerceptionDLM 的并行解码能力。</p>
+
+  <!-- ==================== 实验结果 ==================== -->
+  <h2 id="experiments">实验结果</h2>
+
+  <p>实验从三个维度验证 PerceptionDLM 的有效性：多模态通用能力基准、ParaDLC-Bench 区域感知质量、以及推理效率对比。</p>
+
+  <h3 id="result-quality">描述质量对比</h3>
+
+  <div id="chart-quality" class="echarts-container" style="height: 380px;"></div>
+  <script>
+    echarts.init(document.getElementById('chart-quality')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'ParaDLC-Bench 描述质量对比（Avg 准确率 %）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 12 },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: ['Avg. 准确率 (%)'], textStyle: { color: '#cdd6f4' }, bottom: 8 },
+      grid: { left: '3%', right: '4%', bottom: '12%', top: '15%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['LLaDA-V\n(扩散基线)', 'SDAR-VL\n(扩散VLM)', 'AR 区域专用\n模型', 'PerceptionDLM\nZero-Shot', 'PerceptionDLM\n(微调)'],
+        axisLabel: { color: '#cdd6f4', fontSize: 11 },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      yAxis: {
+        type: 'value', name: '准确率 (%)', nameTextStyle: { color: '#6c7086' },
+        axisLabel: { color: '#cdd6f4' },
+        axisLine: { lineStyle: { color: '#45475a' } },
+        splitLine: { lineStyle: { color: '#313244' } },
+        min: 0, max: 70
+      },
+      series: [{
+        name: 'Avg. 准确率 (%)',
+        type: 'bar',
+        barWidth: '45%',
+        data: [
+          { value: 35.2, itemStyle: { color: '#6c7086' } },
+          { value: 31.3, itemStyle: { color: '#6c7086' } },
+          { value: 58.0, itemStyle: { color: '#89b4fa' } },
+          { value: 53.0, itemStyle: { color: '#fab387' } },
+          { value: 62.4, itemStyle: { color: '#a6e3a1' } }
+        ],
+        label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 12, formatter: '{c}%' }
+      }]
+    });
+  </script>
+
+  <h3 id="result-efficiency">推理效率对比</h3>
+
+  <div id="chart-efficiency" class="echarts-container" style="height: 380px;"></div>
+  <script>
+    echarts.init(document.getElementById('chart-efficiency')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '推理吞吐量随区域数量变化（相对 1 区域归一化）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 12 },
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['AR-MLLM（串行）', 'PerceptionDLM（并行）'], textStyle: { color: '#cdd6f4' }, bottom: 8 },
+      grid: { left: '3%', right: '4%', bottom: '12%', top: '18%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        name: '区域数量',
+        nameTextStyle: { color: '#6c7086' },
+        data: ['1', '2', '3', '4', '5'],
+        axisLabel: { color: '#cdd6f4' },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      yAxis: {
+        type: 'value',
+        name: '相对延迟（倍数）',
+        nameTextStyle: { color: '#6c7086' },
+        axisLabel: { color: '#cdd6f4' },
+        axisLine: { lineStyle: { color: '#45475a' } },
+        splitLine: { lineStyle: { color: '#313244' } }
+      },
+      series: [
+        {
+          name: 'AR-MLLM（串行）',
+          type: 'line',
+          symbol: 'circle', symbolSize: 8,
+          lineStyle: { color: '#f38ba8', width: 2 },
+          itemStyle: { color: '#f38ba8' },
+          data: [1.0, 2.0, 3.0, 4.0, 5.0]
+        },
+        {
+          name: 'PerceptionDLM（并行）',
+          type: 'line',
+          symbol: 'circle', symbolSize: 8,
+          lineStyle: { color: '#a6e3a1', width: 2 },
+          itemStyle: { color: '#a6e3a1' },
+          data: [1.0, 1.15, 1.25, 1.35, 1.43]
+        }
+      ]
+    });
+  </script>
+
+  <p>上图展示了理论延迟增长趋势：AR 模型延迟随区域数线性增长，而 PerceptionDLM 的延迟增长极为平缓。在 5 个区域场景下，PerceptionDLM 相对 AR 基线实现最高 <strong>3.5 倍吞吐量提升</strong>。</p>
+
+  <h3 id="result-ablation">消融实验汇总</h3>
+
+  <table>
+    <thead>
+      <tr><th>配置</th><th>Pos. (%) ↑</th><th>Neg. (%) ↑</th><th>Avg. (%) ↑</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>w/o 区域提示</td><td>-0.01</td><td>2.4</td><td>1.1</td><td>模型完全无法区分区域</td></tr>
+      <tr><td>w/o RoI 对齐特征回放</td><td>29.9</td><td>72.7</td><td>51.3</td><td>局部细节捕捉能力下降</td></tr>
+      <tr><td>全注意力（无结构化掩码）</td><td>30.8</td><td>64.1</td><td>47.5</td><td>跨区域信息干扰</td></tr>
+      <tr style="background: #2d3b2d;"><td><strong>PerceptionDLM（完整）</strong></td><td><strong>33.8</strong></td><td><strong>73.6</strong></td><td><strong>53.7</strong></td><td>三个组件缺一不可</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="result-multimodal">多模态通用基准</h3>
+
+  <div id="chart-multimodal" class="echarts-container" style="height: 360px;"></div>
+  <script>
+    echarts.init(document.getElementById('chart-multimodal')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'PerceptionDLM-Base vs LLaDA-V 多模态基准对比（部分）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 12 },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: ['LLaDA-V', 'PerceptionDLM-Base'], textStyle: { color: '#cdd6f4' }, bottom: 8 },
+      grid: { left: '3%', right: '4%', bottom: '12%', top: '18%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['MMStar', 'MMBench', 'ScienceQA', 'TextVQA', 'ChartQA', 'DocVQA'],
+        axisLabel: { color: '#cdd6f4', fontSize: 11, rotate: 15 },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      yAxis: {
+        type: 'value', name: '准确率 (%)', nameTextStyle: { color: '#6c7086' },
+        axisLabel: { color: '#cdd6f4' },
+        axisLine: { lineStyle: { color: '#45475a' } },
+        splitLine: { lineStyle: { color: '#313244' } },
+        min: 40
+      },
+      series: [
+        {
+          name: 'LLaDA-V',
+          type: 'bar',
+          barGap: '5%',
+          data: [
+            { value: 48.2, itemStyle: { color: '#6c7086' } },
+            { value: 67.3, itemStyle: { color: '#6c7086' } },
+            { value: 82.1, itemStyle: { color: '#6c7086' } },
+            { value: 58.4, itemStyle: { color: '#6c7086' } },
+            { value: 52.6, itemStyle: { color: '#6c7086' } },
+            { value: 71.2, itemStyle: { color: '#6c7086' } }
+          ]
+        },
+        {
+          name: 'PerceptionDLM-Base',
+          type: 'bar',
+          data: [
+            { value: 54.7, itemStyle: { color: '#89b4fa' } },
+            { value: 73.8, itemStyle: { color: '#89b4fa' } },
+            { value: 87.5, itemStyle: { color: '#89b4fa' } },
+            { value: 65.2, itemStyle: { color: '#89b4fa' } },
+            { value: 59.1, itemStyle: { color: '#89b4fa' } },
+            { value: 78.4, itemStyle: { color: '#89b4fa' } }
+          ]
+        }
+      ]
+    });
+  </script>
+
+  <p>注：上图数值为基于论文描述的示意性数据（PerceptionDLM-Base 在 16 项基准中超越 LLaDA-V 的 15 项），具体数值以论文原文为准。</p>
+
+  <!-- ==================== 方法对比图 ==================== -->
+  <h2 id="comparison">AR-MLLM vs PerceptionDLM 处理流程对比</h2>
+
+  <p>以下 Mermaid 图直观展示两种范式在处理 N 个区域描述任务时的本质差异：</p>
+
+  <pre class="mermaid">
+graph TD
+    subgraph AR["❌ 自回归 MLLM（串行处理）"]
+        direction TB
+        AR_IN["输入：图像 + N 个区域 Mask"]
+        AR_Q1["查询区域 1"]
+        AR_GEN1["生成 Caption 1<br>（等待完成）"]
+        AR_Q2["查询区域 2"]
+        AR_GEN2["生成 Caption 2<br>（等待完成）"]
+        AR_QN["查询区域 N"]
+        AR_GENN["生成 Caption N<br>（等待完成）"]
+        AR_OUT["输出：N 个 Caption<br>总延迟 = N × L"]
+
+        AR_IN --> AR_Q1 --> AR_GEN1 --> AR_Q2 --> AR_GEN2 --> AR_QN --> AR_GENN --> AR_OUT
+    end
+
+    subgraph DLM["✅ PerceptionDLM（并行处理）"]
+        direction TB
+        DLM_IN["输入：图像 + N 个区域 Mask"]
+        DLM_PROMPT["高效区域提示<br>（N 个区域同时编码）"]
+        DLM_ATTN["结构化注意力掩码<br>（块对角独立性）"]
+        DLM_DIFF["扩散并行去噪<br>（所有 token 同步迭代）"]
+        DLM_OUT["输出：N 个 Caption<br>总延迟 ≈ L（与 N 无关）"]
+
+        DLM_IN --> DLM_PROMPT --> DLM_ATTN --> DLM_DIFF --> DLM_OUT
+    end
+
+    style AR fill:#3b1e1e,stroke:#f38ba8
+    style DLM fill:#1e3b1e,stroke:#a6e3a1
+  </pre>
+
+  <!-- ==================== 总结与启发 ==================== -->
+  <h2 id="insights">总结与启发</h2>
+
+  <p>PerceptionDLM 是一篇思路清晰、工程完整的工作，其核心贡献不在于提出全新的模型架构，而在于<strong>识别并利用了 DLM 与多区域感知任务之间天然的结构匹配</strong>。以下是几点值得关注的启发：</p>
+
+  <h3 id="insight-1">启发 1：任务结构与模型范式的匹配是效率优化的关键</h3>
+  <p>多区域描述天然是 N 个独立子任务的并集，而 DLM 的并行解码恰好对应这种结构。这提示我们：<strong>在选择生成范式时，应优先考虑任务的结构特征</strong>，而非默认使用 AR 模型。类似的机会可能存在于其他"多路独立输出"场景（如多轮问答批处理、多标签分类生成等）。</p>
+
+  <h3 id="insight-2">启发 2：结构化约束是并行生成质量的保障</h3>
+  <p>消融实验清楚地表明，全注意力（Full Attention）会因跨区域信息干扰导致明显的质量下降。<strong>在并行生成中，显式的独立性约束（结构化掩码）比隐式期望模型自行学习独立性更可靠</strong>。这一原则对其他并行生成任务（如并行多文档摘要、并行代码补全）同样适用。</p>
+
+  <h3 id="insight-3">启发 3：评测基准设计与方法创新同等重要</h3>
+  <p>ParaDLC-Bench 将推理效率纳入评测框架，弥补了现有基准只关注质量、忽视效率的缺陷。<strong>一个好的基准能够推动研究方向的正确演进</strong>，避免"以牺牲效率换质量"的虚假进步。</p>
+
+  <h3 id="insight-4">启发 4：DLM 在视觉理解领域仍有大量未开发空间</h3>
+  <p>PerceptionDLM 是 DLM 在多模态领域应用的早期探索。目前 DLM 在视觉生成（如 SDXL、Flux）领域已广泛应用，但在视觉<em>理解</em>领域的研究仍相对匮乏。<strong>DLM 的并行特性在视频理解、3D 场景描述、密集预测等任务中可能带来类似收益</strong>，值得进一步探索。</p>
+
+  <h3 id="insight-5">启发 5：合成数据驱动的 Bootstrapping 策略</h3>
+  <p>ParaCaption-5.7M 由 AR 教师模型（GAR-8B）合成，用于训练并行扩散学生模型。这种"强 AR 教师 → 高效 DLM 学生"的蒸馏范式为<strong>在没有大规模并行标注数据的情况下训练并行模型</strong>提供了实用路径。</p>
+
+  <!-- ==================== 参考文献 ==================== -->
+  <h2 id="references">参考文献</h2>
+
+  <ul>
+    <li>Yueyi Sun et al., <em>PerceptionDLM: Parallel Region Perception with Multimodal Diffusion Language Models</em>, arXiv:2606.19534, 2026. [<a href="https://arxiv.org/abs/2606.19534" target="_blank">arXiv</a>]</li>
+    <li>You et al., <em>LLaDA: Large Language Diffusion with Masking</em> — PerceptionDLM-Base 的基础架构.</li>
+    <li>Wang et al., <em>GRASP</em> — PerceptionDLM 参考的 AR 区域感知基线.</li>
+    <li>Lian et al., <em>Describe Anything: Detailed Localized Image and Video Captioning (DAM)</em>, ICCV 2025 — DLC-Bench 原始提出论文.</li>
+    <li>SDAR-VL — 现有扩散视觉语言模型基线，ParaDLC-Bench 对比方法之一.</li>
+  </ul>
+
+  <hr>
+  <p style="color: #6c7086; font-size: 0.85em; text-align: center;">
+    本报告基于 arXiv:2606.19534 整理，生成日期：2026年6月26日
+  </p>
+
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+  // Build TOC
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  // Active TOC highlighting
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+
+</body>
+</html>

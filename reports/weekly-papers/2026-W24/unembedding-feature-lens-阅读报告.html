@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EmbedFilter / UnEmbedding Feature Lens | 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .badge-green { color: #a6e3a1; font-weight: 700; }
+    .badge-red { color: #f38ba8; font-weight: 700; }
+    .badge-yellow { color: #f9e2af; font-weight: 700; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+  <h1>Your UnEmbedding Matrix is Secretly a Feature Lens for Text Embeddings</h1>
+  <p style="color:#6c7086; font-size:0.9em;">EmbedFilter — 零样本 LLM 嵌入纯化 | 2026-W24 论文精读报告</p>
+
+  <!-- ===== 论文信息表 ===== -->
+  <table style="margin-top:1.2em">
+    <tr><th style="width:120px">标题</th><td>Your UnEmbedding Matrix is Secretly a Feature Lens for Text Embeddings</td></tr>
+    <tr><th>核心问题</th><td>LLM 作为现成嵌入模型效果差——文本嵌入被高频低信息 token 主导，压制了细腻语义表达；通过 SVD 分解 unembedding 矩阵并过滤"边缘谱"子空间，可无训练地纯化嵌入</td></tr>
+    <tr><th>方法名称</th><td><strong>EmbedFilter</strong>（Bulk Spectrum Transformation）</td></tr>
+    <tr><th>作者</th><td>Songhao Wu*, Zhongxin Chen*, Yuxuan Liu, Heng Cui, Cong Li, Rui Yan†</td></tr>
+    <tr><th>机构</th><td>中国人民大学高岭人工智能学院 · 联想集团 · 武汉大学</td></tr>
+    <tr><th>arXiv</th><td><a href="https://arxiv.org/abs/2606.07502" target="_blank">2606.07502</a></td></tr>
+    <tr><th>开源代码</th><td><a href="https://github.com/CentreChen/EmbFilter" target="_blank">https://github.com/CentreChen/EmbFilter</a></td></tr>
+    <tr><th>评测基准</th><td>MTEB（STS / Classification / Clustering / PairClassification / Reranking / Retrieval / Summarization，共 49 个数据集）</td></tr>
+    <tr><th>骨干模型</th><td>Qwen2.5-0.5B · Llama-3.1-8B-Instruct · Mistral-7B-Instruct-v0.3</td></tr>
+    <tr><th>HF 热度</th><td>87 upvotes（本周第 7 名，截至 2026-W24）</td></tr>
+  </table>
+
+  <!-- ===== 概述 ===== -->
+  <h2>概述</h2>
+
+  <p>
+    本文提出了一个令人意外却又直觉上令人信服的发现：大语言模型（LLM）内部的 <strong>unembedding 矩阵</strong>（即 lm_head，$W_U \in \mathbb{R}^{|V| \times d}$）不仅仅是一个将隐藏状态映射到词表概率的解码器，它同时也是一面"特征透镜"——其奇异值分解所揭示的谱结构，精确编码了哪些隐空间方向负责将高频低语义 token 写入嵌入表示。
+  </p>
+  <p>
+    当我们把 LLM 的最后一层隐状态直接当作文本嵌入使用时，这些向量在 Logit Lens 分析下会优先对齐 "the"、","、"\n" 等高频但语义空洞的 token，而非输入文本中真正有意义的关键词。这种现象跨越 Qwen、Llama、Mistral 等不同模型家族普遍存在，揭示了一个 LLM 嵌入能力的系统性瓶颈：<strong>文本嵌入被拉向一个"平均 token"方向，在这个方向上所有句子都高度相似，掩盖了真正的语义差异</strong>。
+  </p>
+  <p>
+    作者将这一现象与嵌入的各向异性问题（anisotropy）联系起来。前人研究已发现 LLM 嵌入分布在一个极窄的锥形区域内，而本文更进一步：这个锥形的中心方向（质心）恰好对应于训练语料上的词频加权平均嵌入，即"平均 token"。通过对 $W_U$ 做 SVD 分解，并用 Logit Spectroscopy 工具分析每个奇异子空间对高频 token logit 的贡献，作者发现：<strong>谱的两端（最大与最小奇异值对应的右奇异向量）构成的"边缘谱"（edge spectrum）子空间，正是写入高频 token 的主要通道</strong>。
+  </p>
+  <p>
+    基于此，作者提出 <strong>EmbedFilter</strong>：将原始嵌入投影到 $W_U$ 奇异谱的"中间体"（bulk spectrum）子空间，一步线性变换即可滤除高频 token 偏置，无需任何微调。更令人惊喜的是，这一投影天然具有降维效果——由于 $V$（右奇异矩阵）是正交变换，距离关系得到严格保持，将维度压缩到原来的 $1/\tau$ 倍后仍能维持甚至超越原始嵌入的检索质量，同时带来 $\tau$ 倍的检索加速与存储节省。在 MTEB 基准上，EmbedFilter 在 Qwen2.5-0.5B 上实现了最高 <strong>14.1%</strong> 的整体性能提升，在三个 LLM 骨干上均表现出稳健的改善。
+  </p>
+
+  <blockquote>
+    <strong>核心洞见</strong>：unembedding 矩阵不只是解码头，它是 LLM 内部表示空间的一面镜子——通过读取它的奇异谱，我们可以精确定位并手术式地切除那些污染嵌入质量的"噪声方向"。
+  </blockquote>
+
+  <!-- ===== 研究背景 ===== -->
+  <h2>研究背景</h2>
+
+  <h3>LLM-as-Embedder 的困境</h3>
+  <p>
+    近年来，以 LLM 为骨干的文本嵌入模型（如 E5-mistral、GTE-Qwen、BGE-M3）在 MTEB 排行榜上取得了显著成绩，但这些模型都经过了大规模的对比学习微调。当研究者尝试直接将预训练 LLM 的隐状态用作嵌入（零样本场景）时，性能往往远不及专门训练的小型双编码器（如 SimCSE-BERT）。这一现象被称为 <strong>LLM-as-Embedder 的性能鸿沟</strong>。
+  </p>
+  <p>
+    为弥补这一差距，研究者提出了多种提示工程方法：
+  </p>
+  <ul>
+    <li><strong>PromptEOL</strong>（Jiang et al., 2023）：使用"one word limitation"模板，引导 LLM 将语义压缩到最后一个 token 的隐状态中</li>
+    <li><strong>ECHO</strong>（Springer et al., 2024）：复制输入文本，从第二次出现的末尾提取嵌入，缓解因果注意力的单向性瓶颈</li>
+    <li><strong>MetaEOL</strong>（Lei et al., 2024）：利用强大的商业 LLM 生成元提示，增强语义表达</li>
+    <li><strong>GenEOL</strong>（Cho et al., 2024）：通过多次生成并聚合嵌入来提升质量</li>
+  </ul>
+  <p>
+    这些方法虽有改善，但仍是启发式的，且改进幅度有限、对提示选择敏感。本文的核心贡献在于提供了一个<strong>机制性解释</strong>，并基于此设计了原理性的解决方案。
+  </p>
+
+  <h3>相关工作对比</h3>
+  <table>
+    <tr>
+      <th>方法类别</th>
+      <th>代表工作</th>
+      <th>核心思路</th>
+      <th>局限</th>
+    </tr>
+    <tr>
+      <td>监督微调嵌入</td>
+      <td>SimCSE, E5, BGE, GTE</td>
+      <td>对比学习 + 大规模标注/合成数据</td>
+      <td>需要训练，成本高；依赖数据质量</td>
+    </tr>
+    <tr>
+      <td>提示工程</td>
+      <td>PromptEOL, ECHO</td>
+      <td>设计特殊模板引导语义聚合</td>
+      <td>启发式，效果不稳定，对提示敏感</td>
+    </tr>
+    <tr>
+      <td>嵌入校准</td>
+      <td>BERT-whitening, ABCDE</td>
+      <td>统计后处理（白化、中心化）</td>
+      <td>需要校准数据集；不具备降维保距性</td>
+    </tr>
+    <tr>
+      <td><strong>EmbedFilter（本文）</strong></td>
+      <td>EmbedFilter</td>
+      <td>SVD 分解 unembedding 矩阵，过滤边缘谱子空间</td>
+      <td><span class="badge-green">无需训练；无需校准数据；天然降维保距</span></td>
+    </tr>
+  </table>
+
+  <h3>Logit Lens 与 Logit Spectroscopy 工具</h3>
+  <p>
+    本文借助两个机制可解释性工具来分析 LLM 嵌入：
+  </p>
+  <ul>
+    <li>
+      <strong>Logit Lens</strong>（nostalgebraist, 2020）：将中间层隐状态 $h$ 直接乘以 unembedding 矩阵 $W_U$，得到词表上的 logit 分布，从而可视化该隐状态"最像"哪些 token。Nie et al. (2023) 将此工具应用于文本嵌入，发现嵌入能与输入文本的关键词对齐——但本文进一步发现，原始嵌入更多地对齐高频无意义 token。
+    </li>
+    <li>
+      <strong>Logit Spectroscopy</strong>（Dar et al., 2023）：在 Logit Lens 基础上，先将 $h$ 在 $W_U$ 的某个奇异子空间上的投影去除，再做 Logit Lens 分析，从而定量测量每个奇异方向对最终 logit 的贡献。过滤算子定义为 $\Psi_i = I - V_{[i]} V_{[i]}^\top$。
+    </li>
+  </ul>
+
+  <!-- ===== 问题分析 ===== -->
+  <h2>问题分析：高频 Token 偏置的数学根源</h2>
+
+  <h3>嵌入各向异性与"平均 Token"假说</h3>
+  <p>
+    前人研究（Ethayarajh 2019，Li et al. 2020）已记录了 LLM 嵌入的各向异性现象：所有文本嵌入都集中在一个极窄的锥形区域，导致任意两个句子的余弦相似度都偏高，掩盖了真实的语义差异。
+  </p>
+  <p>
+    本文提出了一个更具体的假说：这个锥形区域的质心对应于训练语料上的<strong>词频加权平均嵌入</strong>——即"平均 token"（average token）。Lv et al. (2024) 将此质心描述为"频率加权平均嵌入"，本文进一步将其与高频 token 的 logit 主导现象联系起来，提供了各向异性问题的机制性解释。
+  </p>
+
+  <h3>平均 Token 的逆向工程</h3>
+  <p>
+    设 $\hat{p}$ 为从训练语料（RedPajama）估计的词频分布。LLM 的标准解码步骤为：
+  </p>
+  <p>$$q = \text{Softmax}(h W_U^\top)$$</p>
+  <p>
+    其中 $q_i = \exp(w_i) / \sum_j \exp(w_j)$。对 logit 取对数：$w_i = \log(q_i) + b$（$b$ 为所有 logit 共享的偏置项）。因此：
+  </p>
+  <p>$$h W_U^\top = \log(q) + b \implies h = (\log(q) + b) W_U^{+}$$</p>
+  <p>
+    其中 $W_U^{+}$ 是 $W_U^\top$ 的 Moore-Penrose 伪逆。将 $q$ 替换为观测词频 $\hat{p}$，忽略偏置项 $b$（不影响谱分析），得到平均 token 表示：
+  </p>
+  <p>$$\hat{h} = \log(\hat{p}) \cdot W_U^{+}$$</p>
+  <p>
+    这个 $\hat{h}$ 代表"如果一个隐状态以训练语料的词频分布预测下一个 token，它应该是什么样的"——即所有文本嵌入的公共基底，也是各向异性锥形的质心所在。
+  </p>
+
+  <h3>Unembedding 矩阵的 SVD 分解与边缘谱发现</h3>
+  <p>
+    对 unembedding 矩阵 $W_U \in \mathbb{R}^{|V| \times d}$ 进行奇异值分解：
+  </p>
+  <p>$$W_U = U \Sigma V^\top$$</p>
+  <p>
+    其中 $U \in \mathbb{R}^{|V| \times d}$，$\Sigma \in \mathbb{R}^{d \times d}$（奇异值对角矩阵，按降序排列），$V \in \mathbb{R}^{d \times d}$（正交矩阵，右奇异向量）。$V$ 的每一列 $V_{[i]}$ 构成隐空间 $\mathbb{R}^d$ 的一组正交基。
+  </p>
+  <p>
+    对每个奇异维度 $i \in \{0, \ldots, d-1\}$，定义过滤后的扰动表示：
+  </p>
+  <p>$$\tilde{h}^{(i)} = \hat{h} \left(I - V_{[i]} V_{[i]}^\top\right)$$</p>
+  <p>
+    取高频 token 集合 $\mathcal{V}^+ = \{j \mid j \in \text{argtop}_k(\hat{p})\}$（$k=100$），定义高频 token logit 的相对扰动量：
+  </p>
+  <p>$$\Delta\pi(i) = \frac{\sum_{j \in \mathcal{V}^+} |\tilde{w}_j^{(i)} - \hat{w}_j|}{\sum_{j \in \mathcal{V}^+} |\hat{w}_j|}$$</p>
+  <p>
+    实验结果（Figure 2）显示，$\Delta\pi$ 在谱的两端（最大和最小奇异值对应的维度）显著高于中间部分，在 Qwen、Llama、Mistral 三个模型上均呈现一致的"U 形"分布。相比之下，低频 token 和随机 token 对边缘谱的敏感度显著更低，进一步证实了边缘谱与高频 token 的专属关联。
+  </p>
+
+  <blockquote>
+    <strong>边缘谱（Edge Spectrum）</strong>：由 $W_U$ 最大和最小奇异值对应的右奇异向量张成的子空间，是将高频低语义 token 写入嵌入表示的主要通道。过滤这个子空间即可释放嵌入中被压制的语义信息。
+  </blockquote>
+
+  <!-- ===== EmbedFilter 方法 ===== -->
+  <h2>EmbedFilter 方法详解</h2>
+
+  <h3>核心思路与过滤流程</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["输入文本 X"] --> B["LLM 前向传播 + Pooling"]
+    B --> C["原始嵌入 e ∈ R^d"]
+    D["unembedding 矩阵 W_U"] --> E["SVD 分解\nW_U = UΣV^T\n离线一次性计算"]
+    E --> F["确定过滤比例 τ\n计算截断索引 l_τ, r_τ"]
+    F --> G["提取中间谱子空间\nV_bulk = V[l_τ : r_τ]"]
+    G --> H["Bulk Spectrum Transformation\nΦ_τ = V_bulk · V_bulk^T"]
+    C --> I["应用 EmbedFilter\nẽ = e · Φ_τ^T\n全维精化 d 维"]
+    H --> I
+    C --> J["降维版本\nẽ_dim = e · V_bulk\n压缩到 d/τ 维"]
+    H --> J
+    I --> K["下游任务\nSTS / 检索 / 分类"]
+    J --> K
+
+    style A fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    style E fill:#2a2a3e,stroke:#fab387,color:#cdd6f4
+    style H fill:#2a2a3e,stroke:#a6e3a1,color:#cdd6f4
+    style I fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+    style K fill:#313244,stroke:#89b4fa,color:#cdd6f4
+</pre>
+
+  <h3>Bulk Spectrum Transformation 公式推导</h3>
+  <p>
+    给定过滤比例 $\tau \in \{1, 2, 4, 8\}$，定义左右截断索引：
+  </p>
+  <p>$$l_\tau = \left\lfloor d \cdot \frac{\tau - 1}{2\tau} \right\rfloor, \quad r_\tau = \left\lceil d \cdot \frac{\tau + 1}{2\tau} \right\rceil$$</p>
+  <p>
+    中间谱子空间由 $V_{[l_\tau : r_\tau]} \in \mathbb{R}^{d \times (r_\tau - l_\tau)}$ 构成（去掉最大奇异值端的 $l_\tau$ 个维度和最小奇异值端的 $d - r_\tau$ 个维度）。Bulk Spectrum Transformation 定义为：
+  </p>
+  <p>$$\Phi_\tau = V_{[l_\tau : r_\tau]} \cdot V_{[l_\tau : r_\tau]}^\top \in \mathbb{R}^{d \times d}$$</p>
+  <p>
+    对原始嵌入 $e_i$ 应用 EmbedFilter，得到精化表示：
+  </p>
+  <p>$$\tilde{e}_i = e_i \cdot \Phi_\tau^\top$$</p>
+  <p>
+    由于 $V$ 是正交矩阵，$\Phi_\tau$ 是一个正交投影算子（满足 $\Phi_\tau^2 = \Phi_\tau$ 和 $\Phi_\tau^\top = \Phi_\tau$），它将嵌入投影到"中间谱"子空间，同时过滤掉两端的边缘谱分量。与"直接减去边缘谱投影"的表达方式等价：
+  </p>
+  <p>$$\tilde{e}_i = e_i - e_i V_{\text{edge}} V_{\text{edge}}^\top$$</p>
+  <p>
+    其中 $V_{\text{edge}}$ 包含两端奇异向量，但实践中通过保留中间谱实现更为简洁。
+  </p>
+
+  <h3>降维的保距性证明</h3>
+  <p>
+    EmbedFilter 的降维版本用 $V_{[l_\tau : r_\tau]}$ 直接替换 $\Phi_\tau^\top$，将嵌入压缩到 $d/\tau$ 维。由于 $V$ 是正交矩阵，对任意 $x, y \in \mathbb{R}^d$，有：
+  </p>
+  <p>$$\|x \Phi_\tau^\top - y \Phi_\tau^\top\|_2 = \|x V_{[l_\tau : r_\tau]} - y V_{[l_\tau : r_\tau]}\|_2$$</p>
+  <p>
+    这意味着降维后的欧氏距离（以及余弦相似度）与全维投影结果完全等价，不会因降维而损失相对距离信息。这一性质使得 EmbedFilter 的降维是"无损"的——在语义检索中，$\tau$ 倍降维带来 $\tau$ 倍检索加速和 $1/\tau$ 倍存储占用，而排名顺序不变。
+  </p>
+
+  <h3>算法伪代码</h3>
+  <div class="algo-box">
+    <div class="algo-title">Algorithm 1: EmbedFilter — 离线预处理与在线推理</div>
+    <p><span class="kw">// === 离线阶段（一次性，基于模型权重）===</span></p>
+    <p><span class="kw">Input:</span> <span class="var">W_U</span> ∈ ℝ<sup>|V|×d</sup>（unembedding 矩阵），过滤比例 <span class="num">τ</span> ∈ {1, 2, 4, 8}</p>
+    <p style="padding-left:1.5em"><span class="var">U</span>, <span class="var">Σ</span>, <span class="var">V</span> ← <span class="fn">SVD</span>(<span class="var">W_U</span>)  <span class="cm">// V ∈ ℝ^{d×d}，列按奇异值降序排列</span></p>
+    <p style="padding-left:1.5em"><span class="var">l_τ</span> ← ⌊d · (τ−1) / (2τ)⌋  <span class="cm">// 左截断索引（去掉最大 SV 端）</span></p>
+    <p style="padding-left:1.5em"><span class="var">r_τ</span> ← ⌈d · (τ+1) / (2τ)⌉  <span class="cm">// 右截断索引（去掉最小 SV 端）</span></p>
+    <p style="padding-left:1.5em"><span class="var">V_bulk</span> ← <span class="var">V</span>[:, <span class="var">l_τ</span> : <span class="var">r_τ</span>]  <span class="cm">// 中间谱子空间，ℝ^{d × (r_τ - l_τ)}</span></p>
+    <p style="padding-left:1.5em"><span class="var">Φ_τ</span> ← <span class="var">V_bulk</span> · <span class="var">V_bulk</span><sup>⊤</sup>  <span class="cm">// Bulk Spectrum Transformation，ℝ^{d×d}</span></p>
+    <p><span class="cm">// 缓存 V_bulk 和 Φ_τ，供在线阶段使用</span></p>
+    <p style="margin-top:8px"><span class="kw">// === 在线阶段（每条文本）===</span></p>
+    <p><span class="kw">Input:</span> 原始嵌入集合 {<span class="var">e_i</span>}<sub>i=1</sub><sup>N</sup>，<span class="var">e_i</span> ∈ ℝ<sup>d</sup></p>
+    <p><span class="kw">for</span> <span class="var">i</span> = 1 <span class="kw">to</span> <span class="num">N</span> <span class="kw">do</span></p>
+    <p style="padding-left:1.5em"><span class="cm">// 选项 A：全维精化（保持 d 维，用于高精度场景）</span></p>
+    <p style="padding-left:1.5em"><span class="var">ẽ_i</span> ← <span class="var">e_i</span> · <span class="var">Φ_τ</span><sup>⊤</sup>  <span class="cm">// ∈ ℝ^d，O(d²) 计算</span></p>
+    <p style="padding-left:1.5em"><span class="cm">// 选项 B：降维版本（压缩到 d/τ 维，用于高效检索）</span></p>
+    <p style="padding-left:1.5em"><span class="var">ẽ_i_dim</span> ← <span class="var">e_i</span> · <span class="var">V_bulk</span>  <span class="cm">// ∈ ℝ^{d/τ}，O(d·d/τ) 计算，距离保持</span></p>
+    <p><span class="kw">end for</span></p>
+    <p><span class="kw">return</span> {<span class="var">ẽ_i</span>} 或 {<span class="var">ẽ_i_dim</span>}  <span class="cm">// 用于下游检索/STS等任务</span></p>
+  </div>
+
+  <p>
+    <strong>计算复杂度分析</strong>：离线 SVD 分解为 $O(\min(|V|, d) \cdot d^2)$，仅执行一次，可预先缓存；在线推理每条嵌入仅需一次矩阵乘法，全维版本为 $O(d^2)$，降维版本为 $O(d \cdot d/\tau)$，相比 LLM 推理本身的开销可忽略不计。
+  </p>
+
+  <!-- ===== 实验结果 ===== -->
+  <h2>实验结果</h2>
+
+  <h3>MTEB 主实验（Table 1）</h3>
+  <p>
+    在 MTEB 基准的 49 个数据集上，EmbedFilter 在三个 LLM 骨干（Qwen2.5-0.5B、Llama-3.1-8B-Instruct、Mistral-7B-Instruct-v0.3）上均取得显著提升。$\tau$ 控制降维比例，$\tau=2$ 表示输出维度为原来的 $1/2$：
+  </p>
+
+  <div id="chart-mteb-avg" class="echarts-container" style="height:380px"></div>
+
+  <table>
+    <tr>
+      <th>模型 + 方法</th>
+      <th>STS</th>
+      <th>Classification</th>
+      <th>Clustering</th>
+      <th>Retrieval</th>
+      <th><strong>Avg (49任务)</strong></th>
+    </tr>
+    <tr>
+      <td>Qwen2.5-0.5B + PromptEOL</td>
+      <td>63.04</td>
+      <td>75.19</td>
+      <td>34.91</td>
+      <td>27.31</td>
+      <td>50.07</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=2)</td>
+      <td><strong>69.48</strong></td>
+      <td><strong>76.66</strong></td>
+      <td><strong>39.20</strong></td>
+      <td><strong>34.73</strong></td>
+      <td><strong>54.57 (+9.0%)</strong></td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=4)</td>
+      <td>69.20</td>
+      <td>76.63</td>
+      <td>38.24</td>
+      <td>32.85</td>
+      <td>53.47 (+6.8%)</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=8)</td>
+      <td>68.57</td>
+      <td>76.33</td>
+      <td>35.50</td>
+      <td>29.82</td>
+      <td>51.43 (+2.7%)</td>
+    </tr>
+    <tr>
+      <td>Qwen2.5-0.5B + ECHO</td>
+      <td>63.98</td>
+      <td>70.43</td>
+      <td>30.16</td>
+      <td>18.15</td>
+      <td>46.03</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=2)</td>
+      <td><strong>70.77</strong></td>
+      <td><strong>74.41</strong></td>
+      <td><strong>36.94</strong></td>
+      <td><strong>29.65</strong></td>
+      <td><strong>52.55 (+14.1%)</strong></td>
+    </tr>
+    <tr>
+      <td>Llama-3.1-8B + PromptEOL</td>
+      <td>64.22</td>
+      <td>53.67</td>
+      <td>39.30</td>
+      <td>25.45</td>
+      <td>55.13</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=2)</td>
+      <td>66.64</td>
+      <td>54.68</td>
+      <td>40.67</td>
+      <td>29.69</td>
+      <td><strong>56.79 (+3.0%)</strong></td>
+    </tr>
+    <tr>
+      <td>Llama-3.1-8B + ECHO</td>
+      <td>66.98</td>
+      <td>49.26</td>
+      <td>38.89</td>
+      <td>30.14</td>
+      <td>53.52</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=2)</td>
+      <td><strong>73.98</strong></td>
+      <td><strong>53.15</strong></td>
+      <td><strong>42.64</strong></td>
+      <td><strong>39.21</strong></td>
+      <td><strong>57.70 (+7.8%)</strong></td>
+    </tr>
+    <tr>
+      <td>Mistral-7B + PromptEOL</td>
+      <td>64.15</td>
+      <td>48.10</td>
+      <td>33.40</td>
+      <td>20.91</td>
+      <td>49.47</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=2)</td>
+      <td>66.59</td>
+      <td>49.63</td>
+      <td>36.16</td>
+      <td>24.59</td>
+      <td><strong>51.50 (+4.1%)</strong></td>
+    </tr>
+    <tr>
+      <td>Mistral-7B + ECHO</td>
+      <td>72.81</td>
+      <td>47.56</td>
+      <td>32.42</td>
+      <td>28.37</td>
+      <td>53.21</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=2)</td>
+      <td><strong>74.66</strong></td>
+      <td><strong>51.66</strong></td>
+      <td><strong>36.14</strong></td>
+      <td><strong>35.03</strong></td>
+      <td><strong>56.10 (+5.4%)</strong></td>
+    </tr>
+  </table>
+
+  <h3>降维性能对比（Table 4，Llama-3.1-8B）</h3>
+  <p>
+    EmbedFilter 在大幅压缩维度（4096 → 512，即 $\tau=8$）后，仍能超越未压缩的预 LLM 时代基线（SimCSE、coCondenser），实现"越压越好"的效果：
+  </p>
+
+  <div id="chart-dim-reduction" class="echarts-container" style="height:380px"></div>
+
+  <table>
+    <tr>
+      <th>方法</th>
+      <th>维度</th>
+      <th>STS</th>
+      <th>Classification</th>
+      <th>Retrieval</th>
+      <th>Avg</th>
+    </tr>
+    <tr>
+      <td>SimCSE-BERT-sup</td>
+      <td>768</td>
+      <td>79.12</td>
+      <td>67.32</td>
+      <td>26.34</td>
+      <td>53.54</td>
+    </tr>
+    <tr>
+      <td>coCondenser-msmarco</td>
+      <td>768</td>
+      <td>76.47</td>
+      <td>64.71</td>
+      <td>35.14</td>
+      <td>55.48</td>
+    </tr>
+    <tr>
+      <td>PromptEOL (Llama)</td>
+      <td>4096</td>
+      <td>70.43</td>
+      <td>68.80</td>
+      <td>30.14</td>
+      <td>53.52</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=8)</td>
+      <td><strong>512</strong></td>
+      <td><strong>76.33</strong></td>
+      <td><strong>74.05</strong></td>
+      <td><strong>37.75</strong></td>
+      <td><strong>56.46</strong></td>
+    </tr>
+    <tr>
+      <td>MetaEOL (Llama)</td>
+      <td>4096</td>
+      <td>71.23</td>
+      <td>74.89</td>
+      <td>32.16</td>
+      <td>56.73</td>
+    </tr>
+    <tr>
+      <td>&nbsp;&nbsp;+ EmbedFilter (τ=8)</td>
+      <td><strong>512</strong></td>
+      <td><strong>73.49</strong></td>
+      <td><strong>74.74</strong></td>
+      <td><strong>35.89</strong></td>
+      <td><strong>58.25</strong></td>
+    </tr>
+  </table>
+
+  <h3>与 BERT-whitening 对比（Table 6）</h3>
+  <p>
+    在 Qwen2.5-0.5B 上，EmbedFilter（$\tau=2$，维度 448）与 BERT-whitening（同等维度 448）对比：EmbedFilter 综合指标更优（54.57% vs 53.04%），且不依赖任何校准数据集，部署更简便。
+  </p>
+
+  <!-- ===== 分析与消融 ===== -->
+  <h2>分析与消融实验</h2>
+
+  <h3>过滤策略消融（Table 5）</h3>
+  <p>
+    在 Qwen2.5-0.5B + PromptEOL + $\tau=2$ 设置下，对不同过滤策略进行系统消融，验证 EmbedFilter 设计的合理性：
+  </p>
+
+  <div id="chart-ablation" class="echarts-container" style="height:380px"></div>
+
+  <table>
+    <tr>
+      <th>配置</th>
+      <th>策略说明</th>
+      <th>STS</th>
+      <th>Clustering</th>
+      <th>Avg MTEB</th>
+      <th>vs. 基线</th>
+    </tr>
+    <tr>
+      <td>PromptEOL（基线）</td>
+      <td>原始嵌入，无过滤，d=896</td>
+      <td>63.04</td>
+      <td>34.91</td>
+      <td>50.07</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>① 截断前半维度</td>
+      <td>Matryoshka 风格，取后 d/2 维</td>
+      <td>62.56</td>
+      <td>33.52</td>
+      <td>49.13</td>
+      <td class="badge-red">-0.94</td>
+    </tr>
+    <tr>
+      <td>② 随机选半维度</td>
+      <td>随机采样 d/2 个维度</td>
+      <td>63.27</td>
+      <td>34.15</td>
+      <td>49.27</td>
+      <td class="badge-red">-0.80</td>
+    </tr>
+    <tr>
+      <td>③ 仅过滤主导谱</td>
+      <td>只过滤最大奇异值端（Dominant）</td>
+      <td>60.34</td>
+      <td>33.25</td>
+      <td>47.53</td>
+      <td class="badge-red">-2.54</td>
+    </tr>
+    <tr>
+      <td>④ 仅过滤次级谱</td>
+      <td>只过滤最小奇异值端（Secondary）</td>
+      <td>67.74</td>
+      <td>36.28</td>
+      <td>53.19</td>
+      <td class="badge-yellow">+3.12</td>
+    </tr>
+    <tr>
+      <td>⑤ 保留边缘谱（逆操作）</td>
+      <td>EmbedFilter 的反操作（Bulk 被过滤）</td>
+      <td>59.92</td>
+      <td>32.08</td>
+      <td>47.13</td>
+      <td class="badge-red">-2.94</td>
+    </tr>
+    <tr>
+      <td><strong>EmbedFilter（本文）</strong></td>
+      <td>过滤两端边缘谱，保留中间 bulk</td>
+      <td><strong>69.48</strong></td>
+      <td><strong>39.20</strong></td>
+      <td><strong>54.57</strong></td>
+      <td class="badge-green"><strong>+4.50</strong></td>
+    </tr>
+    <tr>
+      <td>⑥ 最优过滤（理论上界）</td>
+      <td>按 Δπ 排序选最优维度</td>
+      <td>68.52</td>
+      <td>38.63</td>
+      <td>54.19</td>
+      <td class="badge-green">+4.12</td>
+    </tr>
+  </table>
+
+  <p>关键结论：</p>
+  <ul>
+    <li><strong>改进非来自降维本身</strong>：配置①②虽也降维到 d/2，但性能反而下降，证明 EmbedFilter 的提升来自子空间选择，而非维度压缩。</li>
+    <li><strong>两端谱均有害，次级谱更甚</strong>：配置④（过滤最小 SV 端）效果优于③（过滤最大 SV 端），与 Figure 2 中次级谱 $\Delta\pi$ 更大一致。</li>
+    <li><strong>EmbedFilter 接近理论上界</strong>：与需要任务特定校准的最优配置⑥相比，EmbedFilter 无需额外信息即可达到相近效果（54.57 vs 54.19），甚至略优。</li>
+  </ul>
+
+  <h3>过滤比例 τ 的影响与效率权衡</h3>
+  <p>
+    随着 $\tau$ 增大（维度减少），性能逐渐轻微下降，但即使 $\tau=8$（维度压缩到原来的 1/8），EmbedFilter 仍能保持相对基线的正向增益。这提供了灵活的效率-效果权衡空间：
+  </p>
+  <ul>
+    <li>$\tau=1$：全维精化，最大性能提升，无降维</li>
+    <li>$\tau=2$：维度减半，性能接近 $\tau=1$，检索速度提升 2 倍，推荐默认配置</li>
+    <li>$\tau=4$：维度压缩 4 倍，仍优于基线，适合资源受限场景</li>
+    <li>$\tau=8$：维度压缩 8 倍，轻微性能损失，检索速度提升 8 倍、存储节省 87.5%</li>
+  </ul>
+
+  <h3>在复杂提示框架中的泛化性（Table 2, 3）</h3>
+  <p>
+    EmbedFilter 不仅在简单提示基线上有效，在更复杂的框架上也持续改善：
+  </p>
+  <ul>
+    <li><strong>MetaEOL + EmbedFilter</strong>：Qwen 上 52.23 → 55.39（+6.1%），Llama 上 56.73 → 58.79（+3.6%）</li>
+    <li><strong>GenEOL + EmbedFilter</strong>：STS 平均分 77.73 → 78.39（+0.66%）</li>
+  </ul>
+  <p>
+    这表明 EmbedFilter 可以作为通用的嵌入后处理模块，与任意提示工程方法叠加使用，且不会因基线方法更复杂而失效。
+  </p>
+
+  <!-- ===== 局限性 ===== -->
+  <h2>局限性</h2>
+
+  <ul>
+    <li>
+      <strong>对已微调嵌入模型的适用性未验证</strong>：EmbedFilter 的设计假设基于 LLM 的 unembedding 矩阵保留了预训练时的词频偏置。对于已经过对比学习微调的嵌入模型（如 E5、BGE），其 unembedding 矩阵可能已发生显著变化，边缘谱的语义含义有待验证。
+    </li>
+    <li>
+      <strong>非对称边缘谱的最优过滤策略待探索</strong>：消融实验显示最大 SV 端和最小 SV 端对高频 token 的贡献并不对称（次级谱 $\Delta\pi$ 更大），但 EmbedFilter 采用对称截断。如何为不同模型自适应地确定最优的非对称截断比例，仍是未解问题，作者明确将其列为未来工作。
+    </li>
+    <li>
+      <strong>检索任务评测范围有限</strong>：受计算资源限制，检索任务仅评测了 MTEB 的子集，遵循前人协议（Behnamghader et al., Muennighoff et al.），在全量检索数据集上的表现有待进一步验证。
+    </li>
+    <li>
+      <strong>词频分布的代理质量</strong>：平均 token 的计算依赖于对训练语料词频的估计（用 RedPajama 代理）。当代理分布与真实预训练分布差异较大时，边缘谱识别的准确性可能受影响，但作者在多个语料上的平行实验得到了一致结果。
+    </li>
+    <li>
+      <strong>多语言与多模态场景未探索</strong>：论文实验主要在英文 MTEB 上进行，高频 token 的分布在多语言模型中可能有所不同，EmbedFilter 的跨语言泛化性有待探索。
+    </li>
+  </ul>
+
+  <!-- ===== 总结与启发 ===== -->
+  <h2>总结与启发</h2>
+
+  <h3>核心贡献回顾</h3>
+  <p>
+    本文的工作在方法论层面的贡献可以总结为三个维度：<strong>发现</strong>（边缘谱现象）、<strong>解释</strong>（高频 token 偏置的机制性根源）、<strong>利用</strong>（EmbedFilter 的无训练纯化方案）。这三者形成了一条完整的从观察到原理再到应用的研究链条，是高质量 NLP 研究的典范。
+  </p>
+
+  <h3>对 LLM 内部表示的深度思考</h3>
+  <p>
+    本文最深刻的洞见在于：<strong>unembedding 矩阵 $W_U$ 不仅是解码头，更是一面映射隐空间结构的透镜</strong>。这一视角挑战了我们对 LLM 组件功能的传统认知——我们习惯于将 lm_head 视为"输出层"而忽视其对表示空间的反向约束。事实上，由于 LLM 在预训练中需要最大化下一 token 的预测概率，$W_U$ 必然编码了大量关于 token 分布的统计信息，而这些信息通过反向传播"渗透"进了隐状态的几何结构。
+  </p>
+  <p>
+    从信息论角度看，高频 token 的"平均方向"是一种低熵、高冗余的表示成分——它在任何输入下都以高概率被激活，因此在隐空间中对应一个强烈的、跨句子共享的方向。这个方向的存在使得所有嵌入都向同一个"公共区域"靠拢，降低了嵌入的区分能力。EmbedFilter 通过手术式地切除这个方向，本质上是在执行一种<strong>语义去噪</strong>操作。
+  </p>
+  <p>
+    更广泛地说，本文揭示了一个重要原则：<strong>LLM 的预训练目标（语言建模）与下游目标（语义相似度）之间存在内在张力</strong>。语言模型需要准确预测高频 token，因此在隐空间中为这些 token 保留了大量"容量"；而语义嵌入需要捕捉低频但信息丰富的语义差异。这两个目标在表示空间中竞争有限的维度资源，导致了观察到的性能鸿沟。EmbedFilter 的成功表明，通过识别并分离这两种"成分"，可以在不牺牲语言建模能力的前提下提升嵌入质量。
+  </p>
+
+  <h3>对嵌入系统设计的启发</h3>
+  <p>
+    本文的发现对嵌入系统的设计有几个重要启发：
+  </p>
+  <ul>
+    <li>
+      <strong>后处理的价值被低估</strong>：学界过度关注训练阶段的改进（更好的对比学习目标、更多的训练数据），而对推理时的表示净化关注不足。EmbedFilter 以极低的计算开销（一次矩阵乘法）实现了媲美微调方法的性能提升，提示我们应当更系统地探索后处理空间。
+    </li>
+    <li>
+      <strong>降维应与语义结构对齐</strong>：传统的 PCA 降维或 Matryoshka 表示学习都基于统计方差最大化，而不考虑哪些方向是"语义噪声"。EmbedFilter 的降维方案以语义质量为导向，提供了一个更有原则的降维框架。
+    </li>
+    <li>
+      <strong>可解释性工具的实用价值</strong>：本文展示了机制可解释性研究（Logit Lens、Logit Spectroscopy）如何从分析工具转化为实用的工程方法。这为可解释性研究的"落地"提供了一个成功范例，也提示研究者：理解模型内部机制不只是学术目的，更能直接指导系统改进。
+    </li>
+    <li>
+      <strong>对 Matryoshka 嵌入的补充</strong>：当前流行的 Matryoshka Representation Learning（MRL）通过训练来实现多粒度嵌入，但无法在推理时动态调整"哪些维度是有用的"。EmbedFilter 提供了一种基于模型内部结构的无训练替代方案，两者可以互补——先用 MRL 训练，再用 EmbedFilter 过滤边缘谱，可能获得更好的效果。
+    </li>
+  </ul>
+
+  <h3>未来研究方向</h3>
+  <p>
+    基于本文的工作，以下方向值得进一步探索：
+  </p>
+  <ol>
+    <li>将边缘谱过滤思想应用于嵌入模型的微调阶段，在训练目标中显式地惩罚嵌入在边缘谱方向上的投影，从源头减轻高频 token 偏置。</li>
+    <li>研究不同预训练数据配比对边缘谱形态的影响，以及是否可以通过调整数据分布来从预训练阶段改善嵌入质量。</li>
+    <li>探索 EmbedFilter 与量化技术（INT8、FP16）的结合，在降维的同时进行 bit 压缩，进一步降低部署成本。</li>
+    <li>将类似的谱分析方法应用于多模态嵌入（图像-文本对齐），研究视觉特征是否也存在类似的"平均视觉 token"问题。</li>
+    <li>系统研究非对称边缘谱的最优截断策略，为不同模型自动确定最佳的 $l_\tau$ 和 $r_\tau$ 参数。</li>
+  </ol>
+
+  <!-- ===== 参考文献 ===== -->
+  <h2>参考文献</h2>
+
+  <ol>
+    <li>Muennighoff et al. (2022). MTEB: Massive Text Embedding Benchmark. <em>arXiv:2210.07316</em></li>
+    <li>nostalgebraist (2020). Interpreting GPT: the logit lens. <em>LessWrong Blog</em></li>
+    <li>Ethayarajh K. (2019). How Contextual are Contextualized Word Representations? Comparing the Geometry of BERT, ELMo, and GPT-2 Embeddings. <em>EMNLP 2019</em></li>
+    <li>Li et al. (2020). On the Sentence Embeddings from Pre-trained Language Models (BERT-whitening). <em>EMNLP 2020</em></li>
+    <li>Gao et al. (2021). SimCSE: Simple Contrastive Learning of Sentence Embeddings. <em>EMNLP 2021</em></li>
+    <li>Dar et al. (2023). Analyzing Transformers in Embedding Space. <em>ACL 2023</em> — Logit Spectroscopy 原文</li>
+    <li>Wang et al. (2022). Text Embeddings by Weakly-Supervised Contrastive Pre-training (E5). <em>arXiv:2212.03533</em></li>
+    <li>BGE Team (2023). C-Pack: Packaged Resources To Advance General Chinese Embedding. <em>arXiv:2309.07597</em></li>
+    <li>Jiang et al. (2023). Scaling Sentence Embeddings with Large Language Models (PromptEOL). <em>arXiv:2307.16645</em></li>
+    <li>Springer et al. (2024). Repetition Improves Language Model Embeddings (ECHO). <em>arXiv:2402.15449</em></li>
+    <li>Lei et al. (2024). Meta-Task Prompting Elicits Embedding from Large Language Models (MetaEOL). <em>arXiv:2402.18458</em></li>
+    <li>Cho et al. (2024). Generative Representational Instruction Tuning (GenEOL). <em>arXiv:2402.09906</em></li>
+    <li>Lv et al. (2024). Interpreting Key Mechanisms of Factual Recall in Transformer-Based Language Models. <em>ACL Findings 2024</em></li>
+    <li>Kusupati et al. (2022). Matryoshka Representation Learning. <em>NeurIPS 2022</em></li>
+    <li>Yang et al. (2024). Qwen2.5 Technical Report. <em>arXiv:2412.15115</em></li>
+    <li>Dubey et al. (2024). The Llama 3 Herd of Models. <em>arXiv:2407.21783</em></li>
+    <li>Jiang et al. (2023). Mistral 7B. <em>arXiv:2310.06825</em></li>
+    <li>Together Computer (2023). RedPajama: An Open Source Recipe to Reproduce LLaMA training dataset.</li>
+    <li>Nie et al. (2023). Importance of Prompt Engineering for Text Embeddings. <em>arXiv:2307.11224</em></li>
+    <li>Behnamghader et al. (2024). LLM2Vec: Large Language Models Are Secretly Powerful Text Encoders. <em>arXiv:2404.05961</em></li>
+  </ol>
+
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+  // 目录自动生成
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 's' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs = new IntersectionObserver(es => es.forEach(e => {
+    const l = toc.querySelector('a[href="#' + e.target.id + '"]');
+    if (l) l.classList.toggle('active', e.isIntersecting);
+  }), { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+
+  // === ECharts: MTEB 综合性能对比 ===
+  const chartMteb = echarts.init(document.getElementById('chart-mteb-avg'));
+  chartMteb.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'MTEB 综合性能对比（Avg，49 任务，τ=2）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 14 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['基线', '+ EmbedFilter (τ=2)'], bottom: 0, textStyle: { color: '#cdd6f4' } },
+    grid: { left: '3%', right: '4%', bottom: '12%', top: '14%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['Qwen\nPromptEOL', 'Qwen\nECHO', 'Llama\nPromptEOL', 'Llama\nECHO', 'Mistral\nPromptEOL', 'Mistral\nECHO'],
+      axisLabel: { color: '#cdd6f4', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: {
+      type: 'value',
+      min: 40,
+      max: 62,
+      axisLabel: { color: '#cdd6f4' },
+      splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+    },
+    series: [
+      {
+        name: '基线',
+        type: 'bar',
+        data: [50.07, 46.03, 55.13, 53.52, 49.47, 53.21],
+        itemStyle: { color: '#45475a' },
+        barGap: '10%',
+        label: { show: true, position: 'inside', color: '#cdd6f4', fontSize: 10, formatter: (p) => p.value.toFixed(1) }
+      },
+      {
+        name: '+ EmbedFilter (τ=2)',
+        type: 'bar',
+        data: [54.57, 52.55, 56.79, 57.70, 51.50, 56.10],
+        itemStyle: { color: '#89b4fa' },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (p) => {
+            const gains = ['+9.0%', '+14.1%', '+3.0%', '+7.8%', '+4.1%', '+5.4%'];
+            return gains[p.dataIndex];
+          },
+          color: '#a6e3a1',
+          fontSize: 11,
+          fontWeight: 700
+        }
+      }
+    ]
+  });
+
+  // === ECharts: 降维性能对比 ===
+  const chartDim = echarts.init(document.getElementById('chart-dim-reduction'));
+  chartDim.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'Llama-3.1-8B 降维性能对比（MTEB Avg）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 14 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '14%', top: '14%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['SimCSE\n768d', 'coCondenser\n768d', 'PromptEOL\n4096d', 'PromptEOL\n+Filter\n512d', 'MetaEOL\n4096d', 'MetaEOL\n+Filter\n512d'],
+      axisLabel: { color: '#cdd6f4', fontSize: 10 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: {
+      type: 'value',
+      min: 50,
+      max: 60,
+      axisLabel: { color: '#cdd6f4' },
+      splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+    },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: 53.54, itemStyle: { color: '#6c7086' } },
+        { value: 55.48, itemStyle: { color: '#6c7086' } },
+        { value: 53.52, itemStyle: { color: '#45475a' } },
+        { value: 56.46, itemStyle: { color: '#89b4fa' } },
+        { value: 56.73, itemStyle: { color: '#45475a' } },
+        { value: 58.25, itemStyle: { color: '#a6e3a1' } }
+      ],
+      label: {
+        show: true,
+        position: 'top',
+        color: '#cdd6f4',
+        fontSize: 11,
+        fontWeight: 700,
+        formatter: (p) => p.value.toFixed(2)
+      }
+    }]
+  });
+
+  // === ECharts: 消融实验 ===
+  const chartAblation = echarts.init(document.getElementById('chart-ablation'));
+  chartAblation.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '过滤策略消融实验（Qwen2.5-0.5B + PromptEOL，τ=2，MTEB Avg）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 13 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '14%', top: '14%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['基线', '①截断\n前半维', '②随机\n选半维', '③仅过滤\n主导谱', '④仅过滤\n次级谱', '⑤保留\n边缘谱', 'EmbedFilter\n本文', '⑥最优\n过滤'],
+      axisLabel: { color: '#cdd6f4', fontSize: 10 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: {
+      type: 'value',
+      min: 45,
+      max: 56,
+      axisLabel: { color: '#cdd6f4' },
+      splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+    },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: 50.07, itemStyle: { color: '#6c7086' } },
+        { value: 49.13, itemStyle: { color: '#f38ba8' } },
+        { value: 49.27, itemStyle: { color: '#f38ba8' } },
+        { value: 47.53, itemStyle: { color: '#f38ba8' } },
+        { value: 53.19, itemStyle: { color: '#f9e2af' } },
+        { value: 47.13, itemStyle: { color: '#f38ba8' } },
+        { value: 54.57, itemStyle: { color: '#a6e3a1' } },
+        { value: 54.19, itemStyle: { color: '#89dceb' } }
+      ],
+      label: {
+        show: true,
+        position: 'top',
+        color: '#cdd6f4',
+        fontSize: 10,
+        fontWeight: 700,
+        formatter: (p) => p.value.toFixed(2)
+      }
+    }]
+  });
+</script>
+</body>
+</html>

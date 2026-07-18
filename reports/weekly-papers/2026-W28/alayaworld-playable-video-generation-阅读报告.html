@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlayaWorld：长时序可玩视频世界生成 — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .pill { display: inline-block; font-size: 0.78em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 0 3px 3px 0; background: var(--bg-code); color: var(--strong); }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+<h1>AlayaWorld：长时序可玩视频世界生成</h1>
+<p><em>AlayaWorld Team, Alaya Lab · arXiv:2607.06291 · 2026 年 7 月</em></p>
+
+<table>
+  <tr><th>标题</th><td>AlayaWorld: Long-Horizon and Playable Video World Generation</td></tr>
+  <tr><th>核心问题</th><td>如何用一个自回归视频世界模型，同时实现<strong>开放控制、时空一致、长时序稳定、实时低延迟</strong>的可玩世界生成，并提供全栈开源框架。</td></tr>
+  <tr><th>骨干模型</th><td>LTX-2.3（自回归 DiT 微调）</td></tr>
+  <tr><th>关键运行配置</th><td>720p / 24fps / 每chunk 4步去噪 / 单chunk约1秒 / 一分钟级长时序演示</td></tr>
+  <tr><th>核心模块</th><td>3D cache、AdaLN式相机控制、history-compression、error bank、prompt switching、DMD few-step 蒸馏</td></tr>
+  <tr><th>开源地址</th><td><a href="https://alaya-lab.github.io/AlayaWorld/">项目主页</a> · 完整代码与文档于 2026 年 7 月中旬发布</td></tr>
+</table>
+
+<h2 id="sec-overview">1. 概述</h2>
+<p>传统游戏世界依赖劳动密集型的制作管线：对象、动画、玩法、交互规则都需预先显式指定，部署后难以修改、难以扩展。AlayaWorld 主张用<strong>视频世界模型（video world model）</strong>取代这一范式——模型以当前世界状态与用户交互为条件，自回归地合成未来观测，从而在线生成一个可玩世界；并且由于可在游戏录像与真实世界视频上联合训练，所生成的环境不再局限于单一游戏，能覆盖真实/游戏/合成、室内/室外、第一/第三人称等多种域，进而服务于具身智能等更广的交互应用。</p>
+
+<p>论文将“可玩世界”形式化为四个正交挑战，并为每个挑战设计对应模块：</p>
+<table>
+  <tr><th>挑战</th><th>含义</th><th>AlayaWorld 对应模块</th></tr>
+  <tr><td><strong>控制 Control</strong></td><td>世界对玩家开放到何种程度：导航是否无限、动作是否无界</td><td>3D cache（GEN3C式渲染证据）+ AdaLN式相机调制 + prompt switching</td></tr>
+  <tr><td><strong>一致 Consistency</strong></td><td>离开区域后再返回时，空间/时间一致性是否保持（loop closure）</td><td>显式 3D 空间缓存（空间记忆）+ Frame Preservation 式压缩历史（时间记忆）</td></tr>
+  <tr><td><strong>稳定 Stability</strong></td><td>纯前向长 rollout 下不发生视觉漂移、身份漂移</td><td>训练期暴露漂移历史（Helios 式）+ error bank 双路注入</td></tr>
+  <tr><td><strong>运行 Runtime</strong></td><td>视觉延迟（出帧）与语义延迟（条件更新）都足够小</td><td>DMD few-step 蒸馏 + 小 chunk + chunk 边界 prompt 切换</td></tr>
+</table>
+
+<blockquote>本文的定位偏向<strong>系统性综述 + 工程框架</strong>：第 3 节按四挑战逐一回顾代表性方法谱系并给出 AlayaWorld 的取舍，而非逐条给出新算法的完整推导。论文未提供量化对比表与消融数值，实验章节（§4）为纯定性结果（Figures 2–6）。本报告在“方法”部分会忠实复述其设计与所依赖的已被引用的标准公式（AdaLN 调制、DMD 蒸馏、error bank 注入），并明确标注出处；凡论文未给出的数值，均如实说明，不编造。</blockquote>
+
+<h2 id="sec-bg">2. 研究背景与动机</h2>
+
+<h3 id="sec-bg-paradigm">2.1 范式转移：从“工程化世界”到“生成式世界”</h3>
+<p>Sora 提出“video as world simulator”后，扩散/DiT 视频生成主干（Open-Sora、HunyuanVideo、CogVideoX、Wan、LTX-Video、Step-Video、MAGI-1 等）大规模可用。这些模型沿预设轨迹合成高保真、时间连贯的视频，是交互世界生成的天然主干。但它们只沿<strong>预定轨迹</strong>生成，本身不是“可玩”系统。</p>
+
+<h3 id="sec-bg-interactive">2.2 交互式世界模型谱系</h3>
+<p>将世界生成为端到端可玩系统的研究可分为三代：</p>
+
+<div class="timeline-wrap" style="overflow-x:auto;margin:1em 0">
+  <div class="timeline" style="display:flex;gap:0;min-width:1000px">
+    <div style="flex:1;display:flex;flex-direction:column">
+      <div style="background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;border-radius:6px 6px 0 0">第一代：单游戏神经引擎</div>
+      <div style="flex:1;padding:10px 8px;border:1px solid var(--border);border-radius:0 0 6px 6px">
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em"><span class="pill">动作条件</span>Genie / Genie 2：从无标注视频学可控环境</div>
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em"><span class="pill">神经引擎</span>GameNGen(DOOM)、DIAMOND、Oasis(Minecraft)、GameGen-X</div>
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;font-size:.88em">局限：难以泛化到单一游戏之外</div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column">
+      <div style="background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;border-radius:6px 6px 0 0">第二代：可控性与泛化</div>
+      <div style="flex:1;padding:10px 8px;border:1px solid var(--border);border-radius:0 0 6px 6px">
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em"><span class="pill" style="background:#fab387;color:#1e1e2e">泛化</span>The Matrix、GameFactory、MineWorld(开源)</div>
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em"><span class="pill" style="background:#fab387;color:#1e1e2e">自由探索</span>Yume / Yume 1.5：单图+键盘动作合成可探索世界</div>
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;font-size:.88em">关注：可控性、跨游戏泛化</div>
+      </div>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column">
+      <div style="background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;border-radius:6px 6px 0 0">第三代：实时+长时序一致</div>
+      <div style="flex:1;padding:10px 8px;border:1px solid var(--border);border-radius:0 0 6px 6px">
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em"><span class="pill" style="background:#a6e3a1;color:#1e1e2e">实时</span>Genie 3(闭源)、Matrix-Game、Hunyuan-GameCraft</div>
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em"><span class="pill" style="background:#a6e3a1;color:#1e1e2e">长记忆</span>Lingbot-World(扩上下文)、Matrix-Game 3.0、Spatia</div>
+        <div style="background:#313244;border-radius:5px;padding:7px 10px;font-size:.88em">关注：流式交互、分钟级一致、长程空间记忆</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 id="sec-bg-gap">2.3 四个尚未同时解决的挑战</h3>
+<p>论文明确指出，此前的可玩世界模型各有短板，且鲜有系统<strong>同时</strong>处理以下四点，这正是 AlayaWorld 的动机：</p>
+<ul>
+  <li><strong>控制</strong>：导航是否无限、动作是否不受预设物理约束。</li>
+  <li><strong>一致</strong>：重访区域是否与之前一致（place identity / loop closure），这<strong>独立于</strong>原始画质——即使画面无漂移，重访不一致仍算失败。</li>
+  <li><strong>稳定</strong>：纯前向长 rollout 下，自回归模型不断以自身输出为条件，小误差会累积并把后续段推离数据流形；这与是否重访无关。</li>
+  <li><strong>运行</strong>：视觉延迟（触发到出帧）与语义延迟（意图变化到输出响应）都需小。</li>
+</ul>
+
+<h2 id="sec-arch">3. 整体架构</h2>
+<p>AlayaWorld 以 LTX-2.3 为骨干，按 chunk 自回归生成。每个 chunk 的生成同时被四类条件通路调制：相机轨迹通过 AdaLN 注入、空间记忆通过 3D cache 渲染视图提供、时间记忆通过压缩历史 embedding 提供、文本意图通过 prompt 在 chunk 边界切换。训练阶段额外用 error bank 对记忆条件与目标段做双路扰动，以学习从受损历史中稳定续写。</p>
+
+<pre class="mermaid">
+flowchart LR
+  subgraph 输入条件
+    A1["相机轨迹<br>pose_t"]
+    A2["文本 prompt<br>可chunk切换"]
+    A3["3D cache<br>已访区域几何+外观"]
+    A4["近期帧历史"]
+  end
+  subgraph 条件编码
+    B1["AdaLN 调制<br>相机亲和参数"]
+    B2["沿轨迹渲染 cache<br>Render(proxy)"]
+    B3["Frame Preservation<br>压缩历史 embedding"]
+    B4["text condition"]
+  end
+  subgraph 自回归DiT主干
+    C["LTX-2.3 DiT<br>4步去噪 / chunk"]
+  end
+  D["生成 chunk_t<br>约1秒 720p 24fps"]
+  E["更新 3D cache<br>+ 滑窗历史"]
+  F["error bank<br>训练期双路注入"]
+
+  A1 --> B1 --> C
+  A3 --> B2 --> C
+  A4 --> B3 --> C
+  A2 --> B4 --> C
+  C --> D
+  D --> E
+  E --> A3
+  E --> A4
+  F -.训练扰动.-> B3
+  F -.训练扰动.-> D
+</pre>
+
+<p>四条条件通路分工明确：<strong>渲染 cache</strong>提供空间锚定的外观与几何；<strong>AdaLN 相机调制</strong>提供主干内部的轨迹感知；<strong>压缩历史</strong>提供近期运动与全局 rollout 上下文；<strong>prompt switching</strong>提供可变意图。这种“职责分离”是贯穿全文的设计哲学。</p>
+
+<h2 id="sec-control">4. 核心方法之一：控制（导航与开放动作）</h2>
+
+<h3 id="sec-nav">4.1 导航：渲染证据 + AdaLN 相机调制</h3>
+<p>论文按“相机如何进入模型”将先前工作分为三类，并给出 AlayaWorld 的混合取法：</p>
+<table>
+  <tr><th>路线</th><th>代表方法</th><th>机理</th><th>局限</th></tr>
+  <tr><td>相机作为条件信号</td><td>MotionCtrl、CameraCtrl(Plücker)、CamI2V、Yume(离散键)</td><td>训练专门模块编码相机轨迹，注入时序注意力</td><td>精度受限于模型把条件翻译成图像运动的能力</td></tr>
+  <tr><td>相机作为架构偏置</td><td>PRoPE、HY-World 1.5、UCPE、BulletTime(Camera-AdaLN)</td><td>把相机几何内嵌进注意力/归一化算子</td><td>弱条件被忽略、过强条件损伤画质与时序</td></tr>
+  <tr><td>相机作为显式渲染证据</td><td>GEN3C、TrajectoryCrafter、ReCamMaster、ReCapture</td><td>由深度反投影建 3D cache，按目标轨迹渲染后条件化生成器</td><td>管线重、依赖几何估计；多为 V2V 重渲染设定</td></tr>
+  <tr><td><strong>AlayaWorld</strong></td><td>GEN3C 式 cache + BulletTime 式 AdaLN</td><td>渲染证据提供空间锚定外观/几何；AdaLN 提供主干内轨迹感知</td><td>依赖深度估计与 cache 维护</td></tr>
+</table>
+
+<p><strong>AdaLN 式相机调制的形式化</strong>（论文明确称采用“AdaLN-style camera-control module”，其形式源自 BulletTime [70] 的 Camera-AdaLN，DiT 中 AdaLN 调制标准形式见 Peebles &amp; Xie [49]）：对主干第 $i$ 个 token 的隐状态 $h_i$，由相机条件 $c$ 经 MLP 产出仿射参数，做归一化后调制：</p>
+<p>$$ \gamma, \beta = \mathrm{MLP}_{cam}(c),\qquad h_i' = (1+\gamma)\,\mathrm{Norm}(h_i) + \beta $$</p>
+<p>其中 $c$ 由当前相机位姿（外参/内参或其编码）得到。该调制仅引入少量参数与计算开销，且不改变注意力结构，因此可与 LTX 主干兼容。其优点是把<strong>“参数解释问题”</strong>（位姿如何变成图像运动）部分转嫁给<strong>“图像条件生成问题”</strong>（cache 渲染视图已给出该视角的外观证据），生成器只需补全遮挡区、修正渲染伪影、推进场景动态。</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: 导航条件下的 chunk 生成（推理）</div>
+  <p><span class="kw">Input:</span> 当前位姿 <span class="var">pose_t</span>；3D cache <span class="var">C</span>；近期历史窗 <span class="var">H</span>；文本 <span class="var">p</span>；步数 <span class="num">4</span></p>
+  <p style="padding-left:1.5em"><span class="var">v_t</span> = <span class="fn">RenderAlongTrajectory</span>(<span class="var">C</span>, <span class="var">pose_t</span>)  <span class="cm">// 沿目标轨迹渲染 cache 得 proxy 视图</span></p>
+  <p style="padding-left:1.5em"><span class="var">m</span> = <span class="fn">FramePreservation</span>(<span class="var">H</span>)  <span class="cm">// 压缩近期历史为轻量 embedding</span></p>
+  <p style="padding-left:1.5em"><span class="var">γ, β</span> = <span class="fn">MLP_cam</span>(<span class="var">pose_t</span>)  <span class="cm">// AdaLN 仿射参数</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">s</span> = <span class="num">1</span> .. <span class="num">4</span> <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="var">x</span> = <span class="fn">DiTStep</span>(<span class="var">x</span>, <span class="var">v_t</span>, <span class="var">m</span>, <span class="var">p</span>, <span class="var">γ, β</span>)  <span class="cm">// 含 AdaLN 调制的一步去噪</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em"><span class="kw">return</span> <span class="var">chunk_t</span>  <span class="cm">// 约1秒、720p、24fps</span></p>
+</div>
+
+<h3 id="sec-action">4.2 开放动作：chunk 粒度的 prompt switching</h3>
+<p>导航之外，AlayaWorld 支持自由 prompt 驱动动作（施法、武器战斗、召唤怪物等），以达成“真正可玩”。其机制是<strong>在 chunk 边界替换文本条件</strong>：新生成的下一 chunk 受新 prompt 影响，而已生成的前序序列不受影响、无需重生成。这与注意力级 prompt 编辑（Prompt-to-Prompt、Video-P2P）思路一致，但落到了 chunk 粒度。</p>
+<p>语义延迟因此被约束在<strong>一个 chunk 周期</strong>内（约1秒）：用户改意图后，最多一个 chunk 后输出即开始反映新意图，且切换处保持视觉连续。论文据此将“开放动作”归入<strong>降低语义延迟</strong>的运行时设计。</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 2: chunk 边界 prompt 切换（流式生成）</div>
+  <p><span class="kw">Input:</span> 初始 <span class="var">p_0</span>；用户在第 <span class="var">k</span> 个 chunk 后改意图为 <span class="var">p_new</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">t</span> = <span class="num">1</span>, <span class="num">2</span>, ... <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="kw">if</span> 用户在边界 <span class="var">t-1</span> 提交新 prompt <span class="kw">then</span> <span class="var">p_t</span> = <span class="var">p_new</span> <span class="kw">else</span> <span class="var">p_t</span> = <span class="var">p_{t-1}</span></p>
+  <p style="padding-left:3em"><span class="var">chunk_t</span> = <span class="fn">Generate</span>(<span class="var">pose_t</span>, <span class="var">C</span>, <span class="var">H</span>, <span class="var">p_t</span>)  <span class="cm">// 仅本 chunk 用新条件</span></p>
+  <p style="padding-left:3em"><span class="fn">AppendNoRegen</span>(<span class="var">chunk_t</span>)  <span class="cm">// 不重生成前序序列</span></p>
+  <p style="padding-left:3em"><span class="fn">Update</span>(<span class="var">C</span>, <span class="var">H</span>)</p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+</div>
+
+<h2 id="sec-consistency">5. 核心方法之二：一致性（空间+时间双记忆）</h2>
+<p>论文强调一致性是<strong>place identity</strong> 属性：即使流稳定无漂移，只要重访区域与之前不符，仍算失败。其结构困难在于：自回归模型以有界上下文为条件，而注意力成本随保留帧数增长——保留全部 rollout 计算上不可行，只保留近窗又丢失 loop closure 所需证据。</p>
+<p>论文按<strong>索引原理</strong>区分两类记忆：</p>
+<table>
+  <tr><th>记忆类型</th><th>代表方法</th><th>索引键</th><th>长处 / 短板</th></tr>
+  <tr><td>时间索引记忆</td><td>直接保留上下文、FramePack、Frame Preservation、Recurrent/SSM</td><td>按“何时”观测</td><td>维持短期动态与全局连续；但无空间召回保证，长延迟重访证据可能已丢</td></tr>
+  <tr><td>空间索引记忆</td><td>Context-as-Memory、WorldMem、GEN3C、Spatia、Lyra 2.0、HY-World 2.0</td><td>按“何处”观测</td><td>与 loop closure 天然对齐；但管线复杂、依赖深度/几何、难表达动态对象状态</td></tr>
+  <tr><td><strong>AlayaWorld</strong></td><td>GEN3C 式 3D cache + Frame Preservation 式压缩历史</td><td>空间 + 时间互补</td><td>cache 锚定静态结构与外观；压缩历史补足近期动态</td></tr>
+</table>
+
+<pre class="mermaid">
+flowchart TD
+  P["玩家离开区域 A"] --> Q[" rollout 中生成新视角 "]
+  Q --> R["玩家返回区域 A (loop closure)"]
+  R --> S{"检索证据"}
+  S -->|"空间索引: 按位姿查 3D cache"| T1["3D cache 重投影<br>提供 A 的几何+外观"]
+  S -->|"时间索引: 按时序查历史"| T2["压缩历史 embedding<br>提供近期动态/上下文"]
+  T1 --> U["DiT 条件化生成"]
+  T2 --> U
+  U --> V["重访区域与之前一致"]
+</pre>
+
+<p>关键洞见：<strong>两类记忆覆盖互补的失败模式</strong>。纯空间记忆无法编码近期时序动态；纯时间记忆无法保证长延迟重访的证据可得性。AlayaWorld 让 3D cache 负责“空间持久性”、压缩历史负责“时间持久性”，二者共同覆盖单一记忆的盲区。cache 主要表达静态结构这一局限（动态对象状态难固定）也由压缩历史部分缓解。</p>
+
+<h2 id="sec-stability">6. 核心方法之三：稳定性（error bank 双路注入）</h2>
+<p>稳定性关注<strong>纯前向长 rollout</strong>下的漂移，与是否重访无关。自回归视频生成反复以自身输出为条件，小伪影、不一致运动或分布偏移会累积并把后续段推离数据流形。论文把抗漂移干预归为四阶段：条件输入、训练过程、采样调度、预测目标。</p>
+<table>
+  <tr><th>阶段</th><th>代表方法</th><th>思路</th></tr>
+  <tr><td>条件输入</td><td>Context Forcing、Infinite-World、Relax Forcing</td><td>给更长/更好组织的历史以稳定前向 rollout</td></tr>
+  <tr><td>训练过程</td><td>Self-Forcing、Stable Video Infinity(Error-Recycling)、Helios</td><td>把漂移视为 train-test mismatch，训练期暴露错误历史</td></tr>
+  <tr><td>采样调度</td><td>Rolling Forcing、Anchored Tree Sampling</td><td>放松严格因果/用锚点限制漂移局部传播</td></tr>
+  <tr><td>预测目标</td><td>WorldWeaver、Endless World、空间记忆类</td><td>用深度/几何/世界态等更稳定信号约束生成</td></tr>
+</table>
+
+<p><strong>AlayaWorld 的取法</strong>：沿用 Helios [87] 思路——训练期暴露漂移历史而非假设条件段总是干净；并进一步引入 <strong>error bank</strong>（与 Stable Video Infinity [34] 的 Error-Recycling 同源）。其关键创新是<strong>双路注入</strong>：把 error-bank 采样的残差伪影同时注入<strong>记忆条件</strong>和<strong>目标段</strong>，而非只注入预测目标。</p>
+
+<p><strong>error bank 机制形式化</strong>（论文文字描述，公式按 Stable Video Infinity [34] / Helios [87] 的标准表述重建，标注为重建）：记 rollout 中累积的残差伪影集合为 error bank $\mathcal{B}$，训练时从 $\mathcal{B}$ 采样扰动 $\epsilon \sim \mathcal{B}$，对干净记忆条件 $x_{mem}$ 与干净目标 $x_{tgt}$ 同时扰动：</p>
+<p>$$ \tilde{x}_{mem} = x_{mem} + \epsilon_{mem},\qquad \tilde{x}_{tgt} = x_{tgt} + \epsilon_{tgt},\quad \epsilon_{mem},\epsilon_{tgt} \sim \mathcal{B} $$</p>
+<p>随后在扰动样本上估计残差误差并回填 $\mathcal{B}$（跨扩散时间步存储、训练时重采样），让 DiT 学会识别并纠正长 rollout 中将遇到的错误类型。其训练目标可写作在扰动条件下的去噪：</p>
+<p>$$ \mathcal{L} = \mathbb{E}_{\,x_{tgt},\,t,\,\epsilon,\,\epsilon_{tgt}\sim\mathcal{B}}\;\Big\|\, \epsilon - \epsilon_{\theta}\big(x_{tgt}^{(t)} + \epsilon_{tgt},\; t,\; \tilde{x}_{mem},\; c\big) \,\Big\|^{2} $$</p>
+<p>其中 $x_{tgt}^{(t)}$ 为目标在时间步 $t$ 的加噪隐变量，$c$ 为相机/文本等条件。<strong>双路注入</strong>的动机是匹配长时序推理的真实情形：模型既要从受损记忆生成，又要纠正下一段中的误差，从而防止误差跨自回归步复合放大。</p>
+
+<blockquote>说明：论文以文字给出 error bank“注入记忆条件与目标段”的设计，但未给出上述损失式的显式形式；上式是依据所引用的 Stable Video Infinity / Helios 范式与论文描述<strong>重建</strong>的标准去噪目标，用于帮助理解，非论文原文公式。</blockquote>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 3: error bank 训练（双路注入，重建自论文描述）</div>
+  <p><span class="kw">Input:</span> 干净记忆 <span class="var">x_mem</span>；干净目标 <span class="var">x_tgt</span>；error bank <span class="var">B</span></p>
+  <p style="padding-left:1.5em"><span class="var">e_mem, e_tgt</span> = <span class="fn">Sample</span>(<span class="var">B</span>)  <span class="cm">// 跨扩散步重采样残差</span></p>
+  <p style="padding-left:1.5em"><span class="var">x̃_mem</span> = <span class="var">x_mem</span> + <span class="var">e_mem</span>  <span class="cm">// 扰动记忆条件</span></p>
+  <p style="padding-left:1.5em"><span class="var">x̃_tgt</span> = <span class="var">x_tgt</span> + <span class="var">e_tgt</span>  <span class="cm">// 扰动目标段</span></p>
+  <p style="padding-left:1.5em"><span class="var">t</span> ~ <span class="fn">Uniform</span>(<span class="num">1</span>, <span class="var">T</span>);  <span class="var">ε</span> ~ <span class="fn">N</span>(<span class="num">0</span>, <span class="var">I</span>)</p>
+  <p style="padding-left:1.5em"><span class="var">r</span> = <span class="fn">DiT</span>(<span class="var">x̃_tgt</span><sup>(t)</sup>, <span class="var">t</span>, <span class="var">x̃_mem</span>, <span class="var">c</span>) − <span class="var">ε</span>  <span class="cm">// 估计残差误差</span></p>
+  <p style="padding-left:1.5em"><span class="fn">Update</span>(<span class="var">B</span>, <span class="var">r</span>, <span class="var">t</span>)  <span class="cm">// 回填 error bank</span></p>
+  <p style="padding-left:1.5em"><span class="kw">return</span> <span class="fn">Loss</span>(<span class="var">r</span>)</p>
+</div>
+
+<h2 id="sec-runtime">7. 核心方法之四：运行时（few-step 蒸馏 + 小 chunk）</h2>
+<p>运行时被拆为两类延迟：<strong>视觉延迟</strong>（触发到出帧，计算问题）与<strong>语义延迟</strong>（意图变化到输出响应，条件更新问题）。论文据此组织先前工作：加速生成的方法降低视觉延迟，运行时可更新条件的方法降低语义延迟。</p>
+
+<h3 id="sec-runtime-visual">7.1 降低视觉延迟：DMD few-step 蒸馏</h3>
+<p>缩短“触发到出帧”的三条互补路线：蒸馏减少去噪步数、流式因果生成连续出帧、运行时缓存复用。AlayaWorld 采用<strong>标准 DMD 蒸馏</strong>[81,80] 把每个 chunk 的去噪步数压到 <strong>4 步</strong>。DMD 把少步学生分布对齐到真实数据分布，其核心损失（标准形式，论文未给出显式式）为：</p>
+<p>$$ \mathcal{L}_{DMD}(\theta) = \mathbb{E}_{x_t,t}\,\Big[\,\big\|\, s_{\theta}(x_t,t) - \big( s_{\phi}^{real}(x_t,t) - s_{\psi}^{fake}(x_t,t) \big) \,\big\|^{2}\,\Big] $$</p>
+<p>其中 $s_{\theta}$ 为学生（少步生成器）的得分，$s_{\phi}^{real}$ 与 $s_{\psi}^{fake}$ 分别为在真实数据与在学生生成数据上训练的得分网络；学生通过匹配“真实得分−伪造得分”之差来逼近真实数据流形。论文未给出该式的任何具体形式，上式为 DMD/DMD2 的标准重建，仅用于说明“4 步去噪”所依赖的蒸馏原理。</p>
+
+<h3 id="sec-runtime-semantic">7.2 降低语义延迟：小 chunk + chunk 边界 prompt 切换</h3>
+<p>论文未采用重型运行时缓存工程或专门的 KV-recache（如 LongLive [78]），而是用<strong>简单设计</strong>兼顾两种延迟：</p>
+<ul>
+  <li><strong>小时间 chunk</strong>：每次生成调用延迟低，用户命令可在短延迟后影响输出。</li>
+  <li><strong>chunk 边界 prompt 切换</strong>：在生成下一 chunk 前更新文本条件，避免全序列重生成。</li>
+</ul>
+<p>即“few-step 蒸馏提供速度、短 chunk 提供交互粒度、prompt 切换提供可变意图下的可控性”。三者构成一个简单可预测的交互循环。</p>
+
+<h3 id="sec-runtime-config">7.3 运行配置（论文明确给出的数值）</h3>
+<p>以下数值均为论文 §4 与摘要中明确陈述的真实配置，可直接复现评测设定：</p>
+<table>
+  <tr><th>配置项</th><th>取值</th><th>出处</th></tr>
+  <tr><td>骨干模型</td><td><strong>LTX-2.3</strong>（微调）</td><td>§3 / §4</td></tr>
+  <tr><td>生成分辨率</td><td><strong>720p</strong></td><td>§4</td></tr>
+  <tr><td>帧率</td><td><strong>24 fps</strong></td><td>§4</td></tr>
+  <tr><td>每 chunk 去噪步数</td><td><strong>4 步</strong></td><td>§4</td></tr>
+  <tr><td>单 chunk 时长</td><td><strong>约 1 秒</strong></td><td>§4</td></tr>
+  <tr><td>长时序演示</td><td><strong>一分钟</strong>（one-minute generation）</td><td>Figure 5 / §4.4</td></tr>
+  <tr><td>蒸馏方法</td><td>DMD-based few-step distillation</td><td>§3.4 / §3</td></tr>
+  <tr><td>视角</td><td>第一人称 + 第三人称</td><td>Figure 1</td></tr>
+  <tr><td>覆盖域</td><td>真实世界 / 游戏 / 合成；室内 / 室外</td><td>Figure 1</td></tr>
+  <tr><td>支持风格</td><td>realistic、Minecraft、水墨、油画、赛博朋克、像素艺术、Zelda 风格</td><td>Figure 6 / §4.5</td></tr>
+</table>
+
+<div id="chart-config" class="echarts-container" style="height:340px"></div>
+<script>
+  echarts.init(document.getElementById('chart-config')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'AlayaWorld 运行配置关键数值（取自论文原文）', textStyle: { color: '#89b4fa' } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['数值'], textStyle: { color: '#cdd6f4' } },
+    xAxis: { type: 'category', data: ['分辨率(p)', '帧率(fps)', '去噪步数', '单chunk时长(秒)', '一分钟=chunk数'], axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [{
+      name: '数值', type: 'bar', data: [720, 24, 4, 1, 60],
+      itemStyle: { color: '#a6e3a1' },
+      label: { show: true, color: '#cdd6f4', position: 'top' }
+    }]
+  });
+</script>
+<p style="font-size:0.85em;color:#6c7086">注：“一分钟=chunk数”为按“单chunk约1秒”换算的估算值（≈60），论文未直接给出该数；其余均为原文数值。</p>
+
+<h2 id="sec-exp">8. 实验结果与分析</h2>
+
+<blockquote><strong>关于实验数据的如实说明</strong>：论文第 4 节标题即为“Qualitative Results”，<strong>不包含任何量化对比表、指标数值或消融表格</strong>。所有结果以 Figures 2–6 的定性截图呈现。因此本节无法给出“加粗最优值”的量化对比表；下表为对论文定性结论的结构化复述，每行对应一个 Figure 与其定性观察。论文称“为公平起见，所有基线在与 AlayaWorld 相同的输入条件与分辨率下评测（只要其公开实现允许）”，但未给出基线名单与指标。</blockquote>
+
+<table>
+  <tr><th>Figure</th><th>评测维度</th><th>论文定性结论</th></tr>
+  <tr><td>Figure 2</td><td>相机控制</td><td>在多种相机与动作命令下，忠实跟随视角变化与平移，同时保持场景身份与几何合理性</td></tr>
+  <tr><td>Figure 3</td><td>开放动作（prompt 切换）</td><td>生成中实时切换文本 prompt，短延迟内过渡到新 prompt，且切换处保持视觉连续、无需重生成前序</td></tr>
+  <tr><td>Figure 4</td><td>一致性（leave-and-return）</td><td>离开后重访的区域在几何/布局/纹理上与之前一致；对比模型出现画质退化、相机不准、重访不一致等失败模式</td></tr>
+  <tr><td>Figure 5</td><td>长时序生成（一分钟）</td><td>随 rollout 增长仍保持画质、对象身份与运动连续，无明显伪影累积</td></tr>
+  <tr><td>Figure 6</td><td>多样风格</td><td>同一导航轨迹在 realistic/Minecraft/水墨/油画/赛博朋克/像素艺术/Zelda 等风格下，几何、相机轨迹、语义内容一致保持</td></tr>
+</table>
+
+<h3 id="sec-exp-analysis">8.1 结果分析</h3>
+<ul>
+  <li><strong>控制维度</strong>：相机跟随精度得益于“渲染证据+AdaLN”双通路——cache 给出该视角的视觉证据，AdaLN 给主干内部轨迹感知，二者分工使轨迹跟随与跨视角一致同时成立（Figure 2）。</li>
+  <li><strong>一致维度</strong>：重访一致是 place identity 的直接体现。论文显式对比并指出先前模型在重访时出现“画质退化、相机不准、不一致”三类失败模式，而 AlayaWorld 借空间 cache + 时间压缩历史实现 loop closure（Figure 4）。</li>
+  <li><strong>稳定维度</strong>：一分钟纯前向 rollout 无明显伪影累积，说明 error bank 双路注入 + 训练期暴露漂移历史有效抑制了自回归误差复合放大（Figure 5）。</li>
+  <li><strong>运行维度</strong>：4 步/1秒 chunk 使交互延迟可控；prompt 在 chunk 边界切换使语义延迟被约束在一个 chunk 周期内（Figure 3）。</li>
+  <li><strong>风格泛化</strong>：同一轨迹多风格下几何/相机/语义一致保持，说明风格主要由文本条件驱动，而空间结构与轨迹由 cache/相机通路决定，二者解耦良好（Figure 6）。</li>
+</ul>
+
+<h2 id="sec-ablation">9. 消融与关键发现</h2>
+<blockquote><strong>如实说明</strong>：论文<strong>未提供量化消融实验</strong>（无模块去除后的指标对比）。以下“关键发现”为基于论文设计论述与定性结果归纳的工程洞见，非来自消融表。</blockquote>
+
+<h3 id="sec-ablation-findings">9.1 关键工程发现</h3>
+<ul>
+  <li><strong>职责分离优于单一通路</strong>：相机控制不靠单一重型 fusion 模块，而是把“空间锚定外观/几何”交给 cache 渲染、“主干内轨迹感知”交给 AdaLN，避免重相机融合损伤画质与时序。</li>
+  <li><strong>空间记忆与时间记忆互补而非冗余</strong>：cache 解决“重访是否一致”（loop closure），压缩历史解决“近期动态与全局连续”，二者覆盖不同失败模式，缺一不可。</li>
+  <li><strong>error bank 双路注入 &gt; 单路注入</strong>：把残差伪影同时注入记忆条件与目标段，比仅注入目标更贴合长时序推理（既要从受损记忆生成、又要纠正下一段误差），这是相对 Stable Video Infinity 单路做法的关键改动。</li>
+  <li><strong>运行时“简单设计”可匹敌重型工程</strong>：用“4步蒸馏 + 小 chunk + 边界 prompt 切换”替代 KV-recache 等专门机制，保持交互循环简单可预测，同时兼顾视觉与语义延迟。</li>
+  <li><strong>chunk 边界 prompt 切换实现“开放动作”</strong>：把注意力级 prompt 编辑下沉到 chunk 粒度，是“可玩性”落地的关键——用户可任意时刻改意图而不重生成历史。</li>
+</ul>
+
+<h3 id="sec-ablation-tradeoff">9.2 设计权衡与已知局限</h3>
+<table>
+  <tr><th>设计选择</th><th>收益</th><th>代价/局限</th></tr>
+  <tr><td>3D cache（渲染证据）</td><td>精确轨迹跟随、重访一致</td><td>管线复杂、依赖深度/几何估计；难表达动态对象状态</td></tr>
+  <tr><td>AdaLN 相机调制</td><td>轻量、兼容主干、低开销</td><td>弱条件可能被忽略、过强/失准条件损伤画质与时序</td></tr>
+  <tr><td>压缩历史（时间记忆）</td><td>低成本的近期动态与全局上下文</td><td>无空间召回保证，长延迟重访证据可能已丢</td></tr>
+  <tr><td>error bank 双路注入</td><td>抑制长 rollout 漂移</td><td>需额外长 rollout 训练与误差模拟</td></tr>
+  <tr><td>4 步 DMD 蒸馏</td><td>低视觉延迟</td><td>激进减步可能削弱运动保真度与多样性（论文未量化）</td></tr>
+  <tr><td>小 chunk + 边界 prompt 切换</td><td>低语义延迟、可变意图</td><td>chunk 边界可能引入不连续与误差累积（论文称通过设计缓解）</td></tr>
+</table>
+
+<h2 id="sec-conclusion">10. 总结与启发</h2>
+<p>AlayaWorld 的贡献不在单一新算法，而在于<strong>把“可玩视频世界”拆解为四个正交挑战，并为每个挑战给出一条经过取舍的工程路径，再用一个统一的全栈框架把它们组合起来</strong>。其方法论价值在于：</p>
+<ul>
+  <li><strong>统一的分类视角</strong>：把散落的交互世界模型工作按“相机如何进入模型”“记忆按何索引”“抗漂移在何阶段”“延迟分视觉/语义”四套坐标系组织，本身就是一份高质量领域地图。</li>
+  <li><strong>互补优于单一</strong>：空间记忆 vs 时间记忆、渲染证据 vs AdaLN、视觉延迟 vs 语义延迟——论文反复用“覆盖互补失败模式”论证组合的必要性，这是可迁移的设计原则。</li>
+  <li><strong>简单可预测优先</strong>：运行时不堆重型缓存工程，而用“少步蒸馏+小chunk+边界切换”三件套，强调交互循环的可预测性。</li>
+  <li><strong>全栈开源定位</strong>：数据准备、架构、训练、推理加速、部署一体化，附带可复现管线、参考实现、评测工具与文档，意在成为后续视频世界模型研究的基座。</li>
+</ul>
+
+<p><strong>对后续研究的启发</strong>：(1) loop closure 应作为独立于画质的评测维度（place identity）；(2) 抗漂移训练应同时扰动条件与目标，而非只扰动目标；(3) “语义延迟”与“视觉延迟”应分开度量与优化；(4) 动态对象在静态空间 cache 中的状态表达，仍是开放问题。</p>
+
+<p><strong>局限与风险</strong>：论文为系统/框架性工作，<strong>未提供任何量化指标、基线对比表与消融数值</strong>，所有结论依赖定性截图，可验证性受限；完整代码与实验细节承诺于“2026 年 7 月中旬”发布（截至本报告所读版本尚未含）。error bank 损失式与 DMD 损失式均为本报告依据所引方法重建，非论文原文。3D cache 对深度估计质量与动态对象状态的依赖，是其规模化应用的主要待解风险。</p>
+
+<h2 id="sec-refs">11. 主要参考文献（精选）</h2>
+<table>
+  <tr><th>编号</th><th>工作</th><th>在 AlayaWorld 中的角色</th></tr>
+  <tr><td>[18]</td><td>LTX-Video</td><td>骨干模型 LTX-2.3 的来源</td></tr>
+  <tr><td>[52]</td><td>GEN3C</td><td>3D cache + 沿轨迹渲染证据的直接来源</td></tr>
+  <tr><td>[70]</td><td>BulletTime</td><td>Camera-AdaLN 式相机调制思路来源</td></tr>
+  <tr><td>[49]</td><td>DiT (Peebles &amp; Xie)</td><td>AdaLN 调制的标准形式来源</td></tr>
+  <tr><td>[92]</td><td>Frame Preservation</td><td>压缩历史 embedding 的来源</td></tr>
+  <tr><td>[87]</td><td>Helios</td><td>训练期暴露漂移历史的思路来源</td></tr>
+  <tr><td>[34]</td><td>Stable Video Infinity</td><td>Error-Recycling / error bank 的来源</td></tr>
+  <tr><td>[81][80]</td><td>DMD / DMD2</td><td>few-step 蒸馏（4步）的方法来源</td></tr>
+  <tr><td>[23][38]</td><td>Prompt-to-Prompt / Video-P2P</td><td>chunk 边界 prompt 切换的概念来源</td></tr>
+  <tr><td>[25]</td><td>Self-Forcing</td><td>消除 train-test exposure bias 的对照方法</td></tr>
+  <tr><td>[73]</td><td>Infinite-World</td><td>pose-free 固定预算记忆的对照方法</td></tr>
+  <tr><td>[37]</td><td>Rolling Forcing</td><td>放松因果的流式采样对照方法</td></tr>
+  <tr><td>[93]</td><td>Spatia</td><td>latent 空间可更新空间记忆的对照方法</td></tr>
+  <tr><td>[5]</td><td>Genie 3</td><td>实时、分钟级一致但闭源的对照系统</td></tr>
+</table>
+
+<p style="margin-top:2em;font-size:0.85em;color:#6c7086">报告基于 arXiv:2607.06291v1（2026-07-07）全文生成。凡论文未提供的量化数据、公式显式形式与消融数值，本报告均已如实标注为“重建/估算”或“未提供”，未编造。</p>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

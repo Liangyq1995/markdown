@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ABot-AgentOS：面向长时序具身 agent 的通用机器人 Agent OS 与终身多模态记忆</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    .best { color: var(--strong); font-weight: 700; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .note { background: #2a2a3e; border-left: 3px solid var(--link); padding: 8px 14px; margin: 1em 0; border-radius: 0 4px 4px 0; font-size: 0.92em; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+<h1>ABot-AgentOS：面向长时序具身 agent 的通用机器人 Agent OS 与终身多模态记忆</h1>
+
+<h2 id="section-0">1. 概述</h2>
+
+<table>
+  <tr><th>标题</th><td>ABot-AgentOS: A General Robotic Agent OS with Lifelong Multi-modal Memory</td></tr>
+  <tr><th>arXiv ID</th><td>2607.10350 (v2, 2026-07-15)</td></tr>
+  <tr><th>核心问题</th><td>VLM/VLA 提升了机器人感知与动作预测，但长时序具身 agent 仍缺一个通用运行时层（推理 / 记忆 / 工具 / 验证 / 跨体态执行）；ABot-AgentOS 在低层控制器之上提供 deliberative agent 层</td></tr>
+  <tr><th>机构</th><td>AMAP CV Lab（高德 / Alibaba Group）</td></tr>
+  <tr><th>作者</th><td>Jiayi Tian 等 33 位作者；Project Lead：Mingyang Yin、Zedong Chu（通讯作者）</td></tr>
+  <tr><th>项目主页</th><td><a href="https://amap-cvlab.github.io/ABot-AgentOS">https://amap-cvlab.github.io/ABot-AgentOS</a></td></tr>
+  <tr><th>配套基准</th><td>EmbodiedWorldBench（16 场景、4 难度、200+ 任务，含导航/物体搜索/NPC 对话/动态事件/trace-grounded 评分）</td></tr>
+</table>
+
+<p>ABot-AgentOS 把具身智能从“单一 VLA 控制器”推进到“带操作系统的机器人 agent”。论文的核心论点是：<strong>在 VLM/VLA 基座与低层机器人控制器之间，应当存在一个可复用的 deliberative agent 层</strong>，负责场景条件规划、上下文隔离的技能执行、多阶段验证、多模态记忆，以及端云协同。该层不替换已有控制栈，而是作为统一的认知层，横跨人形、四足机器狗、移动操作平台、机械臂等多种 embodiment。</p>
+
+<p>围绕这一论点，论文给出三项主要贡献：（1）一个<strong>通用机器人 Agent OS 架构</strong>，通过结构化的 agent 组件（main LLM、上下文管理、Skill Runner、工具接口、多阶段验证）把高层认知与物理执行解耦，并以插件式技能集成适配异构形态；（2）<strong>EmbodiedWorldBench</strong>，一个可执行基准，覆盖室内/室外/混合 16 场景、4 难度、200+ 任务，强调跨场景连续性、社交动态与工程可复现；（3）<strong>Universal Multi-modal Graph Memory</strong>，一种 typed、source-grounded 的多模态记忆图，将对话、视觉观察、空间上下文、时序关系、任务轨迹转为结构化节点与边，并配套 failure-driven 自演化循环——把诊断出的记忆失败编译为 gated runtime evo-assets，<strong>只提升到后续评测 split</strong>，从而在不泄漏当前 split 的前提下实现累积式终身改进。</p>
+
+<p>实验上，在 EmbodiedWorldBench 子集上，ABot-AgentOS 相对单控制器 baseline 在 Task Success Rate (TSR) 与 Goal Completion Rate (GCR) 上均有明显提升；在 LoCoMo、OpenEQA、Mem-Gallery、NExT-QA、EgoLife 五个记忆基准上，ABot-AgentOS Static 取得 87.5 / 59.9 / 88.6 / 76.5 / 65.4 的成绩，自演化进一步提升至 88.7 / 60.4 / 89.0 / 80.6 / 66.2。论文还附带了面向部署的小模型训练管线（文本沙盒 → 教师轨迹蒸馏 → SFT → 基于 GiGPO 的在线 RL → 自演化奖励引擎），但明确说明该部分不公开私有数据与生产结果。</p>
+
+<h2 id="section-1">2. 研究背景与动机</h2>
+
+<h3 id="section-2">2.1 VLM/VLA 与长时序具身 agent 的鸿沟</h3>
+
+<p>具身智能正把 AI 从数字环境推向物理世界。VLM 与 VLA 系统让机器人获得了自然语言理解、视觉场景理解、导航与动作预测能力，但论文指出一个关键鸿沟：<strong>“理解”与“行动”之间仍有断层</strong>。具体表现为三个待解难题：（i）如何把高层语义推理翻译成可靠的多步物理执行；（ii）如何在不大量重训的前提下跨多种机器人形态泛化；（iii）如何为持续交互构建长期、持久的记忆。</p>
+
+<p>更尖锐的是，<strong>具身任务往往缺乏显式的中间步完成信号</strong>。一个 agent 可能调用了导航指令却并未真正离开当前位置，或在反复碰撞旋转的同时，语言层面仍“相信”任务正在推进。这与软件 agent（如 SWE-agent 的 agent-computer interface、Toolformer 的 API 调用、ReAct 的交错推理-行动）形成鲜明对比——数字任务通常有测试、API 响应、页面状态等外部信号可校验，而具身任务必须依赖 agent 声明进度、执行轨迹与观测场景状态三者的一致性。</p>
+
+<h3 id="section-3">2.2 三条相关研究脉络</h3>
+
+<p>论文梳理了三条“部分相连但尚未打通”的研究脉络：</p>
+
+<table>
+  <tr><th>脉络</th><th>代表工作</th><th>贡献</th><th>局限</th></tr>
+  <tr><td>双系统理论的机器人基座模型</td><td>Galaxea G0、Hi Robot、RoboBrain 系列、RoboMemory、Agentic Robot</td><td>把快速感知-动作策略与慢速 deliberative 推理结合，连接抽象概念 grounding 与具体运动执行</td><td>常绑定到特定模型栈、embodiment 或控制接口</td></tr>
+  <tr><td>通用 agent 研究</td><td>ReAct、Toolformer、SWE-agent、OpenAI Operator、ChatGPT agent、Claude computer use、OSWorld；机器人侧 Gemini Robotics、SayCan、Inner Monologue、Voyager、AutoGen</td><td>显式推理、工具调用、可执行 workflow、grounded skill use、可复用技能</td><td>物理执行带来额外约束：部分可观测、执行不确定性、模糊完成信号、需验证“动作是否真的改变了世界”</td></tr>
+  <tr><td>长期记忆</td><td>generative agents 的 memory stream + reflection、MemoryBank、MemGPT、Mem0</td><td>从短期 buffer 走向持久化用户记忆、分层上下文管理、可扩展记忆基础设施</td><td>具身 agent 需更强基底：须绑定对话、egocentric 视觉证据、物体状态、人/动物身份、地点、时序、空间、provenance、任务轨迹</td></tr>
+</table>
+
+<h3 id="section-4">2.3 三大 Gap 与为何需要 OS 层</h3>
+
+<p>论文把现有系统的不足归纳为三个 gap，并据此论证“为何需要一个 Agent OS 而非更大模型”：</p>
+
+<blockquote>
+  <p><strong>推理-执行 gap</strong>：很多基座模型系统把模型输出直接映射为动作或依赖单体 pipeline，缺乏中间 agent 层来做任务分解、工具调用、技能委派、验证、恢复与多步逻辑推理。</p>
+  <p><strong>跨体态泛化 gap</strong>：机器人 agent 系统常与特定硬件、控制 API 或环境假设紧耦合，跨体态迁移代价高。</p>
+  <p><strong>持久具身记忆 gap</strong>：短期 buffer、纯文本缓存或任务专用记忆模块，无法可靠地跨长期交互保存多模态、关系化、source-grounded 的经验。</p>
+</blockquote>
+
+<p>这三个 gap 还暴露了一个评测需求：长时序具身 agent 需要超越孤立导航/操作/VQA 的基准，转而测试<strong>可执行的多场景场景</strong>，包含动态事件、交互与 trace-grounded 评分。这正是 EmbodiedWorldBench 的动机。</p>
+
+<h3 id="section-5">2.4 与相关 agent 框架的区别（机构定位）</h3>
+
+<p>ABot-AgentOS 来自 <strong>AMAP CV Lab（高德 / Alibaba Group）</strong>，是一个面向真实部署的系统级工作。与 SWE-agent（面向软件工程的 agent-computer interface）、Toolformer（API 工具调用）、ReAct（交错推理-行动）这类软件 agent 相比，它的关键区别在于：<strong>把执行组织为 reasoning-execution-verification 闭环</strong>，而不是简单地让 LLM 调用更多工具。与机器人侧的 SayCan、Inner Monologue、Voyager 相比，它额外强调“完成信号的一致性校验”与“跨体态插件式技能集成”。与 MemoryBank/MemGPT/Mem0 相比，它不只是文本记忆，而是把多模态经验写成 typed graph，并在记忆之上叠加 failure-driven 的管线级自演化。</p>
+
+<h2 id="section-6">3. 核心方法</h2>
+
+<h3 id="section-7">3.1 方法总览</h3>
+
+<p>ABot-AgentOS 的整体数据流可概括为：多模态输入 → 双 LLM 核心（端侧 Tiny LLM 每轮常驻 + 云端 Large LLM 按需升级）→ Agent Harness（验证感知的 ReAct 循环、上下文管理、技能演进）→ Skills & Tools 层 → 机器人硬件执行；记忆系统在端侧（私有）与云端（共享）之间分层同步。下图给出方法总览。</p>
+
+<pre class="mermaid">
+flowchart TD
+    A["多模态输入<br>麦克风 / APP / 相机 / 传感器"] --> B
+    B["双 LLM 核心<br>端侧 Tiny LLM（每轮）<br>云端 Large LLM（按需升级）"]
+    B --> C["Agent Harness<br>验证感知 ReAct / 上下文管理 / 技能演进"]
+    C --> D["Skills & Tools 层<br>Manipulation / Navigation / Motion / Vision"]
+    D --> E["机器人硬件执行<br>人形 / 四足 / 移动操作 / 机械臂"]
+    C -. 记忆读写 .-> F["分层记忆系统<br>端侧私有记忆 + 云端共享记忆"]
+    F -. 跨机器人知识迁移 .-> G["其它机器人"]
+    H["离线自演化循环<br>失败诊断 → Compile → Gate → evo-assets"] -. gated 提升 .-> C
+</pre>
+
+<h3 id="section-8">3.2 AgentOS 架构</h3>
+
+<p>Agent Harness 层是论文的“deliberative agent”核心，包含三个关键组件：<strong>Verification-aware ReAct</strong>（在 ReAct 之上加 verifier 模块提升鲁棒性）、<strong>Context Management</strong>（从观察/对话历史/机器人状态/记忆中选择、压缩、检索相关信息）、<strong>Skill Evolvement</strong>（通过与物理世界持续交互来精炼、复用、扩展技能集）。它把三个常被单控制器混淆的角色显式分离：<strong>main LLM</strong>（语义规划）、<strong>Skill Runner</strong>（过程执行）、<strong>Verifier</strong>（监督校验）。</p>
+
+<pre class="mermaid">
+graph TD
+    subgraph AH["Agent Harness"]
+      M["Main LLM<br>场景条件规划 / 记忆+上下文"]
+      SR["Skill Runner<br>隔离本地上下文 / 过程执行"]
+      V["Verifier<br>Runtime / Skill / Finish 三阶段"]
+      CM["Context Management<br>选择 / 压缩 / 检索"]
+      SE["Skill Evolvement<br>精炼 / 复用 / 扩展技能"]
+    end
+    MEM["Memory System<br>端侧私有 + 云端共享"]
+    SK["Skills & Tools<br>Manipulation / Navigation / Motion / Vision"]
+
+    M -->|"委派多步子任务"| SR
+    SR -->|"压缩结果 + 场景信息"| M
+    M -->|"终止前校验"| V
+    V -->|"纠正反馈 / 缺失条件"| M
+    SR -->|"技能级校验"| V
+    CM <-->|"上下文 ↔ 记忆"| MEM
+    SR --> SK
+    SE --> SK
+</pre>
+
+<h3 id="section-9">3.3 场景条件规划 / Skill Runner / 多阶段验证</h3>
+
+<p><strong>场景条件规划（Scene-Conditioned Task Planning）</strong>。main LLM 不是逐条下达底层动作，而是结合当前场景、地图、机器人状态、近期历史与可用技能，判断任务需要导航、搜索、人机交互、汇报、操作还是额外观察，并形成“带显式完成条件、可修订”的高层计划。关键在于<strong>场景条件而非纯语言</strong>：同一指令在不同位置、不同可视证据、不同可达区域下需要不同执行策略。计划随新观察、工具结果、技能摘要与 verifier 反馈动态更新。</p>
+
+<p><strong>Skill Runner（过程执行）</strong>。技能不是一次性工具调用，而是由 skill-level subagent 在<strong>隔离的本地上下文</strong>中执行，该上下文包含子目标、近期观察、技能状态、失败尝试与恢复策略。main LLM 只收到压缩后的技能进展与结果，而非全部中间动作序列。这种上下文隔离对长时序任务至关重要——若每次局部碰撞、短距移动、失败尝试都追加到 main LLM 上下文，全局目标会被过程细节淹没。终止时 Skill Runner 返回紧凑的语义摘要：子目标是否达成、失败原因、发现的新场景信息、尝试的恢复策略、main LLM 应如何使用该结果。</p>
+
+<p><strong>多阶段验证（Multi-Stage Verification）</strong>。Verifier 校验语言层信念与环境层完成之间的一致性，分三阶段：<strong>Runtime verification</strong> 监控近期轨迹与技能状态是否有效推进，识别停滞、重复碰撞、局部循环或与计划不一致的行为；<strong>Skill-level verification</strong> 检查委派子任务是否真正满足语义目标，而非仅因工具/subagent 正常返回就接受成功；<strong>Finish-time verification</strong> 在 main LLM 尝试终止任务时执行，综合原始指令、当前计划、执行历史、技能摘要、观察与交互中新增的需求，决定是否允许任务结束。</p>
+
+<h3 id="section-10">3.4 Universal Multi-modal Graph Memory</h3>
+
+<p>记忆系统是论文的另一核心贡献。它被定位在在线运行时之下、与上下文管理互补：上下文管理决定“当前 prompt 放什么”，记忆决定“什么应跨 episode 持久化、如何把相关历史证据取回上下文”。这种分离避免长期记忆退化为非结构化的 prompt 堆积。论文把长期经验表示为 typed graph：</p>
+
+<p>$$G = (V, E),$$</p>
+
+<p>其中节点 $v \in V$ 表示实体或证据单元，边 $e \in E$ 表示时序、语义、空间、身份、交互或 provenance 关系。每个节点存储一个紧凑的 JSON-style 信息字段，包含 schema 版本、数据集/来源引用、时间引用、证据摘要、置信度、adapter 专属字段与 provenance（记录 source id、adapter 版本、抽取模型与抽取元数据）。provenance 使记忆项可追溯到它所源自的观察、视频片段、帧、图像或会话。</p>
+
+<h4>节点与边类型</h4>
+
+<table>
+  <tr><th>类别</th><th>类型</th><th>说明</th></tr>
+  <tr><td rowspan="6">节点 (V)</td><td>source container</td><td>原始来源容器（视频/对话/会话）</td></tr>
+  <tr><td>evidence unit</td><td>证据单元（帧、图像、片段、utterance）</td></tr>
+  <tr><td>entity</td><td>人/动物/物体等实体</td></tr>
+  <tr><td>place</td><td>地点 / 空间区域</td></tr>
+  <tr><td>session</td><td>会话级记录</td></tr>
+  <tr><td>semantic event</td><td>时间定位的语义事件</td></tr>
+  <tr><td rowspan="8">边 (E)</td><td>temporal order</td><td>时序先后</td></tr>
+  <tr><td>containment</td><td>包含关系</td></tr>
+  <tr><td>observation</td><td>观察关系</td></tr>
+  <tr><td>participation</td><td>参与关系</td></tr>
+  <tr><td>location</td><td>位置关系</td></tr>
+  <tr><td>identity continuity</td><td>身份连续性</td></tr>
+  <tr><td>spatial relations</td><td>空间关系</td></tr>
+  <tr><td>interaction</td><td>交互关系</td></tr>
+</table>
+
+<p>这种表示区别于传统基于文本块的 RAG：文本检索主要返回语义相似片段，而记忆图<strong>先定位相关 seed 节点，再沿 typed 边扩展为局部证据子图</strong>，从而支持对身份、时间、位置、参与、provenance、空间关系的结构化推理。</p>
+
+<h4>混合检索打分</h4>
+
+<p>给定查询 $q$，混合 seed 选择打分为：</p>
+
+<p>$$s(q, v) = \lambda_{\mathrm{sem}} s_{\mathrm{sem}}(q, v) + \lambda_{\mathrm{lex}} s_{\mathrm{lex}}(q, v) + \lambda_{\mathrm{meta}} s_{\mathrm{meta}}(q, v) + \lambda_{\mathrm{type}} s_{\mathrm{type}}(q, v),$$</p>
+
+<p>其中 $s_{\mathrm{sem}}$ 为 embedding 相似度，$s_{\mathrm{lex}}$ 为词法重叠，$s_{\mathrm{meta}}$ 度量时间/来源/模态/地点等元数据兼容性，$s_{\mathrm{type}}$ 偏好查询期望的节点类型。top-ranked seeds 随后在固定深度与 evidence-token 预算下沿 task-relevant typed 边扩展，产生包含语义/时序/空间/身份/provenance 上下文的局部证据子图。该子图序列化为紧凑证据上下文，配以 retrieval trace 注入 agent 推理上下文。这与 WorldMM 等动态多模态检索 agent 对独立记忆库的检索不同：ABot-AgentOS 是“seed + 图邻域扩展”，answerer 在证据项之间的关系上推理，而非在孤立片段上推理。</p>
+
+<h4>记忆写入与维护</h4>
+
+<p>记忆更新可发生在交互中与 reflection 检查点。memory-writing 服务从观察/工具结果/对话轮/执行轨迹流中选择信息，转为紧凑图记录并链接到 session、place、time、source reference、provenance。论文以一组 graph-construction adapters 实例化该 writer。其设计原则是<strong>语义压缩优先于原始存储</strong>——长期记忆应在不牺牲可追溯性的前提下提升信息密度。例如 utterance “I adopted a Maltese dog yesterday” 被表示为时间定位的语义事件，链接 utterance、解析后的时序上下文、身份假设、置信度估计与来源证据，而非原始 transcript 行；附加图像时，图像节点作为支持性多模态证据连到该事件。写入后进行轻量维护：近重复实体/事件节点在 provenance、时序、身份证据兼容时合并；频繁观察的实体保留有界代表证据集的紧凑状态摘要；陈旧状态事实通过 temporal edge 被更新观察取代（而非立即删除），使检索能区分“当前状态”与“历史证据”。</p>
+
+<h3 id="section-11">3.5 failure-driven 终身自演化循环</h3>
+
+<p>长期记忆不应只靠累积内容来演化，还应改进“写入-检索-选择-使用证据”的管线本身；否则系统会在记忆图增长的同时反复犯相同的抽取/检索/时序 grounding/视觉选择/答案组合错误。论文把这一过程形式化为<strong>split-wise 协议</strong>：在长期部署（或其基准近似）上维护不相交 split 的有序序列 $D_1, \ldots, D_T$。在 split $t$，系统维持两个持久状态：累积记忆图 $G_{t-1}$ 与已提升的 evo-asset 集 $A_{\lt t}$。</p>
+
+<p>核心的“无泄漏”约束：<strong>split $t$ 产生的任何 evo-asset 都不用于 split $t$ 的推理</strong>；只有通过 gate 的 asset 才会被提升、且只作用于后续 split。这让自演化成为累积式终身过程，而非一次性事后修补。在线运行、asset 提议与 asset 提升的形式化如下：</p>
+
+<p>$$T_t, G_t = \mathrm{Run}(D_t;\, G_{t-1},\, A_{\lt t}),$$</p>
+<p>$$\Delta A_t = \mathrm{Gate}\left(\mathrm{Compile}\left(\mathrm{Propose}\left(\mathrm{Diagnose}(T_t)\right)\right)\right),$$</p>
+<p>$$A_{\leq t} = A_{\lt t} \cup \Delta A_t.$$</p>
+
+<p>其中 $T_t$ 为 split $t$ 上收集到的答案轨迹与失败轨迹，只有 $A_{\leq t}$ 可用于后续 split $D_{t+1}, \ldots, D_T$。gate 对每个候选 asset 在 target validation 子集与 regression 子集上评估，仅当目标分提升不少于 $\tau_{\mathrm{gain}}$ 且回归分下降不超过 $\tau_{\mathrm{reg}}$ 时才接受：</p>
+
+<p>$$\mathrm{Accept}(a) = \mathbb{I}\left[\Delta S_{\mathrm{target}}(a) \geq \tau_{\mathrm{gain}} \;\wedge\; \Delta S_{\mathrm{reg}}(a) \geq -\tau_{\mathrm{reg}}\right].$$</p>
+
+<p>该准则使提升保守：asset 必须在改进其目标失败模式的同时保住此前可靠的 case。被接受的 evo-asset 是<strong>生命周期管理的 JSON DSL 记录</strong>，不执行生成的 Python 代码；每个 asset 声明其目标层、触发条件、允许动作、安全约束、provenance、校验结果与版本 id。asset 可针对 memory writing、evidence selection、answer composition、visual frame selection、temporal normalization 或 adapter-level normalization。正常 QA 行为除非显式加载 accepted asset 否则不变；writer-side 与 frame-policy asset 需要重建图，而 evidence-selection 与 answerer asset 可运行时加载。下图为该循环的伪代码。</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: Failure-Driven Lifelong Self-Evolution（split-wise）</div>
+  <p><span class="kw">Input:</span> 有序不相交 split 序列 <span class="var">D_1, ..., D_T</span>；初始记忆图 <span class="var">G_0</span>；初始 asset 集 <span class="var">A_&lt;1 = ∅</span>；阈值 <span class="num">τ_gain</span>, <span class="num">τ_reg</span></p>
+  <p><span class="kw">Output:</span> 终态记忆图 <span class="var">G_T</span> 与累积 evo-asset 集 <span class="var">A_&le;T</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">t</span> = <span class="num">1</span> <span class="kw">to</span> <span class="var">T</span> <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="cm">// 1) 在线运行：仅用此前 split 提升的 asset，禁止用本 split 产生的 asset</span></p>
+  <p style="padding-left:3em"><span class="var">T_t</span>, <span class="var">G_t</span> = <span class="fn">Run</span>(<span class="var">D_t</span>; <span class="var">G_{t-1}</span>, <span class="var">A_&lt;t</span>)  <span class="cm">// 写记忆 / 检索证据 / 记录 retrieval+answer trace</span></p>
+  <p style="padding-left:3em"><span class="cm">// 2) 仅在 split t 评测完成后，用 ground-truth（或部署侧反馈）诊断失败</span></p>
+  <p style="padding-left:3em"><span class="var">failures</span> = <span class="fn">Diagnose</span>(<span class="var">T_t</span>)  <span class="cm">// 归因到 memory-writing / retrieval / evidence / temporal / entity / answer</span></p>
+  <p style="padding-left:3em"><span class="var">candidates</span> = <span class="fn">Propose</span>(<span class="var">failures</span>)  <span class="cm">// 候选修复（针对目标管线层）</span></p>
+  <p style="padding-left:3em"><span class="var">dsl_assets</span> = <span class="fn">Compile</span>(<span class="var">candidates</span>)  <span class="cm">// 编译为受限 JSON DSL evo-asset（不生成可执行代码）</span></p>
+  <p style="padding-left:3em"><span class="kw">for</span> <span class="kw">each</span> <span class="var">a</span> <span class="kw">in</span> <span class="var">dsl_assets</span> <span class="kw">do</span></p>
+  <p style="padding-left:4.5em"><span class="cm">// 3) Gate：target 子集须提升 ≥ τ_gain，regression 子集下降 ≤ τ_reg</span></p>
+  <p style="padding-left:4.5em"><span class="kw">if</span> <span class="fn">Accept</span>(<span class="var">a</span>) == <span class="num">True</span> <span class="kw">then</span> <span class="var">ΔA_t</span>.<span class="fn">add</span>(<span class="var">a</span>)  <span class="cm">// 否则回滚、不提升</span></p>
+  <p style="padding-left:3em"><span class="var">A_&le;t</span> = <span class="var">A_&lt;t</span> ∪ <span class="var">ΔA_t</span>  <span class="cm">// 仅此后 split 可用</span></p>
+  <p><span class="kw">return</span> <span class="var">G_T</span>, <span class="var">A_&le;T</span></p>
+</div>
+
+<p>论文强调，这套机制与真实部署直接兼容：在部署中，正确性信号不必来自基准 ground-truth，而可来自环境结果（任务成败）、人类纠正、或低置信度的 retrieval/answering trace——benchmark 的 split-wise 协议只是对自然具身反馈的受控替代。</p>
+
+<h3 id="section-12">3.6 规划-执行-验证-记忆 时序</h3>
+
+<p>下图展示一次长时序任务中 main LLM、Skill Runner、Verifier 与 Memory 之间的典型交互。注意 Verifier 在 runtime、skill、finish 三个时机都介入，且 Skill Runner 的局部细节不会回流到 main LLM 上下文。</p>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant U as User Instruction
+    participant M as Main LLM
+    participant SR as Skill Runner
+    participant V as Verifier
+    participant Mem as Memory System
+    U->>M: 任务指令 + filtered 语义地图
+    M->>Mem: 检索相关证据 (seed + 图扩展)
+    Mem-->>M: 局部证据子图 + retrieval trace
+    M->>M: 场景条件规划 + 显式完成条件
+    M->>SR: 委派多步子任务 (隔离上下文)
+    loop 局部执行
+        SR->>SR: 移动/观察/重定位/恢复
+        V->>SR: Runtime 校验 (停滞/循环检测)
+    end
+    SR-->>V: Skill-level 校验 (语义目标是否达成)
+    SR-->>M: 压缩结果 + 场景信息
+    M->>V: Finish-time 校验
+    V-->>M: 允许终止 / 返回缺失条件
+    M->>Mem: 写入新观察 (typed nodes/edges)
+    M-->>U: 最终汇报
+</pre>
+
+<h3 id="section-13">3.7 端云协同：路由与记忆分区</h3>
+
+<p><strong>端云协同路由</strong>。并非每个任务都应交给云端大模型——常规请求可由端侧小模型 + 本地工具完成，而长时序任务需更强场景理解、规划、技能执行与验证。ABot-AgentOS 的路由层让端侧模型先观察任务与上下文，再决定本地处理或升级云端。路由策略从训练样本与执行反馈中学习（而非固定规则），捕获“哪些请求可被本地工具可靠解决、哪些需云端规划、哪些需先额外观察再路由”，在控制延迟与部署成本的同时保留云端能力。</p>
+
+<p><strong>端云协同记忆管理</strong>。具身 agent 持续获取异构记忆（地图、语义地标、障碍物、物体、人相关观察）。公共环境记忆（路障、施工区、导航地标）共享可提升多 agent 协作；而隐私敏感记忆（人脸、个人物品、与个人关联的物体）必须留在本地。为此设计了<strong>私有优先（private-by-default）</strong>的分层记忆：端侧私有记忆存储地图、语义、多模态交互历史、用户偏好与本地环境经验；云端公共记忆只含可共享知识（可复用地图表示、通用任务经验），支持跨机器人上传/下载。每条新记忆在同步前做隐私判断——含人/脸/姓名/个人物体/所有权关系的视为不可共享，而地图/交通锥/路障/静态地标等公共环境信息视为可共享。论文构建了隐私分类与上传决策测试集，系统在“记忆项是否适合云端同步”上达到<strong>超过 99% 的准确率</strong>。</p>
+
+<h3 id="section-14">3.8 部署侧小模型训练管线</h3>
+
+<p>除公开的系统/基准/记忆组件外，论文还描述了一个面向部署的小模型训练管线，目标是把 ABot-AgentOS 式长时序规划与工具使用能力从大教师模型迁移到更小的可部署 agent 模型。管线闭环连接四阶段：文本环境构建 → 教师轨迹蒸馏 → SFT → RL，并配自演化奖励引擎。</p>
+
+<ul>
+  <li><strong>文本环境与任务构建</strong>：每个 NL 指令转为有状态沙盒实例，由 LLM 生成 Easy/Medium/Hard 变体，含 <code>env_state</code>（位置/可达性/物体位置与状态）、<code>failure_triggers</code>（物理或语义障碍）、<code>human_persona</code>（NPC 角色/能力/可提供的帮助）。EnvController 校验 skill 调用并返回观察/失败，HumanAgent 处理有效求助并可更新 env_state——使障碍处理、求助、重规划、状态更新成为训练信号。</li>
+  <li><strong>教师轨迹蒸馏与 SFT</strong>：强教师模型在沙盒中控制 ABot-AgentOS 式 agent 产出 ReAct 式轨迹（含失败尝试、求助、重试、恢复），用 LLM-as-a-Judge 过滤后转为保留交互结构的 tool-call SFT 样本，训练学生模型作为 ABot-AgentOS 技能上的可执行策略。</li>
+  <li><strong>RL（GiGPO + LLM-as-a-Judge 奖励）</strong>：SFT 初始化的学生在相同沙盒中在线采样、接收 EnvController/NPC 反馈并用奖励引导策略优化。使用 <strong>GiGPO</strong> 把奖励转为相对优势：对同一初始状态采多条 rollout 形成 episode 相对优势，并在对齐的可比决策步上形成 step 相对优势，使局部恢复选择在类似情境下被强化。</li>
+</ul>
+
+<h4>自演化奖励引擎</h4>
+
+<p>奖励引擎把每条具身轨迹转为 turn-level 与 episode-level 信号。turn-level 奖励 skill-aware 路由（导航/操作/VQA/工具用不同 rubric），并结合 LLM 语义判断与可验证规则检查（非法工具、非法命令、畸形参数、缺失时序前置），还加入对“跳过必要因果步骤的貌似合理动作”的遗漏惩罚。episode-level 奖励对整条轨迹评估效率/一致性/完整性：</p>
+
+<p>$$r_{\mathrm{episode}}(\tau) = \lambda_{\mathrm{eff}} R_{\mathrm{eff}}(\tau) + \lambda_{\mathrm{cons}} R_{\mathrm{cons}}(\tau) + \lambda_{\mathrm{comp}} R_{\mathrm{comp}}(\tau),$$</p>
+
+<p>合并回报为：</p>
+
+<p>$$R(\tau) = \sum_{t=1}^{T} \hat{r}_t + r_{\mathrm{episode}}(\tau),$$</p>
+
+<p>其中 $\hat{r}_t$ 为 skill-specific rubric 路由、LLM 语义判断、可验证规则检查与遗漏惩罚产出的有效 turn-level 奖励。<strong>Meta-Judge</strong> 不直接判断 agent 是否正确，而是校验 first-order judge 输出的可靠性，按 accuracy / logical soundness / completeness / clarity / feedback value 五维打分：</p>
+
+<p>$$Q(x_t) = \sum_{k=1}^{5} w_k q_k, \qquad \mathrm{LowQualityJudgeCase}(x_t) = \mathbb{I}\left[Q(x_t) \lt \theta\right].$$</p>
+
+<p>低质量 judge case 进入<strong>多 agent 自演化</strong>：Cluster 按技能与失败类型分组 → Analyzer 定位缺陷 rubric 组件并产出修订计划 → Refiner 局部编辑相关 rubric/规则/示例 → Validator 在全验证集上评估，仅在提升整体质量时接受，否则回滚。在当前验证设置下，初始 Judge 模型约 <strong>60% 人类对齐</strong>，Meta-Judge 驱动的自演化把对齐度提升到 <strong>90% 以上</strong>。</p>
+
+<h2 id="section-15">4. 实验结果与分析</h2>
+
+<h3 id="section-16">4.1 EmbodiedWorldBench agent 评测</h3>
+
+<p>agent 评测在 EmbodiedWorldBench 子集上进行，覆盖室内/室外/室内-室外环境，含语义导航、区域人/物搜索、物体检查、NPC 信息查询、状态汇报与多阶段指令跟随。比较三种配置：ReAct + Qwen3.6-Plus（单 LLM 控制器 baseline）、ABot-AgentOS + Qwen3.6-Plus（Ours，同基座加分层架构）、ABot-AgentOS + DeepSeek-V4-Pro（Ours，换更强 main LLM）。所有配置的视觉观察都用同一 Qwen3-VL-Plus 观察工具。</p>
+
+<table>
+  <tr><th>Model / Agent</th><th>主控 LLM</th><th>TSR (%)</th><th>GCR (%)</th></tr>
+  <tr><td>ReAct</td><td>Qwen3.6-Plus</td><td>49.97</td><td>57.95</td></tr>
+  <tr><td>ABot-AgentOS (Ours)</td><td>Qwen3.6-Plus</td><td>61.96</td><td>68.79</td></tr>
+  <tr><td>ABot-AgentOS (Ours)</td><td>DeepSeek-V4-Pro</td><td class="best">68.18</td><td class="best">74.62</td></tr>
+</table>
+
+<p>在相同 Qwen3.6-Plus 基座下，Ours 相对 baseline 的 TSR 提升 <strong>+11.99</strong>、GCR 提升 <strong>+10.84</strong>，说明分层执行、任务记忆、skill-level 反馈与 finish-time 验证有助于同基座下的长时序执行。将主控换为 DeepSeek-V4-Pro 后进一步在 TSR 上 +6.22、GCR 上 +5.83，说明更强主控在任务理解、局部恢复与终止决策上仍有增益。GCR 与 TSR 同步提升表明收益不只来自部分进展，分层结构能把更多轨迹转化为完整任务成功。剩余失败主要与感知反馈与场景理解相关：缺乏足够细粒度的主动观察/反馈、VLM 观察工具可能混淆人与物体、在室内-室外连通或大开口场景中可能把可见区域误判为自身所处位置。</p>
+
+<div id="chart-agent" class="echarts-container" style="height:340px"></div>
+<script>
+  echarts.init(document.getElementById('chart-agent')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'EmbodiedWorldBench 子集：TSR / GCR 对比', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+    legend: { data: ['Task Success Rate (TSR)', 'Goal Completion Rate (GCR)'], top: 28, textStyle: { color: '#cdd6f4' } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 60, right: 30, top: 70, bottom: 40 },
+    xAxis: { type: 'category', data: ['ReAct\nQwen3.6-Plus', 'ABot-AgentOS\nQwen3.6-Plus', 'ABot-AgentOS\nDeepSeek-V4-Pro'], axisLabel: { color: '#cdd6f4', interval: 0 }, axisLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'value', min: 40, max: 80, axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [
+      { name: 'Task Success Rate (TSR)', type: 'bar', data: [49.97, 61.96, 68.18], itemStyle: { color: '#89b4fa' }, label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}%' } },
+      { name: 'Goal Completion Rate (GCR)', type: 'bar', data: [57.95, 68.79, 74.62], itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}%' } }
+    ]
+  });
+</script>
+
+<h3 id="section-17">4.2 记忆基准静态结果</h3>
+
+<p>记忆模块独立于 agent 控制评测。所有 ABot-AgentOS 变体使用相同的记忆 schema 与同一 base hybrid graph retriever（检索本身不作为实验变量）。在五个互补基准上评测：LoCoMo（长期多会话对话记忆）、OpenEQA（室内开放词汇具身 QA）、Mem-Gallery（多模态长期对话记忆）、NExT-QA（时序/因果/描述视频 QA）、EgoLife（长上下文 egocentric 日常 QA）。</p>
+
+<h4>LoCoMo（长期对话记忆，Overall）</h4>
+
+<p>ABot-AgentOS Static 取得 <strong>87.5</strong> overall，超过最强复现记忆 baseline Mem0（85.6）1.9 分，逼近人类 overall 87.9。这说明图记忆在“长时序对话事实 + 关系/provenance 感知检索”场景下尤其有效。</p>
+
+<table>
+  <tr><th>方法</th><th>记忆/输入</th><th>Overall</th></tr>
+  <tr><td>Mem0 [15]</td><td>Memory</td><td>85.6</td></tr>
+  <tr><td>ABot-AgentOS Static</td><td>Graph memory</td><td class="best">87.5</td></tr>
+  <tr><td>Human [52]</td><td>Human</td><td>87.9</td></tr>
+</table>
+
+<h4>OpenEQA EM-EQA（LLM-Match）</h4>
+
+<p>静态 ABot-AgentOS 记忆系统以 24 帧达到 <strong>59.9</strong> overall，优于所列 scene-graph / caption-memory / retrieved-caption / 3D snapshot / 3DGS 记忆 baseline 的参考数值；在 ScanNet 上以 8 帧达到 62.8，显示显式记忆检索可在具身 QA 视觉上下文有限时补偿不足。直接 VQA 行作为非记忆上界参考。</p>
+
+<table>
+  <tr><th>方法</th><th>记忆/输入</th><th>帧数</th><th>ScanNet</th><th>HM3D</th><th>Overall</th></tr>
+  <tr><td>Qwen3.6-Plus（Direct VQA 参考）</td><td>Direct VQA</td><td>10</td><td>72.6</td><td>55.3</td><td>66.7</td></tr>
+  <tr><td>GPT-5.4（Direct VQA 参考）</td><td>Direct VQA</td><td>10</td><td>72.7</td><td>58.4</td><td>67.8</td></tr>
+  <tr><td>GPT-4 + ConceptGraphs [53]</td><td>Scene graph</td><td>3</td><td>77.0</td><td>65.2</td><td>73.0</td></tr>
+  <tr><td>GPT-4 + LLaVA-1.5 [53]</td><td>Caption memory</td><td>5–20</td><td>75.9</td><td>70.5</td><td>74.1</td></tr>
+  <tr><td>3D-Mem / SnapMem [102]</td><td>3DGS memory</td><td>3.1</td><td>55.3</td><td>57.2</td><td>57.8</td></tr>
+  <tr><td>ABot-AgentOS Static（Qwen3.6-Plus）</td><td>Graph memory</td><td>8</td><td>62.8</td><td>61.9</td><td>—</td></tr>
+  <tr><td>ABot-AgentOS Static（GPT-5.4）</td><td>Graph memory</td><td>24</td><td>—</td><td>—</td><td class="best">59.9</td></tr>
+  <tr><td>Human [53]</td><td>Human</td><td>—</td><td>87.7</td><td>85.1</td><td>86.8</td></tr>
+</table>
+
+<h4>Mem-Gallery（多模态长期对话记忆，LLM-Judge Overall）</h4>
+
+<p>ABot-AgentOS Static 取得 <strong>88.6</strong> overall，高于所列 textual 与多模态记忆 baseline，但低于 full-context 上界行。静态图记忆的优势集中在<strong>视觉中心推理（VR）、冲突检测（CD）、答案拒答（AR）</strong>等类别——source-grounded 图记录帮助 answerer 保留 provenance、避免无依据回忆。</p>
+
+<table>
+  <tr><th>方法</th><th>记忆/输入</th><th>Overall</th></tr>
+  <tr><td>GPT-5.4（Full context 上界）</td><td>Full context</td><td>92.6</td></tr>
+  <tr><td>Qwen3.6-Plus（Full context 上界）</td><td>Full context</td><td>91.3</td></tr>
+  <tr><td>A-MEM [92]</td><td>Captioned memory</td><td>81.2</td></tr>
+  <tr><td>MemGPT [61]</td><td>Captioned memory</td><td>87.6</td></tr>
+  <tr><td>NGM [21]</td><td>Graph memory</td><td>80.3</td></tr>
+  <tr><td>AUGUSTUS [34]</td><td>Multi-modal memory</td><td>84.4</td></tr>
+  <tr><td>UniversalRAG [107]</td><td>Multi-modal RAG</td><td>84.7</td></tr>
+  <tr><td>ABot-AgentOS Static</td><td>Graph memory</td><td class="best">88.6</td></tr>
+</table>
+
+<h4>NExT-QA（验证集 Acc@All）</h4>
+
+<p>ABot-AgentOS Static 达到 <strong>76.5</strong> Acc@All，较此前 memory-based 的 GraphVideoAgent baseline（73.3）提升 <strong>+3.2</strong>。增益最强在<strong>因果与时间</strong>问题上——记忆图保留了事件顺序、实体关系与跨视频段的交互。Qwen3.6-Plus 直接零shot（83.2）作为非记忆模型参考列入。</p>
+
+<table>
+  <tr><th>方法</th><th>范式</th><th>Acc@All</th></tr>
+  <tr><td>HiTeA [106]（监督上界参考）</td><td>Supervised VQA</td><td>62.4</td></tr>
+  <tr><td>Qwen3.6-Plus（非记忆参考）</td><td>Direct QA</td><td>83.2</td></tr>
+  <tr><td>VideoAgent [19]</td><td>Video memory</td><td>71.3</td></tr>
+  <tr><td>GraphVideoAgent [16]</td><td>Graph video memory</td><td>73.3</td></tr>
+  <tr><td>ABot-AgentOS Static</td><td>Graph memory</td><td class="best">76.5</td></tr>
+</table>
+
+<h4>EgoLifeQA（egocentric 日常 QA）</h4>
+
+<p>ABot-AgentOS-Qwen3.5-Flash 仅从 1FPS 采样视频中检索 <strong>1 帧</strong>，即取得 <strong>65.4%</strong> 平均准确率，优于所列常规 VQA 与 agentic memory 方法，并在 EntityLog、EventRecall、HabitInsight、RelationMap 四类取得最佳；唯一落后的是 TaskMaster（EGAgent-Gemini2.5 Pro 74.6 vs ABot-AgentOS 66.7）。</p>
+
+<table>
+  <tr><th>方法</th><th>帧数</th><th>模态</th><th>EL</th><th>ER</th><th>HI</th><th>RM</th><th>TM</th><th>Avg.</th></tr>
+  <tr><td>Gemini 2.5 Pro [28]</td><td>3000</td><td>V+T</td><td>42.4</td><td>39.7</td><td>45.9</td><td>39.2</td><td>46.0</td><td>41.8</td></tr>
+  <tr><td>Qwen3.5-Flash [74]</td><td>64</td><td>V+T</td><td>42.4</td><td>39.7</td><td>45.9</td><td>39.2</td><td>46.0</td><td>41.8</td></tr>
+  <tr><td>EgoButler-GPT-4o [96]</td><td>1FPS</td><td>V+T</td><td>34.4</td><td>42.1</td><td>29.5</td><td>30.4</td><td>44.4</td><td>36.2</td></tr>
+  <tr><td>EGAgent-Gemini2.5 Pro [64]</td><td>—</td><td>V+T</td><td>54.4</td><td>57.1</td><td>60.3</td><td>62.4</td><td class="best">74.6</td><td>57.5</td></tr>
+  <tr><td>WorldMM-Qwen3.5 Flash [108]</td><td>Full</td><td>V+T</td><td>49.6</td><td>54.8</td><td>54.1</td><td>62.4</td><td>60.3</td><td>56.0</td></tr>
+  <tr><td>ABot-AgentOS-Qwen3.5 Flash</td><td>1FPS→1</td><td>V+T</td><td class="best">63.2</td><td class="best">60.3</td><td class="best">70.5</td><td class="best">66.4</td><td>66.7</td><td class="best">65.4</td></tr>
+</table>
+
+<h3 id="section-18">4.3 终身自演化结果</h3>
+
+<p>自演化变体使用与对应 static run 完全相同的记忆图 schema、base hybrid graph retriever 与 writer-answerer 配置，唯一差异是后续 split 可加载此前 split 提升的 evo-assets（writer rules、evidence-selection 偏好、answerer calibration、frame-selection、temporal-normalization 等）。每个数据集被切为有序不相交 split $D_1, \ldots, D_T$；ground-truth 仅在 split 评测完成后用于诊断失败，不进入推理、不写入记忆图、不为同一 split 生成 asset。下图与表展示 static → +Self-evo 的变化。</p>
+
+<table>
+  <tr><th>基准（主指标）</th><th>Static</th><th>+ Self-evo</th><th>Δ</th></tr>
+  <tr><td>LoCoMo (Overall)</td><td>87.5</td><td class="best">88.7</td><td>+1.2</td></tr>
+  <tr><td>OpenEQA EM-EQA (Overall)</td><td>59.9</td><td class="best">60.4</td><td>+0.5</td></tr>
+  <tr><td>Mem-Gallery (Overall)</td><td>88.6</td><td class="best">89.0</td><td>+0.4</td></tr>
+  <tr><td>NExT-QA (Acc@All)</td><td>76.5</td><td class="best">80.6</td><td>+4.1</td></tr>
+  <tr><td>EgoLife (Avg Acc)</td><td>65.4</td><td class="best">66.2</td><td>+0.8</td></tr>
+</table>
+
+<div class="note">注：论文正文 §5.2.3 文字描述“LoCoMo and OpenEQA both improve by 1.2 points”，但摘要给出的 OpenEQA 自演化终值为 60.4（相对 static 59.9 为 +0.5）。本报告以摘要给出的明确终值为准；正文的 +1.2 可能指 OpenEQA 某个子 split 或子指标，论文本身存在表述不一致。NExT-QA +4.1 与 EgoLife 65.4→66.2 为正文明确数值。</div>
+
+<p>跨五个基准，自演化均在主指标上超过 static；最大绝对增益出现在 NExT-QA（+4.1，源于因果-时序推理的系统性管线错误被定向修复）。Mem-Gallery 总体增益虽仅 +0.4，但类别级增益集中在 knowledge resolution、conflict detection、multi-entity reasoning。最一致的增益出现在暴露系统性管线错误的类别：LoCoMo 的 temporal normalization、OpenEQA 的具身场景消歧、Mem-Gallery 的关系与冲突处理、NExT-QA 的因果-时序推理。由于 asset 仅在 gated 校验后提升且只用于后续 split，正向增益表明这是<strong>可复用的记忆管线改进，而非对当前评测 split 的事后修补</strong>。</p>
+
+<div id="chart-evo" class="echarts-container" style="height:360px"></div>
+<script>
+  echarts.init(document.getElementById('chart-evo')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '终身自演化：Static vs +Self-evo（各基准主指标）', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+    legend: { data: ['Static', '+ Self-evo'], top: 28, textStyle: { color: '#cdd6f4' } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 60, right: 30, top: 70, bottom: 50 },
+    xAxis: { type: 'category', data: ['LoCoMo', 'OpenEQA', 'Mem-Gallery', 'NExT-QA', 'EgoLife'], axisLabel: { color: '#cdd6f4', interval: 0 }, axisLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'value', min: 50, max: 95, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [
+      { name: 'Static', type: 'bar', data: [87.5, 59.9, 88.6, 76.5, 65.4], itemStyle: { color: '#89b4fa' }, label: { show: true, position: 'top', color: '#cdd6f4' } },
+      { name: '+ Self-evo', type: 'bar', data: [88.7, 60.4, 89.0, 80.6, 66.2], itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#cdd6f4' } }
+    ]
+  });
+</script>
+
+<h3 id="section-19">4.4 奖励引擎与隐私门控</h3>
+
+<p>奖励引擎的 Meta-Judge 自演化把 Judge 模型的人类对齐度从约 <strong>60%</strong> 提升到 <strong>90% 以上</strong>；隐私门控在“记忆项是否适合云端同步”的专用测试集上达到 <strong>>99% 准确率</strong>，在保端侧隐私的同时允许非敏感公共知识跨机器人共享。这两项支撑了“可部署、可审计”的系统定位。</p>
+
+<h2 id="section-20">5. 总结与启发</h2>
+
+<h3 id="section-21">5.1 局限性</h3>
+
+<p>论文在 Conclusion 中坦陈若干局限：</p>
+<ul>
+  <li><strong>大规模真实世界验证仍缺失</strong>：尚需在噪声感知、不完美执行、网络延迟、安全约束与异构机器人 embodiment 下验证。</li>
+  <li><strong>EmbodiedWorldBench 覆盖仍有限</strong>：场景多样性、社交交互深度与当前 agent 评测覆盖面有限；未来将发布完整基准评测并开放 EmbodiedWorldBench。</li>
+  <li><strong>记忆与自演化管线依赖结构化 trace 与事后反馈</strong>；隐私感知的端云记忆共享需要更强的审计、用户控制、访问管理与失败分析。</li>
+  <li><strong>小模型训练管线仍停留在文本状态语义沙盒</strong>，应纳入视觉观察、多模态反馈与更多仿真平台。</li>
+  <li><strong>agent 评测仅在小子集上</strong>：论文自述为“initial system validation rather than a complete benchmark leaderboard”，避免在模型或任务类别上做细粒度声称。</li>
+</ul>
+
+<h3 id="section-22">5.2 核心洞见与读后评注</h3>
+
+<p><strong>洞见 1：把“完成信号的一致性校验”提到一等公民。</strong>论文最 sharp 的观察是：具身任务缺的不是更强的动作预测，而是<strong>“语言层信念 ↔ 执行轨迹 ↔ 观测场景状态”三者一致性</strong>的校验机制。Verifier 在 runtime/skill/finish 三时机介入，本质是把“动作是否真的改变了世界”这一被软件 agent 视为外生信号的条件，内化为 agent harness 的内生监督信号。这解释了为何在相同 Qwen3.6-Plus 基座下，分层架构能把 TSR 从 49.97 拉到 61.96——收益来自结构而非参数。</p>
+
+<p><strong>洞见 2：记忆从“存什么”转向“检索谁 + 扩展什么关系”。</strong>Universal Multi-modal Graph Memory 的关键不在图本身，而在检索范式：先 seed 再沿 typed edge 扩展为局部证据子图，使 answerer 在“证据项之间的关系”上推理，而非在孤立文本片段上推理。这与 WorldMM 等对独立记忆库的检索形成分野。LoCoMo 逼近人类（87.5 vs 87.9）、NExT-QA 因果/时序增益最强，都印证了关系化记忆对“需要结构化证据”的问题的价值。</p>
+
+<p><strong>洞见 3：自演化的“无泄漏 split 协议”是把事后修补升级为终身学习的关键约束。</strong>很多“自改进 agent”工作容易滑入“用本 split 监督修本 split”的泄漏陷阱。论文的 split-wise 协议（$A_{\lt t}$ 只含此前 split 的 asset，$D_t$ 的失败只能生成供 $D_{t+1}$ 用的 asset）把自演化变成累积式过程。更巧妙的是 evo-asset 是<strong>受限 JSON DSL</strong>而非生成代码，且必须同时满足 target 提升 $\geq \tau_{\mathrm{gain}}$ 与 regression 下降 $\leq \tau_{\mathrm{reg}}$——这把“安全资源演化”原则落到 gate 上，使每一步改进可版本化、可审计、可回滚。</p>
+
+<p><strong>洞见 4：基准设计即方法声明。</strong>EmbodiedWorldBench 的“可执行场景 = $\langle M, S_0, O, \mathcal{N}, C\rangle$”与 trace-grounded 评分，把“agent 是否真在多场景连续推进、是否真能动态重规划”纳入可复现评测。Scene-conditioned planning 与 trace-grounded scoring 形成镜像：前者要求 agent 在场景中规划，后者要求评分能从轨迹审计——二者共同抵制“prompt collection 式基准”的陷阱。</p>
+
+<p><strong>读后评注</strong>。这篇工作在“OS 层”定位上是有说服力的——它不试图取代 VLA，而是在其上提供推理/记忆/工具/验证/跨体态的运行时，并以私有优先的端云记忆与 gated evo-asset 守住可部署底线。值得关注的张力在于：<strong>agent 评测仍只在子集上、自演化增益在部分基准上较小（Mem-Gallery +0.4、OpenEQA +0.5），且正文与摘要在 OpenEQA 增益数字上不一致</strong>——这提示“管线级自演化”的收益目前仍偏温和，其价值更多在“可审计的累积改进机制”而非单次绝对提升。若未来能展示自演化在长部署周期（数十 split）下的累积放大效应，并与 OS 层的跨体态迁移结果联合发布，将更完整地兑现“通用机器人 Agent OS + 终身多模态记忆”的承诺。</p>
+
+<h2 id="section-23">6. 参考文献</h2>
+
+<ol>
+  <li>Jiayi Tian, Shiao Liu, Yuting Xu, et al. <em>ABot-AgentOS: A General Robotic Agent OS with Lifelong Multi-modal Memory.</em> arXiv:2607.10350, 2026.（本论文）</li>
+  <li>Zedong Chu et al. <em>Abot-N0: Technical Report on the VLA Foundation Model for Versatile Embodied Navigation.</em> arXiv:2602.11598, 2026.（同团队 VLA 基座，AgentOS 的低层导航技能来源）</li>
+  <li>Prateek Chhikara, Dev Khant, et al. <em>Mem0: Building Production-Ready AI Agents with Scalable Long-Term Memory.</em> arXiv:2504.19413, 2025.（LoCoMo 上最强记忆 baseline，Overall 85.6）</li>
+  <li>Lang Feng, Zhenghai Xue, Tingcong Liu, Bo An. <em>Group-in-Group Policy Optimization (GiGPO) for LLM Agent Training.</em> arXiv:2505.10978, 2025.（小模型 RL 的优势估计方法）</li>
+  <li>Yuanchen Bei et al. <em>Mem-Gallery: Benchmarking Multimodal Long-Term Conversational Memory for MLLM Agents.</em> arXiv:2601.03515, 2026.（多模态长期对话记忆基准，ABot 88.6/89.0）</li>
+  <li>Meng Chu, Yicong Li, Tat-Seng Chua. <em>GraphVideoAgent: Enhancing Long-Form Video Understanding with Entity Relation Graphs.</em> ACM MM 2025.（NExT-QA 此前 memory-based baseline，Acc@All 73.3）</li>
+  <li>Shyamal Buch et al. <em>Revisiting the “Video” in Video-Language Understanding.</em> CVPR 2022.（NExT-QA 数据集来源）</li>
+  <li>Matthew Fisher. <em>Neural Graph Memory (NGM): A Structured Approach to Long-Term Memory in Multimodal Agents.</em> Zenodo preprint, 2025.（Mem-Gallery 上的 graph memory baseline）</li>
+  <li>Huan-ang Gao et al. <em>A Survey of Self-Evolving Agents.</em> arXiv:2507.21046, 2025.（自演化 agent 综述，自演化循环的理论背景）</li>
+  <li>Shan He et al. <em>Learning to Evolve: A Self-Improving Framework for Multi-Agent Systems via Textual Parameter Graph Optimization.</em> arXiv:2604.20714, 2026.（模块化文本参数与局部修改的思想来源）</li>
+</ol>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

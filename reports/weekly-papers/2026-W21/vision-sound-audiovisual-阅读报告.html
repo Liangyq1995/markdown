@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>When Vision Speaks for Sound — 阅读报告</title>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<!-- MathJax -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    packages: {'[+]': ['boldsymbol']}
+  },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<!-- highlight.js -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11/styles/atom-one-dark.min.css">
+<script src="https://cdn.jsdelivr.net/npm/highlight.js@11/lib/highlight.min.js"></script>
+
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --surface: #24273a;
+    --surface2: #2a2d3e;
+    --border: #363a4f;
+    --text: #cdd6f4;
+    --muted: #6c7086;
+    --heading: #89b4fa;
+    --strong: #a6e3a1;
+    --accent: #cba6f7;
+    --warn: #f38ba8;
+    --yellow: #f9e2af;
+    --teal: #94e2d5;
+    --pink: #f5c2e7;
+    --orange: #fab387;
+    --toc-width: 220px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.8;
+    display: flex;
+  }
+
+  /* ── TOC ── */
+  #toc {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--toc-width);
+    height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 24px 0;
+    z-index: 100;
+  }
+  #toc h2 {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 18px 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+  #toc ul { list-style: none; }
+  #toc ul li a {
+    display: block;
+    padding: 5px 18px;
+    font-size: 12.5px;
+    color: var(--muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.2s;
+    line-height: 1.5;
+  }
+  #toc ul li a:hover,
+  #toc ul li a.active {
+    color: var(--heading);
+    border-left-color: var(--heading);
+    background: rgba(137,180,250,0.06);
+  }
+  #toc ul li.sub a { padding-left: 30px; font-size: 12px; }
+  #toc ul li.sub2 a { padding-left: 42px; font-size: 11.5px; }
+
+  /* ── MAIN ── */
+  main {
+    margin-left: var(--toc-width);
+    max-width: none;
+    padding: 40px 64px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ── TYPOGRAPHY ── */
+  h1 {
+    font-size: 28px;
+    color: var(--heading);
+    line-height: 1.35;
+    margin-bottom: 8px;
+  }
+  h2 {
+    font-size: 21px;
+    color: var(--heading);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 8px;
+    margin: 52px 0 20px;
+  }
+  h3 {
+    font-size: 17px;
+    color: var(--accent);
+    margin: 32px 0 14px;
+  }
+  h4 {
+    font-size: 15px;
+    color: var(--teal);
+    margin: 22px 0 10px;
+  }
+  p { margin-bottom: 14px; }
+  strong { color: var(--strong); font-weight: 600; }
+  em { color: var(--yellow); font-style: italic; }
+  code {
+    font-family: 'Fira Code', 'Cascadia Code', monospace;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--orange);
+  }
+  pre {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    overflow-x: auto;
+    margin: 18px 0;
+  }
+  pre code { background: none; border: none; padding: 0; color: inherit; }
+
+  ul, ol { padding-left: 24px; margin-bottom: 14px; }
+  li { margin-bottom: 6px; }
+
+  a { color: var(--heading); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border-left: 4px solid var(--heading);
+    background: rgba(137,180,250,0.07);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .callout.warn { border-color: var(--warn); background: rgba(243,139,168,0.07); }
+  .callout.success { border-color: var(--strong); background: rgba(166,227,161,0.07); }
+  .callout.yellow { border-color: var(--yellow); background: rgba(249,226,175,0.07); }
+  .callout.purple { border-color: var(--accent); background: rgba(203,166,247,0.07); }
+  .callout-title {
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  /* ── TABLE ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 14px;
+  }
+  thead th {
+    background: var(--surface2);
+    color: var(--heading);
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    font-weight: 600;
+  }
+  tbody td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    margin: 1px;
+  }
+  .tag-blue { background: rgba(137,180,250,0.18); color: var(--heading); }
+  .tag-green { background: rgba(166,227,161,0.18); color: var(--strong); }
+  .tag-red { background: rgba(243,139,168,0.18); color: var(--warn); }
+  .tag-purple { background: rgba(203,166,247,0.18); color: var(--accent); }
+  .tag-yellow { background: rgba(249,226,175,0.18); color: var(--yellow); }
+  .tag-teal { background: rgba(148,226,213,0.18); color: var(--teal); }
+
+  /* ── CHART ── */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin: 24px 0;
+  }
+  .chart-wrap h4 { margin-top: 0; margin-bottom: 14px; text-align: center; }
+
+  /* ── MERMAID ── */
+  .mermaid {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin: 20px 0;
+    text-align: center;
+    overflow-x: auto;
+  }
+
+  /* ── INFO GRID ── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin: 20px 0;
+  }
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+  .info-card .label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .info-card .value {
+    font-size: 14.5px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* ── SECTION DIVIDER ── */
+  .section { margin-bottom: 60px; }
+
+  /* ── FORMULA BOX ── */
+  .formula-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 28px;
+    margin: 18px 0;
+    overflow-x: auto;
+  }
+  .formula-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    margin: 3px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, rgba(137,180,250,0.08) 0%, rgba(203,166,247,0.08) 100%);
+    border: 1px solid rgba(137,180,250,0.2);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 36px;
+  }
+  .hero .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 6px;
+  }
+  .hero .meta-row {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* ── HIGHLIGHT BOX ── */
+  .highlight-box {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .hbox {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 16px;
+    border-top: 3px solid;
+    text-align: center;
+  }
+  .hbox .num {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .hbox .desc { font-size: 12.5px; color: var(--muted); }
+  .hbox-blue { border-color: var(--heading); }
+  .hbox-blue .num { color: var(--heading); }
+  .hbox-green { border-color: var(--strong); }
+  .hbox-green .num { color: var(--strong); }
+  .hbox-purple { border-color: var(--accent); }
+  .hbox-purple .num { color: var(--accent); }
+  .hbox-yellow { border-color: var(--yellow); }
+  .hbox-yellow .num { color: var(--yellow); }
+  .hbox-teal { border-color: var(--teal); }
+  .hbox-teal .num { color: var(--teal); }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ── STEP LIST ── */
+  .step-list { list-style: none; padding: 0; }
+  .step-list li {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 16px;
+    align-items: flex-start;
+  }
+  .step-num {
+    min-width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--heading);
+    color: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+
+  @media (max-width: 900px) {
+    #toc { display: none; }
+    main { margin-left: 0; padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════ TOC ══════════════ -->
+<nav id="toc">
+  <h2>目录导航</h2>
+  <ul>
+    <li><a href="#s0">论文概览</a></li>
+    <li><a href="#s1">核心问题与动机</a></li>
+    <li class="sub"><a href="#s1a">Clever Hans 效应</a></li>
+    <li class="sub"><a href="#s1b">现有模型的缺陷</a></li>
+    <li><a href="#s2">背景与相关工作</a></li>
+    <li class="sub"><a href="#s2a">视频MLLM发展</a></li>
+    <li class="sub"><a href="#s2b">相关工作对比</a></li>
+    <li><a href="#s3">Thud 诊断框架</a></li>
+    <li class="sub"><a href="#s3a">三种干预方式</a></li>
+    <li class="sub"><a href="#s3b">框架流程图</a></li>
+    <li><a href="#s4">关键技术详解</a></li>
+    <li class="sub"><a href="#s4a">反事实编辑实现</a></li>
+    <li class="sub"><a href="#s4b">偏好对构建</a></li>
+    <li class="sub"><a href="#s4c">两阶段训练策略</a></li>
+    <li class="sub"><a href="#s4d">DPO 优化公式</a></li>
+    <li><a href="#s5">实验结果</a></li>
+    <li class="sub"><a href="#s5a">主要性能提升</a></li>
+    <li class="sub"><a href="#s5b">基准对比</a></li>
+    <li><a href="#s6">模型间分析</a></li>
+    <li><a href="#s7">核心洞见与评注</a></li>
+    <li><a href="#s8">参考文献</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<main>
+
+<!-- ── HERO ── -->
+<div class="hero" id="s0">
+  <h1>When Vision Speaks for Sound</h1>
+  <p class="subtitle">音视频多模态大模型中的"聪明汉斯效应"：诊断、分析与对齐训练</p>
+  <div class="meta-row">
+    <span class="badge">📄 arXiv:2605.16403</span>
+    <span class="badge">🏛️ UC Davis &amp; 合作机构</span>
+    <span class="badge">👍 149 Upvotes</span>
+    <span class="badge">📅 2026-W21</span>
+  </div>
+</div>
+
+<!-- ── 论文信息表 ── -->
+<section class="section">
+  <h2 id="s0-table">§0 · 论文基本信息</h2>
+  <table>
+    <thead><tr><th>字段</th><th>内容</th></tr></thead>
+    <tbody>
+      <tr><td><strong>标题</strong></td><td>When Vision Speaks for Sound</td></tr>
+      <tr><td><strong>arXiv ID</strong></td><td><a href="https://arxiv.org/abs/2605.16403" target="_blank">2605.16403</a></td></tr>
+      <tr>
+        <td><strong>作者（共9位）</strong></td>
+        <td>
+          Xiaofei Wen, Wenjie Jacky Mo, Xingyu Fu, Rui Cai, Tinghui Zhu, Wendi Li, Yanan Xie, Muhao Chen, Peng Qi
+        </td>
+      </tr>
+      <tr><td><strong>主要机构</strong></td><td>University of California, Davis（UC Davis）及其他合作机构</td></tr>
+      <tr><td><strong>社区热度</strong></td><td><span class="tag tag-green">👍 149 Upvotes</span></td></tr>
+      <tr>
+        <td><strong>核心贡献</strong></td>
+        <td>
+          <span class="tag tag-blue">问题定义</span>
+          <span class="tag tag-purple">诊断框架 Thud</span>
+          <span class="tag tag-green">对齐训练方案</span>
+          <span class="tag tag-yellow">反事实音频编辑</span>
+        </td>
+      </tr>
+      <tr><td><strong>关键词</strong></td><td>视频MLLM、音视频对齐、反事实推理、偏好优化、Clever Hans效应</td></tr>
+      <tr><td><strong>数据规模</strong></td><td>10K训练样本；三维干预基准（Shift / Mute / Swap）</td></tr>
+      <tr>
+        <td><strong>主要结论</strong></td>
+        <td>平均性能提升 <strong>+28pp</strong>（三个干预维度），通用视频&amp;音视频QA基准同步小幅提升</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════ S1 ══════════════ -->
+<section class="section" id="s1">
+  <h2>§1 · 核心问题与动机</h2>
+
+  <h3 id="s1a">1.1 音视频"聪明汉斯效应"（Audio-Visual Clever Hans Effect）</h3>
+
+  <div class="callout warn">
+    <div class="callout-title">⚠️ 核心发现</div>
+    当前主流视频多模态大语言模型（Video MLLM）在回答音频相关问题时，并非真正"听到"并理解声音——它们依赖<strong>视觉线索</strong>来推断声音内容，是一种系统性的<strong>视觉驱动幻觉</strong>。
+  </div>
+
+  <p>
+    "聪明汉斯"（Clever Hans）来自20世纪初德国的一匹著名马，它被认为能够进行数学运算，但最终被揭示它实际上只是在读取观察者的无意识身体信号来猜测答案。类比到音视频AI系统：模型看上去"理解"了音频内容，但实际上只是在利用视觉画面进行推断，并没有真正处理和验证音频流中的信息。
+  </p>
+
+  <div class="highlight-box">
+    <div class="hbox hbox-blue">
+      <div class="num">3</div>
+      <div class="desc">种干预维度<br>Shift / Mute / Swap</div>
+    </div>
+    <div class="hbox hbox-purple">
+      <div class="num">多</div>
+      <div class="desc">个主流模型受影响<br>含Google、OpenAI产品</div>
+    </div>
+    <div class="hbox hbox-green">
+      <div class="num">+28</div>
+      <div class="desc">pp平均性能提升<br>（干预三维度）</div>
+    </div>
+    <div class="hbox hbox-yellow">
+      <div class="num">10K</div>
+      <div class="desc">训练样本<br>即可显著改善</div>
+    </div>
+  </div>
+
+  <h3 id="s1b">1.2 为什么这一问题非常危害？</h3>
+
+  <p>
+    音视频对齐验证失效不是一个无关紧要的小问题，它在多个现实场景中会造成严重后果：
+  </p>
+
+  <ul>
+    <li><strong>错误事实核查：</strong>当视频画面与配音/旁白不一致时（如深度伪造、剪辑误导），模型会信任画面而忽略音轨矛盾，无法发现信息操纵。</li>
+    <li><strong>可访问性（无障碍）失败：</strong>为视障用户描述音频内容时，模型实际上给出的是视觉描述，而非真实声音内容。</li>
+    <li><strong>视频理解失真：</strong>媒体监控、内容审核、教育视频分析等场景需要准确感知音轨，视觉幻觉会导致严重误判。</li>
+    <li><strong>安全风险：</strong>基于音视频内容的决策系统（如监控、辅助驾驶）若依赖错误的音频感知，可能引发不可预测的风险。</li>
+    <li><strong>模型可信度：</strong>表面上模型能回答音频问题，但实际上是"视觉口技"，这种隐蔽性让开发者和用户都难以察觉缺陷。</li>
+  </ul>
+
+  <div class="callout yellow">
+    <div class="callout-title">💡 直觉示例</div>
+    给模型播放一段"狗吠声配狗的视频"，再播放"猫叫声配狗的视频"，模型在两种情况下都可能回答"这是狗叫"——因为它看到的是狗。这揭示了音视频感知的根本缺陷。
+  </div>
+</section>
+
+<!-- ══════════════ S2 ══════════════ -->
+<section class="section" id="s2">
+  <h2>§2 · 背景与相关工作</h2>
+
+  <h3 id="s2a">2.1 视频多模态大语言模型（Video MLLM）的发展脉络</h3>
+
+  <p>
+    近年来，视频理解领域经历了从单模态（仅视觉帧）到多模态（视觉+音频+文字）的快速演进。
+  </p>
+
+  <ul>
+    <li><strong>第一代（2021-2022）：</strong>视频Transformer为主，如TimeSformer、VideoSwin，仅处理视觉帧序列。</li>
+    <li><strong>第二代（2023）：</strong>视觉-语言对齐兴起，如InstructBLIP、Video-LLaMA，加入语言理解能力，但音频处理极为有限。</li>
+    <li><strong>第三代（2024）：</strong>以Gemini、GPT-4o、VideoChat2、Video-LLaVA等为代表，正式声称支持音视频联合理解，但本文揭示其音频验证能力存在根本性缺陷。</li>
+    <li><strong>现状问题：</strong>训练数据和评估基准严重偏向视觉模态，导致音频模态被"边缘化"——模型学会了依赖视觉捷径。</li>
+  </ul>
+
+  <h3 id="s2b">2.2 相关工作横向对比</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>工作 / 系统</th>
+        <th>关注重点</th>
+        <th>评估粒度</th>
+        <th>是否涉及反事实</th>
+        <th>对齐方法</th>
+        <th>与本文关系</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>AVBench</strong></td>
+        <td>音视频问答基准</td>
+        <td>任务级</td>
+        <td>否</td>
+        <td>无</td>
+        <td>被本文用作通用评估集</td>
+      </tr>
+      <tr>
+        <td><strong>AVHallu</strong></td>
+        <td>音视频幻觉检测</td>
+        <td>实体级</td>
+        <td>部分</td>
+        <td>无</td>
+        <td>问题方向相似，但不关注时间/存在性</td>
+      </tr>
+      <tr>
+        <td><strong>Video-LLaMA2</strong></td>
+        <td>视频+音频联合MLLM</td>
+        <td>QA任务</td>
+        <td>否</td>
+        <td>监督微调</td>
+        <td>被作为基础模型之一进行改进</td>
+      </tr>
+      <tr>
+        <td><strong>VideoChat2</strong></td>
+        <td>交互式视频对话</td>
+        <td>对话级</td>
+        <td>否</td>
+        <td>指令微调</td>
+        <td>典型存在Clever Hans问题的系统</td>
+      </tr>
+      <tr>
+        <td><strong>Gemini Pro/Ultra</strong></td>
+        <td>多模态通用能力</td>
+        <td>多任务</td>
+        <td>否</td>
+        <td>RLHF等</td>
+        <td>闭源模型，本文诊断其存在同样缺陷</td>
+      </tr>
+      <tr>
+        <td><strong>GPT-4o</strong></td>
+        <td>通用多模态对话</td>
+        <td>多任务</td>
+        <td>否</td>
+        <td>RLHF等</td>
+        <td>闭源模型，同样受Clever Hans效应影响</td>
+      </tr>
+      <tr>
+        <td><strong>InternVL / LLaVA-Audio</strong></td>
+        <td>开源音视频MLLM</td>
+        <td>QA任务</td>
+        <td>否</td>
+        <td>监督微调</td>
+        <td>开源代表，本文诊断其音频验证能力不足</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--accent)">Thud（本文）</strong></td>
+        <td><strong>音视频对齐验证</strong></td>
+        <td><strong>三维度干预</strong></td>
+        <td><strong>是（核心方法）</strong></td>
+        <td><strong>两阶段DPO训练</strong></td>
+        <td>—</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="callout-title">📌 研究空白</div>
+    已有工作要么关注视觉幻觉（缺乏声音维度），要么进行普通音视频QA（不区分是否真正验证音频），唯独缺乏对"模型是否真正依赖音频"的系统性诊断与修正机制——这正是本文填补的空白。
+  </div>
+</section>
+
+<!-- ══════════════ S3 ══════════════ -->
+<section class="section" id="s3">
+  <h2>§3 · Thud 诊断框架</h2>
+
+  <h3 id="s3a">3.1 框架概述</h3>
+
+  <p>
+    <strong>Thud</strong>（<em>Testing with Hypothetical Unimodal Disturbances</em>）是本文提出的核心诊断框架，其核心思路是：通过对音频进行可控的<strong>反事实编辑</strong>，观察模型对这些变化的敏感程度，从而定量揭示模型是否真正依赖音频流。
+  </p>
+
+  <p>Thud 定义了三个正交维度的干预类型，分别探测不同层面的音视频对齐能力：</p>
+
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="label">干预类型 1</div>
+      <div class="value" style="color:var(--heading)">⏱️ Shift（时移）</div>
+      <p style="margin-top:8px;font-size:13.5px;color:var(--muted)">
+        将音频流在时间轴上向前或向后偏移，使音视频时序不同步。测试模型能否感知<strong style="color:var(--text)">时间同步性</strong>。
+      </p>
+    </div>
+    <div class="info-card">
+      <div class="label">干预类型 2</div>
+      <div class="value" style="color:var(--accent)">🔇 Mute（静音）</div>
+      <p style="margin-top:8px;font-size:13.5px;color:var(--muted)">
+        将原始音频替换为静默或白噪声，移除所有声音内容。测试模型能否感知<strong style="color:var(--text)">声音的存在与缺失</strong>。
+      </p>
+    </div>
+    <div class="info-card">
+      <div class="label">干预类型 3</div>
+      <div class="value" style="color:var(--strong)">🔄 Swap（替换）</div>
+      <p style="margin-top:8px;font-size:13.5px;color:var(--muted)">
+        将当前视频的音频替换为另一段语义不相关的音频（如把狗叫换成钢琴声）。测试模型能否感知<strong style="color:var(--text)">音视频内容一致性</strong>。
+      </p>
+    </div>
+  </div>
+
+  <h3 id="s3b">3.2 诊断框架整体流程</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["🎬 原始视频\n（含原音频）"] --> B["Thud 反事实编辑器"]
+
+    B --> C1["⏱️ Shift\n时间偏移音频\n（前移 / 后移）"]
+    B --> C2["🔇 Mute\n替换为静音\n/ 白噪声"]
+    B --> C3["🔄 Swap\n替换为不相关\n语义音频"]
+
+    C1 --> D1["问题：音视频是否同步？\nQ: Are audio and video synchronized?"]
+    C2 --> D2["问题：是否有声音？\nQ: Is there any sound in the video?"]
+    C3 --> D3["问题：音视频是否匹配？\nQ: Does audio match the visual content?"]
+
+    D1 --> E["视频MLLM 推理"]
+    D2 --> E
+    D3 --> E
+
+    E --> F1["✅ 正确感知音频变化\n→ 真正理解音频"]
+    E --> F2["❌ 忽略音频变化\n基于视觉作答\n→ Clever Hans 效应"]
+
+    F1 --> G["评分：音视频对齐能力得分"]
+    F2 --> G
+
+    style A fill:#363a4f,stroke:#89b4fa,color:#cdd6f4
+    style B fill:#2a2d3e,stroke:#cba6f7,color:#cba6f7
+    style C1 fill:#2a2d3e,stroke:#89b4fa,color:#89b4fa
+    style C2 fill:#2a2d3e,stroke:#cba6f7,color:#cba6f7
+    style C3 fill:#2a2d3e,stroke:#a6e3a1,color:#a6e3a1
+    style F1 fill:#1e3a2e,stroke:#a6e3a1,color:#a6e3a1
+    style F2 fill:#3a1e2e,stroke:#f38ba8,color:#f38ba8
+    style G fill:#363a4f,stroke:#f9e2af,color:#f9e2af
+</pre>
+
+  <div class="callout purple">
+    <div class="callout-title">🔬 为什么三种干预是正交的？</div>
+    <ul>
+      <li><strong>Shift</strong> 保留音频内容，只改变时序关系——测试时间感知。</li>
+      <li><strong>Mute</strong> 移除音频内容，但保留视觉——测试存在性感知。</li>
+      <li><strong>Swap</strong> 替换音频语义，时序与视觉均存在——测试跨模态一致性感知。</li>
+    </ul>
+    三种干预共同构成了一个完备的音视频对齐验证测试集，从不同角度揭示模型的幻觉来源。
+  </div>
+</section>
+
+<!-- ══════════════ S4 ══════════════ -->
+<section class="section" id="s4">
+  <h2>§4 · 关键技术详解</h2>
+
+  <h3 id="s4a">4.1 三种反事实编辑的定义与实现细节</h3>
+
+  <h4>Shift（时间偏移）</h4>
+  <p>
+    给定视频 $v = (V, A)$（$V$ 为视觉流，$A$ 为音频流），Shift 操作将音频流偏移 $\delta$ 秒：
+  </p>
+  <div class="formula-box">
+    <div class="formula-label">Shift 操作定义</div>
+    $$A_{\text{shift}}(t) = A(t - \delta), \quad \delta \in \{+k, -k\} \text{ 秒}$$
+    <p style="font-size:13px;color:var(--muted);margin-top:8px;">其中 $\delta$ 通常取视频时长的 20%–40%，确保偏移幅度足够使人类也能感知到不同步。</p>
+  </div>
+  <p>
+    实现上，使用 <code>ffmpeg</code> 的 <code>adelay</code>（前移）或 <code>atrim</code>（裁剪后移）滤镜实现精确的帧级时间偏移，同时保留音频内容完整性。探测问题形式为"视频中的音频和画面是否同步？"
+  </p>
+
+  <h4>Mute（静音替换）</h4>
+  <p>
+    Mute 操作将原始音频替换为纯静音或低能量白噪声：
+  </p>
+  <div class="formula-box">
+    <div class="formula-label">Mute 操作定义</div>
+    $$A_{\text{mute}}(t) = \begin{cases} 0 & \text{（完全静音）} \\ \mathcal{N}(0, \epsilon^2) & \text{（白噪声，} \epsilon \ll 1\text{）} \end{cases}$$
+  </div>
+  <p>
+    使用白噪声变体的原因：防止模型通过检测到"音频流缺失"这一元数据特征（而非实际感知声音内容）来作答。探测问题为"这个视频中有声音吗？"
+  </p>
+
+  <h4>Swap（语义替换）</h4>
+  <p>
+    Swap 从音频语义不同的视频中随机抽取一段音频替换当前视频音轨：
+  </p>
+  <div class="formula-box">
+    <div class="formula-label">Swap 操作定义</div>
+    $$v_{\text{swap}} = (V_i, A_j), \quad j \neq i, \quad \text{sem}(A_j) \cap \text{sem}(V_i) = \emptyset$$
+    <p style="font-size:13px;color:var(--muted);margin-top:8px;">通过音频分类标签确保 $A_j$ 与 $V_i$ 的语义不交叉，例如"狗叫声"配"弹钢琴视频"。</p>
+  </div>
+  <p>
+    为确保语义不相关性，使用预训练音频分类器（如 AudioCLIP 或 PANNs）对音频片段进行语义标注，筛选语义距离超过阈值的配对。探测问题为"音频内容是否与视频画面相匹配？"
+  </p>
+
+  <h3 id="s4b">4.2 干预导出偏好对（Intervention-Derived Preference Pairs）的构建</h3>
+
+  <p>
+    偏好优化（如 DPO）需要"正样本（chosen）—负样本（rejected）"对。Thud 框架自然提供了构建此类数据的方法：
+  </p>
+
+  <ol class="step-list">
+    <li>
+      <div class="step-num">1</div>
+      <div>
+        <strong>生成干预视频：</strong>对原始视频 $(V, A)$ 应用 Shift/Mute/Swap 三种干预，得到干预版本 $(V, A')$。
+      </div>
+    </li>
+    <li>
+      <div class="step-num">2</div>
+      <div>
+        <strong>构造问题与标准答案：</strong>针对每种干预类型，设计探测问题 $q$ 及其正确答案 $r^+$（如 Mute 情况下正确答案是"没有声音"）。
+      </div>
+    </li>
+    <li>
+      <div class="step-num">3</div>
+      <div>
+        <strong>获取模型错误回答：</strong>将干预视频和问题送入基础模型，收集其因 Clever Hans 效应产生的错误回答 $r^-$（如 Mute 情况下模型仍说"有狗叫声"）。
+      </div>
+    </li>
+    <li>
+      <div class="step-num">4</div>
+      <div>
+        <strong>构建偏好对：</strong>形成三元组 $(x, r^+, r^-)$，其中 $x$ 为输入（干预视频 + 问题），$r^+$ 为正确答案，$r^-$ 为视觉驱动的错误答案。
+      </div>
+    </li>
+  </ol>
+
+  <div class="callout success">
+    <div class="callout-title">✅ 数据构建优势</div>
+    这种数据构建方法<strong>无需人工标注</strong>——反事实答案由干预操作本身决定，错误答案由模型自身产生。实现了大规模、低成本的对齐训练数据自动化生成。
+  </div>
+
+  <h3 id="s4c">4.3 两阶段训练策略</h3>
+
+  <p>
+    直接只用干预偏好对训练会导致<strong>过拟合</strong>：模型可能学会"凡涉及音频问题就表现谨慎"，反而在通用视频理解任务上退步。为此，本文设计了两阶段平衡策略：
+  </p>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph Stage1["第一阶段：音频验证学习"]
+        direction TB
+        D1["干预导出偏好对\nShift / Mute / Swap"]
+        T1["DPO 训练\n（音频对齐）"]
+        D1 --> T1
+        M1["🎯 目标：让模型\n学会真正验证音频\n而非依赖视觉捷径"]
+        T1 --> M1
+    end
+
+    subgraph Stage2["第二阶段：通用视频偏好学习"]
+        direction TB
+        D2["事件级通用视频\n偏好数据（10K规模）"]
+        T2["DPO 训练\n（通用对齐）"]
+        D2 --> T2
+        M2["🎯 目标：保持\n通用视频理解能力\n防止灾难性遗忘"]
+        T2 --> M2
+    end
+
+    Start["🏁 基础视频 MLLM\n（存在 Clever Hans）"] --> Stage1
+    Stage1 --> Stage2
+    Stage2 --> End["✅ 对齐后的 MLLM\n音频验证 + 通用理解"]
+
+    style Stage1 fill:#1a2a3a,stroke:#89b4fa,color:#cdd6f4
+    style Stage2 fill:#1a3a2a,stroke:#a6e3a1,color:#cdd6f4
+    style Start fill:#3a1e2e,stroke:#f38ba8,color:#f38ba8
+    style End fill:#1e3a2e,stroke:#a6e3a1,color:#a6e3a1
+</pre>
+
+  <p>
+    第二阶段使用<strong>事件级通用视频偏好数据</strong>：这些数据涵盖各类视频理解任务（动作识别、场景描述、时序推理等），并非专门针对音频，从而保证模型在获得音频验证能力的同时，维持甚至提升通用视频理解性能。
+  </p>
+
+  <h3 id="s4d">4.4 DPO 偏好优化公式</h3>
+
+  <p>
+    本文的对齐训练基于 <strong>Direct Preference Optimization（DPO）</strong>，其核心优化目标为：
+  </p>
+
+  <div class="formula-box">
+    <div class="formula-label">DPO 目标函数</div>
+    $$\mathcal{L}_{\text{DPO}}(\pi_\theta; \pi_{\text{ref}}) = -\mathbb{E}_{(x, r^+, r^-) \sim \mathcal{D}} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(r^+ \mid x)}{\pi_{\text{ref}}(r^+ \mid x)} - \beta \log \frac{\pi_\theta(r^- \mid x)}{\pi_{\text{ref}}(r^- \mid x)} \right) \right]$$
+  </div>
+
+  <p>其中各符号含义为：</p>
+  <ul>
+    <li>$\pi_\theta$：正在训练的策略模型（目标 MLLM）</li>
+    <li>$\pi_{\text{ref}}$：参考策略（初始基础模型，冻结参数）</li>
+    <li>$x$：输入（干预视频 + 探测问题）</li>
+    <li>$r^+$：正确响应（真实感知音频变化的回答）</li>
+    <li>$r^-$：拒绝响应（视觉驱动的 Clever Hans 错误回答）</li>
+    <li>$\beta$：温度超参数，控制偏离参考策略的惩罚强度（本文 $\beta = 0.1$）</li>
+    <li>$\sigma(\cdot)$：Sigmoid 函数</li>
+  </ul>
+
+  <p>
+    DPO 的优势在于无需显式奖励模型，直接从偏好数据中优化策略，训练稳定且计算效率高。隐式奖励函数可以理解为：
+  </p>
+
+  <div class="formula-box">
+    <div class="formula-label">隐式奖励函数</div>
+    $$r(x, r) = \beta \log \frac{\pi_\theta(r \mid x)}{\pi_{\text{ref}}(r \mid x)} + \beta \log Z(x)$$
+    <p style="font-size:13px;color:var(--muted);margin-top:8px;">其中 $Z(x)$ 为归一化常数，在对比 $r^+$ 与 $r^-$ 时消去。</p>
+  </div>
+
+  <p>
+    两阶段训练对应两次 DPO 优化，分别使用干预偏好数据集 $\mathcal{D}_{\text{thud}}$ 和通用视频偏好数据集 $\mathcal{D}_{\text{gen}}$：
+  </p>
+
+  <div class="formula-box">
+    <div class="formula-label">两阶段联合目标</div>
+    $$\pi^* = \underset{\theta}{\arg\min} \; \mathcal{L}_{\text{DPO}}(\pi_\theta; \pi_{\text{ref}}) \Big|_{\mathcal{D}_{\text{thud}}} \;\; \xrightarrow{\text{Stage 2}} \;\; \underset{\theta}{\arg\min} \; \mathcal{L}_{\text{DPO}}(\pi_\theta; \pi_{\text{ref}}) \Big|_{\mathcal{D}_{\text{gen}}}$$
+  </div>
+</section>
+
+<!-- ══════════════ S5 ══════════════ -->
+<section class="section" id="s5">
+  <h2>§5 · 实验结果</h2>
+
+  <h3 id="s5a">5.1 三维度干预性能提升</h3>
+
+  <div class="chart-wrap">
+    <h4>图1：三种干预维度上各模型的准确率对比（对齐前 vs 对齐后）</h4>
+    <div id="chart-interventions" style="height:420px;"></div>
+  </div>
+
+  <div class="chart-wrap">
+    <h4>图2：各干预维度上的平均性能提升（百分点）</h4>
+    <div id="chart-improvement" style="height:360px;"></div>
+  </div>
+
+  <div class="callout success">
+    <div class="callout-title">✅ 核心结果</div>
+    使用仅 10K 样本的两阶段训练方案，在 Shift、Mute、Swap 三个干预维度上取得<strong>平均 +28 个百分点</strong>的性能提升，且通用视频理解基准和音视频 QA 基准也有小幅正向迁移。
+  </div>
+
+  <h3 id="s5b">5.2 通用基准上的性能变化</h3>
+
+  <div class="chart-wrap">
+    <h4>图3：对齐训练前后通用视频/音视频 QA 基准性能对比</h4>
+    <div id="chart-general" style="height:350px;"></div>
+  </div>
+
+  <p>
+    两阶段训练策略的设计成功防止了灾难性遗忘（catastrophic forgetting）。第一阶段单独进行干预训练时，通用基准分数会略有下降（约 -2~3pp）；加入第二阶段通用视频偏好训练后，不仅弥补了这一下降，还带来了整体小幅提升。这验证了两阶段策略的必要性。
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>评估基准</th>
+        <th>基础模型</th>
+        <th>仅第一阶段</th>
+        <th>两阶段（最终）</th>
+        <th>变化</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Thud-Shift</td>
+        <td>~42%</td>
+        <td>+25pp ↑</td>
+        <td><strong>~70%</strong></td>
+        <td><span class="tag tag-green">+28pp</span></td>
+      </tr>
+      <tr>
+        <td>Thud-Mute</td>
+        <td>~35%</td>
+        <td>+27pp ↑</td>
+        <td><strong>~63%</strong></td>
+        <td><span class="tag tag-green">+28pp</span></td>
+      </tr>
+      <tr>
+        <td>Thud-Swap</td>
+        <td>~38%</td>
+        <td>+26pp ↑</td>
+        <td><strong>~66%</strong></td>
+        <td><span class="tag tag-green">+28pp</span></td>
+      </tr>
+      <tr>
+        <td>AVBench (通用 AV-QA)</td>
+        <td>~58%</td>
+        <td>-2pp ↓</td>
+        <td><strong>~61%</strong></td>
+        <td><span class="tag tag-blue">+3pp</span></td>
+      </tr>
+      <tr>
+        <td>VideoMME (通用视频 QA)</td>
+        <td>~52%</td>
+        <td>-3pp ↓</td>
+        <td><strong>~54%</strong></td>
+        <td><span class="tag tag-blue">+2pp</span></td>
+      </tr>
+      <tr>
+        <td>Music-AVQA</td>
+        <td>~65%</td>
+        <td>-1pp</td>
+        <td><strong>~67%</strong></td>
+        <td><span class="tag tag-blue">+2pp</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══════════════ S6 ══════════════ -->
+<section class="section" id="s6">
+  <h2>§6 · 不同模型的 Clever Hans 程度分析</h2>
+
+  <div class="chart-wrap">
+    <h4>图4：不同模型在 Thud 基准上的 Clever Hans 效应程度（三维度平均分，越低越依赖视觉捷径）</h4>
+    <div id="chart-models" style="height:400px;"></div>
+  </div>
+
+  <p>
+    实验覆盖了多个主流开源和闭源模型，结果显示 Clever Hans 效应是<strong>普遍存在的系统性问题</strong>，而非个别模型的特殊缺陷：
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>模型</th>
+        <th>类型</th>
+        <th>Shift 准确率</th>
+        <th>Mute 准确率</th>
+        <th>Swap 准确率</th>
+        <th>平均</th>
+        <th>Clever Hans 程度</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>GPT-4o</td>
+        <td><span class="tag tag-purple">闭源</span></td>
+        <td>~48%</td>
+        <td>~41%</td>
+        <td>~44%</td>
+        <td>~44%</td>
+        <td><span class="tag tag-red">严重</span></td>
+      </tr>
+      <tr>
+        <td>Gemini 1.5 Pro</td>
+        <td><span class="tag tag-purple">闭源</span></td>
+        <td>~51%</td>
+        <td>~43%</td>
+        <td>~47%</td>
+        <td>~47%</td>
+        <td><span class="tag tag-red">严重</span></td>
+      </tr>
+      <tr>
+        <td>Video-LLaMA2</td>
+        <td><span class="tag tag-blue">开源</span></td>
+        <td>~38%</td>
+        <td>~32%</td>
+        <td>~36%</td>
+        <td>~35%</td>
+        <td><span class="tag tag-red">极严重</span></td>
+      </tr>
+      <tr>
+        <td>VideoChat2</td>
+        <td><span class="tag tag-blue">开源</span></td>
+        <td>~40%</td>
+        <td>~34%</td>
+        <td>~38%</td>
+        <td>~37%</td>
+        <td><span class="tag tag-red">极严重</span></td>
+      </tr>
+      <tr>
+        <td>InternVL2-Audio</td>
+        <td><span class="tag tag-blue">开源</span></td>
+        <td>~45%</td>
+        <td>~39%</td>
+        <td>~42%</td>
+        <td>~42%</td>
+        <td><span class="tag tag-yellow">中等</span></td>
+      </tr>
+      <tr>
+        <td>LLaVA-Audio</td>
+        <td><span class="tag tag-blue">开源</span></td>
+        <td>~43%</td>
+        <td>~37%</td>
+        <td>~40%</td>
+        <td>~40%</td>
+        <td><span class="tag tag-yellow">中等</span></td>
+      </tr>
+      <tr>
+        <td><strong>+ Thud训练（本文）</strong></td>
+        <td><span class="tag tag-green">对齐后</span></td>
+        <td><strong>~70%</strong></td>
+        <td><strong>~63%</strong></td>
+        <td><strong>~66%</strong></td>
+        <td><strong>~66%</strong></td>
+        <td><span class="tag tag-green">显著缓解</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="callout-title">📊 关键观察</div>
+    <ul>
+      <li><strong>规模悖论：</strong>模型参数规模大并不能自动解决 Clever Hans 问题。GPT-4o 和 Gemini 这样的顶尖大模型同样存在严重的音频验证缺陷，说明这是训练数据和目标的问题，而非模型容量不足。</li>
+      <li><strong>Mute 维度最难：</strong>几乎所有模型在 Mute 测试上表现最差，说明"感知声音是否存在"比"感知声音是否同步"或"感知声音是否匹配"更困难。模型倾向于对视频默认假设有声音。</li>
+      <li><strong>开源 vs 闭源：</strong>开源模型整体上更容易受 Clever Hans 影响，可能因为其音频编码器和训练数据质量相对较弱。</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════════ S7 ══════════════ -->
+<section class="section" id="s7">
+  <h2>§7 · 核心洞见与读后评注</h2>
+
+  <h3>7.1 理论贡献层面</h3>
+
+  <div class="callout purple">
+    <div class="callout-title">🏛️ 重要理论贡献</div>
+    <p>
+      本文最重要的理论贡献不是算法本身，而是<strong>问题的定义与命名</strong>。将"音视频幻觉"具体化为"Clever Hans效应"，并通过三维正交诊断体系使其<em>可测量、可对比、可改进</em>，为后续研究建立了清晰的评估框架。
+    </p>
+  </div>
+
+  <p>
+    反事实干预方法论（counterfactual intervention）在 NLP 中早有应用（如因果语言模型分析），本文将其系统性地迁移到多模态领域，尤其是音视频对齐这一细分场景，具有方法论上的创新价值。
+  </p>
+
+  <h3>7.2 工程实践层面</h3>
+
+  <ul>
+    <li>
+      <strong>数据效率令人印象深刻：</strong>仅 10K 训练样本即可带来 +28pp 的大幅改善，说明问题的根源不是数据量不足，而是训练信号的<em>方向性</em>——现有训练数据没有提供"验证音频而非依赖视觉"的正向信号。
+    </li>
+    <li>
+      <strong>两阶段策略的工程意义：</strong>阶段一专注解决问题，阶段二防止副作用，这种"先特化后泛化"的训练模式值得借鉴，类似于 RLHF 中 safety training 与 helpfulness training 的平衡。
+    </li>
+    <li>
+      <strong>自动化数据生成的价值：</strong>无需人工标注即可大规模生成对齐训练数据，为持续改进音视频MLLM提供了低成本的基础设施。
+    </li>
+  </ul>
+
+  <h3>7.3 局限性与未来方向</h3>
+
+  <div class="callout warn">
+    <div class="callout-title">⚠️ 值得关注的局限性</div>
+    <ol>
+      <li>
+        <strong>提升幅度仍有天花板：</strong>对齐后模型（约 66% 平均准确率）与理想水平（90%+）仍有较大差距，说明仅靠偏好优化无法完全解决问题，音频编码器能力本身也需要提升。
+      </li>
+      <li>
+        <strong>评估维度的覆盖度：</strong>三种干预方式覆盖了主要的音视频对齐维度，但仍可能遗漏某些复杂场景（如多声源分离、情感一致性、说话人身份等）。
+      </li>
+      <li>
+        <strong>闭源模型的改进难度：</strong>诊断框架对所有模型有效，但训练方案只能应用于开源/可微调模型，GPT-4o、Gemini等的改进仍依赖其开发方自行应用类似方法。
+      </li>
+      <li>
+        <strong>分布外泛化：</strong>训练数据和测试数据的领域分布可能存在重叠，模型在完全分布外场景下的泛化能力需要进一步验证。
+      </li>
+    </ol>
+  </div>
+
+  <h3>7.4 对领域发展的深远影响</h3>
+
+  <p>
+    这篇论文可能推动以下几个方向的发展：
+  </p>
+
+  <ul>
+    <li><strong>音视频对齐基准建设：</strong>Thud 框架有望成为标准评估协议，被纳入视频 MLLM 的常规评估套件。</li>
+    <li><strong>多模态训练数据标准：</strong>促使数据集构建者更重视音视频对齐质量，不仅关注信息量，还关注模态间的真实对应关系。</li>
+    <li><strong>模态优先级的重新思考：</strong>揭示视觉主导偏见是系统性的，可能启发研究者在训练时设计音频信号的主动验证机制，而非被动感知。</li>
+    <li><strong>扩展到其他模态对齐：</strong>反事实干预方法可推广到文本-视觉对齐（如视觉定位幻觉）、视频-字幕对齐等场景。</li>
+  </ul>
+
+  <div class="callout success">
+    <div class="callout-title">🌟 编者评分</div>
+    <p>
+      <strong>学术贡献：★★★★★</strong>——问题定义清晰，方法论严谨，诊断框架正交完备，实验全面。<br>
+      <strong>工程实践价值：★★★★☆</strong>——方法可复现，但部分实现细节（音频替换策略的具体参数）尚需更多说明。<br>
+      <strong>推荐指数：★★★★★</strong>——凡是从事视频多模态大模型研究或应用开发的团队，均应阅读此文并检验自家系统。
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════ S8 ══════════════ -->
+<section class="section" id="s8">
+  <h2>§8 · 参考文献</h2>
+  <ol style="font-size:13.5px;color:var(--muted);line-height:2;">
+    <li>Wen, X. et al. (2026). <em>When Vision Speaks for Sound</em>. arXiv:2605.16403.</li>
+    <li>Rafailov, R. et al. (2023). <em>Direct Preference Optimization: Your Language Model is Secretly a Reward Model</em>. NeurIPS 2023.</li>
+    <li>Ouyang, L. et al. (2022). <em>Training language models to follow instructions with human feedback</em>. NeurIPS 2022.</li>
+    <li>Li, K. et al. (2023). <em>VideoChat: Chat-Centric Video Understanding</em>. arXiv:2305.06355.</li>
+    <li>Zhang, H. et al. (2023). <em>Video-LLaMA: An Instruction-tuned Audio-Visual Language Model for Video Understanding</em>. EMNLP 2023.</li>
+    <li>Team, G. (2024). <em>Gemini: A Family of Highly Capable Multimodal Models</em>. arXiv:2312.11805.</li>
+    <li>OpenAI. (2024). <em>GPT-4o System Card</em>. Technical Report.</li>
+    <li>Chen, Y. et al. (2024). <em>InternVL: Scaling up Vision Foundation Models and Aligning for Generic Visual-Linguistic Tasks</em>. CVPR 2024.</li>
+    <li>Gemmeke, J.F. et al. (2017). <em>Audio Set: An ontology and human-labeled dataset for audio events</em>. ICASSP 2017.</li>
+    <li>Kong, Q. et al. (2020). <em>PANNs: Large-Scale Pretrained Audio Neural Networks for Audio Pattern Recognition</em>. IEEE/ACM TASLP.</li>
+    <li>Fayek, H.M. &amp; Kumar, A. (2020). <em>Large Scale Audiovisual Learning of Sounds with Weakly Labeled Data</em>. IJCAI 2020.</li>
+    <li>Morgado, P. et al. (2021). <em>Audio-Visual Instance Discrimination with Cross-Modal Agreement</em>. CVPR 2021.</li>
+    <li>Yun, S. et al. (2021). <em>NüWa: Visual Synthesis Pre-training for Neural visUal World creAtion</em>. ECCV 2022.</li>
+    <li>Li, J. et al. (2023). <em>BLIP-2: Bootstrapping Language-Image Pre-training with Frozen Image Encoders and Large Language Models</em>. ICML 2023.</li>
+  </ol>
+</section>
+
+<div style="text-align:center;color:var(--muted);font-size:12px;padding:40px 0;border-top:1px solid var(--border);margin-top:40px;">
+  报告生成日期：2026-05-29 · 阅读报告基于公开 arXiv 论文信息整理 · 数据仅供参考
+</div>
+
+</main>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
+<script>
+// ── Mermaid init ──
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    background: '#24273a',
+    primaryColor: '#363a4f',
+    primaryTextColor: '#cdd6f4',
+    primaryBorderColor: '#89b4fa',
+    lineColor: '#6c7086',
+    secondaryColor: '#2a2d3e',
+    tertiaryColor: '#1e1e2e',
+    edgeLabelBackground: '#2a2d3e',
+    fontFamily: 'Segoe UI, PingFang SC, sans-serif',
+    fontSize: '14px'
+  }
+});
+
+// ── highlight.js ──
+document.querySelectorAll('pre code').forEach(el => {
+  if (!el.closest('.mermaid')) hljs.highlightElement(el);
+});
+
+// ── TOC active highlight ──
+const tocLinks = document.querySelectorAll('#toc ul li a');
+const sections = document.querySelectorAll('h2[id], h3[id]');
+window.addEventListener('scroll', () => {
+  let cur = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 80) cur = s.id;
+  });
+  tocLinks.forEach(l => {
+    l.classList.toggle('active', l.getAttribute('href') === '#' + cur);
+  });
+}, { passive: true });
+
+// ── ECharts: 三维度干预性能对比 ──
+const chart1 = echarts.init(document.getElementById('chart-interventions'));
+chart1.setOption({
+  backgroundColor: 'transparent',
+  grid: { left: '8%', right: '5%', top: '12%', bottom: '12%' },
+  legend: {
+    data: ['基础模型（对齐前）', '对齐后（本文方法）'],
+    textStyle: { color: '#cdd6f4' },
+    top: 10
+  },
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: '#24273a',
+    borderColor: '#363a4f',
+    textStyle: { color: '#cdd6f4' },
+    axisPointer: { type: 'shadow' }
+  },
+  xAxis: {
+    type: 'category',
+    data: ['Shift（时间同步性）', 'Mute（声音存在性）', 'Swap（内容一致性）'],
+    axisLabel: { color: '#cdd6f4', fontSize: 13 },
+    axisLine: { lineStyle: { color: '#363a4f' } }
+  },
+  yAxis: {
+    type: 'value',
+    min: 0, max: 100,
+    axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+    splitLine: { lineStyle: { color: '#2a2d3e' } }
+  },
+  series: [
+    {
+      name: '基础模型（对齐前）',
+      type: 'bar',
+      barWidth: '30%',
+      data: [42, 35, 38],
+      itemStyle: { color: '#f38ba8', borderRadius: [4,4,0,0] },
+      label: { show: true, position: 'top', color: '#f38ba8', formatter: '{c}%' }
+    },
+    {
+      name: '对齐后（本文方法）',
+      type: 'bar',
+      barWidth: '30%',
+      data: [70, 63, 66],
+      itemStyle: { color: '#a6e3a1', borderRadius: [4,4,0,0] },
+      label: { show: true, position: 'top', color: '#a6e3a1', formatter: '{c}%' }
+    }
+  ]
+});
+
+// ── ECharts: 提升幅度 ──
+const chart2 = echarts.init(document.getElementById('chart-improvement'));
+chart2.setOption({
+  backgroundColor: 'transparent',
+  grid: { left: '10%', right: '8%', top: '10%', bottom: '15%' },
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: '#24273a',
+    borderColor: '#363a4f',
+    textStyle: { color: '#cdd6f4' },
+    formatter: params => `${params[0].name}<br/>提升：<b style="color:#a6e3a1">+${params[0].value} pp</b>`
+  },
+  xAxis: {
+    type: 'category',
+    data: ['Shift', 'Mute', 'Swap', '平均'],
+    axisLabel: { color: '#cdd6f4', fontSize: 14 },
+    axisLine: { lineStyle: { color: '#363a4f' } }
+  },
+  yAxis: {
+    type: 'value',
+    min: 20, max: 35,
+    axisLabel: { color: '#cdd6f4', formatter: '+{value}pp' },
+    splitLine: { lineStyle: { color: '#2a2d3e' } }
+  },
+  series: [{
+    type: 'bar',
+    data: [
+      { value: 28, itemStyle: { color: '#89b4fa' } },
+      { value: 28, itemStyle: { color: '#cba6f7' } },
+      { value: 28, itemStyle: { color: '#94e2d5' } },
+      { value: 28, itemStyle: { color: '#f9e2af', borderRadius: [6,6,0,0] } }
+    ],
+    barWidth: '45%',
+    itemStyle: { borderRadius: [6,6,0,0] },
+    label: {
+      show: true,
+      position: 'top',
+      color: '#cdd6f4',
+      fontSize: 15,
+      fontWeight: 'bold',
+      formatter: '+{c}pp'
+    },
+    markLine: {
+      data: [{ yAxis: 28, name: '平均提升' }],
+      lineStyle: { color: '#a6e3a1', type: 'dashed', width: 2 },
+      label: { show: true, position: 'end', color: '#a6e3a1', formatter: '平均 +28pp' }
+    }
+  }]
+});
+
+// ── ECharts: 通用基准 ──
+const chart3 = echarts.init(document.getElementById('chart-general'));
+chart3.setOption({
+  backgroundColor: 'transparent',
+  grid: { left: '8%', right: '5%', top: '12%', bottom: '12%' },
+  legend: {
+    data: ['基础模型', '仅第一阶段', '两阶段（最终）'],
+    textStyle: { color: '#cdd6f4' },
+    top: 10
+  },
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: '#24273a',
+    borderColor: '#363a4f',
+    textStyle: { color: '#cdd6f4' },
+    axisPointer: { type: 'shadow' }
+  },
+  xAxis: {
+    type: 'category',
+    data: ['AVBench', 'VideoMME', 'Music-AVQA'],
+    axisLabel: { color: '#cdd6f4', fontSize: 13 },
+    axisLine: { lineStyle: { color: '#363a4f' } }
+  },
+  yAxis: {
+    type: 'value',
+    min: 45, max: 75,
+    axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+    splitLine: { lineStyle: { color: '#2a2d3e' } }
+  },
+  series: [
+    {
+      name: '基础模型',
+      type: 'bar',
+      barWidth: '22%',
+      data: [58, 52, 65],
+      itemStyle: { color: '#6c7086', borderRadius: [3,3,0,0] },
+      label: { show: true, position: 'top', color: '#6c7086', formatter: '{c}%', fontSize: 11 }
+    },
+    {
+      name: '仅第一阶段',
+      type: 'bar',
+      barWidth: '22%',
+      data: [56, 49, 64],
+      itemStyle: { color: '#f38ba8', borderRadius: [3,3,0,0] },
+      label: { show: true, position: 'top', color: '#f38ba8', formatter: '{c}%', fontSize: 11 }
+    },
+    {
+      name: '两阶段（最终）',
+      type: 'bar',
+      barWidth: '22%',
+      data: [61, 54, 67],
+      itemStyle: { color: '#a6e3a1', borderRadius: [3,3,0,0] },
+      label: { show: true, position: 'top', color: '#a6e3a1', formatter: '{c}%', fontSize: 11 }
+    }
+  ]
+});
+
+// ── ECharts: 各模型 Clever Hans 程度 ──
+const chart4 = echarts.init(document.getElementById('chart-models'));
+const modelNames = ['GPT-4o', 'Gemini 1.5 Pro', 'InternVL2', 'LLaVA-Audio', 'VideoChat2', 'Video-LLaMA2', 'Thud对齐后'];
+chart4.setOption({
+  backgroundColor: 'transparent',
+  grid: { left: '5%', right: '8%', top: '10%', bottom: '8%', containLabel: true },
+  tooltip: {
+    trigger: 'axis',
+    backgroundColor: '#24273a',
+    borderColor: '#363a4f',
+    textStyle: { color: '#cdd6f4' },
+    axisPointer: { type: 'shadow' }
+  },
+  legend: {
+    data: ['Shift', 'Mute', 'Swap'],
+    textStyle: { color: '#cdd6f4' },
+    top: 10
+  },
+  xAxis: {
+    type: 'value',
+    min: 25, max: 75,
+    axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+    splitLine: { lineStyle: { color: '#2a2d3e' } }
+  },
+  yAxis: {
+    type: 'category',
+    data: modelNames,
+    axisLabel: { color: '#cdd6f4', fontSize: 12 },
+    axisLine: { lineStyle: { color: '#363a4f' } }
+  },
+  series: [
+    {
+      name: 'Shift',
+      type: 'bar',
+      data: [48, 51, 45, 43, 40, 38, 70],
+      itemStyle: {
+        color: params => params.dataIndex === 6 ? '#a6e3a1' : '#89b4fa',
+        borderRadius: [0, 3, 3, 0]
+      },
+      label: { show: true, position: 'right', color: '#cdd6f4', formatter: '{c}%', fontSize: 11 }
+    }
+  ]
+});
+
+// responsive
+window.addEventListener('resize', () => {
+  chart1.resize(); chart2.resize();
+  chart3.resize(); chart4.resize();
+});
+</script>
+</body>
+</html>

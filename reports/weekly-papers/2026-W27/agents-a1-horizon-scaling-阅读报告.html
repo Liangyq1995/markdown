@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agents-A1 阅读报告 — 无需万亿参数，用35B Agent达到万亿级性能</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; }
+    .tag.green { background: #a6e3a1; }
+    .tag.purple { background: #cba6f7; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .info-table table { max-width: 700px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>Agents-A1：无需万亿参数，35B MoE Agent 达到万亿级性能</h1>
+    <p><span class="tag">Agent</span><span class="tag orange">MoE</span><span class="tag green">长轨迹</span><span class="tag purple">知识蒸馏</span></p>
+    <p style="color:#6c7086; font-size:0.9em;">arXiv: 2606.30616 · 2026-06-29 · InternScience · HuggingFace本周 #1 (195 upvotes)</p>
+
+    <div class="info-table">
+      <table>
+        <tr><th>标题</th><td>Scaling the Horizon, Not the Parameters: Reaching Trillion-Parameter Performance with a 35B Agent</td></tr>
+        <tr><th>核心问题</th><td>如何用35B参数的MoE模型，在长轨迹Agent任务上超越万亿参数级别大模型</td></tr>
+        <tr><th>开源地址</th><td><a href="https://github.com/InternScience/Agents-A1">github.com/InternScience/Agents-A1</a></td></tr>
+      </table>
+    </div>
+
+    <h2 id="overview">1. 核心问题与动机</h2>
+    <p>大型语言模型（LLM）的性能提升通常依赖于<strong>参数规模的堆砌</strong>——从7B到70B再到万亿参数级别。然而，万亿参数模型的训练和推理成本极为高昂，部署门槛极高。</p>
+    <p>Agents-A1 提出了一个颠覆性思路：<strong>不扩展参数规模，而是扩展 Agent 的"视野"（Horizon）</strong>。具体而言，通过构建更长的推理轨迹和跨多个异构能力域的智能体协同，一个仅有35B参数的MoE模型，可以在基准测试中达到甚至超越 Kimi-K2.6、DeepSeek-V4-pro 等万亿参数级模型的性能。</p>
+    <blockquote>
+      "The performance gap between small and large models can be bridged not by adding parameters, but by teaching agents to reason over longer, richer interaction horizons."
+    </blockquote>
+
+    <h2 id="background">2. 背景与相关工作</h2>
+    <h3>Agent 能力扩展的两条路径</h3>
+    <table>
+      <tr><th>路径</th><th>代表工作</th><th>局限性</th></tr>
+      <tr><td>参数规模扩展</td><td>GPT-4o, Kimi-K2, DeepSeek-V3</td><td>成本高、部署难</td></tr>
+      <tr><td>推理时扩展（轨迹）</td><td>o1, o3, QwQ</td><td>单一领域，缺乏跨域整合</td></tr>
+      <tr><td><strong>本文：双维度扩展</strong></td><td><strong>Agents-A1</strong></td><td>—</td></tr>
+    </table>
+    <h3>长轨迹 Agent 训练的挑战</h3>
+    <ul>
+      <li>长达45K tokens的轨迹数据难以收集和过滤</li>
+      <li>多个异构域（数学、科学、编程、网页浏览等）的知识难以统一</li>
+      <li>教师模型（Teacher）的专家知识难以向小学生模型（Student）迁移</li>
+    </ul>
+
+    <h2 id="method">3. 训练流程总览</h2>
+    <pre class="mermaid">
+flowchart TD
+    A["长轨迹知识-动作基础设施<br>Long-Horizon Knowledge-Action Infrastructure"] --> B["外部知识库 Knowledge"]
+    A --> C["动作空间 Actions"]
+    A --> D["观测空间 Observations"]
+    A --> E["验证器 Verifier"]
+    B & C & D & E --> F["生成超长轨迹<br>avg 45K tokens / trajectory"]
+    F --> G["Stage 1：全领域 SFT<br>Full-domain Supervised Fine-Tuning"]
+    G --> H["Stage 2：领域级教师模型训练<br>Domain-Level Teacher Model Training<br>6个异构领域"]
+    H --> I["Stage 3：多教师域路由蒸馏<br>Multi-Teacher Domain-Routed On-Policy Distillation<br>+ Salient Vocabulary Alignment"]
+    I --> J["Agents-A1 35B MoE<br>最终部署模型"]
+
+    style A fill:#2a2a3e,stroke:#89b4fa
+    style J fill:#2a2a3e,stroke:#a6e3a1,stroke-width:2px
+    </pre>
+
+    <h2 id="key-tech">4. 关键技术</h2>
+
+    <h3>4.1 长轨迹知识-动作基础设施</h3>
+    <p>Agents-A1 构建了一套专门的<strong>长轨迹生成基础设施</strong>，连接四类组件：</p>
+    <ul>
+      <li><strong>外部知识</strong>：检索增强（RAG）、工具调用、代码执行</li>
+      <li><strong>动作空间</strong>：Web浏览、文件操作、代码运行等</li>
+      <li><strong>观测反馈</strong>：环境返回的中间结果</li>
+      <li><strong>验证器</strong>：对每步动作的结果进行打分</li>
+    </ul>
+    <p>生成轨迹平均长度达 <strong>45K tokens</strong>，远超普通SFT数据。</p>
+
+    <h3>4.2 三阶段训练配方</h3>
+    <h3>Stage 1：全领域 SFT</h3>
+    <p>在全部领域数据上进行有监督微调，对基座模型进行广泛的 Agent 行为对齐。这一阶段覆盖了数学、科学、编程、工具调用等多个领域，为后续专业化训练奠定基础。</p>
+    <h3>Stage 2：域级教师模型训练</h3>
+    <p>在6个异构领域分别训练专精的<strong>领域教师模型（Domain-Level Teacher）</strong>，每个教师专精于某一领域（如分子生物学、数学奥林匹克、代码工程等）。</p>
+    <h3>Stage 3：多教师域路由 On-Policy 蒸馏</h3>
+    <p>这是最核心的创新。模型在推理时，根据当前任务的领域类型动态路由到对应教师，获取该领域的蒸馏监督信号：</p>
+    <p>$$\mathcal{L}_{\text{DOPD}} = \sum_{d=1}^{D} \mathbb{1}[domain=d] \cdot \mathcal{L}_{KL}(\pi_{\text{teacher}_d} \| \pi_{\text{student}})$$</p>
+    <p>同时引入 <strong>Salient Vocabulary Alignment（关键词汇对齐）</strong>，专注于让学生模型学习教师模型在关键决策词汇（如工具调用名、关键推理步骤）上的分布，避免在无意义词汇上的梯度浪费。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Multi-Teacher Domain-Routed On-Policy Distillation</div>
+      <p><span class="kw">Input:</span> <span class="var">Student</span> $\pi_s$, <span class="var">Teacher set</span> $\{\pi_{T_d}\}_{d=1}^{D}$, <span class="var">Trajectory buffer</span> $\mathcal{B}$</p>
+      <p><span class="kw">for</span> each training step <span class="kw">do</span></p>
+      <p style="padding-left:1.5em"><span class="var">batch</span> ← <span class="fn">sample</span>($\mathcal{B}$) <span class="cm">// 采样长轨迹 batch</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> each trajectory $\tau$ in <span class="var">batch</span> <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="var">d</span> ← <span class="fn">DomainRouter</span>($\tau$) <span class="cm">// 判断领域</span></p>
+      <p style="padding-left:3em"><span class="var">salient_tokens</span> ← <span class="fn">SalientVocabSelect</span>($\tau$) <span class="cm">// 关键词汇对齐</span></p>
+      <p style="padding-left:3em">$\mathcal{L}$ ← <span class="fn">KL_Loss</span>($\pi_{T_d}$, $\pi_s$, <span class="var">salient_tokens</span>)</p>
+      <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+      <p style="padding-left:1.5em"><span class="fn">Backprop</span>($\mathcal{L}$) <span class="cm">// 更新学生模型</span></p>
+      <p><span class="kw">end for</span></p>
+      <p><span class="kw">return</span> <span class="var">Student</span> $\pi_s$ (35B MoE)</p>
+    </div>
+
+    <h2 id="experiment">5. 实验结果</h2>
+    <div id="chart-benchmark" class="echarts-container" style="height:380px"></div>
+
+    <table>
+      <tr><th>基准</th><th>Agents-A1 (35B)</th><th>对比（~1T参数）</th></tr>
+      <tr><td>SEAL-0</td><td><strong>56.4</strong></td><td>Kimi-K2.6 竞争水平</td></tr>
+      <tr><td>IFBench</td><td><strong>80.6</strong></td><td>超越多数1T模型</td></tr>
+      <tr><td>HiPhO（物理）</td><td><strong>46.4</strong></td><td>—</td></tr>
+      <tr><td>FrontierScience-Olympiad</td><td><strong>79.0</strong></td><td>—</td></tr>
+      <tr><td>MolBench-Bind（分子）</td><td><strong>56.8</strong></td><td>—</td></tr>
+      <tr><td>SciCode（科学编程）</td><td><strong>44.3</strong></td><td>—</td></tr>
+      <tr><td>HLE（困难推理）</td><td><strong>47.6</strong></td><td>—</td></tr>
+      <tr><td>BrowseComp（网页）</td><td><strong>75.5</strong></td><td>—</td></tr>
+    </table>
+
+    <h2 id="ablation">6. 消融实验与关键发现</h2>
+    <ul>
+      <li><strong>轨迹长度的作用</strong>：将平均轨迹从10K缩短至45K，性能显著提升，证实"扩展视野"的有效性</li>
+      <li><strong>域路由 vs. 单一教师</strong>：多教师域路由比单一通用教师提升约3-5个百分点</li>
+      <li><strong>Salient Vocabulary Alignment</strong>：在关键词汇上聚焦的蒸馏比全词蒸馏更高效</li>
+      <li><strong>MoE vs. Dense</strong>：相同激活参数规模下，MoE架构在多域任务上表现更优</li>
+    </ul>
+
+    <h2 id="limitation">7. 局限性</h2>
+    <ul>
+      <li>长轨迹数据构建成本高，基础设施复杂</li>
+      <li>45K token的推理轨迹在推理时延方面代价较大</li>
+      <li>6个领域的划分可能不够覆盖所有真实世界任务</li>
+      <li>结果依赖特定基准集，泛化到未见领域仍待验证</li>
+    </ul>
+
+    <h2 id="insight">8. 核心洞见与读后评注</h2>
+    <blockquote>
+      <strong>关键洞见</strong>：参数规模≠能力边界。在 Agent 范式下，模型的实际能力上界由其"有效视野长度"和"异构能力整合度"共同决定，而非纯粹参数量。
+    </blockquote>
+    <p>这篇论文最深刻的贡献在于对"Scaling Law"的重新解读：以往我们理解的scaling是指参数量，但Agents-A1表明还存在另一条scaling维度——<strong>Agent轨迹长度与域覆盖的协同扩展</strong>。</p>
+    <p>从工程角度，多教师域路由蒸馏是一个非常实用的框架：它允许在有限计算预算下，通过组合多个专家教师的知识来构建通才学生模型。这与集成学习的思想一脉相承，但在LLM训练范式下有独特的实现路径。</p>
+    <p>值得关注的是<strong>Salient Vocabulary Alignment</strong>这一细节设计——它揭示了蒸馏效率的核心：不是每个token都同等重要，关键决策节点（如工具调用、答案生成）的对齐才真正驱动能力迁移。这对未来的蒸馏方法设计具有重要启发。</p>
+    <p>未来方向：将此框架扩展到更多异构域，同时探索如何在更短的轨迹内实现同等效果（减少推理时延），以及结合强化学习进一步提升长轨迹规划能力。</p>
+
+    <h2 id="ref">参考文献</h2>
+    <ul>
+      <li>[1] InternScience Team. <em>Agents-A1: Scaling the Horizon, Not the Parameters</em>. arXiv:2606.30616, 2026.</li>
+      <li>[2] DeepSeek Team. <em>DeepSeek-V3 Technical Report</em>. 2025.</li>
+      <li>[3] Kimi Team. <em>Kimi-K2: Scaling Agentic Capabilities</em>. 2026.</li>
+      <li>[4] OpenAI. <em>Learning to Reason with LLMs (o1)</em>. 2024.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    // ECharts
+    const chart = echarts.init(document.getElementById('chart-benchmark'));
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'Agents-A1 各基准得分', textStyle: { color: '#89b4fa' } },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: ['SEAL-0','IFBench','HiPhO','FrontierSci','MolBench','SciCode','HLE','BrowseComp'], axisLabel: { color: '#cdd6f4', rotate: 20 } },
+      yAxis: { type: 'value', min: 30, max: 100, axisLabel: { color: '#cdd6f4' } },
+      series: [{ name: 'Agents-A1 (35B)', type: 'bar', data: [56.4,80.6,46.4,79.0,56.8,44.3,47.6,75.5], itemStyle: { color: '#89b4fa' }, label: { show: true, position: 'top', color: '#cdd6f4' } }]
+    });
+    // TOC
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

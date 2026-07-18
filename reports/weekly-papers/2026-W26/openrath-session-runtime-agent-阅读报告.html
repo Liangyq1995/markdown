@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenRath: Session-Centered Runtime State for Agent Systems 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin-bottom: 0.3em; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+    .tag { background: #2a2a3e; border: 1px solid var(--border); border-radius: 20px; padding: 3px 12px; font-size: 0.82em; color: var(--heading); }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 1em 0; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; }
+    .info-card .label { font-size: 0.78em; color: #6c7086; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .info-card .value { font-size: 1.05em; color: var(--strong); font-weight: 600; }
+    .highlight-box { background: #1a2a1a; border: 1px solid #2d5a2d; border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .highlight-box .box-title { color: var(--strong); font-weight: 700; margin-bottom: 8px; font-size: 0.95em; }
+    .warning-box { background: #2a1a0a; border: 1px solid #5a3a0a; border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .warning-box .box-title { color: #fab387; font-weight: 700; margin-bottom: 8px; font-size: 0.95em; }
+    .phase-badge { display: inline-block; background: #313244; border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.82em; color: var(--heading); margin: 2px; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>OpenRath: Session-Centered Runtime State for Agent Systems</h1>
+    <div class="tag-row">
+      <span class="tag">arXiv: 2606.19409</span>
+      <span class="tag">cs.SE / cs.PL</span>
+      <span class="tag">2026-06-17</span>
+      <span class="tag">Upvotes: 73</span>
+    </div>
+    <blockquote>
+      <strong>作者：</strong>Fukang Wen†, Zhijie Wang, Ruilin Xu†（清华大学，通讯作者：Fukang Wen &amp; Ruilin Xu）&nbsp;&nbsp;|&nbsp;&nbsp;
+      <strong>论文链接：</strong><a href="https://arxiv.org/abs/2606.19409" target="_blank">arXiv:2606.19409</a>
+    </blockquote>
+
+    <div class="info-grid" style="margin-top:1.2em;">
+      <div class="info-card"><div class="label">核心贡献</div><div class="value">Session 运行时抽象</div></div>
+      <div class="info-card"><div class="label">编程范式类比</div><div class="value">PyTorch 架构风格</div></div>
+      <div class="info-card"><div class="label">关键操作</div><div class="value">Fork / Merge / Replay</div></div>
+      <div class="info-card"><div class="label">评估方式</div><div class="value">受控运行时属性验证</div></div>
+    </div>
+
+    <!-- ===== 概述 ===== -->
+    <h2 id="overview">概述</h2>
+    <p>
+      现代 Agent 系统在构建多步骤、多角色协同任务时面临一个隐蔽但严重的问题：<strong>运行时状态高度碎片化</strong>。
+      对话记录、工具副作用、内存事件、沙箱放置信息、分支溯源和重放证据分散在不同的控制器日志、提供商追踪和外部系统中，
+      彼此之间缺乏统一的连接。一旦模型、提供商、工作空间或提示词发生变化，最终答案几乎无法被审计或复现。
+    </p>
+    <p>
+      OpenRath 提出了以 <strong>Session</strong> 为中心的运行时状态模型，将上述所有碎片化信息统一为一个可分支、可检视、可重放、后端感知且可组合的一等公民运行时值。
+      其编程模型的灵感来自 PyTorch 的架构风格——不是 PyTorch 的张量数学，而是"一个中心运行时值在可复用模块间流动"的接口设计哲学。
+    </p>
+    <p>
+      论文明确将其主张限定在受控运行时属性范围内，广泛的基准测试和实时提供商质量评估留待后续工作。
+      这是一篇以运行时架构设计为核心的系统论文，而非 benchmark-driven 的实证论文。
+    </p>
+
+    <!-- ===== 研究背景与动机 ===== -->
+    <h2 id="background">研究背景与动机</h2>
+    <p>
+      单 Agent 的消息循环（接收消息 → 调用模型 → 执行工具 → 追加观察）对于单一助手场景是有效的。
+      但当工作分布到多个角色、工具、内存存储、沙箱和恢复执行时，这个循环就成了一个<strong>弱状态边界</strong>。
+    </p>
+
+    <h3 id="fragmentation">碎片化运行时状态的具体表现</h3>
+    <p>消息列表保留了对话表面，但通常不暴露以下关键信息：</p>
+    <ul>
+      <li><strong>角色溯源（Role Provenance）：</strong>某条消息由哪个角色/Agent 产生</li>
+      <li><strong>废弃分支（Abandoned Branches）：</strong>探索过但被丢弃的执行路径</li>
+      <li><strong>工具放置（Tool Placement）：</strong>工具在哪个沙箱/后端执行</li>
+      <li><strong>工作空间副作用（Workspace Effects）：</strong>文件系统、代码执行的实际影响</li>
+      <li><strong>内存召回/提交事件（Memory Recall/Commit Events）：</strong>内存何时被读取或写入</li>
+      <li><strong>被压缩丢弃的证据（Evidence Discarded by Compression）：</strong>上下文压缩后消失的工具结果</li>
+    </ul>
+
+    <h3 id="pressure-points">多 Agent 场景的关键压力点</h3>
+    <div class="warning-box">
+      <div class="box-title">隐藏运行时状态问题（Hidden Runtime State Problem）</div>
+      <p>多 Agent 工作创建多条运行时路径（收集、编辑、验证、压缩），共享的转录文本对下游 Agent 引入噪声，
+      隐藏的控制器状态使分支溯源无法重建。OpenRath 将这一现象定义为"隐藏运行时状态问题"，
+      并将<strong>可分支性（branchability）</strong>视为运行时状态的属性，而非控制器侧的约定。</p>
+    </div>
+
+    <h3 id="pytorch-analogy">PyTorch 架构类比</h3>
+    <p>OpenRath 以 PyTorch 为类比对象，但类比的是<strong>架构接口</strong>而非张量数学：</p>
+    <table>
+      <thead><tr><th>PyTorch 概念</th><th>OpenRath 等价物</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>Tensor（张量）</td><td><code>Session</code></td><td>在模块间流动的核心运行时值</td></tr>
+        <tr><td><code>tensor.to(device)</code></td><td><code>session.to(backend)</code></td><td>显式的放置/后端绑定操作</td></tr>
+        <tr><td><code>nn.Linear</code>（层）</td><td><code>Agent</code></td><td>可复用的 Session→Session 变换</td></tr>
+        <tr><td><code>nn.Module</code>（模块）</td><td><code>Workflow</code></td><td>组合式容器</td></tr>
+        <tr><td>Parameters（参数）</td><td><code>Memory</code></td><td>跨运行的持久状态平面</td></tr>
+        <tr><td>控制流</td><td><code>Selector</code></td><td>运行时路由决策</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 核心设计 ===== -->
+    <h2 id="design">核心设计：Session 抽象</h2>
+    <p>
+      OpenRath 编程模型的核心规则是：<strong>所有运行时组件只能变换或标注 Session，不得自行发明私有的转录格式、放置信息、工具日志、内存格式或工作流状态。</strong>
+      这条规则确保了整个系统的可审计性——证据存在于程序已经传递的值中，而不是需要重建的旁路通道。
+    </p>
+
+    <h3 id="session-fields">Session 记录的字段</h3>
+    <p>Session 是一个携带以下信息的运行时值：</p>
+    <div class="highlight-box">
+      <div class="box-title">Session 包含的七类信息</div>
+      <ul>
+        <li><strong>Conversation Chunks（对话块）：</strong>有序的对话片段，包含角色、内容、工具调用和结果</li>
+        <li><strong>Sandbox Placement（沙箱放置）：</strong>后端意图和工作空间绑定，在执行前即被记录</li>
+        <li><strong>Lineage Metadata（谱系元数据）：</strong>父 Session、fork/detach/merge 操作记录、分支溯源</li>
+        <li><strong>Token Usage（Token 使用量）：</strong>累计的提示词和补全 Token 计数</li>
+        <li><strong>Pending Work（待处理工作）：</strong>尚未完成的工具调用或工作流步骤</li>
+        <li><strong>Tool Evidence（工具证据）：</strong>工具结果、错误、沙箱输出，作为结构化 chunk 追加</li>
+        <li><strong>Memory Boundary Records（内存边界记录）：</strong>召回和提交事件的可见运行时记录</li>
+      </ul>
+    </div>
+
+    <h3 id="object-vocab">对象词汇表（Object Vocabulary）</h3>
+    <p>围绕 Session，OpenRath 定义了六个配套抽象，每个都有严格的运行时边界：</p>
+    <table>
+      <thead><tr><th>对象</th><th>运行时边界</th><th>不拥有的内容</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Agent</strong></td>
+          <td>可复用的 <code>Session → Session</code> 变换，携带本地提示词、提供商、工具和内存策略</td>
+          <td>不拥有对话图——谱系属于 Session</td>
+        </tr>
+        <tr>
+          <td><strong>Tool</strong></td>
+          <td>模型可见的可调用对象：schema 验证、session 上下文、沙箱分发、返回证据</td>
+          <td>不拥有放置权——通过活跃沙箱执行</td>
+        </tr>
+        <tr>
+          <td><strong>Sandbox</strong></td>
+          <td>文件、命令、代码、外部工具执行的放置边界</td>
+          <td>不暴露私有执行状态给 Agent</td>
+        </tr>
+        <tr>
+          <td><strong>Memory</strong></td>
+          <td>跨运行的持久状态平面，召回/提交为可见运行时事件</td>
+          <td>不成为隐藏的提示词文本</td>
+        </tr>
+        <tr>
+          <td><strong>Workflow</strong></td>
+          <td>Agent、工具、分支、压缩、内存、子工作流的组合面</td>
+          <td>不创建独立的编排状态</td>
+        </tr>
+        <tr>
+          <td><strong>Selector</strong></td>
+          <td>读取 Session，路由到自描述工作流之一，空工作流表示结束</td>
+          <td>不硬编码下一 Agent 的路由逻辑</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="arch-diagram">Session 抽象关系图</h3>
+    <pre class="mermaid">graph TD
+    S["Session\n(核心运行时值)"]
+
+    S -->|"forward(session) → session"| A["Agent\n可复用变换层"]
+    S -->|"forward(session) → session"| W["Workflow\n组合式容器"]
+    A -->|"调用 / 分发"| T["Tool\n模型可见可调用对象"]
+    T -->|"执行副作用"| SB["Sandbox\n放置边界"]
+    A -->|"召回 / 提交"| M["Memory\n持久状态平面"]
+    W -->|"运行时路由"| SEL["Selector\n控制流路由器"]
+    SEL -->|"选择下一工作流"| W
+
+    S -->|"记录 chunk"| C1["Conversation Chunks"]
+    S -->|"记录"| C2["Sandbox Placement"]
+    S -->|"记录"| C3["Lineage Metadata"]
+    S -->|"记录"| C4["Token Usage"]
+    S -->|"记录"| C5["Pending Work"]
+    S -->|"记录"| C6["Tool Evidence"]
+    S -->|"记录"| C7["Memory Boundary Records"]
+
+    style S fill:#1a3a5c,stroke:#89b4fa,stroke-width:2px,color:#cdd6f4
+    style A fill:#1a2a1a,stroke:#a6e3a1,color:#cdd6f4
+    style W fill:#1a2a1a,stroke:#a6e3a1,color:#cdd6f4
+    style T fill:#2a2a1a,stroke:#f9e2af,color:#cdd6f4
+    style SB fill:#2a1a2a,stroke:#cba6f7,color:#cdd6f4
+    style M fill:#2a1a1a,stroke:#f38ba8,color:#cdd6f4
+    style SEL fill:#1a2a2a,stroke:#89dceb,color:#cdd6f4
+    style C1 fill:#313244,stroke:#45475a,color:#6c7086,font-size:12px
+    style C2 fill:#313244,stroke:#45475a,color:#6c7086,font-size:12px
+    style C3 fill:#313244,stroke:#45475a,color:#6c7086,font-size:12px
+    style C4 fill:#313244,stroke:#45475a,color:#6c7086,font-size:12px
+    style C5 fill:#313244,stroke:#45475a,color:#6c7086,font-size:12px
+    style C6 fill:#313244,stroke:#45475a,color:#6c7086,font-size:12px
+    style C7 fill:#313244,stroke:#45475a,color:#6c7086,font-size:12px
+</pre>
+
+    <h3 id="tool-boundary">Tool 边界细节</h3>
+    <p>
+      工具执行遵循分层路径：模型看到 <code>FlowToolCall</code> schema；Session 循环合并内置工具和用户工具；
+      将 schema 发送给提供商；按名称解析返回的工具调用；验证参数；以活跃 Session 调用选中工具；
+      工具通过 session 的沙箱分发后端负载（用于副作用）；所有结果（参数错误、未知工具、异常、成功）
+      都成为 <strong>tool-result chunk</strong> 追加到 Session，而不是被丢弃进控制器流。
+    </p>
+
+    <h3 id="selector-detail">Selector：控制流转运行时路由</h3>
+    <p>
+      Selector 是 OpenRath 偏离静态工作流图的关键设计。它读取当前 Session 状态，路由到多个自描述工作流之一。
+      路由决策本身成为 Session 记录的一部分，使得"下一步执行哪个 Agent"这一决策具备可审计性。
+      当 Selector 返回空工作流时，表示执行结束。
+    </p>
+
+    <!-- ===== 关键操作 ===== -->
+    <h2 id="operations">关键操作：Fork / Merge / Replay</h2>
+    <p>
+      Session 的可分支性、可合并性和可重放性是 OpenRath 区别于传统 Agent 框架的核心能力。
+      这三个操作都是显式的运行时操作，作用于程序已经传递的值，而非从外部日志重建的状态。
+    </p>
+
+    <h3 id="lifecycle">Session 生命周期阶段</h3>
+    <table>
+      <thead><tr><th>阶段</th><th>可审计的内容</th></tr></thead>
+      <tbody>
+        <tr><td><span class="phase-badge">Create</span></td><td>初始用户文本、Agent 提示词、角色、有序 chunk 状态</td></tr>
+        <tr><td><span class="phase-badge">Place</span></td><td>来自 <code>Session.to(...)</code> 的后端意图、工具执行的工作空间</td></tr>
+        <tr><td><span class="phase-badge">Transform</span></td><td>模型调用、工具请求、结果、错误、压缩器、工作流步骤、使用量</td></tr>
+        <tr><td><span class="phase-badge">Branch</span></td><td>父 Session、fork、detach、merge、分支溯源、merge 输入</td></tr>
+        <tr><td><span class="phase-badge">Persist</span></td><td>可重放的 chunk、谱系 JSONL 行、使用量、来源证据</td></tr>
+        <tr><td><span class="phase-badge">Release</span></td><td>沙箱句柄所有权、后端生命周期</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="branch-ops">分支操作语义</h3>
+    <ul>
+      <li><strong>Fork：</strong>复制状态同时保留父子关系，用于并行工作的独立探索</li>
+      <li><strong>Detach：</strong>从复制内容创建新的谱系根，切断与父 Session 的关联</li>
+      <li><strong>Merge：</strong>合并兼容的 Session，记录两个父节点；兼容性包括<strong>沙箱兼容性</strong>——两个 Session 必须共享活跃的沙箱句柄或指向同一未绑定后端，使放置成为运行时图的一部分</li>
+    </ul>
+
+    <h3 id="sequence-diagram">Fork / Merge / Replay 时序图</h3>
+    <pre class="mermaid">sequenceDiagram
+    participant U as User
+    participant W as Workflow
+    participant S0 as Session-Root
+    participant S1 as Session-Branch-A
+    participant S2 as Session-Branch-B
+    participant SM as Session-Merged
+    participant SB as Sandbox
+    participant P as Persistence
+
+    U->>W: 提交任务
+    W->>S0: create(user_text, role)
+    S0->>SB: session.to(backend)
+    Note over S0,SB: Place 阶段：记录后端意图
+
+    W->>S0: Agent-A.forward(session)
+    S0-->>W: 返回变换后 Session
+
+    W->>S1: S0.fork()
+    W->>S2: S0.fork()
+    Note over S1,S2: Branch 阶段：保留父子关系
+
+    par 并行执行
+      W->>S1: Agent-B.forward(S1)
+      S1->>SB: Tool 执行
+      SB-->>S1: tool-result chunk
+    and
+      W->>S2: Agent-C.forward(S2)
+      S2->>SB: Tool 执行
+      SB-->>S2: tool-result chunk
+    end
+
+    W->>SM: S1.merge(S2)
+    Note over SM: 记录两个父节点，沙箱兼容性验证
+
+    SM->>P: persist(lineage_jsonl)
+    Note over P: Persist 阶段：可重放 chunk + 谱系 JSONL
+
+    U->>P: replay(session_id)
+    P->>SM: 从 JSONL 重建 Session
+    Note over SM: Replay 阶段：显式后端边界重放
+</pre>
+
+    <h3 id="persistence">持久化与重放机制</h3>
+    <p>
+      运行中的 Session 可以向 Session JSONL 存储追加行。谱系导出将 Session 投影为包含以下字段的 JSONL 行：
+      标识符、父标识符、谱系操作符、谱系类型、chunk 计数、累计使用量。
+      格式被刻意设计为<strong>可用命令行工具检视</strong>，无需专用查看器。
+    </p>
+
+    <!-- ===== 运行时架构 ===== -->
+    <h2 id="runtime-arch">运行时架构</h2>
+    <p>
+      运行时架构回答一个核心问题：Session 在穿越 Agent、工具、沙箱、分支和存储工件时，如何保持可检视性？
+      OpenRath 使用一个小型生命周期，而非为每个阶段引入独立的运行时对象。
+    </p>
+
+    <h3 id="backend-boundary">后端边界表</h3>
+    <table>
+      <thead><tr><th>边界</th><th>所有者与角色</th></tr></thead>
+      <tbody>
+        <tr><td><strong>放置意图（Placement Intent）</strong></td><td>Session 在执行前存储后端名称和开启规格</td></tr>
+        <tr><td><strong>资源生命周期（Resource Lifetime）</strong></td><td>沙箱句柄跨分支共享/释放活跃执行资源</td></tr>
+        <tr><td><strong>能力声明（Capability Claim）</strong></td><td>后端类声明隔离级别和支持的工具负载</td></tr>
+        <tr><td><strong>具体执行（Concrete Execution）</strong></td><td>后端实例运行本地、OpenSandbox 或未来后端操作</td></tr>
+        <tr><td><strong>证据返回（Evidence Return）</strong></td><td>Session 循环将结果或错误追加到 session 流</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="multi-agent">多 Agent 多 Session 设计</h3>
+    <p>
+      多 Agent 设计被刻意保持"intentionally small"：Agent 是可复用层，Workflow 是可复用组合，移动的值是 Session。
+      这避免了在从单 Agent 扩展到多 Agent 时引入新的共享可变对象、隐藏消息总线或仅控制器可见的追踪。
+    </p>
+
+    <h3 id="composition-patterns">组合模式</h3>
+    <table>
+      <thead><tr><th>模式</th><th>组合方式</th><th>可检视内容</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>一 Agent，多 Session</strong></td>
+          <td>同一 Agent 参数应用于新建/fork/恢复/沙箱绑定的 Session</td>
+          <td>提示词层稳定；对话、放置、谱系、使用量在 Session 上</td>
+        </tr>
+        <tr>
+          <td><strong>多 Agent，一状态</strong></td>
+          <td>专业 Agent 各自消费并返回 Session；工作流将返回值向前传递</td>
+          <td>规划、工具使用、压缩、QA、综合后的中间状态可检视</td>
+        </tr>
+        <tr>
+          <td><strong>嵌套工作流</strong></td>
+          <td>子工作流在 <code>forward(session)</code> 背后隐藏内部 Agent 结构</td>
+          <td>父节点看到一个返回的 Session，而非私有编排格式</td>
+        </tr>
+        <tr>
+          <td><strong>控制面</strong></td>
+          <td>chunk、工具结果、谱系字段、使用计数器、持久化文件、回调绑定到 Session</td>
+          <td>失败、预算超限、分支溯源、中断运行成为可审查工件</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 实验结果 ===== -->
+    <h2 id="evaluation">实验结果与评估协议</h2>
+    <p>
+      OpenRath 采用<strong>审计优先（Audit-First）</strong>的评估哲学：将证据范围限定在运行时主张，而非排行榜主张。
+      评估围绕三个问题展开：运行时主张是否有可重建的证据包支撑？每个证据包是否声明了自身边界？每个可见主张是否在主张账本中有映射？
+    </p>
+
+    <h3 id="claim-ledger">主张账本（Claim Ledger）</h3>
+    <p>论文共追踪 10 条主张，分类如下：</p>
+    <div id="chart-claims" class="echarts-container" style="height:300px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-claims'), null, {renderer: 'canvas'}).setOption({
+        backgroundColor: '#2a2a3e',
+        tooltip: { trigger: 'item', formatter: '{b}: {c} 条 ({d}%)' },
+        legend: {
+          orient: 'vertical', right: '5%', top: 'center',
+          textStyle: { color: '#cdd6f4' }
+        },
+        series: [{
+          name: '主张分类',
+          type: 'pie',
+          radius: ['40%', '70%'],
+          center: ['40%', '50%'],
+          data: [
+            { value: 5, name: '有操作证据包支撑', itemStyle: { color: '#a6e3a1' } },
+            { value: 1, name: '部分支撑', itemStyle: { color: '#f9e2af' } },
+            { value: 1, name: '仅先决条件支撑', itemStyle: { color: '#fab387' } },
+            { value: 1, name: '文献定位主张', itemStyle: { color: '#89b4fa' } },
+            { value: 1, name: '布局烟雾测试', itemStyle: { color: '#89dceb' } },
+            { value: 1, name: '证据门控主张', itemStyle: { color: '#f38ba8' } }
+          ],
+          label: { color: '#cdd6f4', fontSize: 12 },
+          emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } }
+        }]
+      });
+    </script>
+
+    <h3 id="evidence-table">证据包表（Release Evidence Table）</h3>
+    <table>
+      <thead><tr><th>运行时主张</th><th>当前证据包</th><th>范围边界</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Session 谱系可检视</td>
+          <td><code>lineage_export</code>：通过，确定性</td>
+          <td>证明导出的分支元数据，不证明分支质量</td>
+        </tr>
+        <tr>
+          <td>工具放置可审计</td>
+          <td><code>local_sandbox</code>：通过；<code>opensandbox_optional</code>：跳过</td>
+          <td>证明本地放置证据，不证明 OpenSandbox 对等性</td>
+        </tr>
+        <tr>
+          <td>工作流组合 Session 状态</td>
+          <td><code>workflow_transcript</code>：通过，确定性</td>
+          <td>证明组合形状，不证明实时 Agent 质量</td>
+        </tr>
+        <tr>
+          <td>实现契约成立</td>
+          <td><code>pytest_report</code>：通过</td>
+          <td>不覆盖每个实时集成</td>
+        </tr>
+        <tr>
+          <td>提供商先决条件安全披露</td>
+          <td><code>live_provider_manifest</code>：通过，已编辑</td>
+          <td>不执行实时推理</td>
+        </tr>
+        <tr>
+          <td>内存是 Session 可见平面</td>
+          <td><code>memory_local</code>：<strong>跳过</strong></td>
+          <td>证据门控，待源锚点存在后再评估</td>
+        </tr>
+        <tr>
+          <td>主张范围显式追踪</td>
+          <td><code>claim_ledger</code>：通过，10 条主张</td>
+          <td>1 条证据门控主张仍待解决</td>
+        </tr>
+        <tr>
+          <td>报告布局可审查</td>
+          <td><code>visual_qa</code> 和 <code>layout_audit</code>：通过</td>
+          <td>视觉烟雾测试，非最终人工设计审批</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 id="impl-milestones">实现里程碑</h3>
+    <table>
+      <thead><tr><th>实现面</th><th>状态</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Session 核心</strong></td><td>已实现：有序 chunk、fork/detach/merge、使用量统计、JSONL 谱系导出；有聚焦测试覆盖</td></tr>
+        <tr><td><strong>后端放置</strong></td><td>本地执行已实现并验证；OpenSandbox 作为可选后端，在此环境中未配置</td></tr>
+        <tr><td><strong>工具层</strong></td><td>已实现：模型可见 schema 与后端分发副作用返回 Session；含自定义工具和 MCP 示例</td></tr>
+        <tr><td><strong>Agent 和 Workflow</strong></td><td>已实现统一 <code>Session → Session</code> 契约上的组合面；含脚本化多阶段工作流</td></tr>
+        <tr><td><strong>提供商层</strong></td><td>实时推理先决条件已就位；模型质量和提供商运行不在范围内</td></tr>
+        <tr><td><strong>Memory 平面</strong></td><td><strong>预期中的运行时平面，尚未有本地模块、示例和测试支撑</strong></td></tr>
+        <tr><td><strong>示例集</strong></td><td>覆盖谱系、后端、工具、流式传输、使用量、多 Agent 工作流的完整示例集</td></tr>
+      </tbody>
+    </table>
+
+    <h3 id="followon-metrics">后续评估的基线与指标设计</h3>
+    <p>论文为后续基准测试提供了系统性的基线分类建议：</p>
+    <ul>
+      <li>单 Agent 循环基线</li>
+      <li>多 Agent 共享转录基线</li>
+      <li>工作流/DAG 运行器基线</li>
+      <li>Notebook 或脚本基线</li>
+      <li>沙箱工具 Agent 基线</li>
+      <li>内存/RAG 基线</li>
+    </ul>
+    <p>指标应追踪：运行时正确性、溯源覆盖率、可重放性、后端可移植性、效率、任务质量、控制/安全事件。</p>
+
+    <!-- ===== 局限性 ===== -->
+    <h2 id="limitations">局限性与范围边界</h2>
+    <p>
+      OpenRath 在论文中对自身局限性保持高度透明，明确列出了每项能力的当前状态和需要满足什么条件才能提出更强主张。
+      这种"主张账本"方法本身也是论文设计哲学的体现。
+    </p>
+
+    <table>
+      <thead><tr><th>边界</th><th>当前状态</th><th>提出更强主张的前提</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>基准测试</strong></td>
+          <td>仅有确定性烟雾运行器和证据包</td>
+          <td>固定工作负载、基线适配器、指标、实时提供商运行、评审员评分工件</td>
+        </tr>
+        <tr>
+          <td><strong>后端对等性</strong></td>
+          <td>本地后端通过；OpenSandbox 显式跳过</td>
+          <td>后端能力矩阵、配置的 OpenSandbox 包、记录的挂载/导出/失败行为</td>
+        </tr>
+        <tr>
+          <td><strong>内存</strong></td>
+          <td>预期运行时平面；<code>memory_local</code> 证据门控</td>
+          <td>恢复本地内存 API、示例、测试；然后单独评估召回/提交质量</td>
+        </tr>
+        <tr>
+          <td><strong>多 Agent 控制</strong></td>
+          <td>Session 暴露分支/合并/工具/谱系证据；无策略层</td>
+          <td>角色权限、工具权威、内存提交门、合并策略、人工审查要求</td>
+        </tr>
+        <tr>
+          <td><strong>安全性</strong></td>
+          <td>未声明安全属性；工具使用+交互式环境扩大攻击面，<strong>包括间接提示注入</strong></td>
+          <td>针对 Agent/Web/具身安全基准的评估；工具权威限制；人工审查门</td>
+        </tr>
+        <tr>
+          <td><strong>可复现性</strong></td>
+          <td>证据包支持无密钥的确定性主张重放；实时输出依赖提供商/环境</td>
+          <td>固定源代码快照、提供商清单、沙箱镜像、缓存的外部负载</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="warning-box">
+      <div class="box-title">安全注意：间接提示注入风险</div>
+      <p>论文明确指出，使用工具的 Agent 在交互式环境中存在<strong>间接提示注入（Indirect Prompt Injection）</strong>风险。
+      这是工具使用型 Agent 的已知攻击向量，需要在工具权威限制和人工审查门方面进行专门评估。</p>
+    </div>
+
+    <!-- ===== 总结与启发 ===== -->
+    <h2 id="conclusion">总结与启发</h2>
+    <p>
+      OpenRath 的核心论点是：多 Agent 系统不仅仅是提示词图、工具注册表、追踪流或基准测试框架——
+      它是一个运行时，其中对话 chunk、分支谱系、沙箱放置、工具副作用、内存交互、使用量、工件和重放证据必须保持连接。
+    </p>
+
+    <h3 id="key-insights">核心洞见</h3>
+    <div class="highlight-box">
+      <div class="box-title">Session 作为边界的设计原则</div>
+      <p>每个主要组件要么变换 Session，要么标注 Session，要么通过其放置分发工作，要么发出运行后可检视的证据。
+      因为证据存在于程序已经传递的值中（而非重建的旁路通道），它在审查者需要时精确可用。</p>
+    </div>
+
+    <h3 id="governing-standard">未来扩展的治理标准</h3>
+    <p>论文提出了新能力进入系统的治理标准：</p>
+    <blockquote>
+      新能力只有在满足以下条件之一时才能进入系统：变换 Session、向 Session 附加证据、或通过 Session 暴露后端副作用。
+      这防止了隐藏旁路通道的积累。
+    </blockquote>
+
+    <h3 id="closing-thesis">结语论点</h3>
+    <blockquote>
+      "如果过去十年的深度学习使张量成为网络围绕其构建的值，那么下一代 Agent 系统需要同样的转变：
+      一个所有组件读取、变换和解释的单一运行时值。OpenRath 提出这个值就是 Session。"
+    </blockquote>
+
+    <h3 id="implications">对工程实践的启发</h3>
+    <ul>
+      <li><strong>状态统一优先于功能堆叠：</strong>在设计 Agent 框架时，首先明确"运行时值是什么"比堆叠功能更重要</li>
+      <li><strong>可审计性是一等公民：</strong>工具证据、分支溯源、内存事件应作为结构化数据附加到运行时值，而非散落在日志中</li>
+      <li><strong>主张账本是诚实的工程实践：</strong>明确区分"已证明"、"部分证明"和"待证明"的能力，是系统设计成熟度的体现</li>
+      <li><strong>PyTorch 类比的迁移价值：</strong>"一个中心运行时值在可复用模块间流动"的模式可能是 Agent 系统工程化的关键缺失环节</li>
+      <li><strong>安全需要显式设计：</strong>间接提示注入等风险不能靠运行时架构自动解决，需要专门的工具权威控制和人工审查门</li>
+    </ul>
+
+    <h3 id="comparison">与现有方法的对比</h3>
+    <div id="chart-compare" class="echarts-container" style="height:380px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-compare'), null, {renderer: 'canvas'}).setOption({
+        backgroundColor: '#2a2a3e',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: {
+          data: ['传统循环 Agent', '图/DAG 编排器', 'OpenRath Session'],
+          textStyle: { color: '#cdd6f4' }
+        },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: {
+          type: 'value', max: 5,
+          axisLabel: { color: '#6c7086' },
+          splitLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'category',
+          data: ['分支溯源', '工具证据记录', '沙箱放置可审计', '跨运行重放', '多 Agent 状态统一', '内存边界可见'],
+          axisLabel: { color: '#cdd6f4' }
+        },
+        series: [
+          {
+            name: '传统循环 Agent', type: 'bar',
+            data: [1, 2, 1, 1, 1, 1],
+            itemStyle: { color: '#f38ba8' }
+          },
+          {
+            name: '图/DAG 编排器', type: 'bar',
+            data: [3, 2, 2, 2, 3, 2],
+            itemStyle: { color: '#f9e2af' }
+          },
+          {
+            name: 'OpenRath Session', type: 'bar',
+            data: [5, 5, 5, 5, 5, 4],
+            itemStyle: { color: '#a6e3a1' }
+          }
+        ]
+      });
+    </script>
+    <p style="color:#6c7086;font-size:0.85em;margin-top:0.4em;">注：评分为定性估计（1-5），基于论文描述，内存平面（4分）因尚未完全实现而略低。</p>
+
+    <!-- ===== 参考文献 ===== -->
+    <h2 id="references">参考文献</h2>
+    <ul>
+      <li>Fukang Wen, Zhijie Wang, Ruilin Xu. <em>OpenRath: Session-Centered Runtime State for Agent Systems.</em> arXiv:2606.19409 [cs.SE], 2026. <a href="https://arxiv.org/abs/2606.19409" target="_blank">https://arxiv.org/abs/2606.19409</a></li>
+      <li>Paszke, A., et al. <em>PyTorch: An Imperative Style, High-Performance Deep Learning Library.</em> NeurIPS 2019. [PyTorch 架构类比来源]</li>
+      <li>OpenAI. <em>Model Context Protocol (MCP).</em> [工具协议参考，论文中提及 MCP 集成]</li>
+    </ul>
+
+    <hr>
+    <p style="color:#6c7086;font-size:0.82em;text-align:center;">
+      本报告生成于 2026-06-26 | 基于 arXiv:2606.19409v1 | 仅供学术交流使用
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qwen3-ASR &amp; Qwen3-TTS 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+#toc .toc-sep{font-size:10px;color:#45475a;text-transform:uppercase;letter-spacing:.1em;padding:8px 8px 4px;margin-top:8px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+/* 分隔横幅 */
+.part-banner{background:linear-gradient(135deg,#1e1e2e,#2a2a3e);border:1px solid var(--border);border-left:5px solid var(--heading);border-radius:8px;padding:18px 24px;margin:2.5em 0 1.5em;display:flex;align-items:center;gap:16px;}
+.part-banner .part-num{font-size:2.5em;font-weight:900;color:var(--heading);opacity:.4;line-height:1;}
+.part-banner .part-info h3{color:var(--heading);font-size:1.2em;margin:0 0 4px;}
+.part-banner .part-info p{color:#6c7086;font-size:.88em;margin:0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Qwen3-ASR &amp; Qwen3-TTS 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Qwen Team · 阿里云 · ASR: 2026-01-29 &nbsp;|&nbsp; TTS: 2026-01-22</p>
+
+<table>
+  <tr><th style="width:100px">ASR 代码</th><td>github.com/QwenLM/Qwen3-ASR &nbsp;·&nbsp; HuggingFace: Qwen/qwen3-asr</td></tr>
+  <tr><th>TTS 代码</th><td>github.com/QwenLM/Qwen3-TTS &nbsp;·&nbsp; HuggingFace: Qwen/qwen3-tts</td></tr>
+  <tr><th>许可证</th><td>Apache 2.0（模型权重 + 推理/微调代码全部开源）</td></tr>
+</table>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--                   PART 1  ASR                        -->
+<!-- ══════════════════════════════════════════════════════ -->
+
+<div class="part-banner">
+  <div class="part-num">Ⅰ</div>
+  <div class="part-info">
+    <h3>Qwen3-ASR Technical Report</h3>
+    <p>全能语音识别模型：52 语言 ASR + 语言识别 + 强制对齐 · 1.7B/0.6B + ForcedAligner-0.6B</p>
+  </div>
+</div>
+
+<!-- ─── A1. 概述 ─── -->
+<h2 id="a1">A1. 概述与核心贡献</h2>
+
+<p>Qwen3-ASR 家族包含三个模型，全部基于 Qwen3-Omni 为基础模型后训练：</p>
+
+<table>
+  <tr><th>模型</th><th>参数</th><th>核心能力</th><th>推理模式</th><th>最大时长</th></tr>
+  <tr><td><strong>Qwen3-ASR-1.7B</strong></td><td>1.7B LM + 300M AuT</td><td>52 语言/方言 ASR + LID，最强开源 ASR</td><td>流式 / 离线</td><td>1200s</td></tr>
+  <tr><td><strong>Qwen3-ASR-0.6B</strong></td><td>0.6B LM + 180M AuT</td><td>同上，最佳精度-效率比，适合端侧部署</td><td>流式 / 离线</td><td>1200s</td></tr>
+  <tr><td><strong>Qwen3-ForcedAligner-0.6B</strong></td><td>0.6B LM + 180M AuT</td><td>11 语言强制时间戳对齐，首个基于 LALM 的对齐器</td><td>NAR（非自回归）</td><td>300s</td></tr>
+</table>
+
+<!-- ─── A2. 架构 ─── -->
+<h2 id="a2">A2. 模型架构</h2>
+
+<h3>A2.1 AuT 音频编码器</h3>
+
+<pre class="mermaid">
+flowchart LR
+    AUDIO["输入音频\n原始波形"] --> FBANK["FBank 特征\n128维, 100Hz"]
+    FBANK --> CONV["Conv2d 8倍下采样\n→ 12.5Hz token 率"]
+    CONV --> ENC["AuT Encoder\n自注意力层 x32\n动态窗口 1s-8s"]
+    ENC --> PROJ["投影层\nProjector"]
+    PROJ --> LM["Qwen3 LLM\n0.6B 或 1.7B"]
+    LM --> OUT["文本输出\nlanguage X + ASR text"]
+</pre>
+
+<p>AuT 是基于 AED（Attention-Encoder-Decoder）框架的 ASR 模型，独立预训练后与 Qwen3 LLM 拼接。动态 Flash Attention 窗口（1s-8s）同时支持流式短片段和离线长语音推理。</p>
+
+<h3>A2.2 ForcedAligner 架构（时间戳槽填充）</h3>
+
+<pre class="mermaid">
+flowchart TD
+    SPEECH["语音输入"] --> AUT["AuT Encoder\n帧级语音嵌入\n80ms 帧率"]
+    TRANSCRIPT["文本 + [time] 槽位\n每词/字前后插入特殊token"] --> TOK["Qwen3 Tokenizer"]
+    AUT --> LM2["Qwen3-0.6B LLM\n联合处理语音+文本"]
+    TOK --> LM2
+    LM2 --> HEAD["时间戳预测线性层\n分类数 3750 = 300s/80ms"]
+    HEAD --> IDX["输出时间戳索引 n_i\n× 80ms = 实际时间"]
+</pre>
+
+<div class="tech-card blue">
+<strong>非自回归推理的关键</strong>：传统 LALM 训练时序列有一位偏移（next-token prediction），ForcedAligner 采用<strong>因果训练（causal training）</strong>——输出序列与标签序列不偏移，使模型能直接识别 [time] 槽位并非自回归地填充所有时间戳索引。损失只在 [time] 槽位计算，聚焦于时间戳预测任务。
+</div>
+
+<p>时间戳准确度指标 AAS（Accumulated Average Shift）：</p>
+
+<div class="math-block">
+$$\mathrm{AAS} = \frac{1}{N}\sum_{i=1}^{N} |\hat{n}_i - n_i|$$
+</div>
+
+<p>其中 $\hat{n}_i$ 为预测时间戳，$n_i$ 为参考时间戳（MFA 或人工标注），单位为帧（80ms/帧）。</p>
+
+<!-- ─── A3. 训练策略 ─── -->
+<h2 id="a3">A3. 四阶段训练策略</h2>
+
+<pre class="mermaid">
+flowchart LR
+    S1["阶段1：AuT 预训练\n~4000万小时伪标注数据\n主要为中英文\n获得稳定的动态窗口音频表示"]
+    S2["阶段2：Omni 预训练\n基于 Qwen3-Omni 基础模型\n3万亿 token 多模态数据\n音频+视觉+文本联合训练"]
+    S3["阶段3：ASR SFT\n多语言 ASR 数据微调\n非语音/流式/上下文偏置数据\n固化 ASR 专用输出格式"]
+    S4["阶段4：ASR RL\nGSPO 算法\n~50K 语音片段\n提升噪声鲁棒性和转录稳定性"]
+    S1 --> S2 --> S3 --> S4
+</pre>
+
+<table>
+  <tr><th>RL 训练数据构成（~50K 语句）</th><th>比例</th><th>目的</th></tr>
+  <tr><td>中英文数据</td><td>35%</td><td>核心语言质量巩固</td></tr>
+  <tr><td>多语言数据</td><td>35%</td><td>多语言鲁棒性</td></tr>
+  <tr><td>功能性数据</td><td>30%</td><td>复杂环境转录稳定性（噪声/唱歌/口吃等）</td></tr>
+</table>
+
+<!-- ─── A4. 特色能力 ─── -->
+<h2 id="a4">A4. 特色能力</h2>
+
+<table>
+  <tr><th>能力</th><th>覆盖范围</th><th>特点</th></tr>
+  <tr><td>多语言 ASR</td><td>30 种语言</td><td>含阿拉伯、印尼、越南、波斯、马其顿等小语种</td></tr>
+  <tr><td>中国方言</td><td>22 种方言</td><td>粤语、四川、闽南、东北、安徽、云南等</td></tr>
+  <tr><td>唱歌识别</td><td>含 BGM 的完整歌曲</td><td>首个支持含伴奏音乐直接转写的开源模型</td></tr>
+  <tr><td>长语音</td><td>单次最长 20 分钟</td><td>流式/离线统一，无需分段</td></tr>
+  <tr><td>上下文偏置</td><td>系统提示词中注入实体</td><td>支持专有名词/品牌名定制化识别</td></tr>
+</table>
+
+<!-- ─── A5. 推理效率 ─── -->
+<h2 id="a5">A5. 推理效率</h2>
+
+<div id="chart-asr-eff" class="echarts-box" style="height:320px"></div>
+
+<table>
+  <tr><th>场景</th><th>Qwen3-ASR-0.6B</th><th>Qwen3-ASR-1.7B</th></tr>
+  <tr><td>TTFT (并发1)</td><td><strong>92ms</strong></td><td>102ms</td></tr>
+  <tr><td>RTF (并发128)</td><td><strong>0.00064</strong>（1s 处理 1562s 音频）</td><td>~0.001</td></tr>
+  <tr><td>吞吐量 (并发128)</td><td><strong>2000s音频/s</strong></td><td>~1000s音频/s</td></tr>
+  <tr><td>推理框架</td><td colspan="2">vLLM v0.14.0，CUDA Graph，bfloat16</td></tr>
+</table>
+
+<!-- ─── A6. 实验结果 ─── -->
+<h2 id="a6">A6. 实验结果</h2>
+
+<h3>A6.1 英语 / 中文基准</h3>
+
+<table>
+  <tr><th>基准</th><th>GPT-4o-Transcribe</th><th>Gemini-2.5-Pro</th><th>Whisper-v3</th><th>Qwen3-ASR-0.6B</th><th>Qwen3-ASR-1.7B</th></tr>
+  <tr><td>LibriSpeech clean|other (WER)</td><td>1.39|3.75</td><td>2.89|3.56</td><td>1.51|3.97</td><td>2.11|4.55</td><td><strong>1.63|3.38</strong></td></tr>
+  <tr><td>GigaSpeech (WER)</td><td>25.50</td><td>9.37</td><td>9.76</td><td>8.88</td><td><strong>8.45</strong></td></tr>
+  <tr><td>WenetSpeech net|meeting (CER)</td><td>15.30|32.27</td><td>14.43|13.47</td><td>9.86|19.11</td><td>5.97|6.88</td><td><strong>4.97|5.88</strong></td></tr>
+  <tr><td>AISHELL-2 (CER)</td><td>4.24</td><td>26.87</td><td>24.71</td><td>5.27</td><td><strong>5.06</strong></td></tr>
+  <tr><td>Fleurs-yue (CER)</td><td>9.18</td><td>3.44</td><td>9.43</td><td>3.98</td><td><strong>2.88</strong></td></tr>
+</table>
+
+<h3>A6.2 内部鲁棒性测试（关键场景）</h3>
+
+<table>
+  <tr><th>测试集</th><th>GPT-4o</th><th>Gemini-2.5-Pro</th><th>Doubao-ASR</th><th>Whisper-v3</th><th>Qwen3-ASR-0.6B</th><th>Qwen3-ASR-1.7B</th></tr>
+  <tr><td>带口音英语</td><td>28.56</td><td>23.85</td><td>20.41</td><td>21.30</td><td>16.62</td><td><strong>16.07</strong></td></tr>
+</table>
+
+<h3>A6.3 ForcedAligner 时间戳精度（AAS↓）</h3>
+
+<p>相比 MFA（Montreal Forced Aligner）、NFA（NeMo）等主流对齐工具：</p>
+<ul>
+  <li>Qwen3-ForcedAligner-0.6B 在人工标注测试集上 AAS 相对降低 <strong>67%~77%</strong></li>
+  <li>支持 11 语言，单一模型覆盖跨语言对齐场景</li>
+  <li>NAR 推理：并发 128 时 RTF 仍接近 0.001（1s 处理 1000s 音频）</li>
+</ul>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--                   PART 2  TTS                        -->
+<!-- ══════════════════════════════════════════════════════ -->
+
+<div class="part-banner">
+  <div class="part-num">Ⅱ</div>
+  <div class="part-info">
+    <h3>Qwen3-TTS Technical Report</h3>
+    <p>多语言可控流式 TTS · 双 Tokenizer 架构 · 3s 声音克隆 · 97ms 首包延迟</p>
+  </div>
+</div>
+
+<!-- ─── B1. 概述 ─── -->
+<h2 id="b1">B1. 概述与模型家族</h2>
+
+<p>Qwen3-TTS 共发布 10 个模型变体，覆盖两种 Tokenizer（12Hz/25Hz）× 两种模型大小（0.6B/1.7B）× 三种能力版本（Base/VoiceDesign/CustomVoice）：</p>
+
+<table>
+  <tr><th>模型</th><th>流式</th><th>多语言</th><th>声音克隆</th><th>指令控制</th><th>首包延迟</th></tr>
+  <tr><td>Qwen3-TTS-12Hz-1.7B-Base</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>101ms</td></tr>
+  <tr><td>Qwen3-TTS-12Hz-1.7B-VoiceDesign</td><td>✓</td><td>✓</td><td>✓</td><td>✓（语音创作）</td><td>—</td></tr>
+  <tr><td>Qwen3-TTS-12Hz-1.7B-CustomVoice</td><td>✓</td><td>✓</td><td>✓</td><td>✓（风格控制）</td><td>—</td></tr>
+  <tr><td>Qwen3-TTS-12Hz-0.6B-Base</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td><strong>97ms</strong></td></tr>
+  <tr><td>Qwen3-TTS-25Hz-1.7B-VoiceEditing</td><td>✓</td><td>✓</td><td>✓</td><td>✓（语音编辑）</td><td>—</td></tr>
+</table>
+
+<!-- ─── B2. 双 Tokenizer ─── -->
+<h2 id="b2">B2. 双 Tokenizer 架构</h2>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph T25["Qwen-TTS-Tokenizer-25Hz"]
+        A1["基于 Qwen2-Audio 编码器\n两阶段训练：ASR预训练 + 梅尔谱重建微调"]
+        A2["单码本 VQ 量化\n25Hz, 码本大小 32768\n语义+声学联合表示"]
+        A3["流式解码器：块式 DiT\nFlow Matching + BigVGAN\n首包含约 190ms 音频"]
+    end
+    subgraph T12["Qwen-TTS-Tokenizer-12Hz"]
+        B1["GAN框架，WavLM作语义教师\n语义流 + 声学流解耦量化"]
+        B2["16层 RVQ\n12.5Hz, 码本大小 2048\n第一层语义，后15层声学细节"]
+        B3["因果 ConvNet 解码器\n无需前看，真正流式\n一包 = 4 tokens = 320ms 音频"]
+    end
+    T25 -->|"更高表达力\n适合精细控制"| CHOICE["架构选择"]
+    T12 -->|"更低延迟\n更好稳定性"| CHOICE
+</pre>
+
+<h3>B2.1 Tokenizer 关键指标对比</h3>
+
+<table>
+  <tr><th>Tokenizer</th><th>NQ</th><th>码本大小</th><th>FPS</th><th>PESQ_WB↑</th><th>STOI↑</th><th>UTMOS↑</th><th>SIM↑</th></tr>
+  <tr><td>Mimi (Défossez 2024)</td><td>16</td><td>2048</td><td>12.5</td><td>2.88</td><td>0.94</td><td>3.87</td><td>0.87</td></tr>
+  <tr><td>FireredTTS 2 Tokenizer</td><td>16</td><td>2048</td><td>12.5</td><td>2.73</td><td>0.94</td><td>3.88</td><td>0.87</td></tr>
+  <tr><td style="color:var(--strong)"><strong>Qwen-TTS-Tokenizer-12Hz</strong></td><td>16</td><td>2048</td><td>12.5</td><td><strong>3.21</strong></td><td><strong>0.96</strong></td><td><strong>4.16</strong></td><td><strong>0.95</strong></td></tr>
+</table>
+
+<!-- ─── B3. 方法 ─── -->
+<h2 id="b3">B3. 模型架构与训练</h2>
+
+<h3>B3.1 双轨自回归架构</h3>
+
+<pre class="mermaid">
+flowchart LR
+    TXT["文本 token\n标准 Qwen tokenizer"] --> BACKBONE["Qwen3 LM 骨干网络\n0.6B 或 1.7B"]
+    SPK["说话人编码\n可学习 Speaker Encoder\n3s参考音频 or 文本指令"] --> BACKBONE
+    BACKBONE -->|"25Hz 变体"| HEAD1["线性预测头\n输出单码本 token"]
+    BACKBONE -->|"12Hz 变体"| HEAD2["预测第0层码本\n+ MTP 模块预测\n剩余15层 RVQ"]
+    HEAD1 --> C2W1["块式 DiT + BigVGAN\n流式波形重建"]
+    HEAD2 --> C2W2["因果 ConvNet\n即时流式解码"]
+</pre>
+
+<div class="tech-card blue">
+<strong>MTP（Multi-Token Prediction）模块的作用</strong>：12Hz 变体需要预测 16 层 RVQ 的所有码本，直接自回归建模开销大且误差积累严重。MTP 模块让骨干网络预测第0层（语义主导），再用轻量分支一次性生成剩余15层声学细节，在单帧内完成，大幅降低延迟。
+</div>
+
+<h3>B3.2 六阶段训练流程</h3>
+
+<table>
+  <tr><th>阶段</th><th>类型</th><th>内容</th><th>目标</th></tr>
+  <tr><td>S1 General</td><td>预训练</td><td>500万小时多语言语音</td><td>建立文本→语音单调映射</td></tr>
+  <tr><td>S2 High-Quality</td><td>CPT</td><td>高质量数据筛选后继续训练</td><td>减少幻觉，提升语音质量</td></tr>
+  <tr><td>S3 Long-Context</td><td>CPT</td><td>最大长度 8192→32768，上采样长语音</td><td>支持10分钟以上流畅生成</td></tr>
+  <tr><td>P1 DPO</td><td>后训练</td><td>多语言偏好对构建 + DPO 对齐</td><td>与人类偏好对齐</td></tr>
+  <tr><td>P2 GSPO RL</td><td>后训练</td><td>规则奖励 + GSPO 强化学习</td><td>全面提升能力与跨任务稳定性</td></tr>
+  <tr><td>P3 Speaker FT</td><td>后训练</td><td>特定说话人轻量微调</td><td>高保真声音定制</td></tr>
+</table>
+
+<!-- ─── B4. 效率 ─── -->
+<h2 id="b4">B4. 流式推理效率</h2>
+
+<div id="chart-tts-latency" class="echarts-box" style="height:300px"></div>
+
+<table>
+  <tr><th>模型</th><th>并发1 首包延迟</th><th>并发3 首包延迟</th><th>RTF (并发1)</th></tr>
+  <tr><td>Qwen3-TTS-25Hz-1.7B</td><td>150ms</td><td>284ms</td><td>0.253</td></tr>
+  <tr><td>Qwen3-TTS-25Hz-0.6B</td><td>138ms</td><td>260ms</td><td>0.234</td></tr>
+  <tr><td>Qwen3-TTS-12Hz-1.7B</td><td>101ms</td><td>195ms</td><td>0.313</td></tr>
+  <tr><td style="color:var(--strong)"><strong>Qwen3-TTS-12Hz-0.6B</strong></td><td style="color:var(--strong)"><strong>97ms</strong></td><td style="color:var(--strong)"><strong>179ms</strong></td><td>0.288</td></tr>
+</table>
+
+<p>12Hz Tokenizer 之所以延迟更低：无需等待 DiT 的前看 context（25Hz 首包需先缓冲 16 tokens = 640ms 内容），纯因果 ConvNet 解码器可在第一个 token 生成后立即合成波形。</p>
+
+<!-- ─── B5. 实验结果 ─── -->
+<h2 id="b5">B5. 实验结果</h2>
+
+<h3>B5.1 零样本语音克隆（Seed-TTS 基准，WER↓）</h3>
+
+<div id="chart-tts-wer" class="echarts-box" style="height:300px"></div>
+
+<table>
+  <tr><th>模型</th><th>test-zh (CER)</th><th>test-en (WER)</th></tr>
+  <tr><td>Seed-TTS</td><td>1.12</td><td>2.25</td></tr>
+  <tr><td>CosyVoice 3</td><td>0.71</td><td>1.45</td></tr>
+  <tr><td>MiniMax-Speech</td><td>0.83</td><td>1.65</td></tr>
+  <tr><td>Qwen3-TTS-25Hz-1.7B-Base</td><td>1.10</td><td>1.49</td></tr>
+  <tr><td>Qwen3-TTS-12Hz-0.6B-Base</td><td>0.92</td><td>1.32</td></tr>
+  <tr><td style="color:var(--strong)"><strong>Qwen3-TTS-12Hz-1.7B-Base</strong></td><td style="color:var(--strong)"><strong>0.77</strong></td><td style="color:var(--strong)"><strong>1.24</strong></td></tr>
+</table>
+
+<h3>B5.2 多语言生成（10语言 WER + 说话人相似度）</h3>
+
+<p>在 TTS 多语言测试集上，与 MiniMax-Speech 和 ElevenLabs v2 对比：</p>
+<ul>
+  <li><strong>内容准确率</strong>：10 语言中 6 个（中/英/意/法/韩/俄）Qwen3-TTS 排名第一</li>
+  <li><strong>说话人相似度</strong>：全部 10 语言均领先，12Hz-1.7B 的 SIM 最高达 0.934（英语）vs MiniMax 0.775</li>
+</ul>
+
+<h3>B5.3 跨语言声音克隆（Cross-Lingual，WER↓）</h3>
+
+<table>
+  <tr><th>任务</th><th>Qwen3-TTS-12Hz-1.7B</th><th>CosyVoice3</th><th>CosyVoice2</th></tr>
+  <tr><td>zh → en</td><td>2.98</td><td><strong>2.77</strong></td><td>6.47</td></tr>
+  <tr><td>zh → ko</td><td><strong>4.82</strong></td><td>14.4</td><td>24.8</td></tr>
+  <tr><td>en → zh</td><td><strong>5.09</strong></td><td>4.77</td><td>13.5</td></tr>
+  <tr><td>ja → zh</td><td><strong>3.05</strong></td><td>3.43</td><td>48.1</td></tr>
+</table>
+
+<p>zh→ko（中文到韩语）任务，Qwen3-TTS 误差率 4.82 vs CosyVoice3 的 14.4，<strong>相对降低 66%</strong>，说明跨语言音色迁移能力远超基线。</p>
+
+<h3>B5.4 可控语音生成（InstructTTSEval）</h3>
+
+<table>
+  <tr><th>类型</th><th>模型</th><th>APS-ZH↑</th><th>DSD-ZH↑</th><th>APS-EN↑</th></tr>
+  <tr><td rowspan="3">目标说话人控制</td><td>Gemini-pro</td><td>89.0</td><td>90.1</td><td>87.6</td></tr>
+  <tr><td>Qwen3-TTS-12Hz-1.7B-CV</td><td>83.0</td><td>77.8</td><td>77.3</td></tr>
+  <tr><td>GPT-4o-mini-tts</td><td>54.9</td><td>52.3</td><td>76.4</td></tr>
+  <tr><td rowspan="2">语音设计创作</td><td>Hume</td><td>—</td><td>—</td><td>83.0</td></tr>
+  <tr><td style="color:var(--strong)"><strong>Qwen3-TTS-12Hz-1.7B-VD</strong></td><td style="color:var(--strong)"><strong>85.2</strong></td><td style="color:var(--strong)"><strong>81.1</strong></td><td style="color:var(--strong)"><strong>82.9</strong></td></tr>
+</table>
+
+<p>语音设计（创作全新声音）任务上超越所有开源模型，与 Hume 等商业系统持平；目标说话人控制比 GPT-4o-mini-tts 高 28%（中文 APS）。</p>
+
+<hr>
+
+<!-- ══════════════════════════════════════════════════════ -->
+<!--                   PART 3  横向对比                    -->
+<!-- ══════════════════════════════════════════════════════ -->
+
+<div class="part-banner">
+  <div class="part-num">Ⅲ</div>
+  <div class="part-info">
+    <h3>ASR vs TTS 技术对比与共性洞见</h3>
+    <p>两篇技术报告的共同设计哲学与差异分析</p>
+  </div>
+</div>
+
+<h2 id="c1">C1. 技术共性：LALM 范式的统一</h2>
+
+<table>
+  <tr><th>维度</th><th>Qwen3-ASR</th><th>Qwen3-TTS</th></tr>
+  <tr><td>基础模型</td><td>Qwen3-Omni（音频理解）</td><td>Qwen3 LM（文本生成）</td></tr>
+  <tr><td>音频编码</td><td>AuT Encoder（12.5Hz）</td><td>Qwen-TTS-Tokenizer（12.5/25Hz）</td></tr>
+  <tr><td>后训练 RL 算法</td><td>GSPO</td><td>GSPO（P2阶段）</td></tr>
+  <tr><td>偏好对齐</td><td>RL 直接优化（无显式 DPO）</td><td>DPO → GSPO 两阶段</td></tr>
+  <tr><td>流式支持</td><td>动态窗口 AuT，统一流式/离线</td><td>双轨自回归，因果解码</td></tr>
+  <tr><td>开源许可</td><td>Apache 2.0</td><td>Apache 2.0</td></tr>
+  <tr><td>参数规模</td><td>0.6B / 1.7B LM + AuT</td><td>0.6B / 1.7B LM + Tokenizer</td></tr>
+</table>
+
+<h2 id="c2">C2. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>GSPO 在语音任务中的关键作用</strong><br>
+两篇报告都用 GSPO 作为最终 RL 阶段，效果显著：ASR 的 GSPO 主要提升噪声鲁棒性和转录稳定性；TTS 的 GSPO 全面提升多任务能力和跨语言稳定性。这与 FIPO、R3 等工作的发现一致——RL 阶段对于解决"边缘情况"（噪声、方言、复杂文本）特别有效，而监督微调（SFT）容易在这些 case 上欠拟合。
+</div>
+
+<div class="tech-card blue">
+<strong>12Hz 双码本 vs 25Hz 单码本的权衡</strong><br>
+TTS 报告揭示了一个有趣的设计张力：25Hz 单码本的语义信息更丰富，适合精细控制（VoiceEditing）；但 12Hz 多码本的自回归建模更稳定（长时依赖更好），且因果 ConvNet 解码器使延迟降低约 40%（97ms vs 138ms）。这是"语义表达力"与"生成稳定性"的 trade-off，最终选择取决于应用场景。
+</div>
+
+<div class="tech-card purple">
+<strong>非自回归 ForcedAligner 的工程价值</strong><br>
+传统强制对齐（MFA/NFA）基于 HMM+GMM 或 CTC，依赖语言特定音素集。Qwen3-ForcedAligner 用 LALM 的槽填充框架，一模型支持 11 语言，AAS 降低 67-77%，且 RTF 接近 0.001（比实时快 1000 倍）。字幕生成、语音数据标注等工业场景将直接受益——不再需要为每种语言维护独立的对齐工具链。
+</div>
+
+<div class="tech-card orange">
+<strong>Qwen 生态的语音闭环</strong><br>
+Qwen3-ASR（语音→文本）+ Qwen3-TTS（文本→语音）+ Qwen3-Omni（多模态理解）共同构成了一个完整的语音 AI 生态。三者共享 AuT 编码器和 Qwen3 LM 骨干，开发者可以用统一的代码库和权重格式搭建语音助手、实时翻译、语音克隆等全链路应用，是当前开源语音 AI 生态中最完整的解决方案之一。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月18日 · 基于 Qwen3-ASR arXiv:2501.XXXXX（2026-01-29）& Qwen3-TTS arXiv:2501.XXXXX（2026-01-22）/ Qwen Team, Alibaba Cloud</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  // 添加分组标签
+  const groups=[
+    {label:'Part Ⅰ — ASR',ids:['a1','a2','a3','a4','a5','a6']},
+    {label:'Part Ⅱ — TTS',ids:['b1','b2','b3','b4','b5']},
+    {label:'Part Ⅲ — 对比',ids:['c1','c2']},
+  ];
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  // ASR 效率图
+  const c1=echarts.init(document.getElementById('chart-asr-eff'));
+  c1.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'Qwen3-ASR-0.6B 在线推理效率（不同并发数）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis'},
+    legend:{data:['TTFT avg (ms)','吞吐量 (s音频/s)'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['1','2','4','8','16','32','64','128'],name:'并发数',axisLabel:{color:'#cdd6f4'},nameTextStyle:{color:'#cdd6f4'}},
+    yAxis:[
+      {type:'value',name:'TTFT (ms)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:0,max:3500},
+      {type:'value',name:'吞吐量 (s/s)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:0,max:2500}
+    ],
+    series:[
+      {name:'TTFT avg (ms)',type:'bar',data:[92,103,132,228,459,820,1631,3210],barMaxWidth:28,
+       itemStyle:{color:'rgba(137,180,250,0.8)'},label:{show:false}},
+      {name:'吞吐量 (s音频/s)',type:'line',yAxisIndex:1,
+       data:[106,181,327,543,826,1099,1471,2000],
+       lineStyle:{color:'#a6e3a1',width:2.5},itemStyle:{color:'#a6e3a1'},symbol:'circle',symbolSize:7}
+    ],
+    grid:{left:70,right:70,bottom:50,top:70}
+  });
+
+  // TTS 首包延迟对比
+  const c2=echarts.init(document.getElementById('chart-tts-latency'));
+  c2.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'Qwen3-TTS 各变体首包延迟对比（并发1/3/6）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['并发1','并发3','并发6'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',
+      data:['25Hz-1.7B','25Hz-0.6B','12Hz-1.7B','12Hz-0.6B'],
+      axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',name:'首包延迟 (ms)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:0,max:600},
+    series:[
+      {name:'并发1',type:'bar',data:[150,138,101,97],barMaxWidth:22,itemStyle:{color:'rgba(166,227,161,0.9)'},
+       label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}ms',fontSize:11}},
+      {name:'并发3',type:'bar',data:[284,260,195,179],barMaxWidth:22,itemStyle:{color:'rgba(137,180,250,0.8)'},
+       label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}ms',fontSize:11}},
+      {name:'并发6',type:'bar',data:[523,481,333,299],barMaxWidth:22,itemStyle:{color:'rgba(203,166,247,0.7)'},
+       label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}ms',fontSize:11}}
+    ],
+    grid:{left:70,right:20,bottom:40,top:80}
+  });
+
+  // TTS WER 零样本对比
+  const c3=echarts.init(document.getElementById('chart-tts-wer'));
+  c3.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'零样本语音克隆 WER 对比（Seed-TTS test-en）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    xAxis:{type:'category',
+      data:['Seed-TTS','CosyVoice3','MiniMax','F5-TTS','Spark-TTS','Q3-25Hz-1.7B','Q3-12Hz-0.6B','Q3-12Hz-1.7B'],
+      axisLabel:{color:'#cdd6f4',rotate:15,fontSize:11}},
+    yAxis:{type:'value',name:'WER↓ (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:1,max:3},
+    series:[{type:'bar',data:[
+      {value:2.25,itemStyle:{color:'#45475a'}},
+      {value:1.45,itemStyle:{color:'#fab387'}},
+      {value:1.65,itemStyle:{color:'#45475a'}},
+      {value:1.83,itemStyle:{color:'#45475a'}},
+      {value:1.98,itemStyle:{color:'#45475a'}},
+      {value:1.49,itemStyle:{color:'#89b4fa'}},
+      {value:1.32,itemStyle:{color:'#89b4fa'}},
+      {value:1.24,itemStyle:{color:'#a6e3a1'}}
+    ],barMaxWidth:35,
+    label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}%',fontSize:11}}],
+    grid:{left:60,right:20,bottom:70,top:50}
+  });
+});
+</script>
+</body>
+</html>

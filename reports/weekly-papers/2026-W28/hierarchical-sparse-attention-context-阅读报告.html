@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HiLS-Attention 阅读报告：层次稀疏注意力</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    td.best { color: var(--strong); font-weight: 700; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .info-table { width: auto; max-width: 760px; }
+    .info-table th { width: 130px; white-space: nowrap; }
+    .callout { background: #2a2a3e; border-left: 3px solid var(--heading); padding: 10px 16px; margin: 1em 0; border-radius: 0 4px 4px 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>Hierarchical Sparse Attention Done Right：走向无限上下文建模</h1>
+    <p style="color:#6c7086;">腾讯 Hunyuan · ShanghaiTech · HKUST · UCSD · arXiv:2607.02980 · HuggingFace 2026-W28 排名 #9 (upvotes 55)</p>
+
+    <table class="info-table">
+      <tr><th>标题</th><td>Hierarchical Sparse Attention Done Right: Toward Infinite Context Modeling</td></tr>
+      <tr><th>核心问题</th><td>分块稀疏注意力（chunk-wise sparse attention）因 chunk 选择不准而无法匹敌全注意力；提出 HiLS-Attention，将检索分数融入前向注意力计算，实现端到端可学习的原生稀疏训练与超长上下文外推。</td></tr>
+      <tr><th>关键方法</th><td>层次化 Landmark 稀疏注意力：基于全注意力 chunk mass 的一阶 Taylor 展开构造可学习 chunk 摘要，并用 inter/intra-chunk 两级 softmax 因式分解实现端到端检索学习。</td></tr>
+      <tr><th>核心结论</th><td>仅 50B 续训 token 即可将全注意力模型转换为 HiLS；在域内长度匹敌甚至超越全注意力，外推可达训练长度的 64× 以上（345M 上 8K→4M，512×），且长上下文推理更快（512K 时 prefill 13.5×、decode 15.7×）。</td></tr>
+      <tr><th>开源地址</th><td><a href="https://github.com/Tencent-Hunyuan/HiLS-Attention">https://github.com/Tencent-Hunyuan/HiLS-Attention</a></td></tr>
+    </table>
+
+    <h2 id="sec-overview">1. 概述</h2>
+    <p>将大语言模型（LLM）扩展到长上下文受限于全注意力的二次复杂度、外推能力差、以及随上下文增长的 KV cache 成本。<strong>分块稀疏注意力</strong>（chunk-wise sparse attention）通过只对相关 chunk 做 attention 来保持常数计算预算，但所有现有方法都因<strong>chunk 选择不准确</strong>而无法达到全注意力水平。</p>
+    <p>本文指出这一问题的根源在于两点：(1) 非参数 chunk 摘要（如 mean-pooling）表达能力不足；(2) chunk 选择过程没有接受 LM loss 的端到端优化——分数选出 top-K 后就被丢弃，梯度无法回传到摘要或打分上。</p>
+    <p>为此，作者提出 <strong>HiLS-Attention（Hierarchical Landmark Sparse Attention）</strong>，其两大设计为：</p>
+    <ul>
+      <li><strong>可学习的 chunk mass 替代物</strong>：在每个 chunk 末尾追加一个 landmark token，以其 query 派生 chunk 摘要 key；该打分操作是全注意力诱导 chunk mass 的<strong>一阶 Taylor 展开</strong>，从而具备充分表达能力。</li>
+      <li><strong>层次化 softmax 因式分解</strong>：将注意力质量先在 chunk 之间分配（inter-chunk），再在每个 chunk 内 token 之间分配（intra-chunk）。由于替代物分数直接参与前向 attention 权重，LM loss 的梯度可直接监督 landmark 表征学习，实现原生稀疏训练。</li>
+    </ul>
+    <p>实验上，HiLS-Attention 在 345M–7B 多个尺度上：域内长度性能与全注意力相当甚至更好；345M 模型仅以 8K 训练长度即可外推到 4M（512×）且保持 NIAH 90%+ 准确率；7B 全注意力模型仅需 50B token 续训即可转换为 HiLS 并显著超越 YaRN 外推基线；推理上 512K 长度 prefill/decode 分别加速 13.5×/15.7×。</p>
+
+    <h2 id="sec-motivation">2. 研究背景与动机</h2>
+
+    <h3 id="sec-mot-chunk">2.1 分块稀疏注意力的范式与瓶颈</h3>
+    <p>分块稀疏注意力将序列划分为不重叠、大小为 $S$ 的 chunk，每个 query token 同时关注：(a) 一个局部滑动窗口（local sliding window, SWA）；(b) 全局检索到的 $K$ 个最相关远距离 chunk。这样可在常数计算预算下建模长上下文，并按需将 KV cache 换入快内存。</p>
+    <p>但论文 Fig. 2 的 in-context retrieval 实验显示：在参数受限（345M、8K 训练）的小模型上，现有稀疏方法（NSA、DashAttention、InfLLM v2）在 8K 域内 RULER 上与全注意力存在显著 retrieval gap。作者认为，<strong>chunk 选择不准</strong>是核心症结，而它又源于弱摘要与缺乏端到端优化。</p>
+
+    <h3 id="sec-mot-bsa">2.2 从 Naive Block Sparse Attention 出发</h3>
+    <p>作者以一个朴素基线 <strong>Naive BSA（Block Sparse Attention）</strong> 为出发点：先计算完整 attention，在每个 chunk 内汇总 token 级注意力质量，选 top-K chunk。Naive BSA 虽无计算节省，但能得到一个"由全注意力导出"的 chunk 选择模式（ground-truth pattern）。HiLS 的目标即是用一个可学习、可稀疏计算的机制去逼近这一模式，并进一步超过它。</p>
+
+    <h3 id="sec-mot-related">2.3 相关工作谱系与方法对比</h3>
+    <p>论文将分块稀疏注意力按"chunk 摘要是否参数化"分为两类：</p>
+    <table>
+      <tr><th>类别</th><th>代表方法</th><th>摘要形式</th><th>关键局限</th></tr>
+      <tr><td>非参数摘要</td><td>NSA、MoBA、SeerAttention</td><td>mean-pooling（部分蒸馏自全注意力）</td><td>mean 稀释了高度集中的注意力质量，NIAH 等检索任务上选择不准；蒸馏类上限为全注意力</td></tr>
+      <tr><td>参数化摘要</td><td>Landmark Attention (LMK-Attn)、HSA 系列、DashAttention</td><td>landmark token / 可学习 gate</td><td>LMK-Attn 训练期需 dense attention、且 PPL 显著高于全注意力；HSA 与 SWA 以 cross-attention 耦合，参数开销大，长时间训练后 PPL 被 SWA 主导</td></tr>
+    </table>
+    <p>下表（对应原文 Table 12）从五个维度对比各方法，红色为该方法的弱点：</p>
+    <table>
+      <tr><th>方法</th><th>Perfect NIAH</th><th>需完整 QK</th><th>外推能力</th><th>训练策略</th><th>支持 CPT</th></tr>
+      <tr><td>Full-Attention</td><td class="best">是</td><td class="best">是</td><td style="color:#f38ba8">&lt; 2×</td><td>End-to-End</td><td class="best">是</td></tr>
+      <tr><td>Seer-Attention</td><td class="best">是</td><td style="color:#f38ba8">是</td><td>—</td><td>Distillation</td><td class="best">是</td></tr>
+      <tr><td>NSA</td><td style="color:#f38ba8">否</td><td style="color:#f38ba8">是</td><td style="color:#f38ba8">&lt; 2×</td><td>End-to-End</td><td class="best">是</td></tr>
+      <tr><td>DSA</td><td style="color:#f38ba8">否</td><td>是</td><td>—</td><td>Distillation</td><td class="best">是</td></tr>
+      <tr><td>DashAttention</td><td style="color:#f38ba8">否</td><td style="color:#f38ba8">是</td><td style="color:#f38ba8">&lt; 2×</td><td>End-to-End</td><td class="best">是</td></tr>
+      <tr><td>LMK-Attn</td><td class="best">是</td><td style="color:#f38ba8">是</td><td>&lt; 32×</td><td>End-to-End</td><td class="best">是</td></tr>
+      <tr><td>HSA</td><td style="color:#f38ba8">否</td><td class="best">否</td><td class="best">&gt; 64×</td><td>End-to-End</td><td style="color:#f38ba8">否</td></tr>
+      <tr><td><strong>HiLS-Attention</strong></td><td class="best">是</td><td class="best">否</td><td class="best">&gt; 64×</td><td>End-to-End</td><td class="best">是</td></tr>
+    </table>
+    <p>HiLS 是唯一一个同时满足"完美 NIAH、无需完整 QK、外推 &gt; 64×、端到端训练、支持 CPT"的方法。</p>
+
+    <h2 id="sec-prelim">3. 预备：Naive BSA 的形式化</h2>
+    <p>给定输入序列 $x=\{x_1,\dots,x_N\}$，划分为大小 $S$ 的不重叠 chunk，第 $j$ 个 token 属于第 $c(j)=\lfloor j/S \rfloor$ 个 chunk。BSA 中 query 同时关注局部滑动窗口与 $K$ 个全局检索的远距离 chunk。为避免局部窗口与检索 chunk 重叠，将窗口左边界对齐到 chunk 边界：</p>
+    <p>$$\ell(i)=\left\lfloor \frac{i-W+1}{S} \right\rfloor S$$</p>
+    <p>其中 $W$ 为窗口大小。于是位置 $i$ 的可检索历史 chunk 索引集为 $C_i=\{0,1,\dots,\ell(i)/S - 1\}$。记 $q_i,k_j,v_j\in\mathbb{R}^d$ 为标准 query/key/value，token-to-token 注意力 logit 为 $s_{i,j}=q_i^\top k_j / \sqrt{d}$。全注意力下定义 <strong>chunk mass</strong> 为 token 级指数化 logit 之和：</p>
+    <p>$$Z_{i,\text{swa}}=\sum_{j=\ell(i)}^{i}\exp(s_{i,j}), \qquad Z_{i,c}=\sum_{j\in T_c}\exp(s_{i,j}) \tag{1}$$</p>
+    <p>由于按归一化注意力质量选 chunk 等价于按 $Z_{i,c}$ 选，naive BSA 选择 top-K：</p>
+    <p>$$I_i=\{c\in C_i \mid \mathrm{rank}_\downarrow(Z_{i,c}) \lt K\} \tag{2}$$</p>
+    <p>query 仅对被选中的 token（选中 chunk 的 token + 局部窗口）做注意力：</p>
+    <p>$$Z_i=\sum_{c\in I_i} Z_{i,c}+Z_{i,\text{swa}}, \quad w_{i,j}=\begin{cases}\exp(s_{i,j})/Z_i, & j \text{ 被选中}\\ 0, & \text{否则}\end{cases}, \quad o_i=\sum_{j\le i} w_{i,j} v_j \tag{3}$$</p>
+
+    <h3 id="sec-prelim-limit">3.1 现有方法的表现力局限</h3>
+    <p>naive BSA 给出精确 chunk 选择，但计算精确 $Z_{i,c}$ 需评估 chunk 内所有 token 级 logit，训练时无稀疏收益。理想情况下，若能构造 chunk 级摘要 key $k'_c$ 使得：</p>
+    <p>$$\exp\!\left(\frac{q_i^\top k'_c}{\sqrt{d}}\right) \approx Z_{i,c}=\sum_{j\in T_c}\exp(s_{i,j}) \iff \frac{q_i^\top k'_c}{\sqrt{d}} \approx \log Z_{i,c} \tag{4}$$</p>
+    <p>则可仅用 chunk 级表征高效选择。但目标 $\log Z_{i,c}$ 是一个 <strong>LogSumExp</strong> 函数，其行为取决于 chunk 内 logit 分布：</p>
+    <p>$$\log Z_{i,c}=\log\sum_{j\in T_c}\exp(s_{i,j}) \approx \begin{cases}\mathrm{mean}_{j\in T_c}(s_{i,j})+\log S, & \text{logit 近似均匀}\\ \max_{j\in T_c}(s_{i,j}), & \text{单个 logit 占主导}\end{cases} \tag{5}$$</p>
+    <p>多数方法用 mean-pooled key 作摘要（$k'_c=\frac{1}{S}\sum_{j\in T_c}k_j$），此时：</p>
+    <p>$$\frac{q_i^\top k'_c}{\sqrt{d}}=\frac{1}{S}\sum_{j\in T_c}\frac{q_i^\top k_j}{\sqrt{d}}=\mathrm{mean}_{j\in T_c}(s_{i,j}) \tag{6}$$</p>
+    <p>即 chunk 分数退化为 token 级 logit 的<strong>均值</strong>。这揭示了一个根本局限：均值仅在 logit 近似均匀时有效，max 仅在单 token 主导时有效。由于 logit 分布随 query、head、数据变化，mean 与 max 都无法稳定忠实地表示 chunk mass，从而错排 chunk、漏掉重要 chunk——这正是 NIAH 等任务退化的原因（NIAH 中只有少数 needle token 主导，mean 会将其稀释）。</p>
+
+    <h2 id="sec-method">4. 核心方法：HiLS-Attention</h2>
+    <p>基于上述分析，作者用从可学习 chunk 摘要计算得到的替代物 $\hat{Z}_{i,c}$ 替换非参数摘要，并提出两个研究问题：</p>
+    <ul>
+      <li><strong>RQ1</strong>：能否仅用 query $q_i$ 与一个紧凑 chunk 摘要的交互，以可处理形式近似 LogSumExp chunk mass $\log Z_{i,c}$？</li>
+      <li><strong>RQ2</strong>：如何端到端学习 $\hat{Z}_{i,c}$，使 chunk 选择与 LM loss 联合优化？</li>
+    </ul>
+
+    <h3 id="sec-method-rq1">4.1 RQ1：chunk mass 的线性替代物（Proposition 3.1）</h3>
+    <p>为找到 LogSumExp chunk mass 的可处理替代物，作者考察其一阶 Taylor 展开，揭示出 chunk 级打分的仿射结构：</p>
+    <blockquote><strong>Proposition 3.1（LogSumExp 线性化）</strong>：对任意 chunk $c$，query-key logit 的 LogSumExp 可线性化为：</blockquote>
+    <p>$$\log\sum_{j\in T_c}\exp\!\left(\frac{q^\top k_j}{\sqrt{d}}\right) \approx \underbrace{\frac{q^\top k'_c}{\sqrt{d}} + b'_c}_{\text{surrogate score}} \tag{7}$$</p>
+    <p>其中 $k'_c$ 与 $b'_c$ 由一个可学习 query $q'_c$ 在 chunk $c$ 的 key 上诱导；记 chunk 内 key 拼接为 $K_c\in\mathbb{R}^{S\times d}$，有：</p>
+    <p>$$s_j=\frac{(q'_c)^\top k_j}{\sqrt{d}},\quad p_j=\frac{\exp(s_j)}{\sum_{k\in T_c}\exp(s_k)},\quad k'_c=\sum_{j\in T_c} p_j k_j,\quad b'_c=-\sum_{j\in T_c} p_j\log p_j \tag{8}$$</p>
+    <p>这里 $k'_c=\mathrm{Attn}(q'_c,K_c,K_c)$ 是 chunk 内注意力对 key 的加权求和，$b'_c$ 是该注意力分布的<strong>熵</strong>。<strong>推导要点</strong>（详见原文 Appendix B）：对 $f(q)=\log\sum_{j=1}^{S}\exp(q^\top K_j)$ 在 $q_c$ 处做一阶 Taylor 展开 $f(q)\approx f(q_c)+\nabla f(q_c)^\top(q-q_c)$，其梯度为：</p>
+    <p>$$\nabla f(q_c)=\frac{\sum_{j=1}^{S}\exp(q_c^\top K_j)\,K_j}{\sum_{j=1}^{S}\exp(q_c^\top K_j)}=\sum_{j=1}^{S}p_j K_j = k'_c \tag{9}$$</p>
+    <p>将 $q_c^\top K_j=\log p_j+\log\sum_{k}\exp(q_c^\top K_k)$ 代回并消去常数项，偏置恰化为熵的负值 $b'_c=-\sum_j p_j\log p_j$，最终得到式 (7)。每个 chunk 的计算成本为 $O(S)$，对长度 $N$（$N/S$ 个 chunk）总成本为 $O(N)$。</p>
+    <p><strong>熵偏置的直观意义</strong>：$b'_c$ 自适应地在式 (5) 的两种 regime 间插值——logit 近似均匀时趋近 $\log S$，单 logit 主导时趋近 $0$。因此 surrogate 同时覆盖了 mean 与 max 两种情形，表达能力远超 mean-pooling。</p>
+    <p><strong>实例化 $q'_c$</strong>：在每个 chunk 末尾追加一个特殊 <strong>landmark token</strong>，用其 query 向量作为 $q'_c$。得到的 $(k'_c, b'_c)$ 作为"熵校准的压缩 key"用于 chunk 级路由：按式 (7) 线性 surrogate 打分、选 top-K、估计配分函数：</p>
+    <p>$$\hat{s}_{i,c}=\frac{q_i^\top k'_c}{\sqrt{d}}+b'_c,\quad I_i=\{c\in C_i\mid \mathrm{rank}_\downarrow(\hat{s}_{i,c})\lt K\},\quad \hat{Z}_{i,c}=\exp(\hat{s}_{i,c}),\quad \hat{Z}_i=\sum_{c\in I_i}\hat{Z}_{i,c}+Z_{i,\text{swa}} \tag{10}$$</p>
+    <p>这构成了<strong>原生稀疏训练</strong>实现：每个 query 在所有 $N/S$ 个 chunk 摘要上路由、保留 top-K、仅对常数个选中 token 做 attention。唯一二次项是路由成本：每 token $O(N/S)$、每序列 $O(N^2/S)$。</p>
+
+    <h3 id="sec-method-rq2">4.2 RQ2：层次化 softmax 实现端到端学习</h3>
+    <p>为让 $q'_c$ 可学习，核心思路是让 $\hat{Z}_{i,c}$ 参与注意力质量的前向计算。作者将注意力质量因式分解为<strong>chunk 内归一化项</strong>与<strong>chunk 间质量项</strong>，后者用可学习 surrogate 替换。对选中 chunk 与局部窗口内的 token，其归一化注意力权重可重写为：</p>
+    <p>$$w_{i,j}=\frac{\exp(s_{i,j})}{Z_i}=\underbrace{\frac{\exp(s_{i,j})}{Z_{i,c(j)}}}_{\text{intra-chunk}}\times\underbrace{\frac{Z_{i,c(j)}}{Z_i}}_{\text{inter-chunk}} \approx \frac{\exp(s_{i,j})}{Z_{i,c(j)}}\times\underbrace{\frac{\hat{Z}_{i,c(j)}}{\hat{Z}_i}}_{\text{surrogate}} \tag{11}$$</p>
+    <p>其中当 $\ell(i)\le j\le i$ 时 $\hat{Z}_{i,c(j)}=Z_{i,\text{swa}}$。直观上，模型先在每个选中 chunk 内聚合相关信息，再按学习到的 surrogate 质量融合 chunk 级信息。由于 $\hat{Z}_{i,c}$ 影响最终注意力权重，LM loss 的梯度可直接监督 landmark 表征学习，鼓励对预测更有用的 chunk 获得更大质量、抑制无关 chunk。作者指出，这种自监督 surrogate 甚至<strong>超过 naive BSA</strong>（见实验），说明端到端学习提供了比全注意力模式更有效的注意力分配。</p>
+
+    <h3 id="sec-method-arch">4.3 整体架构</h3>
+    <pre class="mermaid">
+flowchart TD
+    A["输入序列 x1..xN"] --> B["按大小 S 切分为不重叠 chunk"]
+    B --> C["每个 chunk 末尾追加 landmark token"]
+    C --> D["landmark query q'c 在 chunk 内做 intra-attn"]
+    D --> E["得到压缩摘要 k'c 与熵偏置 b'c\n(Proposition 3.1)"]
+    F["query qi"] --> G["低秩 Q-Cal 校正 q̂i"]
+    G --> H["与所有 chunk 摘要做 surrogate 打分\nŝ = q̂i·k'c/√d + b'c"]
+    E --> H
+    H --> I["top-K 选出 K 个远距离 chunk"]
+    I --> J["inter-chunk: 用 Ẑc=exp(ŝ) 分配 chunk 间质量"]
+    K["局部滑动窗口 SWA"] --> J
+    J --> L["intra-chunk: 每个选中 chunk 内 token 级 softmax"]
+    L --> M["融合输出 oi = Σ w·vj"]
+    M --> N["LM loss 反传梯度"]
+    N -.->|"梯度直达 k'c, b'c, q'c"| E
+    N -.->|"梯度监督 landmark 学习"| C
+    </pre>
+    <figcaption>HiLS-Attention 前向与端到端梯度通路：surrogate 分数参与前向权重，使 LM loss 可直接监督 chunk 摘要与检索学习。</figcaption>
+
+    <h3 id="sec-method-algo">4.4 算法伪代码</h3>
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: HiLS-Attention 前向（单层、MHA）</div>
+      <p><span class="kw">Input:</span> 序列 <span class="var">x</span>（已切分为大小 <span class="num">S</span> 的 chunk，每 chunk 末尾含 landmark token）；超参 <span class="num">K</span>（top-K）、窗口 <span class="num">W</span></p>
+      <p><span class="cm">// 1) Chunk 压缩：用 landmark query 诱导摘要</span></p>
+      <p><span class="kw">for</span> 每个历史 chunk <span class="var">c</span>: <span class="kw">do</span></p>
+      <p style="padding-left:1.5em"><span class="var">s_j</span> = <span class="fn">dot</span>(<span class="var">q'_c</span>, <span class="var">k_j</span>) / √<span class="var">d</span>,  <span class="var">p_j</span> = <span class="fn">softmax</span>(<span class="var">s_j</span>)   <span class="cm">// j ∈ chunk c</span></p>
+      <p style="padding-left:1.5em"><span class="var">k'_c</span> = Σ <span class="var">p_j</span>·<span class="var">k_j</span>            <span class="cm">// 压缩 key = Attn(q'_c, K_c, K_c)</span></p>
+      <p style="padding-left:1.5em"><span class="var">b'_c</span> = − Σ <span class="var">p_j</span>·log <span class="var">p_j</span>       <span class="cm">// 熵偏置</span></p>
+      <p><span class="cm">// 2) Query 校正（低秩 Q-Cal）</span></p>
+      <p><span class="var">Δq_i</span> = <span class="var">W_up</span>·<span class="var">W_down</span>·<span class="var">h_i</span>,   <span class="var">q̂_i</span> = <span class="var">q_i</span> + <span class="var">Δq_i</span></p>
+      <p><span class="cm">// 3) Chunk 级 surrogate 打分 + top-K 路由</span></p>
+      <p><span class="var">ŝ_{i,c}</span> = <span class="fn">dot</span>(<span class="var">q̂_i</span>, <span class="var">k'_c</span>)/√<span class="var">d</span> + <span class="var">b'_c</span></p>
+      <p><span class="var">I_i</span> = <span class="fn">topK</span>(<span class="var">ŝ_{i,c}</span>, <span class="num">K</span>)             <span class="cm">// 选 K 个远距离 chunk</span></p>
+      <p><span class="var">Ẑ_{i,c}</span> = <span class="fn">exp</span>(<span class="var">ŝ_{i,c}</span>),  <span class="var">Z_{i,swa}</span> = Σ_{j=ℓ(i)}^{i} exp(<span class="var">s_{i,j}</span>)</p>
+      <p><span class="var">Ẑ_i</span> = Σ_{c∈I_i} <span class="var">Ẑ_{i,c}</span> + <span class="var">Z_{i,swa}</span></p>
+      <p><span class="cm">// 4) 层次化融合：inter-chunk × intra-chunk</span></p>
+      <p><span class="kw">for</span> 每个选中 token <span class="var">j</span>: <span class="kw">do</span></p>
+      <p style="padding-left:1.5em"><span class="var">w_{i,j}</span> = ( exp(<span class="var">s_{i,j}</span>) / <span class="var">Z_{i,c(j)}}</span> ) × ( <span class="var">Ẑ_{i,c(j)}}</span> / <span class="var">Ẑ_i</span> )</p>
+      <p><span class="var">o_i</span> = Σ <span class="var">w_{i,j}</span>·<span class="var">v_j</span></p>
+      <p><span class="kw">return</span> <span class="var">o_i</span>   <span class="cm">// LM loss 梯度经 Ẑ 回传到 k'_c, b'_c, q'_c</span></p>
+    </div>
+
+    <h2 id="sec-practical">5. 实用设计选择</h2>
+
+    <h3 id="sec-prac-arch">5.1 架构设计</h3>
+    <p>沿用 Qwen3 等主流开源 Transformer 架构，仅将标准全注意力替换为 HiLS。三项关键调整：</p>
+    <ul>
+      <li><strong>位置编码（HoPE）</strong>：8K 训练时标准 RoPE 下 HiLS 的 PPL 劣于全注意力；改用 <strong>HoPE</strong>——保留旋转周期不超过训练长度的 RoPE 维，其余维度用 NoPE（不加位置编码）替换——使 HiLS 在 PPL 上反超全注意力。机制上：chunk 压缩对 key 做加权聚合，若对所有维度施加 RoPE 会聚合不同的位置旋转、扭曲语义；NoPE 维提供位置无关的语义子空间，利于 chunk 语义保持与外推。</li>
+      <li><strong>低秩 Query 校正（Q-Cal）</strong>：由于 $k'_c$ 是多 token 的压缩摘要而非 token key，原始 token 级 query $q_i$ 估计 chunk 级质量并非最优。引入轻量低秩校正：$\Delta q_i=W_{\text{up}}W_{\text{down}}h_i$，$\hat{q}_i=q_i+\Delta q_i$，其中 $W_{\text{up}}\in\mathbb{R}^{d\times r}$、$W_{\text{down}}\in\mathbb{R}^{r\times d_{\text{model}}}$，$r\ll d_{\text{model}}$。该模块显著改善 PPL 与外推。</li>
+      <li><strong>GQA 适配</strong>：现代 LLM 常用 GQA（多 query head 共享 KV head）。同组 query head 应使用相同检索 chunk 集以便 gather 一次、批量 attention。但同组 head 可能关注不同 chunk。HiLS 对每个 query head 分别计算归一化 chunk 权重，再在组内取 <strong>max</strong> 聚合，按组级分数选 top-K——任一 head 重要的 chunk 都会被选中，兼顾共享检索与 head 级灵活性（完整形式见原文 Appendix C）。</li>
+      <li><strong>无 landmark 替代方案</strong>：为降低 landmark token 的工程开销，可用每层共享的可学习 query 替代 per-chunk landmark。该方案域内性能相当，但<strong>外推能力显著退化</strong>。</li>
+    </ul>
+
+    <h3 id="sec-prac-kernel">5.2 硬件高效 kernel 设计</h3>
+    <p>稀疏注意力的实现挑战：不同 token 对应不同 chunk 集，朴素实现无法加速甚至内存爆炸。NSA 的 kernel 设计（Fig. 4a）每次处理一个 query token、加载其选中 K/V chunk，Tensor Core 计算形状为 $(G, d)\times(d, S)$（$G$ 为 GQA 组内 query head 数）。由于 Tensor Core 在 tile 维 $\ge 16$ 时最高效，MHA（$G=1$）会严重欠利用、需将 query-head 维从 1 padding 到 16。NSA 靠 $G\ge 16$ 缓解，但这隐式要求 query-to-KV head 比 $\ge 16$，限制适用性。</p>
+    <p><strong>HiLS kernel</strong>（Fig. 4b）跨 query token 与 query head 批处理：相邻 query token 检索的 chunk 高度重叠（重叠率高达 80%），故将 $M$ 个相邻 query token 分组、对其选中 chunk 的<strong>并集</strong>做 attention，Tensor Core 计算变为 $(M\times G, d)\times(d, S)$，只需 $M\times G\ge 16$ 而非 $G\ge 16$。取并集还让打包 query 复用已加载 K/V chunk、减少冗余内存访问。该设计不依赖大 GQA 组、也可用于 speculative decoding。</p>
+    <pre class="mermaid">
+flowchart LR
+    subgraph NSA["NSA kernel (一次一个 query token)"]
+      N1["query 1"] --> NT["Tensor Core\n(G, d) × (d, S)"]
+      N2["query 2"] --> NT2["Tensor Core\n(G, d) × (d, S)"]
+    end
+    subgraph HiLS["HiLS kernel (M 个相邻 query 打包)"]
+      H1["query 1..M"] --> HT["Tensor Core\n(M×G, d) × (d, S)"]
+      HU["选中 chunk 并集\n(一次加载, 多次复用)"] --> HT
+    end
+    </pre>
+    <figcaption>NSA 单 token 处理需 $G\ge 16$ 才能填满 Tensor Core；HiLS 打包 $M$ 个相邻 query、对 chunk 并集计算，只需 $M\times G\ge 16$，且复用重叠的 K/V chunk。</figcaption>
+
+    <h3 id="sec-prac-cpt">5.3 续训策略</h3>
+    <p>为保留原模型能力，评估两种续训策略：</p>
+    <ul>
+      <li><strong>Landmark Token Tuning（近 training-free）</strong>：冻结所有 base 参数，仅训练新引入的 landmark token embedding 与 $W_{\text{up}},W_{\text{down}}$ 投影（&lt; 1% 参数）。&le; 5B token 即可达与 base 相当的性能。</li>
+      <li><strong>Full-Parameter Tuning</strong>：landmark embedding 与低秩 adapter 随机初始化，其余参数继承自 base，全部联合更新。配合 HoPE 替换位置编码时效果最佳，最大化长度泛化。</li>
+    </ul>
+
+    <h2 id="sec-exp-small">6. 小尺度实验（345M）</h2>
+    <h3 id="sec-exp-setup">6.1 实验设置</h3>
+    <p>345M（GPT-2 Medium 架构）从头训练，8K 上下文，OLMo/Dolma 语料 + 5% RULER 风格 NIAH 样本。所有稀疏方法统一超参：局部窗口 512、chunk size 64、top-K 32（即激活 2K token）。基线含全注意力（RoPE/HoPE）、SWA、NSA、DashAttention、HSA-UltraLong、InfLLM v2、Naive-BSA。评估指标为 PPL 与 RULER（Single-N、Multi-Key Multi-Query、Variable Tracking）。</p>
+
+    <h3 id="sec-exp-ppl">6.2 困惑度结果（Table 1）</h3>
+    <p>下表为 345M 模型在 8K 训练长度内及近域的 PPL。HiLS-Attn-HoPE 在 8K 训练长度与 Naive-BSA 持平（4.94 vs 4.94），在各长度均处于最优梯队（加粗为该列最优）。</p>
+    <table>
+      <tr><th>模型</th><th>Extra #Param</th><th>64</th><th>128</th><th>512</th><th>8K</th><th>32K</th></tr>
+      <tr><td>Full-Attn RoPE</td><td>–</td><td>33.92</td><td>26.89</td><td>18.68</td><td class="best">4.96</td><td>&gt;102</td></tr>
+      <tr><td>Full-Attn HoPE</td><td>–</td><td>34.15</td><td>26.97</td><td>18.73</td><td>6.42</td><td>4.95</td></tr>
+      <tr><td>Full-Attn HoPE (extra MLP)</td><td>0.6%</td><td>34.28</td><td>27.12</td><td>18.76</td><td>4.95</td><td>5.85</td></tr>
+      <tr><td>SWA-RoPE</td><td>–</td><td>35.38</td><td>27.94</td><td>19.30</td><td>9.01</td><td>8.95</td></tr>
+      <tr><td>NSA-RoPE</td><td>0.2%</td><td>34.15</td><td>27.11</td><td>18.85</td><td>5.01</td><td>7.62</td></tr>
+      <tr><td>DashAttention-RoPE</td><td>0.006%</td><td class="best">33.70</td><td class="best">26.74</td><td class="best">18.67</td><td>5.00</td><td>&gt;102</td></tr>
+      <tr><td>HSA-Ultralong</td><td>12.7%</td><td class="best">33.19</td><td class="best">26.26</td><td>21.50</td><td>5.84</td><td>8.81</td></tr>
+      <tr><td>Naive-BSA-HoPE</td><td>–</td><td>36.12</td><td>29.06</td><td>20.45</td><td class="best">4.94</td><td>4.94</td></tr>
+      <tr><td><strong>HiLS-Attn-HoPE</strong></td><td>0.6%</td><td>33.97</td><td>26.91</td><td>18.65</td><td class="best">4.94</td><td class="best">4.34</td></tr>
+      <tr><td>InfLLM v2*</td><td>0.006%</td><td>33.71</td><td>26.74</td><td class="best">18.55</td><td>13.68</td><td>4.95</td></tr>
+    </table>
+    <p style="color:#6c7086;font-size:0.85em;">*InfLLM v2 仅支持 head dim ≥ 128，与其他 head dim 64 模型不完全对齐，仅供参考。8K 列中 Full-Attn RoPE(4.96)、Naive-BSA(4.94)、HiLS(4.94) 并列最优；32K 外推时 HiLS(4.34) 为最优。</p>
+
+    <h3 id="sec-exp-ruler">6.3 RULER 检索结果与超长外推（Table 2）</h3>
+    <p>在 8K 域内，仅 Naive-BSA 与 HiLS-Attention 能在全注意力水平上维持 Single-NIAH；基于 mean-pooling 的 NSA、DashAttention、InfLLM v2 明显退化。HiLS 更是<strong>唯一</strong>能在域内 NIAH 上达到满分的原生稀疏注意力方法。下表展示 HiLS-Attn-HoPE 在 1M–4M 上下文上的超长外推结果：</p>
+    <table>
+      <tr><th>上下文长度</th><th>1M</th><th>2M</th><th>4M</th></tr>
+      <tr><td>训练长度倍数</td><td>128×</td><td>256×</td><td>512×</td></tr>
+      <tr><td>Single-N (S-N)</td><td class="best">100</td><td class="best">97</td><td class="best">96</td></tr>
+      <tr><td>Multi-Key Multi-Query (MK-MQ)</td><td>97</td><td>87</td><td class="best">89</td></tr>
+      <tr><td>Variable Tracking (VT)</td><td>53</td><td>50</td><td>43</td></tr>
+    </table>
+    <p>即便外推到训练长度 512×（4M），Single-N 仍保持 96%、MK-MQ 保持 89%——对应原文摘要所述"64× 训练长度仍达 90% retrieval accuracy"的超强外推能力。</p>
+
+    <h3 id="sec-exp-256k">6.4 256K 长上下文扩展训练（Table 3）</h3>
+    <p>将 345M checkpoint 用 256K 上下文续训 10B token（保持最多 2K token 激活，稀疏度更高）。续训前将 RoPE base 从 $1\times10^4$ 扩大到 $1\times10^7$。PPL 结果：</p>
+    <table>
+      <tr><th>RoPE θ</th><th>模型</th><th>Extra #Param</th><th>8K</th><th>32K</th><th>128K</th><th>256K</th><th>512K</th><th>1M</th></tr>
+      <tr><td rowspan="2">1×10⁷</td><td>Full-Attn RoPE</td><td>–</td><td>9.11</td><td>9.22</td><td>9.17</td><td>8.11</td><td>8.54</td><td>7.87</td></tr>
+      <tr><td>HiLS-Attn-HoPE</td><td>0.6%</td><td class="best">9.08</td><td class="best">9.09</td><td class="best">8.93</td><td class="best">8.15</td><td class="best">8.15</td><td class="best">7.82</td></tr>
+      <tr><td rowspan="3">1×10⁴</td><td>Full-Attn RoPE</td><td>–</td><td>8.86</td><td>8.88</td><td>8.93</td><td>7.45</td><td>7.51</td><td>&gt;102</td></tr>
+      <tr><td>Full-Attn HoPE</td><td>–</td><td>8.86</td><td>8.89</td><td>8.89</td><td>7.37</td><td class="best">7.51</td><td>8.08</td></tr>
+      <tr><td>HiLS-Attn-HoPE</td><td>0.6%</td><td class="best">8.86</td><td class="best">8.88</td><td class="best">8.89</td><td class="best">7.37</td><td>7.55</td><td class="best">8.08</td></tr>
+    </table>
+    <p>HiLS 在 256K 训练设置下各长度 PPL 始终不劣于全注意力，且仅激活 ≤ 2K token——稀疏并未牺牲能力，反而因压缩带来更干净的检索表征。</p>
+
+    <h2 id="sec-exp-large">7. 大尺度实验</h2>
+
+    <h3 id="sec-large-14b">7.1 1.4B 从头训练（300B token）</h3>
+    <p>1.4B 从头训练 300B token，全程跟踪 PPL 与 RULER 外推稳定性。Fig. 5 的数据（8K 训练长度）显示：HiLS 与全注意力 PPL 几乎重合，而外推稳定性上 HiLS 远胜全注意力。</p>
+    <div id="chart-1ppl" class="echarts-container" style="height:340px"></div>
+    <div id="chart-1ruler" class="echarts-container" style="height:340px"></div>
+    <p>左图：1.4B 模型在不同上下文长度的 PPL——HiLS 与全注意力在 64–8K 重合，但 32K 后全注意力 PPL 飙升至 &gt;102，而 HiLS 平滑外推（32K=4.08, 128K=5.54, 512K=8.58）。右图：RULER 平均准确率——全注意力 16K 即崩塌至 7.7%，HiLS 在 512K 仍保持 83.7%。</p>
+    <p>Table 8 的下游任务（1.4B）显示，尽管 HiLS 仅关注不到一半的 token，在 LAMBADA、HellaSwag、PIQA、ARC 等短上下文任务上仍与全注意力相当或略优（平均 49.06 vs 48.65）。</p>
+
+    <h3 id="sec-large-7b">7.2 7B 续训（OLMo3-7B，50B token）</h3>
+    <p>以 Olmo3-1025-7B 为起点（MHA，3 层 4K SWA + 1 层全注意力的 3:1 模式），将全注意力层替换为 HiLS-Attn、SWA 窗口从 4K 缩到 512，保持 3:1 模式。chunk size 64、top-K 32（8K 续训长度下检索 2048 token）。续训 50B token。对比 LMK token tuning（冻结 base，&lt;1% 参数，5B token）、Olmo3-512swa-CPT（仅缩窗不加 HiLS 检索）。</p>
+    <p><strong>验证集 PPL（Table 10）</strong>：</p>
+    <table>
+      <tr><th>模型</th><th>512</th><th>8K</th><th>16K</th><th>64K</th><th>128K</th><th>256K</th></tr>
+      <tr><td>Olmo3-base</td><td>10.396</td><td>3.997</td><td>6.898</td><td>11.003</td><td>11.226</td><td>14.554</td></tr>
+      <tr><td>LDM token tuning</td><td>10.394</td><td>3.470</td><td>5.124</td><td>7.058</td><td>6.126</td><td>7.770</td></tr>
+      <tr><td>Olmo3-512swa-CPT</td><td>10.180</td><td>3.234</td><td>4.398</td><td>5.218</td><td>6.984</td><td>12.760</td></tr>
+      <tr><td>HiLS-Attn-HoPE</td><td>10.200</td><td class="best">3.234</td><td class="best">2.772</td><td class="best">2.722</td><td class="best">2.550</td><td class="best">3.095</td></tr>
+      <tr><td>HiLS-Attn-RoPE</td><td>10.201</td><td>3.236</td><td>3.770</td><td>4.454</td><td>4.709</td><td>6.546</td></tr>
+      <tr><td>HiLS-Attn-NoPE</td><td>10.235</td><td>3.242</td><td>2.895</td><td>27.117</td><td>51.911</td><td>73.896</td></tr>
+    </table>
+    <p>8K 域内 HiLS-HoPE 与 Olmo3-512swa-CPT 持平（3.234 vs 3.234），差异主要源于从全注意力 checkpoint 迁移的代价（从头原生训练时不出现）。随长度增长 HiLS-HoPE 优势急剧扩大：256K 时 3.095 vs 12.760。</p>
+    <p><strong>LongBench-v1（Table 11）</strong>：在真实长上下文任务上，HiLS-Attn（含 +YaRN 32K 外推增强）全面超过 Olmo3-512swa-CPT + YaRN 基线，尤其 &gt;8K 分组。原文强调：即便给基线加上 YaRN 外推增强，与 training-free 的 HiLS-Attention 相比在 LongBench 上仍有明显差距——印证 HiLS 的长上下文能力源于更优的压缩-检索归纳偏置，而非单纯的位置外推技巧。（注：原 PDF 表格因数值密集、文本提取顺序错乱，此处不逐一列出各子项数值，以免误传；定性结论与图 1d 的 Overall 趋势一致：HiLS &gt; YaRN-基线 &gt; Olmo3-512swa-CPT &gt; Olmo3-Base。）</p>
+
+    <h2 id="sec-analysis">8. 分析</h2>
+
+    <h3 id="sec-ana-latency">8.1 推理效率（Fig. 6）</h3>
+    <p>在 SGLang 引擎、单张 NVIDIA H800、batch=1、bf16 下端到端测延迟（345M 架构，chunk 64、top-K 32、512 窗口）。HiLS 成本由固定检索预算（K×chunk=2048 token）+ 局部窗口决定，与全上下文长度无关：prefill 近线性增长、decode 每 token 近 $O(1)$。两方法在约 16K 处交叉，512K 时 HiLS prefill 5.0s vs 67.0s（13.5×）、decode 5.5ms vs 85.9ms（15.7×）。</p>
+    <div id="chart-latency" class="echarts-container" style="height:360px"></div>
+    <p>下方为各长度的加速比（Full / HiLS，&gt;1 表示 HiLS 更快）：8K 时 HiLS 略慢（prefill 0.62×、decode 0.73×，检索尚未摊销），16K 起反超并随长度迅速拉开差距。</p>
+    <div id="chart-speedup" class="echarts-container" style="height:340px"></div>
+
+    <h3 id="sec-ana-overlap">8.2 相邻 query 的 chunk 重叠（Fig. 7）</h3>
+    <p>验证 HiLS kernel 的关键假设：相邻 query 检索的 chunk 高度重叠。对 $M$ 个相邻 query，定义归一化重叠率：</p>
+    <p>$$\mathrm{Overlap}=\frac{MK-\left|\bigcup_{m=1}^{M} I_m\right|}{(M-1)K} \tag{12}$$</p>
+    <p>在 Olmo3-7B 续训 checkpoint 上（chunk 64、top-K 32）：最后 $M=16$ 个 query 的可见历史 chunk 池从 4K 时的 57 个增长到 64K 时的 1032 个，但加载的并集仅从 43.6 增长到 102.1，加载占比从 76.4% 降到 9.9%；且平均 92.8% 的 chunk 已出现在上一 query 块中——强力支持相邻 query 打包与 one-load-multiple-compute 策略。</p>
+
+    <h2 id="sec-ablation">9. 消融实验与关键发现</h2>
+    <p>消融在 345M、8K 训练上进行（Table 5–7），考察 Q-Cal、Proposition 3.1、landmark token、位置编码等组件。主要发现：</p>
+    <table>
+      <tr><th>消融变体</th><th>说明</th><th>关键影响</th></tr>
+      <tr><td>w/ Q-Cal (r=64)</td><td>低秩 query 校正（默认）</td><td>默认配置，PPL 与外推最佳</td></tr>
+      <tr><td>w/ Q-Cal (r=128)</td><td>增大秩</td><td>反而损害长度外推</td></tr>
+      <tr><td>w/ full-rank</td><td>全秩线性变换替换低秩</td><td>PPL 与外推均退化</td></tr>
+      <tr><td>w/o Q-Cal</td><td>移除 Δq 项</td><td><strong>严重退化</strong>（8K PPL 4.94→4.97，512K 5.95→16.93）</td></tr>
+      <tr><td>w/o Prop. 3.1</td><td>直接用 landmark key 作路由 key，不做 Taylor 展开</td><td>外推明显退化</td></tr>
+      <tr><td>LMK-Attn</td><td>对齐 Landmark Attention：移除 Δq、用 landmark key</td><td>PPL 劣化、外推差</td></tr>
+      <tr><td>w/ mean pooling</td><td>用 mean-pooled key 作摘要</td><td>NIAH 退化（8K S-N 92 vs 100），印证 mean 稀释集中质量</td></tr>
+      <tr><td>w/o lmk, shared qc</td><td>移除 landmark、用每层共享 query</td><td>域内尚可，<strong>外推急剧退化</strong>（512K 7.94 vs 5.95）</td></tr>
+      <tr><td>HoPE vs RoPE vs NoPE</td><td>位置编码对比</td><td>HoPE 最优；NoPE 域内尚可但外推崩塌；RoPE 居中</td></tr>
+    </table>
+    <div class="callout"><strong>关键发现</strong>：
+      <ul>
+        <li><strong>landmark token 不可或缺</strong>：共享 query 表达力有限，无法捕捉多样 chunk 语义；landmark query 由完整 Transformer 计算（含 attention + MLP）产生，能自适应编码每个 chunk，是超长外推的关键。</li>
+        <li><strong>Q-Cal 的机制仍未完全理解</strong>：作者推测 Δq 将 token 级 attention 与 chunk 级 mass surrogate 解耦（二者信息层次不同），但强调"底层机制尚未完全理解，留待未来工作"。</li>
+        <li><strong>压缩增强 in-context retrieval</strong>：HiLS 在 Variable Tracking（多跳推理）上甚至<strong>超过全注意力</strong>。作者给出分解 $k_i=\text{semantic}(k_i)+\text{noise}(k_i)$：压缩聚合多 key 时，互不对齐的噪声项部分相消、共享语义信号保留，得到更干净的检索表征。这解释了为何 HiLS 的强外推源于更强的域内检索能力。</li>
+        <li><strong>HiLS 学到比 naive BSA 更鲁棒的分配</strong>：全注意力中只要 logit 非 −∞ 即获非零质量，无关 token 注入小噪声，长上下文下噪声累积使 BSA 的选择信号变噪；端到端学习的 HiLS 反而更有效。</li>
+      </ul>
+    </div>
+
+    <h2 id="sec-conclusion">10. 总结与启发</h2>
+    <p>HiLS-Attention 通过"<strong>可学习 chunk 摘要 + 层次化 softmax 因式分解</strong>"，将检索分数融入前向 attention 计算，使 chunk 选择首次接受 LM loss 的端到端优化。其理论基础（Proposition 3.1）将 LogSumExp chunk mass 一阶线性化为"相关性项 + 熵偏置"，熵偏置自适应插值 mean/max 两种 regime，从根本上修复了 mean-pooling 的表达力缺陷。</p>
+    <p><strong>面向无限上下文</strong>：HiLS 的原生稀疏性使训练时注意力成本有界——chunk 压缩为 $O(L)$、每 token 检索 $O(L/S)$、token 级 attention 限于选中 chunk 与窗口 $O(LKS)$，唯一超线性项是检索，可用 FAISS 等近似最近邻搜索降至约 $O(L\log(L/S))$。配合强长度外推（短上下文学到的检索模式可泛化到超长上下文），使无限上下文训练在工程上变得可行。</p>
+    <p><strong>读后启发</strong>：</p>
+    <ul>
+      <li><strong>端到端是关键</strong>：长久以来稀疏注意力的瓶颈不在稀疏本身，而在"选择"这一离散决策脱离了 loss 优化。HiLS 用层次化 softmax 让选择分数参与前向、梯度直达摘要，是把"检索"内化为可微前向计算的优雅范例。</li>
+      <li><strong>压缩即去噪</strong>：压缩不只是省算力，更是归纳偏置——它让 token 级噪声相消、语义信号保留。这为"为何压缩后检索更强"提供了清晰解释，也提示未来可设计更强的压缩算子。</li>
+      <li><strong>位置编码与稀疏耦合</strong>：RoPE 在 chunk 压缩时聚合不同旋转会扭曲语义，HoPE 的 NoPE 维提供位置无关语义子空间。说明长上下文建模中位置编码需与注意力稀疏化协同设计。</li>
+      <li><strong>工程可行性强</strong>：仅 50B token、&lt;1% 参数即可将现成全注意力大模型转为 HiLS，且推理 512K 加速 13–15×——对工业部署极具吸引力。</li>
+    </ul>
+
+    <h3 id="sec-limit">10.1 局限性</h3>
+    <ul>
+      <li>HiLS-Attention <strong>尚不支持 context parallelism</strong>，在更大训练上下文长度上的有效性有待验证。</li>
+      <li><strong>未被选中的 chunk 不接受梯度更新</strong>。</li>
+      <li>Q-Cal 改善外推与域内性能的底层机制<strong>尚未完全理解</strong>。</li>
+    </ul>
+
+    <h2 id="sec-refs">11. 参考文献（精选）</h2>
+    <ul>
+      <li>[5] NSA: Native Sparse Attention — hardware-aligned and natively trainable sparse attention. ACL 2025.</li>
+      <li>[6] MoBA: Mixture of Block Attention for long-context LLMs. 2025.</li>
+      <li>[7] NOSA: Native and Offloadable Sparse Attention. 2026.</li>
+      <li>[8] Landmark Attention: Random-access infinite context length for transformers. NeurIPS 2023.</li>
+      <li>[9] RULER: What's the real context size of your long-context LLMs? 2024.</li>
+      <li>[10] LongBench: A bilingual, multitask benchmark for long context understanding. ACL 2024.</li>
+      <li>[11] YaRN: Efficient context window extension of LLMs. ICLR 2024.</li>
+      <li>[12] MiniMax Sparse Attention. 2026.</li>
+      <li>[15] HoPE: A novel positional encoding without long-term decay. ACL 2025.</li>
+      <li>[20] DashAttention: Differentiable and adaptive sparse hierarchical attention. 2026.</li>
+      <li>[21] InfLLM-v2: Dense-sparse switchable attention. 2025.</li>
+      <li>[22] HSA-UltraLong: Every token counts — generalizing 16M ultra-long context. ACL 2026.</li>
+      <li>[24] Olmo-3-1025-7B base checkpoint. Allen Institute for AI, 2025.</li>
+      <li>[28] SeerAttention: Learning intrinsic sparse attention in your LLMs. 2025.</li>
+      <li>[31] FAISS: The FAISS library. IEEE TBD 2026.</li>
+    </ul>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    // 自动生成目录
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+    // ECharts 1: 1.4B PPL 对比
+    echarts.init(document.getElementById('chart-1ppl')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '1.4B 模型 PPL 随上下文长度变化（Fig. 5a）', textStyle: { color: '#89b4fa', fontSize: 14 } },
+      legend: { data: ['Full-Attn RoPE', 'HiLS-Attn HoPE'], textStyle: { color: '#cdd6f4' }, top: 28 },
+      tooltip: { trigger: 'axis' },
+      grid: { left: 55, right: 30, bottom: 45, top: 70 },
+      xAxis: { type: 'category', data: ['64', '128', '512', '8K', '32K', '128K', '512K'], name: '上下文长度', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'} },
+      yAxis: { type: 'log', name: 'PPL (log)', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'} },
+      series: [
+        { name: 'Full-Attn RoPE', type: 'line', data: [26.17, 20.05, 13.56, 4.02, 8.60, 102, 102], itemStyle:{color:'#f38ba8'}, lineStyle:{width:3} },
+        { name: 'HiLS-Attn HoPE', type: 'line', data: [26.21, 20.03, 13.55, 4.02, 4.08, 5.54, 8.58], itemStyle:{color:'#a6e3a1'}, lineStyle:{width:3} }
+      ]
+    });
+
+    // ECharts 2: 1.4B RULER 对比
+    echarts.init(document.getElementById('chart-1ruler')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '1.4B 模型 RULER 平均准确率（Fig. 5b）', textStyle: { color: '#89b4fa', fontSize: 14 } },
+      legend: { data: ['Full-Attn RoPE', 'HiLS-Attn HoPE'], textStyle: { color: '#cdd6f4' }, top: 28 },
+      tooltip: { trigger: 'axis' },
+      grid: { left: 55, right: 30, bottom: 45, top: 70 },
+      xAxis: { type: 'category', data: ['8K', '16K', '32K', '128K', '512K'], name: '上下文长度', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'} },
+      yAxis: { type: 'value', max: 100, name: '准确率 (%)', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'} },
+      series: [
+        { name: 'Full-Attn RoPE', type: 'line', data: [96.7, 7.7, 1.0, 0.0, 0.0], itemStyle:{color:'#f38ba8'}, lineStyle:{width:3} },
+        { name: 'HiLS-Attn HoPE', type: 'line', data: [96.3, 91.7, 90.7, 88.7, 83.7], itemStyle:{color:'#a6e3a1'}, lineStyle:{width:3} }
+      ]
+    });
+
+    // ECharts 3: 延迟绝对值
+    echarts.init(document.getElementById('chart-latency')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '推理延迟：Full vs HiLS（Fig. 6, 345M, H800）', textStyle: { color: '#89b4fa', fontSize: 14 } },
+      legend: { data: ['Prefill-Full', 'Prefill-HiLS', 'Decode-Full', 'Decode-HiLS'], textStyle: { color: '#cdd6f4' }, top: 28 },
+      tooltip: { trigger: 'axis' },
+      grid: { left: 70, right: 60, bottom: 45, top: 70 },
+      xAxis: { type: 'category', data: ['8K', '16K', '32K', '64K', '128K', '256K', '512K'], name: '上下文长度', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'} },
+      yAxis: [
+        { type: 'log', name: 'Prefill (s)', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'} },
+        { type: 'log', name: 'Decode (ms/tok)', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'}, offset: 50 }
+      ],
+      series: [
+        { name: 'Prefill-Full', type: 'line', yAxisIndex: 0, data: [0.5, 1.5, 4.5, 14, 48, 175, 67.0*1].map((v,i)=> i===6?67.0:v), itemStyle:{color:'#f38ba8'} },
+        { name: 'Prefill-HiLS', type: 'line', yAxisIndex: 0, data: [0.8, 1.4, 2.4, 4.2, 8.3, 18.3, 5.0], itemStyle:{color:'#a6e3a1'} },
+        { name: 'Decode-Full', type: 'line', yAxisIndex: 1, data: [5, 7.5, 12, 24, 48, 90, 85.9], itemStyle:{color:'#eba0ac'} },
+        { name: 'Decode-HiLS', type: 'line', yAxisIndex: 1, data: [7, 6.8, 7.0, 8.3, 9.2, 9.7, 5.5], itemStyle:{color:'#94e2d5'} }
+      ]
+    });
+
+    // ECharts 4: 加速比
+    echarts.init(document.getElementById('chart-speedup')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'HiLS 相对全注意力的加速比（Full / HiLS）', textStyle: { color: '#89b4fa', fontSize: 14 } },
+      legend: { data: ['Prefill 加速', 'Decode 加速'], textStyle: { color: '#cdd6f4' }, top: 28 },
+      tooltip: { trigger: 'axis', formatter: p => p.map(x=>x.seriesName+': '+x.value+'×').join('<br/>') },
+      grid: { left: 55, right: 30, bottom: 45, top: 70 },
+      xAxis: { type: 'category', data: ['8K', '16K', '32K', '64K', '128K', '256K', '512K'], name: '上下文长度', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'} },
+      yAxis: { type: 'value', name: '加速比 (×)', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#9399b2'} },
+      series: [
+        { name: 'Prefill 加速', type: 'bar', data: [0.62, 1.1, 1.9, 3.3, 5.8, 9.3, 13.5], itemStyle:{color:'#89b4fa'} },
+        { name: 'Decode 加速', type: 'bar', data: [0.73, 1.1, 1.7, 2.9, 5.2, 9.3, 15.7], itemStyle:{color:'#a6e3a1'} }
+      ]
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arbor / Hypothesis-Tree Refinement | 阅读报告</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1}
+    *{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border)}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #toc a:hover{background:var(--border)}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8}
+    main{margin-left:240px;max-width:none;padding:40px 64px}h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px}h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em}
+    p{margin:.6em 0}a{color:var(--link)}strong{color:var(--strong)}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em}th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border)}
+    td{padding:7px 12px;border:1px solid var(--border)}tr:hover td{background:#2a2a3e}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em}code{font-family:'JetBrains Mono','Fira Code',monospace}
+    p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center}.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+    .algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9}
+    .algo-box .algo-title{color:var(--heading);font-weight:700;font-size:1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+    .algo-box .kw{color:#cba6f7;font-weight:700}.algo-box .cm{color:#6c7086;font-style:italic}.algo-box .var{color:#94e2d5}.algo-box .fn{color:#a6e3a1}.algo-box .num{color:#f9e2af}
+    ul,ol{padding-left:1.6em;margin:.6em 0}li{margin:.25em 0}
+    .badge{display:inline-block;font-size:.75em;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:4px}
+    .badge-blue{background:var(--heading);color:#1e1e2e}.badge-orange{background:#fab387;color:#1e1e2e}.badge-green{background:#a6e3a1;color:#1e1e2e}.badge-purple{background:#cba6f7;color:#1e1e2e}
+    .highlight-box{background:#2a2a3e;border:1px solid var(--border);border-radius:6px;padding:16px 20px;margin:1em 0}
+    .timeline-wrap{overflow-x:auto;margin:1em 0}.timeline{display:flex;gap:0;min-width:900px}.tl-col{flex:1;display:flex;flex-direction:column}
+    .tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;font-size:.95em;border-radius:6px 6px 0 0}
+    .tl-body{flex:1;padding:10px 8px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px}
+    .tl-item{background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em;line-height:1.5}
+    .tl-item:last-child{margin-bottom:0}.tl-tag{display:inline-block;font-size:.75em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:4px;background:var(--heading);color:#1e1e2e}
+    .tl-tag.orange{background:#fab387}.tl-tag.green{background:#a6e3a1}.tl-tag.purple{background:#cba6f7}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}}</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Arbor：基于假设树精炼的通用自主研究框架</h1>
+<p style="color:#6c7086;font-size:.9em">Toward Generalist Autonomous Research via Hypothesis-Tree Refinement &nbsp;|&nbsp; arXiv:2606.11926 &nbsp;|&nbsp; 2026-06-10</p>
+
+<table>
+  <tr><th style="width:130px">标题</th><td>Toward Generalist Autonomous Research via Hypothesis-Tree Refinement</td></tr>
+  <tr><th>核心问题</th><td>如何让 AI Agent 在无人工逐步干预的条件下，将长时间序列的多次实验从孤立尝试转变为累积性假设精炼，从而持续改进真实研究制品（代码库、训练配方、数据管道）</td></tr>
+  <tr><th>作者机构</th><td>Jiajie Jin, Yuyang Hu, Kai Qiu 等 18 人 &nbsp;|&nbsp; 中国人民大学 NLPIR Lab（高瓴人工智能学院）&amp; 微软亚洲研究院</td></tr>
+  <tr><th>开源地址</th><td><a href="https://github.com/RUC-NLPIR/Arbor" target="_blank">https://github.com/RUC-NLPIR/Arbor</a></td></tr>
+  <tr><th>HuggingFace</th><td>⬆ 89 upvotes（本周第 6 名，截至 2026-06-12）</td></tr>
+</table>
+
+<!-- ===== 概述 ===== -->
+<h2>概述</h2>
+
+<p>科学进步的本质是一个反复的循环：探索假设、设计实验、解读证据、将洞见带入下一轮尝试。人类研究者能够在数周乃至数月的时间跨度内维持这一过程，因为他们拥有持久的记忆——知道哪些方向已被证伪、哪些发现可以复用、哪些失败包含了下一步的线索。然而，现有 LLM Agent 系统（如 Codex、Claude Code）虽然能够长时间运行代码编辑和实验，但其本质仍是"持久的任务执行"而非"累积性研究"——每次尝试基本上是独立的，缺乏将过去证据系统化纳入未来决策的机制。</p>
+
+<p>本文提出 <strong>Arbor</strong>，一个面向自主优化（Autonomous Optimization, AO）的通用研究框架。其核心创新是 <strong>Hypothesis Tree Refinement（HTR）</strong>——一种持久化的树形数据结构，将假设、制品版本、实验证据和蒸馏洞见有机绑定在每个节点上。框架由两类 Agent 构成：</p>
+
+<ul>
+  <li><strong>长生命周期协调器（Coordinator）</strong>：拥有并维护全局假设树，负责战略层面的探索——观察当前前沿、生成子假设、选择待执行节点、整合返回证据、向上传播洞见、决定合并/剪枝/继续。</li>
+  <li><strong>短生命周期执行器（Executor）</strong>：每个执行器接受一个树节点（假设），在隔离的 git worktree 中实现并评估该假设，返回结构化报告（dev 分数、事实结果、蒸馏洞见、分支引用），然后退出。</li>
+</ul>
+
+<p>关键机制在于 <strong>held-out 合并门控</strong>：只有当候选制品在 held-out 测试集上真正超越当前最优时，才被合并进主干。这将探索性 dev 反馈与已验证的制品级进步严格分离，防止对开发集的过拟合伪装成真实进展。</p>
+
+<p>在六个真实研究任务（模型训练、harness 工程、数据合成）上，Arbor 在所有任务上取得最佳 held-out 结果，平均相对增益超过 Codex 和 Claude Code 的 <strong>2.5 倍</strong>。在 MLE-Bench Lite 上，配合 GPT-5.5 骨干，Arbor 达到 <strong>86.36% Any Medal</strong>，创下该榜单最高纪录。</p>
+
+<!-- ===== 研究背景 ===== -->
+<h2>研究背景</h2>
+
+<h3>自主研究 Agent 的发展脉络</h3>
+
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">2023–2024 早期</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">端到端管道</span><br>
+          <strong>AI Scientist</strong>（Lu et al., 2024）：想法生成→实现→执行→解读→论文写作全自动循环，但流程预定义，单线推进
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">多 Agent 协作</span><br>
+          <strong>Agent Laboratory</strong>（Schmidgall et al., 2025）：类似阶段，人工监督多 Agent 研究助手工作流
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag green">代码搜索</span><br>
+          <strong>AIDE</strong>（Jiang et al., 2025）：将 ML 工程建模为迭代代码搜索，引入显式搜索过程
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025 搜索显式化</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">树搜索</span><br>
+          <strong>AI Scientist-v2</strong>（Yamada et al., 2025）：引入 agentic 树搜索覆盖研究计划和实验
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">程序演化</span><br>
+          <strong>FunSearch / AlphaEvolve</strong>（DeepMind）：LLM 作为程序变异算子，适应度信号引导选择
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag purple">多 Agent 角色</span><br>
+          <strong>R&D-Agent / Loongflow</strong>：专业化角色分工，文献到实验的循环细化
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2026 搜索对象扩展</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">Harness 搜索</span><br>
+          <strong>AutoHarness / Meta-Harness / AHE</strong>：搜索或演化 Agent 周围的控制代码
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">数据为中心</span><br>
+          <strong>DataMaster</strong>（Du et al., 2026）：搜索目标转向数据，DataTree + Data Pool + Global Memory
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag green">假设树</span><br>
+          <strong>Arbor（本文）</strong>：持久化假设树作为研究状态，协调器-执行器分离，HTR 累积学习
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>现有方法局限性对比</h3>
+
+<table>
+  <tr>
+    <th>方法</th><th>搜索结构</th><th>证据持久化</th><th>假设层级</th><th>Dev/Test 分离</th><th>核心局限</th>
+  </tr>
+  <tr>
+    <td>Codex / Claude Code</td><td>无结构，线性执行</td><td>❌ 依赖上下文窗口</td><td>❌ 平坦单线</td><td>❌ 无合并门控</td><td>长时间后上下文丢失，无法累积</td>
+  </tr>
+  <tr>
+    <td>AI Scientist</td><td>预定义阶段管道</td><td>部分（论文写作）</td><td>❌ 单线推进</td><td>❌ 无</td><td>流程固化，无法动态分支</td>
+  </tr>
+  <tr>
+    <td>AIDE</td><td>代码空间迭代搜索</td><td>部分（代码历史）</td><td>❌ 平坦</td><td>❌ 无</td><td>缺乏假设语义，搜索无方向记忆</td>
+  </tr>
+  <tr>
+    <td>AI Scientist-v2</td><td>树搜索（研究计划）</td><td>部分</td><td>✅ 有层级</td><td>❌ 无</td><td>节点不绑定制品版本，洞见无法回传</td>
+  </tr>
+  <tr>
+    <td><strong>Arbor（本文）</strong></td><td><strong>HTR 假设树</strong></td><td><strong>✅ 持久化树节点</strong></td><td><strong>✅ 多层级精炼</strong></td><td><strong>✅ held-out 合并门控</strong></td><td>—</td>
+  </tr>
+</table>
+
+<blockquote>
+  <strong>核心差距</strong>：现有系统缺乏将"证据保留弱、dev/test 纪律松散、静默指标追逐"等问题系统性解决的机制（Tie et al., 2025；Gasteiger et al., 2025）。Arbor 通过 HTR 和合并门控正面回应了这三个问题。
+</blockquote>
+
+<!-- ===== Arbor 框架设计 ===== -->
+<h2>Arbor 框架设计</h2>
+
+<h3>协调器-执行器整体架构</h3>
+
+<pre class="mermaid">
+flowchart TD
+    AO["AO 任务 P = (M0, O, Edev, Etest)"] --> COORD
+
+    subgraph COORD["协调器 Coordinator（长生命周期）"]
+        OBS["1 Observe\n读取树状态\n（前沿、洞见、约束）"]
+        IDE["2 Ideate\n在选定父节点下\n提出 k 个子假设"]
+        SEL["3 Select\n选择最有价值的\n待执行叶节点"]
+        DISP["4 Dispatch\n并行派发执行器"]
+        BP["5 Backpropagate\n抽象洞见向上传播\n更新祖先节点"]
+        DEC["6 Decide\n合并 / 剪枝 /\n继续 / 挂起"]
+        OBS --> IDE --> SEL --> DISP --> BP --> DEC --> OBS
+    end
+
+    DISP -->|"假设 hn + 祖先洞见"| EXA
+    DISP -->|"假设 hn + 祖先洞见"| EXB
+    DISP -->|"假设 hn + 祖先洞见"| EXC
+
+    subgraph EXA["执行器 A（隔离 worktree）"]
+        direction TB
+        IA["实现 hn"] --> EA["Edev 评估"] --> DA["蒸馏洞见"]
+    end
+    subgraph EXB["执行器 B（隔离 worktree）"]
+        direction TB
+        IB["实现 hn"] --> EB["Edev 评估"] --> DB["蒸馏洞见"]
+    end
+    subgraph EXC["执行器 C（隔离 worktree）"]
+        direction TB
+        IC["实现 hn"] --> EC["Edev 评估"] --> DC["蒸馏洞见"]
+    end
+
+    EXA -->|"(sn, rn, ιn, branch)"| BP
+    EXB -->|"(sn, rn, ιn, branch)"| BP
+    EXC -->|"(sn, rn, ιn, branch)"| BP
+
+    DEC -->|"候选通过 held-out 门控"| MERGE["合并到主干 Mbest"]
+    DEC -->|"未通过 / 信息性失败"| PRUNE["剪枝 / 挂起"]
+    MERGE --> OUT["输出：改进制品 M* + 假设树 Tree"]
+</pre>
+
+<h3>假设树节点结构</h3>
+
+<p>假设树 $T = (V, E)$ 是一棵有根树，根节点 $n_0$ 代表初始研究目标。每个节点 $n \in V$ 是一个三元组：</p>
+
+<p>$$n = \langle h_n,\ \iota_n,\ \mu_n \rangle$$</p>
+
+<ul>
+  <li><strong>假设 $h_n$</strong>：描述如何修改制品以改进目标的可验证/可证伪声明。靠近根的节点描述宽泛研究方向，深层节点指定可被执行器实现的具体干预。</li>
+  <li><strong>洞见 $\iota_n$</strong>：存储与该假设相关联的可复用证据解释。对已执行叶节点，总结"尝试了什么、发生了什么、为何支持或削弱假设"；对内部节点，抽象其所有子节点的洞见，形成方向级理解。</li>
+  <li><strong>元数据 $\mu_n$</strong>：连接语义假设与可执行证据，包括节点状态、dev 分数、事实结果记录、实现引用（git 分支/commit）、可选背景证据。</li>
+</ul>
+
+<pre class="mermaid">
+graph TD
+    ROOT["根节点 n0\n研究目标（宽泛方向）\nιroot: 全局先验"]
+
+    D1A["方向节点 1.x\n假设：优化器几何诊断\nι: Muon 在 Newton-Schulz 前\n丢失有用几何信息"]
+    D1B["方向节点 2.x\n假设：MLP 瓶颈定位\nι: 晚期进展在某模块崩溃"]
+    D1C["方向节点 3.x\n假设：行/列平衡 MLP\nι: 各向异性保持需全矩阵"]
+
+    L1["叶节点 1.1\n轴统计保留\nscore: 3275\n状态: merged ✅"]
+    L2["叶节点 1.2\n替换 Newton-Schulz\nscore: 3450\n状态: pruned ❌"]
+    L3["叶节点 2.1\n轴分解符号更新\nscore: 3290\n状态: pending ⏳"]
+    L4["叶节点 3.1\n行/列平衡\nscore: 3237\n状态: validated"]
+
+    ROOT --> D1A & D1B & D1C
+    D1A --> L1 & L2
+    D1B --> L3
+    D1C --> L4
+
+    style ROOT fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    style D1A fill:#2a2a3e,stroke:#89dceb,color:#cdd6f4
+    style D1B fill:#2a2a3e,stroke:#89dceb,color:#cdd6f4
+    style D1C fill:#2a2a3e,stroke:#89dceb,color:#cdd6f4
+    style L1 fill:#1e3a2e,stroke:#a6e3a1,color:#cdd6f4
+    style L2 fill:#3a1e1e,stroke:#f38ba8,color:#cdd6f4
+    style L3 fill:#2a2a3e,stroke:#f9e2af,color:#cdd6f4
+    style L4 fill:#1e2a3a,stroke:#89b4fa,color:#cdd6f4
+</pre>
+
+<h3>三种角色同时扮演</h3>
+
+<p>假设树在 Arbor 运行中同时扮演三个角色：</p>
+<ul>
+  <li><strong>搜索前沿</strong>：记录哪些方向处于活跃、已验证或已剪枝状态</li>
+  <li><strong>长期记忆</strong>：存储成功与失败的可复用证据</li>
+  <li><strong>可审计研究记录</strong>：将每次制品变更链接到驱动它的假设和证据</li>
+</ul>
+
+<!-- ===== Hypothesis Tree Refinement ===== -->
+<h2>Hypothesis Tree Refinement（HTR）</h2>
+
+<h3>HTR 算法伪代码</h3>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1 &nbsp; Hypothesis Tree Refinement (HTR)</div>
+  <p><span class="kw">Input:</span> &nbsp; <span class="var">P</span> = (<span class="var">M</span><sub>0</sub>, <span class="var">O</span>, <span class="var">E</span><sub>dev</sub>, <span class="var">E</span><sub>test</sub>), budget <span class="var">B</span>, branching factor <span class="num">k</span></p>
+  <p><span class="kw">Output:</span> best artifact <span class="var">M</span><sup>*</sup> and hypothesis tree <span class="var">Tree</span></p>
+  <p>&nbsp;</p>
+  <p><span class="cm">// 初始化：单根节点树，最优制品为初始制品</span></p>
+  <p><span class="kw">init</span> <span class="var">Tree</span> = ({<span class="var">n</span><sub>0</sub>}, ∅), &nbsp; <span class="var">b</span><sub>n0</sub> ← <span class="var">M</span><sub>0</sub>, &nbsp; <span class="var">M</span><sub>best</sub> ← <span class="var">M</span><sub>0</sub></p>
+  <p>&nbsp;</p>
+  <p><span class="kw">while</span> <span class="var">B</span> left <span class="kw">and</span> pending leaves exist <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 1: Observe — 从树中读取前沿状态、根洞见、剪枝/验证教训</span></p>
+  <p style="padding-left:1.5em"><span class="var">V</span> ← <span class="fn">Observe</span>(<span class="var">Tree</span>, <span class="var">M</span><sub>best</sub>)</p>
+  <p>&nbsp;</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 2: Ideate — 在选定父节点下附加 k 个子假设</span></p>
+  <p style="padding-left:1.5em"><span class="var">p</span> ← choose parent under <span class="var">V</span></p>
+  <p style="padding-left:1.5em">attach <span class="num">k</span> pending children {<span class="var">n</span><sup>(i)</sup> : <span class="var">h</span><sup>(i)</sup>} ← <span class="fn">Ideate</span>(<span class="var">p</span>, <span class="var">V</span>)</p>
+  <p>&nbsp;</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 3: Select — 前沿控制，选择最有价值的待执行叶节点</span></p>
+  <p style="padding-left:1.5em"><span class="var">L</span> ← pending leaves under <span class="fn">Select</span>(<span class="var">V</span>)</p>
+  <p>&nbsp;</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 4: Dispatch — 并行执行器，每个执行器测试一个假设</span></p>
+  <p style="padding-left:1.5em">{(<span class="var">s</span><sub>n</sub>, <span class="var">r</span><sub>n</sub>, <span class="var">ι</span><sub>n</sub>, <span class="var">b</span><sub>n</sub>)}<sub>n∈L</sub> ← parallel <span class="fn">Executor</span>(<span class="var">h</span><sub>n</sub>, <span class="var">ι</span><sub>anc(n)</sub>, <span class="var">M</span><sub>best</sub>)</p>
+  <p>&nbsp;</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 5: Backpropagate — 写回证据，向上抽象洞见</span></p>
+  <p style="padding-left:1.5em"><span class="kw">foreach</span> <span class="var">n</span> ∈ <span class="var">L</span>, <span class="var">a</span> ∈ path(<span class="var">n</span><sub>0</sub> → <span class="var">n</span>) <span class="kw">do</span></p>
+  <p style="padding-left:3em">write back (<span class="var">s</span><sub>n</sub>, <span class="var">r</span><sub>n</sub>, <span class="var">ι</span><sub>n</sub>, <span class="var">b</span><sub>n</sub>)</p>
+  <p style="padding-left:3em"><span class="var">ι</span><sub>a</sub> ← <span class="fn">Abstract</span>({<span class="var">ι</span><sub>c</sub>}<sub>c∈ch(a)</sub>) &nbsp; <span class="cm">// 子节点洞见抽象为方向级洞见</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end foreach</span></p>
+  <p>&nbsp;</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 6: Decide — held-out 合并门控 + 剪枝</span></p>
+  <p style="padding-left:1.5em"><span class="var">n</span><sup>†</sup> ← arg max<sub>n∈L</sub> <span class="var">s</span><sub>n</sub></p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> <span class="var">O</span>(<span class="var">E</span><sub>test</sub>(<span class="var">b</span><sub>n†</sub>)) &gt; <span class="var">O</span>(<span class="var">E</span><sub>test</sub>(<span class="var">M</span><sub>best</sub>)) <span class="kw">then</span> <span class="var">M</span><sub>best</sub> ← <span class="fn">merge</span>(<span class="var">b</span><sub>n†</sub>)</p>
+  <p style="padding-left:1.5em"><span class="fn">prune</span> subtrees falsified by {<span class="var">ι</span><sub>n</sub>}<sub>n∈L</sub>; &nbsp; <span class="fn">persist</span> <span class="var">Tree</span></p>
+  <p><span class="kw">end while</span></p>
+  <p><span class="kw">return</span> <span class="var">M</span><sup>*</sup> ← <span class="var">M</span><sub>best</sub>, <span class="var">Tree</span></p>
+  <p>&nbsp;</p>
+  <p><span class="kw">Procedure</span> <span class="fn">Executor</span>(<span class="var">h</span><sub>n</sub>, <span class="var">ι</span><sub>anc(n)</sub>, <span class="var">M</span><sub>best</sub>):</p>
+  <p style="padding-left:1.5em"><span class="cm">// 在隔离 worktree 中实现假设，直到成功或达到上限</span></p>
+  <p style="padding-left:1.5em">fresh worktree <span class="var">W</span><sub>n</sub> ← <span class="var">M</span><sub>best</sub></p>
+  <p style="padding-left:1.5em"><span class="kw">repeat</span></p>
+  <p style="padding-left:3em">Δ ← <span class="fn">Implement</span>(<span class="var">h</span><sub>n</sub>, <span class="var">ι</span><sub>anc(n)</sub>, <span class="var">W</span><sub>n</sub>)</p>
+  <p style="padding-left:3em">(<span class="var">s</span><sub>n</sub>, <span class="var">r</span><sub>n</sub>) ← <span class="var">E</span><sub>dev</sub>(<span class="fn">apply</span>(Δ, <span class="var">W</span><sub>n</sub>))</p>
+  <p style="padding-left:1.5em"><span class="kw">until</span> run ok ∧ h<sub>n</sub>-path exercised, or cap reached &nbsp; <span class="cm">// 仅修复 Δ，假设 hn 固定不变</span></p>
+  <p style="padding-left:1.5em"><span class="kw">return</span> (<span class="var">s</span><sub>n</sub>, <span class="var">r</span><sub>n</sub>, <span class="fn">Distill</span>(<span class="var">h</span><sub>n</sub>, Δ, <span class="var">r</span><sub>n</sub>), <span class="fn">commit</span>(<span class="var">W</span><sub>n</sub>))</p>
+</div>
+
+<h3>假设生成、验证与精炼的时序流程</h3>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant C as 协调器 Coordinator
+    participant T as 假设树 Tree
+    participant EA as 执行器 A
+    participant EB as 执行器 B
+    participant GATE as Held-out 门控
+
+    C->>T: Observe 读取前沿状态、洞见、约束
+    T-->>C: 活跃前沿节点 + 祖先洞见 + 全局先验
+
+    C->>T: Ideate 在父节点 p 下提出子假设 h1, h2
+    T-->>C: 新增 pending 节点 n1, n2
+
+    C->>T: Select 选择 n1, n2 执行
+    C->>EA: Dispatch(h1, ancestor_insights, Mbest)
+    C->>EB: Dispatch(h2, ancestor_insights, Mbest)
+
+    Note over EA: 创建隔离 worktree<br/>实现 h1 → 运行 Edev<br/>蒸馏洞见 ι1
+
+    Note over EB: 创建隔离 worktree<br/>实现 h2 → 运行 Edev<br/>蒸馏洞见 ι2
+
+    EA-->>C: (s1, r1, ι1, branch_ref1)
+    EB-->>C: (s2, r2, ι2, branch_ref2)
+
+    C->>T: Backpropagate 写回证据，向上抽象洞见
+    T-->>C: 更新后的祖先洞见
+
+    C->>GATE: 候选 n† 申请合并（最优 dev 分数）
+    GATE->>GATE: 在 fresh worktree 运行 Etest
+    alt Etest(b_n†) > Etest(Mbest)
+        GATE-->>C: 合并通过 ✅
+        C->>T: 更新 Mbest，标记节点为 merged
+    else 未通过
+        GATE-->>C: 拒绝合并 ❌
+        C->>T: 标记节点为 dev-only，记录失败原因
+    end
+
+    C->>T: Decide 剪枝被证伪子树，持久化 Tree
+    C->>C: 下一个协调器循环（Observe...）
+</pre>
+
+<h3>协调器六步骤详解</h3>
+
+<table>
+  <tr><th>步骤</th><th>操作</th><th>关键设计</th></tr>
+  <tr>
+    <td><strong>Observe</strong></td>
+    <td>读取树的结构化投影：活跃前沿节点、最近返回证据、祖先洞见、当前最优制品</td>
+    <td>树作为权威状态，防止协调器依赖有损的对话历史；上下文压缩后重新接地</td>
+  </tr>
+  <tr>
+    <td><strong>Ideate</strong></td>
+    <td>选择父节点，在其下提出一组子假设（精炼、替代或修正）</td>
+    <td>以累积树证据为条件：已验证洞见提供构建基础，已剪枝节点提供负约束，最近报告提示可行干预</td>
+  </tr>
+  <tr>
+    <td><strong>Select</strong></td>
+    <td>选择待执行的 pending 节点</td>
+    <td>不仅是分数最大化；在部分和延迟反馈下的前沿控制——方向可因强先验、兄弟歧义或失败能澄清假设而被选中</td>
+  </tr>
+  <tr>
+    <td><strong>Dispatch</strong></td>
+    <td>并行派发执行器，每个执行器在独立 worktree 中实现一个假设</td>
+    <td>兄弟假设的并行执行在同一研究方向内提供对比证据，便于后续剪枝和抽象</td>
+  </tr>
+  <tr>
+    <td><strong>Backpropagate</strong></td>
+    <td>将执行器证据写入叶节点，沿路径向上更新洞见</td>
+    <td>传播的不只是标量分数，还包括因果归因、适用条件、可复用教训；叶级观察可成为方向级约束，最终成为全局先验</td>
+  </tr>
+  <tr>
+    <td><strong>Decide</strong></td>
+    <td>继续扩展 / 剪枝 / 停止 / 申请合并</td>
+    <td>held-out 合并门控：候选在 fresh worktree 上运行 Etest，仅当超越当前最优时合并；高 dev 低 test 被视为过拟合信号</td>
+  </tr>
+</table>
+
+<!-- ===== 实验结果 ===== -->
+<h2>实验结果</h2>
+
+<h3>自主优化（AO）任务套件</h3>
+
+<table>
+  <tr>
+    <th>类型</th><th>任务</th><th>初始制品</th><th>指标（方向）</th><th>Dev / Test 划分</th>
+  </tr>
+  <tr>
+    <td>模型训练</td><td>Optimizer Design</td><td>NanoGPT-Bench 调优 Muon 基线</td><td>达目标 loss 所需步数（↓）</td><td>标准 NanoGPT-Bench / 2 个 held-out 随机种子</td>
+  </tr>
+  <tr>
+    <td>模型训练</td><td>Architecture Design</td><td>autoresearch LLM 训练代码库</td><td>固定时间预算下最终 loss（↓）</td><td>标准评估 / 2 个 held-out 随机种子</td>
+  </tr>
+  <tr>
+    <td>Harness 工程</td><td>Terminal-Bench 2.0</td><td>官方 terminal-agent 代码库</td><td>通过率（↑）</td><td>36 dev 任务 / 53 test 任务（按难度分层）</td>
+  </tr>
+  <tr>
+    <td>Harness 工程</td><td>BrowseComp</td><td>最简 ReAct 风格搜索 harness</td><td>答案准确率（↑）</td><td>50 dev / 300 test 问题（不重叠）</td>
+  </tr>
+  <tr>
+    <td>数据合成</td><td>Search-Agent Data Synthesis</td><td>手工设计搜索 Agent 问题生成管道</td><td>mean pass@4 − pass@1 gap（↑）</td><td>50 dev seed / 100 test seed</td>
+  </tr>
+  <tr>
+    <td>数据合成</td><td>Math-Reasoning Data Synthesis</td><td>手工设计 AIME 风格推理题生成管道</td><td>mean pass@4 − pass@1 gap（↑）</td><td>50 dev（10 seed）/ 96 test（12 seed）</td>
+  </tr>
+</table>
+
+<h3>主要结果对比（六任务）</h3>
+
+<table>
+  <tr>
+    <th>任务</th><th>指标</th><th>初始值</th>
+    <th>Codex (Test)</th><th>Claude Code (Test)</th><th><strong>Arbor (Test)</strong></th>
+    <th>Arbor vs 初始 (Δ)</th>
+  </tr>
+  <tr>
+    <td>Optimizer Design</td><td>步数 ↓</td><td>3325</td>
+    <td>3287.5</td><td>3237.5</td><td><strong>3237.5</strong></td>
+    <td style="color:#a6e3a1">+2.63%</td>
+  </tr>
+  <tr>
+    <td>Architecture Design</td><td>loss ↓</td><td>1.098</td>
+    <td>1.083</td><td>1.033</td><td><strong>1.028</strong></td>
+    <td style="color:#a6e3a1">+6.38%</td>
+  </tr>
+  <tr>
+    <td>Terminal-Bench 2.0</td><td>pass ↑</td><td>69.81</td>
+    <td>71.70</td><td>71.70</td><td><strong>77.36</strong></td>
+    <td style="color:#a6e3a1">+7.55</td>
+  </tr>
+  <tr>
+    <td>BrowseComp</td><td>acc. ↑</td><td>45.33</td>
+    <td>50.00</td><td>53.33</td><td><strong>67.67</strong></td>
+    <td style="color:#a6e3a1">+22.34</td>
+  </tr>
+  <tr>
+    <td>Search-Agent</td><td>gap ↑</td><td>5.00</td>
+    <td>8.00</td><td>8.33</td><td><strong>18.00</strong></td>
+    <td style="color:#a6e3a1">+13.00</td>
+  </tr>
+  <tr>
+    <td>Math-Reasoning</td><td>gap ↑</td><td>1.04</td>
+    <td>6.25</td><td>8.33</td><td><strong>20.83</strong></td>
+    <td style="color:#a6e3a1">+19.79</td>
+  </tr>
+</table>
+
+<h3>归一化 held-out 增益对比（ECharts）</h3>
+
+<div id="chart-main" class="echarts-container" style="height:380px"></div>
+<script>
+(function(){
+  var c = echarts.init(document.getElementById('chart-main'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'六任务归一化 held-out 增益对比',textStyle:{color:'#89b4fa',fontSize:14},left:'center',top:10},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['Codex','Claude Code','Arbor'],textStyle:{color:'#cdd6f4'},top:40},
+    grid:{left:'3%',right:'4%',bottom:'3%',top:80,containLabel:true},
+    xAxis:{
+      type:'category',
+      data:['Optimizer\nDesign','Architecture\nDesign','Terminal\nBench','BrowseComp','Search\nAgent','Math\nReasoning'],
+      axisLabel:{color:'#cdd6f4',interval:0,fontSize:11},
+      axisLine:{lineStyle:{color:'#45475a'}}
+    },
+    yAxis:{
+      type:'value',
+      name:'归一化增益 (%)',
+      nameTextStyle:{color:'#cdd6f4'},
+      axisLabel:{color:'#cdd6f4'},
+      axisLine:{lineStyle:{color:'#45475a'}},
+      splitLine:{lineStyle:{color:'#313244'}}
+    },
+    series:[
+      {
+        name:'Codex',
+        type:'bar',
+        barGap:'5%',
+        data:[1.13, 1.37, 2.71, 10.33, 60, 5.21],
+        itemStyle:{color:'#89dceb'},
+        label:{show:true,position:'top',color:'#89dceb',fontSize:10,formatter:function(p){return p.value+'%'}}
+      },
+      {
+        name:'Claude Code',
+        type:'bar',
+        data:[0.00, 5.92, 2.71, 17.67, 63, 7.29],
+        itemStyle:{color:'#cba6f7'},
+        label:{show:true,position:'top',color:'#cba6f7',fontSize:10,formatter:function(p){return p.value+'%'}}
+      },
+      {
+        name:'Arbor',
+        type:'bar',
+        data:[2.63, 6.38, 10.81, 49.34, 260, 19.79],
+        itemStyle:{color:'#a6e3a1'},
+        label:{show:true,position:'top',color:'#a6e3a1',fontSize:10,formatter:function(p){return p.value+'%'}}
+      }
+    ]
+  });
+})();
+</script>
+
+<blockquote>
+  <strong>关键发现</strong>：Arbor 在所有六个任务上均取得最佳 held-out 结果。在 BrowseComp 上，Arbor 将准确率从 45.33 提升至 67.67，而 Codex 和 Claude Code 仅达 50.00 和 53.33。在 Math-Reasoning 数据合成上，Arbor 提升 19.79 分，而基线仅提升 5.21 和 7.29 分。<strong>平均相对增益超过 Codex 和 Claude Code 的 2.5 倍</strong>。
+</blockquote>
+
+<h3>Dev/Test 分离揭示自主搜索中的过拟合</h3>
+
+<p>Terminal-Bench 任务上出现了一个典型案例：Claude Code 取得最高 dev 分数（75.00），但 held-out 分数下降至 71.70；Arbor dev 分数较低（72.22），但 held-out 分数达到最佳（77.36）。这正是 Arbor 合并门控的价值体现——高 dev 低 test 的候选被识别为"利用反馈信号而非产生可迁移改进"的证据。</p>
+
+<h3>MLE-Bench Lite 结果</h3>
+
+<table>
+  <tr>
+    <th>方法</th><th>骨干模型</th><th>Valid sub.</th><th>Above median</th><th>Bronze</th><th>Silver</th><th>Gold</th><th>Any medal</th>
+  </tr>
+  <tr><td>InternAgent</td><td>DeepSeek-R1</td><td>100%</td><td>78.79%</td><td>10.61%</td><td>16.67%</td><td>34.85%</td><td>62.12%</td></tr>
+  <tr><td>ML-Master</td><td>DeepSeek-R1</td><td>100%</td><td>74.24%</td><td>4.55%</td><td>13.64%</td><td>30.30%</td><td>48.48%</td></tr>
+  <tr><td>AIDE</td><td>o3</td><td>100%</td><td>70.45%</td><td>7.95%</td><td>12.73%</td><td>34.32%</td><td>55.00%</td></tr>
+  <tr><td>ML-Master 2.0</td><td>DeepSeekV3.2</td><td>100%</td><td>84.85%</td><td>13.64%</td><td>31.82%</td><td>30.30%</td><td>75.76%</td></tr>
+  <tr><td>R&D-Agent</td><td>GPT-5</td><td>77.27%</td><td>74.24%</td><td>12.12%</td><td>22.73%</td><td>33.33%</td><td>68.18%</td></tr>
+  <tr><td>MARS</td><td>Claude-Opus-4.6</td><td>100%</td><td>86.36%</td><td>15.15%</td><td>19.70%</td><td>40.91%</td><td>75.76%</td></tr>
+  <tr><td>LoongFlow</td><td>Gemini-3-Flash</td><td>100%</td><td>89.39%</td><td>6.06%</td><td>15.15%</td><td>53.03%</td><td>74.24%</td></tr>
+  <tr><td>Codex</td><td>GPT-5.5 (xhigh)</td><td>68.18%</td><td>68.18%</td><td>18.18%</td><td>19.70%</td><td>30.30%</td><td>68.18%</td></tr>
+  <tr><td>AI-Scientist</td><td>Gemini-3-Flash</td><td>100%</td><td>81.82%</td><td>13.64%</td><td>25.76%</td><td>37.88%</td><td>81.82%</td></tr>
+  <tr><td>Arbor</td><td>Gemini-3-Flash</td><td>100%</td><td>86.36%</td><td>18.18%</td><td>27.27%</td><td>40.90%</td><td>81.82%</td></tr>
+  <tr style="background:#1e3a2e"><td><strong>Arbor</strong></td><td><strong>GPT-5.5</strong></td><td><strong>100%</strong></td><td><strong>95.45%</strong></td><td><strong>0.00%</strong></td><td><strong>9.09%</strong></td><td><strong>77.27%</strong></td><td><strong>86.36%</strong></td></tr>
+</table>
+
+<p>配合 GPT-5.5，Arbor 达到 <strong>86.36% Any Medal</strong> 和 <strong>77.27% Gold</strong>，是表中最高值。值得注意的是，骨干从 Gemini-3-Flash 换为 GPT-5.5 时，控制器、树深度、调度器和适配器均未改变，说明 HTR 框架本身提供了模型无关的结构化探索能力。</p>
+
+<!-- ===== 消融实验 ===== -->
+<h2>消融实验</h2>
+
+<h3>HTR 各组件贡献（MLE-Bench Lite，Claude Opus 4.6 骨干）</h3>
+
+<table>
+  <tr>
+    <th>变体</th><th>Valid sub.</th><th>Above median</th><th>Bronze</th><th>Silver</th><th>Gold</th><th>Any medal</th>
+  </tr>
+  <tr style="background:#1e3a2e">
+    <td><strong>Full Arbor</strong></td><td>100%</td><td>90.91%</td><td>4.55%</td><td>27.27%</td><td>50.00%</td><td><strong>81.82%</strong></td>
+  </tr>
+  <tr>
+    <td>w/o tree（平坦实验队列）</td><td>100%</td><td>72.72%</td><td>9.09%</td><td>22.73%</td><td>31.82%</td><td>63.64%</td>
+  </tr>
+  <tr>
+    <td>w/o insight feedback（保留树结构但禁用洞见传播）</td><td>100%</td><td>77.27%</td><td>4.55%</td><td>13.64%</td><td>36.36%</td><td>54.54%</td>
+  </tr>
+</table>
+
+<div id="chart-ablation" class="echarts-container" style="height:320px"></div>
+<script>
+(function(){
+  var c = echarts.init(document.getElementById('chart-ablation'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'消融实验：Any Medal 率对比',textStyle:{color:'#89b4fa',fontSize:14},left:'center',top:10},
+    tooltip:{trigger:'axis'},
+    grid:{left:'3%',right:'4%',bottom:'8%',top:60,containLabel:true},
+    xAxis:{
+      type:'category',
+      data:['Above Median','Bronze','Silver','Gold','Any Medal'],
+      axisLabel:{color:'#cdd6f4'},
+      axisLine:{lineStyle:{color:'#45475a'}}
+    },
+    yAxis:{
+      type:'value',name:'(%)',nameTextStyle:{color:'#cdd6f4'},
+      axisLabel:{color:'#cdd6f4'},
+      axisLine:{lineStyle:{color:'#45475a'}},
+      splitLine:{lineStyle:{color:'#313244'}}
+    },
+    legend:{data:['Full Arbor','w/o tree','w/o insight feedback'],textStyle:{color:'#cdd6f4'},top:35},
+    series:[
+      {name:'Full Arbor',type:'bar',data:[90.91,4.55,27.27,50.00,81.82],itemStyle:{color:'#a6e3a1'},barGap:'5%'},
+      {name:'w/o tree',type:'bar',data:[72.72,9.09,22.73,31.82,63.64],itemStyle:{color:'#89dceb'}},
+      {name:'w/o insight feedback',type:'bar',data:[77.27,4.55,13.64,36.36,54.54],itemStyle:{color:'#fab387'}}
+    ]
+  });
+})();
+</script>
+
+<h3>消融实验关键发现</h3>
+
+<ul>
+  <li><strong>HTR 提升精炼质量而非可执行性</strong>：所有变体均获得 100% 有效提交，说明消融差距不是由基本执行失败导致的。差距出现在结果质量上——Full Arbor 81.82% vs w/o tree 63.64% vs w/o insight feedback 54.54%。</li>
+  <li><strong>去掉洞见传播比去掉树本身更有害</strong>：这是反直觉但深刻的发现。仅有层级结构而无传播洞见的树，只能在语法上组织实验，无法提供后续决策所需的语义记忆。树的价值在于其上能够累积证据。</li>
+  <li><strong>树结构与洞见传播相辅相成</strong>：树定义了竞争假设的存储和比较位置，洞见传播决定了什么可复用信息被携带向前。二者结合才能将局部实验结果转化为对未来搜索的持久约束。</li>
+</ul>
+
+<h3>节点统计（树追踪）</h3>
+
+<table>
+  <tr>
+    <th>统计项</th><th>Optimizer Design</th><th>Arch. Design</th><th>Terminal Bench</th><th>BrowseComp</th><th>Search Agent</th><th>Math Reasoning</th>
+  </tr>
+  <tr><td>总节点数</td><td>26</td><td>150</td><td>17</td><td>26</td><td>15</td><td>15</td></tr>
+  <tr><td>Dev+ 节点数</td><td>13</td><td>15</td><td>7</td><td>10</td><td>10</td><td>6</td></tr>
+  <tr><td>已合并节点数</td><td>2</td><td>9</td><td>3</td><td>3</td><td>4</td><td>4</td></tr>
+</table>
+
+<p>Dev+ 节点（在 dev 集上改进基线的节点）数量远多于已合并节点，说明合并门控有效过滤了对开发集的过拟合，只有真正可迁移的改进才被纳入最终制品。</p>
+
+<!-- ===== 局限性 ===== -->
+<h2>局限性</h2>
+
+<ul>
+  <li><strong>标量目标的局限</strong>：Arbor 当前评估的 AO 任务均使用单一标量指标（loss、pass rate、accuracy）。对于多目标、定性评估或需要人类判断的研究任务，HTR 的假设精炼机制能否有效工作尚待验证。</li>
+  <li><strong>高层问题表述依赖人工</strong>：Arbor 在目标可通过具体精炼序列改进时表现最强，但当进展需要弱连接于现有树的全新高层表述时可靠性下降。Architecture Design 任务最终发现单旋钮调整已到边际收益递减，需要更大的算法变动，但识别这一变动仍依赖先验判断而非树的自动生成能力。</li>
+  <li><strong>搜索成本</strong>：Arbor 使用 20.12M–43.19M tokens，与单轨迹基线规模相当，但对于资源受限场景，树的维护和洞见传播仍有额外开销。</li>
+  <li><strong>骨干模型依赖</strong>：HTR 提供模型无关的框架结构，但实证上限受任务-骨干匹配影响。Claude Opus 4.6 在 BrowseComp 上最优，GPT-5.5 在 MLE-Bench 上最优，说明框架无法完全解耦模型能力与任务需求。</li>
+  <li><strong>评估范围</strong>：当前 AO 任务套件覆盖三类研究制品，但仍属于 ML 工程范畴。将 Arbor 推广至更广泛的科学研究场景（实验科学、理论推导、跨学科发现）需要进一步的评估和可能的架构调整。</li>
+  <li><strong>活跃技术报告</strong>：论文明确声明这是一份持续演进的技术报告，评估范围将随项目发展更新，当前结果代表特定时间点的快照。</li>
+</ul>
+
+<!-- ===== 总结与启发 ===== -->
+<h2>总结与启发</h2>
+
+<h3>核心贡献回顾</h3>
+
+<p>Arbor 的贡献可以从三个层次理解：</p>
+
+<p><strong>问题层次</strong>：将自主研究形式化为"自主优化（AO）"——Agent 从初始制品出发，通过迭代实验改进制品，无需逐步人工监督。这一形式化的价值在于它清晰地分离了探索性 dev 反馈（可自由使用）与验证性 test 评估（仅用于准入），从而将"研究进展"与"过拟合"区分开来。</p>
+
+<p><strong>机制层次</strong>：HTR 是核心创新。它将假设树作为持久化研究状态，每个节点绑定假设、制品版本、实验证据和蒸馏洞见。关键不在于树的存在本身，而在于洞见的双向流动：执行结果向上抽象为方向级教训，方向级约束向下影响子假设生成。这使得"失败"不再是浪费的尝试，而是压缩进树节点的可复用信息。</p>
+
+<p><strong>系统层次</strong>：协调器-执行器的架构分离解决了长时间自主研究的核心张力——战略决策需要全局视野，而实现单个假设需要短视野的工程工作。通过将两者分离，Arbor 避免了低级执行追踪模糊全局研究状态，同时保持了实验结果对假设的可归因性。</p>
+
+<h3>对自主 AI 研究范式的深度思考</h3>
+
+<p>Arbor 代表了自主研究 Agent 从"持久任务执行"向"累积性学习"的范式转变。这一转变的本质是：<strong>研究的价值不在于单次实验的结果，而在于实验序列如何重塑后续搜索空间</strong>。人类研究者的核心优势正是这种跨时间的认识论积累——每次失败都在压缩可能性空间，每次成功都在建立新的构建基础。</p>
+
+<p>消融实验揭示了一个深刻洞见：<strong>去掉洞见传播比去掉树结构本身更有害</strong>。这说明层级组织只是必要条件，而非充分条件。树的价值来自其上积累的语义记忆，而非其拓扑结构。这与认知科学中"图式"（schema）的概念高度呼应——专家的优势不在于记住更多事实，而在于拥有能将新信息快速整合进现有知识结构的抽象模式。</p>
+
+<p>从更宏观的视角看，Arbor 的设计哲学指向了一个关于 AI 研究能力的根本问题：<strong>自主研究需要的不是更强的单次推理，而是更好的证据组织机制</strong>。当前 LLM 的上下文窗口虽然越来越大，但线性增长的上下文无法替代树形的知识组织——前者是信息的堆积，后者是知识的精炼。</p>
+
+<p>跨任务迁移实验（BrowseComp 优化的 harness 在 HLE 和 DeepSearchQA 上同样有效）进一步表明，HTR 发现的不是任务特定的技巧，而是具有更广泛适用性的设计原则。这与人类研究者在一个领域积累的方法论能迁移到相关领域的现象类似。</p>
+
+<p>然而，Arbor 也揭示了当前 AI 研究的边界：当问题需要全新的高层概念框架时，树形精炼的能力受限。这暗示下一代自主研究系统可能需要某种"元认知"能力——不仅能在已有框架内精炼，还能识别何时需要跳出框架、重新定义问题。这或许是通向真正"通才自主研究"的最后一公里。</p>
+
+<h3>对实践者的启示</h3>
+
+<ul>
+  <li><strong>设计研究系统时，持久化研究状态比更大的上下文窗口更重要</strong>：树形结构将证据压缩为可复用洞见，而非简单堆积原始信息。</li>
+  <li><strong>Dev/Test 分离是自主搜索的必要条件，而非可选项</strong>：没有 held-out 门控，迭代优化几乎必然导致对反馈信号的过拟合。</li>
+  <li><strong>失败的实验应被设计为一等公民</strong>：HTR 的洞见传播机制使失败节点成为约束未来搜索的宝贵信息，而非被丢弃的噪声。</li>
+  <li><strong>协调器-执行器分离是可扩展性的关键</strong>：战略决策与局部实现的分离允许并行探索，同时保持全局研究状态的一致性。</li>
+</ul>
+
+<!-- ===== 参考文献 ===== -->
+<h2>参考文献</h2>
+
+<ol>
+  <li>Jin, J., Hu, Y., Qiu, K., et al. (2026). <em>Toward Generalist Autonomous Research via Hypothesis-Tree Refinement.</em> arXiv:2606.11926.</li>
+  <li>Lu, C., Lu, C., Lange, R. T., et al. (2024). <em>The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery.</em> arXiv:2408.06292.</li>
+  <li>Jiang, Z., Schmidt, D., Srikanth, D., et al. (2025). <em>AIDE: AI-Driven Exploration in the Space of Code.</em> arXiv:2502.13138.</li>
+  <li>Chan, J. S., et al. (2024). <em>MLE-Bench: Evaluating Machine Learning Agents on Machine Learning Engineering.</em> arXiv:2410.07095.</li>
+  <li>Yang, C., et al. (2025). <em>R&D-Agent: Autonomous Evolving Agents for Automated Research and Development.</em></li>
+  <li>Novikov, A., et al. (2025). <em>AlphaEvolve: A Learning Framework to Discover Novel Algorithms Using LLMs.</em> DeepMind Technical Report.</li>
+  <li>Romera-Paredes, B., et al. (2024). <em>Mathematical Discoveries from Program Search with Large Language Models (FunSearch).</em> Nature, 625, 468–475.</li>
+  <li>Gasteiger, J., Khan, A., Bowman, S., et al. (2025). <em>Automated Researchers Can Subtly Sandbag.</em> Anthropic Alignment Research.</li>
+</ol>
+
+<hr>
+<p style="color:#6c7086;font-size:.85em;text-align:center">报告生成时间：2026-06-12 &nbsp;|&nbsp; 基于 arXiv:2606.11926 全文分析 &nbsp;|&nbsp; 作者：Claude Opus 4.8 (1M context)</p>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

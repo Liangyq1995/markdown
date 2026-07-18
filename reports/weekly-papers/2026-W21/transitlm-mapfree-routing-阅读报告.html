@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TransitLM 阅读报告 — Map-Free Transit Route Generation</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.5em; margin: 0.5em 0; }
+    li { margin: 0.3em 0; }
+    .badge { display: inline-block; background: var(--heading); color: #1e1e2e; font-size: 0.78em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-right: 4px; }
+    .badge.green { background: var(--strong); }
+    .badge.orange { background: #fab387; }
+    .badge.purple { background: #cba6f7; }
+    .tag-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 12px 18px; margin: 0.8em 0; }
+    .best { color: var(--strong); font-weight: 700; }
+    .second { color: #89dceb; text-decoration: underline; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .metric-card { display: inline-block; background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 24px; margin: 8px; text-align: center; min-width: 140px; }
+    .metric-card .val { font-size: 2em; font-weight: 700; color: var(--heading); }
+    .metric-card .label { font-size: 0.82em; color: #6c7086; margin-top: 4px; }
+    .info-table-wrap table th:first-child { width: 120px; }
+    .highlight-row td { background: #252535 !important; }
+    .paradigm-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin: 1em 0; }
+    .paradigm-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .paradigm-card h4 { color: var(--heading); margin-bottom: 8px; }
+    .paradigm-card ul { font-size: 0.9em; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+  <!-- ==================== 标题 ==================== -->
+  <h1>TransitLM: A Large-Scale Dataset and Benchmark for Map-Free Transit Route Generation</h1>
+  <p>
+    <span class="badge">cs.CL</span>
+    <span class="badge green">cs.AI</span>
+    <span class="badge orange">cs.LG</span>
+    <span class="badge purple">arXiv 2605.22355</span>
+    &nbsp;·&nbsp; 2026-05-21 &nbsp;·&nbsp; ⬆ 175 upvotes
+  </p>
+
+  <!-- ==================== 1. 论文信息表 ==================== -->
+  <h2 id="paper-info">1. 论文信息</h2>
+  <div class="info-table-wrap">
+    <table>
+      <tr><th>标题</th><td>TransitLM: A Large-Scale Dataset and Benchmark for Map-Free Transit Route Generation</td></tr>
+      <tr><th>核心问题</th><td>能否仅从数据中学习公共交通路线规划，完全绕过地图基础设施和路由引擎，实现端到端的无地图路线生成？</td></tr>
+      <tr><th>作者</th><td>Hanyu Guo*, Jiedong Yang*, Chao Chen, Longfei Xu, Kaikui Liu, Xiangxiang Chu</td></tr>
+      <tr><th>机构</th><td>AMAP (Alibaba Group)，北京</td></tr>
+      <tr><th>数据集</th><td><a href="https://huggingface.co/datasets/GD-ML/TransitLM" target="_blank">HuggingFace: GD-ML/TransitLM</a></td></tr>
+      <tr><th>评估代码</th><td><a href="https://github.com/HotTricker/TransitLM" target="_blank">GitHub: HotTricker/TransitLM</a></td></tr>
+      <tr><th>许可证</th><td>CC BY 4.0</td></tr>
+      <tr><th>核心结论</th><td>"Transit route planning can be learned entirely from data, enabling end-to-end, map-free route generation."</td></tr>
+    </table>
+  </div>
+
+  <div style="display:flex; gap:12px; flex-wrap:wrap; margin:1.2em 0;">
+    <div class="metric-card"><div class="val">13.9M</div><div class="label">CPT训练记录总量</div></div>
+    <div class="metric-card"><div class="val">120,845</div><div class="label">覆盖站点数</div></div>
+    <div class="metric-card"><div class="val">13,666</div><div class="label">覆盖线路数</div></div>
+    <div class="metric-card"><div class="val">4</div><div class="label">中国城市</div></div>
+    <div class="metric-card"><div class="val">3</div><div class="label">评估任务</div></div>
+    <div class="metric-card"><div class="val">10</div><div class="label">评估指标</div></div>
+    <div class="metric-card"><div class="val">20B+</div><div class="label">token 总量</div></div>
+  </div>
+
+  <!-- ==================== 2. 核心问题与动机 ==================== -->
+  <h2 id="motivation">2. 核心问题与动机</h2>
+
+  <h3 id="paradigm-shift">2.1 范式转变：从地图驱动到数据驱动</h3>
+  <p>公共交通路线规划是城市日常出行的核心基础设施服务，但传统系统高度依赖结构化地图数据和复杂工程管道。一条典型的传统规划流程包含：</p>
+  <ol>
+    <li><strong>地图数据检索</strong>：从拓扑网络中检索起点-终点间的候选路段；</li>
+    <li><strong>路由算法</strong>：运行 Dijkstra、A*、RAPTOR 等算法在图上搜索最优路径；</li>
+    <li><strong>候选排序</strong>：利用规则或排序模型对候选路线进行个性化排序。</li>
+  </ol>
+  <p>这种传统架构存在三大固有局限：<strong>基础设施成本极高</strong>（需要维护实时地图与调度数据）、<strong>配置静态僵化</strong>（难以快速响应用户偏好变化）、以及<strong>跨城市扩展困难</strong>（每座城市都需要独立的路网图建模）。</p>
+
+  <blockquote>
+    <strong>核心洞察：</strong>交通平台每天产生海量规划日志，这些日志隐式编码了丰富的路由知识——包括换乘站、用户如何权衡速度、便利性和线路偏好。这激发了一个自然的问题：<em>能否直接从这些数据中学习路线规划，完全绕开地图与路由引擎？</em>
+  </blockquote>
+
+  <h3 id="why-llm-fails">2.2 通用 LLM 为何不够用</h3>
+  <p>人们自然会想到用 GPT-4、Qwen3 等通用大模型来解决这一问题。然而，近期研究表明自回归 LLM 在规划任务上有根本性的局限：</p>
+  <ul>
+    <li>能回忆热门站点或高频路线，但对低频起终点对会产生<strong>幻觉站点</strong>（hallucinated stations）；</li>
+    <li>生成的路线常出现<strong>断裂连接</strong>（disconnected routes），即相邻站点之间没有共享线路；</li>
+    <li>输出<strong>无效的上下车站点</strong>，与起终点的实际空间关系不符。</li>
+  </ul>
+  <p>根本原因在于：<strong>缺少合适的训练数据</strong>。现有数据源各有缺陷：车辆轨迹数据集（T-Drive、Porto Taxi）缺少站点结构；静态网络数据（GTFS、OpenStreetMap）没有用户行为标注。TransitLM 正是为了填补这一空白而构建。</p>
+
+  <div class="paradigm-grid">
+    <div class="paradigm-card">
+      <h4>传统地图管道</h4>
+      <ul>
+        <li>依赖结构化路网图</li>
+        <li>Dijkstra / A* / RAPTOR 算法</li>
+        <li>候选检索 + 排序模型</li>
+        <li>工业验证、高稳定性</li>
+        <li>成本高、配置静态</li>
+      </ul>
+    </div>
+    <div class="paradigm-card">
+      <h4>通用 LLM（无领域数据）</h4>
+      <ul>
+        <li>依赖文本语义线索</li>
+        <li>幻觉站点 / 断裂路线</li>
+        <li>缺乏拓扑结构知识</li>
+        <li>端到端但精度极低</li>
+        <li>无法隐式对齐 GPS</li>
+      </ul>
+    </div>
+    <div class="paradigm-card">
+      <h4>TransitLM（本文方案）</h4>
+      <ul>
+        <li>从真实规划日志中学习</li>
+        <li>端到端无地图生成</li>
+        <li>隐式 GPS→站点对齐</li>
+        <li>结构合法，高精度路线</li>
+        <li>单模型跨任务泛化</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ==================== 3. 背景与相关工作 ==================== -->
+  <h2 id="related-work">3. 背景与相关工作</h2>
+
+  <h3 id="transit-routing">3.1 公共交通路由算法谱系</h3>
+  <p>传统公共交通路由算法以图为核心，历经数十年发展，形成了一套成熟的方法体系：</p>
+  <table>
+    <tr>
+      <th>算法</th>
+      <th>发表年份</th>
+      <th>核心思想</th>
+      <th>局限</th>
+    </tr>
+    <tr>
+      <td>Dijkstra</td>
+      <td>1959</td>
+      <td>单源最短路，贪心扩展</td>
+      <td>无法直接处理时刻表约束</td>
+    </tr>
+    <tr>
+      <td>A*</td>
+      <td>1968</td>
+      <td>启发式引导搜索，加速收敛</td>
+      <td>需要可容许启发函数设计</td>
+    </tr>
+    <tr>
+      <td>RAPTOR</td>
+      <td>2015</td>
+      <td>轮次式扫描，支持 Pareto 最优</td>
+      <td>需完整时刻表，内存占用大</td>
+    </tr>
+    <tr>
+      <td>Connection Scan Algorithm (CSA)</td>
+      <td>2018</td>
+      <td>按出发时间扫描连接序列</td>
+      <td>构建和更新成本高</td>
+    </tr>
+    <tr>
+      <td>Transfer Patterns</td>
+      <td>2010</td>
+      <td>预计算换乘模式加速查询</td>
+      <td>预计算成本极高，离线专用</td>
+    </tr>
+    <tr>
+      <td>LLM-A*</td>
+      <td>2024</td>
+      <td>LLM 生成启发值引导 A* 搜索</td>
+      <td>仍需图作为输入</td>
+    </tr>
+    <tr>
+      <td><strong>TransitLM (本文)</strong></td>
+      <td><strong>2026</strong></td>
+      <td><strong>纯数据驱动，从规划日志学习</strong></td>
+      <td><strong>无需地图和路由引擎</strong></td>
+    </tr>
+  </table>
+
+  <h3 id="datasets-comparison">3.2 现有数据集对比</h3>
+  <table>
+    <tr>
+      <th>数据集</th>
+      <th>类型</th>
+      <th>规模</th>
+      <th>站点结构</th>
+      <th>用户行为</th>
+      <th>换乘信息</th>
+      <th>GPS 坐标</th>
+    </tr>
+    <tr>
+      <td>T-Drive</td>
+      <td>车辆轨迹</td>
+      <td>1500万+ GPS点</td>
+      <td>✗</td>
+      <td>✗</td>
+      <td>✗</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>Porto Taxi</td>
+      <td>出租车轨迹</td>
+      <td>170万次行程</td>
+      <td>✗</td>
+      <td>✗</td>
+      <td>✗</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>GeoLife</td>
+      <td>个人GPS</td>
+      <td>17,621条轨迹</td>
+      <td>✗</td>
+      <td>✗</td>
+      <td>✗</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>GTFS</td>
+      <td>静态网络</td>
+      <td>数百城市</td>
+      <td>✓</td>
+      <td>✗</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>CPTOND-2025</td>
+      <td>静态网络</td>
+      <td>百余城市</td>
+      <td>✓</td>
+      <td>✗</td>
+      <td>✓</td>
+      <td>✓</td>
+    </tr>
+    <tr>
+      <td>MobilityBench</td>
+      <td>评测基准</td>
+      <td>小规模问答</td>
+      <td>✓</td>
+      <td>部分</td>
+      <td>部分</td>
+      <td>部分</td>
+    </tr>
+    <tr class="highlight-row">
+      <td><strong>TransitLM (本文)</strong></td>
+      <td><strong>规划日志+基准</strong></td>
+      <td><strong>13.9M 条记录</strong></td>
+      <td><strong>✓</strong></td>
+      <td><strong>✓</strong></td>
+      <td><strong>✓</strong></td>
+      <td><strong>✓</strong></td>
+    </tr>
+  </table>
+
+  <h3 id="benchmark-comparison">3.3 规划评测基准对比</h3>
+  <table>
+    <tr>
+      <th>基准</th>
+      <th>核心任务</th>
+      <th>评估粒度</th>
+      <th>是否评估无地图生成</th>
+    </tr>
+    <tr>
+      <td>TravelPlanner</td>
+      <td>多日行程规划（工具调用）</td>
+      <td>高层约束满足</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>CityBench</td>
+      <td>城市智能多任务</td>
+      <td>任务特定</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>MobilityBench</td>
+      <td>地图 API 调用编排</td>
+      <td>工具使用能力</td>
+      <td>✗</td>
+    </tr>
+    <tr>
+      <td>GridRoute</td>
+      <td>合成网格图路径推理</td>
+      <td>图搜索准确率</td>
+      <td>部分（合成环境）</td>
+    </tr>
+    <tr class="highlight-row">
+      <td><strong>TransitBench (本文)</strong></td>
+      <td><strong>最优路线/偏好/多路线生成</strong></td>
+      <td><strong>站点级精度，10指标</strong></td>
+      <td><strong>✓（核心贡献）</strong></td>
+    </tr>
+  </table>
+
+  <!-- ==================== 4. 数据集构建流程 ==================== -->
+  <h2 id="dataset-construction">4. 数据集构建流程</h2>
+
+  <h3 id="construction-pipeline">4.1 总体构建管道（Mermaid 流程图）</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["原始数据来源<br>Amap 导航平台规划日志"] --> B["数据采集层"]
+    B --> B1["路线规划会话<br>12,945,264 条"]
+    B --> B2["站点信息<br>120,845 个站点"]
+    B --> B3["线路信息<br>13,666 条线路"]
+
+    B1 --> C["数据清洗与去标识化"]
+    B2 --> C
+    B3 --> C
+
+    C --> D["隐私保护处理<br>去除用户身份信息"]
+    D --> E["多样性过滤<br>每次会话保留≤5条路线"]
+
+    E --> F1["CPT 语料库<br>13.9M 文本记录"]
+    E --> F2["SFT 基准数据<br>3任务 × 30K 训练 + 10K 测试"]
+
+    F1 --> G1["词表扩展<br>注册 120,845 站点 ID 为独立 token"]
+    G1 --> H1["持续预训练 CPT<br>Qwen3-0.6B / 1.7B / 4B"]
+
+    F2 --> H2["监督微调 SFT<br>ORG / PRG / DRG"]
+    H1 --> H2
+
+    H2 --> I["TransitBench 评估<br>4 维度 × 10 指标"]
+
+    style A fill:#313244,color:#cdd6f4
+    style F1 fill:#2a3a5e,color:#89b4fa
+    style F2 fill:#2a3a5e,color:#89b4fa
+    style I fill:#1a3a2e,color:#a6e3a1
+</pre>
+
+  <h3 id="data-collection">4.2 数据收集细节</h3>
+  <p>TransitLM 的原始数据来源于 Amap（高德地图）导航平台，覆盖北京、上海、深圳、成都四座中国主要城市。数据从<strong>单日导航日志</strong>中提取，每条规划会话包含以下字段：</p>
+  <ul>
+    <li><strong>起终点 GPS 坐标</strong>（经纬度）及 POI 名称；</li>
+    <li><strong>候选路线列表</strong>：完整站点 ID 序列（唯一数字 ID，非自然语言站名）和线路标识符；</li>
+    <li><strong>分段级出行信息</strong>：各段距离、时间、票价；</li>
+    <li><strong>路线类型标注</strong>（bus-only / subway-only / bus+subway / mixed）；</li>
+    <li><strong>首末里程接驳信息</strong>：起终点到最近公交站的步行/骑行/打车细节；</li>
+    <li><strong>用户选择标签</strong>：用户实际点击的路线（反映真实偏好）。</li>
+  </ul>
+
+  <blockquote>
+    <strong>关键设计选择：</strong>所有候选路线均由 Amap 生产路由引擎生成，天然满足连通性和可行性约束，提供了无需人工验证的高质量训练信号。
+  </blockquote>
+
+  <!-- ==================== 5. 关键技术详解 ==================== -->
+  <h2 id="technical-details">5. 关键技术详解</h2>
+
+  <h3 id="data-schema">5.1 数据 Schema：CPT 语料库 vs SFT 基准数据</h3>
+  <p>TransitLM 发布两种互补的数据资源：</p>
+
+  <div class="algo-box">
+    <div class="algo-title">CPT 记录格式（路线规划会话文本）</div>
+    <p><span class="cm">// 查询头部</span></p>
+    <p style="padding-left:1.5em"><span class="kw">城市：</span><span class="var">北京</span></p>
+    <p style="padding-left:1.5em"><span class="kw">起点：</span><span class="var">(lng, lat)</span>，<span class="var">POI名称</span></p>
+    <p style="padding-left:1.5em"><span class="kw">终点：</span><span class="var">(lng, lat)</span>，<span class="var">POI名称</span></p>
+    <p><span class="cm">// 候选路线（用户选择的路线排第一位）</span></p>
+    <p style="padding-left:1.5em"><span class="kw">路线1：</span><span class="var">线路序列</span> | <span class="var">站点ID序列: [S1, S2, ..., Sn]</span></p>
+    <p style="padding-left:3em"><span class="fn">距离</span>: <span class="num">X.X km</span> | <span class="fn">时间</span>: <span class="num">N min</span> | <span class="fn">票价</span>: <span class="num">¥X.X</span></p>
+    <p style="padding-left:3em"><span class="fn">首里程</span>: <span class="var">步行/骑行/打车</span> → <span class="var">站点S_board</span></p>
+    <p style="padding-left:3em"><span class="fn">末里程</span>: <span class="var">站点S_alight</span> → <span class="var">步行/骑行/打车</span></p>
+    <p style="padding-left:1.5em"><span class="kw">路线2：</span>... <span class="cm">（最多5条，多样性过滤后）</span></p>
+  </div>
+
+  <p>CPT 语料库还包括 <strong>880,854 条站点描述</strong>（名称、坐标、描述）和 <strong>147,918 条线路描述</strong>（线路长、停靠站序列、运营时间、连通性），共形成约 <strong>20B+ tokens</strong> 的训练语料。</p>
+
+  <h3 id="vocab-expansion">5.2 词表扩展与站点 Token 化</h3>
+  <p>TransitLM 的一个核心技术决策是<strong>将所有 120,845 个站点 ID 注册为词表中的独立 token</strong>。这一设计具有深远意义：</p>
+  <ul>
+    <li><strong>防止字符级幻觉</strong>：若用字符组合表示站点 ID（如 "12345"），模型可能拼出现实中不存在的数字组合，产生幻觉站点；独立 token 使模型只能输出已注册的合法站点；</li>
+    <li><strong>直接编码空间关系</strong>：每个站点 token 的嵌入向量在预训练过程中逐渐捕获该站点在交通网络中的拓扑和空间位置信息；</li>
+    <li><strong>序列长度缩短</strong>：一个长数字 ID 变为单个 token，使中间站点序列的表示更紧凑，减少了生成误差累积。</li>
+  </ul>
+
+  <h3 id="implicit-gps-grounding">5.3 GPS 坐标的隐式对齐机制</h3>
+  <p>TransitLM 最令人印象深刻的能力之一是<strong>隐式空间对齐（Implicit Spatial Grounding）</strong>：模型仅根据 GPS 坐标输入，无需任何坐标到站点的显式映射模块，就能正确预测最近的上下车站点。</p>
+
+  <p>其实现原理可从以下角度理解：</p>
+
+<pre class="mermaid">
+flowchart LR
+    GPS["GPS 坐标输入<br>(lng, lat) 起终点"] --> EMBED["token 嵌入层<br>GPS 坐标编码为浮点token序列"]
+    EMBED --> CPT_LEARNED["CPT 训练中<br>隐式学习的空间映射"]
+    CPT_LEARNED --> STATION["预测上车站点 token<br>S_board ∈ 词表中的120845个站点"]
+    STATION --> ROUTE["完整路线生成<br>S1 → S2 → ... → Sn"]
+
+    subgraph "CPT 阶段学到的知识"
+        L1["坐标 ↔ 附近站点的共现关系"]
+        L2["站点的邻接拓扑结构"]
+        L3["线路的地理覆盖范围"]
+    end
+
+    CPT_LEARNED --- L1
+    CPT_LEARNED --- L2
+    CPT_LEARNED --- L3
+
+    style GPS fill:#313244,color:#cdd6f4
+    style STATION fill:#1a3a2e,color:#a6e3a1
+    style ROUTE fill:#1a3a2e,color:#a6e3a1
+</pre>
+
+  <p>在 CPT 语料中，每条记录都包含 GPS 坐标和对应的上下车站点 ID。通过在 13.9M 条记录上的 next-token prediction，模型在统计上学到了 <strong>哪些坐标区域对应哪些站点</strong>，从而无需外部地理数据库即可完成隐式空间对齐。</p>
+
+  <p>评估方式：Station Grounding (SG) 指标检测预测的上下车站点是否在起终点坐标的模式特定距离阈值内（步行 3km / 骑行 5km / 打车 10km）。</p>
+
+  <p>GPS-only 消融实验进一步证实了这一能力：移除所有文本提示，仅保留 GPS 坐标输入时，领域专用模型性能几乎不下降（Qwen3-4B 的 Route Exact Match 仅从 71.0% 降至 70.4%），而通用 LLM 的 Station Grounding 从 72.0% 骤降至 16.8%。</p>
+
+  <h3 id="three-tasks">5.4 三项评估任务设计</h3>
+  <table>
+    <tr>
+      <th>任务</th>
+      <th>缩写</th>
+      <th>输入</th>
+      <th>输出</th>
+      <th>Ground-Truth 构建规则</th>
+      <th>额外指标</th>
+    </tr>
+    <tr>
+      <td><strong>最优路线生成</strong></td>
+      <td>ORG</td>
+      <td>OD 坐标 + 自然语言查询</td>
+      <td>单条最优路线（JSON）</td>
+      <td>同时满足：平台排名第一 AND 用户实际点击</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td><strong>偏好感知规划</strong></td>
+      <td>PRG</td>
+      <td>OD 坐标 + 偏好约束（地铁优先/公交优先/少换乘/最短时间）</td>
+      <td>单条满足偏好的最优路线（JSON）</td>
+      <td>同 ORG + 偏好约束满足（来自用户显式设置的偏好会话）</td>
+      <td>Preference Compliance (PC)</td>
+    </tr>
+    <tr>
+      <td><strong>多路线生成</strong></td>
+      <td>DRG</td>
+      <td>OD 坐标 + 查询（请求 k=3 条路线）</td>
+      <td>3 条多样化路线（JSON 数组）</td>
+      <td>优先级：用户点击路线 → 不同 tag/不重叠线路 → 专家评分函数 fallback</td>
+      <td>Route Diversity (RD)</td>
+    </tr>
+  </table>
+
+  <p>每个任务提供 <strong>30,000 训练样本 + 10,000 测试样本</strong>，SFT 数据来自独立时间段，与 CPT 语料完全无重叠（防止数据泄漏）。</p>
+
+  <h3 id="evaluation-metrics">5.5 评估指标体系（10 项）</h3>
+  <p>TransitBench 设计了覆盖五个维度的 10 项指标：</p>
+  <table>
+    <tr>
+      <th>维度</th>
+      <th>指标</th>
+      <th>缩写</th>
+      <th>方向</th>
+      <th>定义</th>
+    </tr>
+    <tr>
+      <td rowspan="1"><strong>连通性</strong></td>
+      <td>Connectivity</td>
+      <td>Conn</td>
+      <td>↑</td>
+      <td>预测序列中每对相邻站点通过共享线路或合法换乘可达</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><strong>接驳可行性</strong></td>
+      <td>Station Grounding</td>
+      <td>SG</td>
+      <td>↑</td>
+      <td>预测上/下车站点在起/终点的模式特定距离阈值内（步行3km/骑行5km/打车10km）</td>
+    </tr>
+    <tr>
+      <td>Distance Plausibility</td>
+      <td>DP</td>
+      <td>↑</td>
+      <td>预测接驳距离在物理合理范围内</td>
+    </tr>
+    <tr>
+      <td rowspan="3"><strong>路线重叠度</strong></td>
+      <td>Line Overlap</td>
+      <td>LO</td>
+      <td>↑</td>
+      <td>完整线路集合（含首末里程）的 IoU</td>
+    </tr>
+    <tr>
+      <td>Station Sequence Overlap</td>
+      <td>SSO</td>
+      <td>↑</td>
+      <td>站点 ID 集合的 IoU</td>
+    </tr>
+    <tr>
+      <td>Route Exact Match</td>
+      <td>REM</td>
+      <td>↑</td>
+      <td>LO=1 且 SSO=1 的样本比例（最严格指标）</td>
+    </tr>
+    <tr>
+      <td rowspan="2"><strong>数值字段精度</strong></td>
+      <td>Estimation Accuracy</td>
+      <td>EA</td>
+      <td>↑</td>
+      <td>距离/时间/票价双容差标准下的通过率（仅在 REM 样本上计算）</td>
+    </tr>
+    <tr>
+      <td>Mean Absolute Percentage Error</td>
+      <td>MAPE</td>
+      <td>↓</td>
+      <td>数值字段的平均绝对百分比误差</td>
+    </tr>
+    <tr>
+      <td><strong>任务特定</strong></td>
+      <td>Preference Compliance</td>
+      <td>PC</td>
+      <td>↑</td>
+      <td>（PRG 专用）预测路线是否满足硬规则偏好约束</td>
+    </tr>
+    <tr>
+      <td><strong>任务特定</strong></td>
+      <td>Route Diversity</td>
+      <td>RD</td>
+      <td>↑</td>
+      <td>（DRG 专用）3 条生成路线间两两线路集合不相似度均值</td>
+    </tr>
+  </table>
+
+  <p>指标依赖关系：后续指标（LO/SSO/REM 等）仅在 Connectivity 通过的样本上计算；EA 和 MAPE 仅在 REM 样本上计算，确保数值预测的参考值是有意义的 ground truth。</p>
+
+  <h3 id="training-pipeline">5.6 两阶段训练流程</h3>
+
+<pre class="mermaid">
+flowchart LR
+    BASE["Qwen3-Base 底座模型<br>0.6B / 1.7B / 4B"] --> VOCAB["词表扩展<br>+120,845 站点 ID tokens"]
+    VOCAB --> CPT["持续预训练 CPT<br>13.9M 文本记录<br>序列 packed 到固定长度<br>cosine LR 调度"]
+    CPT --> SFT_ORG["SFT-ORG<br>最优路线生成<br>1 epoch"]
+    CPT --> SFT_PRG["SFT-PRG<br>偏好感知规划<br>1 epoch"]
+    CPT --> SFT_DRG["SFT-DRG<br>多路线生成<br>1 epoch"]
+    CPT --> SFT_JOINT["SFT-Joint<br>三任务合并<br>1 epoch"]
+
+    style BASE fill:#313244,color:#cdd6f4
+    style CPT fill:#2a3a5e,color:#89b4fa
+    style SFT_JOINT fill:#1a3a2e,color:#a6e3a1
+</pre>
+
+  <p>训练平台：<strong>阿里云 PPU 加速器</strong>。SFT 数据从独立时间段抽取，与 CPT 数据时间不重叠，彻底避免数据泄漏。</p>
+
+  <!-- ==================== 6. 数据集统计 ==================== -->
+  <h2 id="statistics">6. 数据集统计可视化</h2>
+
+  <h3 id="city-stats">6.1 各城市数据规模分布</h3>
+  <div id="chart-city" class="echarts-container" style="height:340px"></div>
+
+  <h3 id="modality-stats">6.2 路线出行方式分布</h3>
+  <div id="chart-modality" class="echarts-container" style="height:320px"></div>
+
+  <h3 id="distance-stats">6.3 路线距离与时间分布</h3>
+  <div id="chart-distance" class="echarts-container" style="height:320px"></div>
+
+  <h3 id="scale-comparison">6.4 与已有数据集规模对比</h3>
+  <div id="chart-scale" class="echarts-container" style="height:320px"></div>
+
+  <!-- ==================== 7. 实验结果 ==================== -->
+  <h2 id="experiments">7. 实验结果与分析</h2>
+
+  <h3 id="general-llm-comparison">7.1 通用 LLM 对比（任务 ORG，1000 测试样本）</h3>
+  <p>评估六个最强通用 LLM，注意这里给通用 LLM 提供了<strong>更宽松的评估条件</strong>（仅需预测上下车站点，而领域专用模型需要生成完整中间站点序列）：</p>
+
+  <table>
+    <tr>
+      <th>指标</th>
+      <th>GPT-5.4-pro</th>
+      <th>DeepSeek-V4</th>
+      <th class="best">Gemini-3.1-Pro</th>
+      <th>Claude-4.6</th>
+      <th>Qwen-3.6</th>
+      <th>Doubao</th>
+    </tr>
+    <tr>
+      <td>Connectivity ↑</td>
+      <td>60.5%</td>
+      <td>64.9%</td>
+      <td class="best">75.5%</td>
+      <td>48.1%</td>
+      <td>45.0%</td>
+      <td>61.6%</td>
+    </tr>
+    <tr>
+      <td>Station Grounding ↑</td>
+      <td>60.5%</td>
+      <td>72.0%</td>
+      <td class="best">93.9%</td>
+      <td>50.7%</td>
+      <td>64.2%</td>
+      <td>83.9%</td>
+    </tr>
+    <tr>
+      <td>Distance Plausibility ↑</td>
+      <td>40.7%</td>
+      <td>49.9%</td>
+      <td class="best">67.0%</td>
+      <td>27.9%</td>
+      <td>42.9%</td>
+      <td>59.4%</td>
+    </tr>
+    <tr>
+      <td>Line Overlap ↑</td>
+      <td>0.407</td>
+      <td>0.447</td>
+      <td class="best">0.600</td>
+      <td>0.396</td>
+      <td>0.475</td>
+      <td>0.584</td>
+    </tr>
+    <tr>
+      <td>Station Seq. Overlap ↑</td>
+      <td>0.361</td>
+      <td>0.425</td>
+      <td class="best">0.569</td>
+      <td>0.314</td>
+      <td>0.386</td>
+      <td>0.517</td>
+    </tr>
+    <tr>
+      <td>Route Exact Match ↑</td>
+      <td>18.4%</td>
+      <td>23.7%</td>
+      <td class="best">40.2%</td>
+      <td>15.4%</td>
+      <td>19.8%</td>
+      <td>33.6%</td>
+    </tr>
+    <tr>
+      <td>Estimation Accuracy ↑</td>
+      <td>27.0%</td>
+      <td>30.5%</td>
+      <td>38.9%</td>
+      <td class="best">47.3%</td>
+      <td>20.2%</td>
+      <td>26.1%</td>
+    </tr>
+    <tr>
+      <td>MAPE ↓</td>
+      <td>13.7%</td>
+      <td>14.3%</td>
+      <td class="best">10.7%</td>
+      <td class="second">12.1%</td>
+      <td>16.1%</td>
+      <td>12.0%</td>
+    </tr>
+  </table>
+
+  <div id="chart-llm-compare" class="echarts-container" style="height:380px"></div>
+
+  <h3 id="org-results">7.2 ORG 任务主要结果（10,000 测试样本）</h3>
+  <table>
+    <tr>
+      <th>指标</th>
+      <th>Qwen3-0.6B</th>
+      <th>Qwen3-1.7B</th>
+      <th>Qwen3-4B-25%</th>
+      <th>Qwen3-4B</th>
+      <th class="best">4B-Joint</th>
+    </tr>
+    <tr>
+      <td>Connectivity ↑</td>
+      <td>93.5%</td>
+      <td>95.0%</td>
+      <td>95.9%</td>
+      <td>97.0%</td>
+      <td class="best">97.9%</td>
+    </tr>
+    <tr>
+      <td>Station Grounding ↑</td>
+      <td>96.3%</td>
+      <td>96.6%</td>
+      <td>97.7%</td>
+      <td>98.5%</td>
+      <td class="best">98.9%</td>
+    </tr>
+    <tr>
+      <td>Distance Plausibility ↑</td>
+      <td>84.9%</td>
+      <td>85.0%</td>
+      <td>87.4%</td>
+      <td>91.0%</td>
+      <td class="best">92.9%</td>
+    </tr>
+    <tr>
+      <td>Line Overlap ↑</td>
+      <td>0.812</td>
+      <td>0.827</td>
+      <td>0.811</td>
+      <td>0.828</td>
+      <td class="best">0.835</td>
+    </tr>
+    <tr>
+      <td>Station Seq. Overlap ↑</td>
+      <td>0.805</td>
+      <td>0.818</td>
+      <td>0.816</td>
+      <td>0.838</td>
+      <td class="best">0.847</td>
+    </tr>
+    <tr>
+      <td>Route Exact Match ↑</td>
+      <td>62.1%</td>
+      <td>64.1%</td>
+      <td>65.6%</td>
+      <td>71.0%</td>
+      <td class="best">73.7%</td>
+    </tr>
+    <tr>
+      <td>Estimation Accuracy ↑</td>
+      <td>97.2%</td>
+      <td>98.4%</td>
+      <td>97.8%</td>
+      <td>98.5%</td>
+      <td class="best">98.6%</td>
+    </tr>
+    <tr>
+      <td>MAPE ↓</td>
+      <td>2.03%</td>
+      <td>1.60%</td>
+      <td>1.88%</td>
+      <td>1.33%</td>
+      <td class="best">1.30%</td>
+    </tr>
+  </table>
+
+  <div id="chart-org-results" class="echarts-container" style="height:380px"></div>
+
+  <h3 id="prg-results">7.3 PRG 任务（偏好感知规划）结果</h3>
+  <table>
+    <tr>
+      <th>指标</th>
+      <th>Qwen3-0.6B</th>
+      <th>Qwen3-1.7B</th>
+      <th>Qwen3-4B-25%</th>
+      <th>Qwen3-4B</th>
+      <th class="best">4B-Joint</th>
+    </tr>
+    <tr>
+      <td>Connectivity ↑</td>
+      <td>85.0%</td>
+      <td>88.5%</td>
+      <td>90.1%</td>
+      <td>93.2%</td>
+      <td class="best">95.3%</td>
+    </tr>
+    <tr>
+      <td>Route Exact Match ↑</td>
+      <td>38.7%</td>
+      <td>39.4%</td>
+      <td>43.9%</td>
+      <td>50.4%</td>
+      <td class="best">52.6%</td>
+    </tr>
+    <tr>
+      <td>Preference Compliance ↑</td>
+      <td>81.8%</td>
+      <td>81.6%</td>
+      <td>88.8%</td>
+      <td>89.8%</td>
+      <td class="best">90.5%</td>
+    </tr>
+    <tr>
+      <td>MAPE ↓</td>
+      <td>2.74%</td>
+      <td>2.29%</td>
+      <td>2.49%</td>
+      <td>2.05%</td>
+      <td class="best">1.88%</td>
+    </tr>
+  </table>
+  <p>Label Preference Compliance（ground-truth 标签自身的偏好满足率）= 96.02%，可见标注本身并不完美，模型 90.5% 的表现已经相当出色。</p>
+
+  <h3 id="drg-results">7.4 DRG 任务（多路线生成）结果</h3>
+  <table>
+    <tr>
+      <th>指标</th>
+      <th>Qwen3-0.6B</th>
+      <th>Qwen3-1.7B</th>
+      <th>Qwen3-4B-25%</th>
+      <th>Qwen3-4B</th>
+      <th class="best">4B-Joint</th>
+    </tr>
+    <tr>
+      <td>Connectivity ↑</td>
+      <td>92.3%</td>
+      <td>95.2%</td>
+      <td>94.9%</td>
+      <td>96.3%</td>
+      <td class="best">97.1%</td>
+    </tr>
+    <tr>
+      <td>Route Exact Match ↑</td>
+      <td>52.6%</td>
+      <td>52.9%</td>
+      <td>57.9%</td>
+      <td>64.5%</td>
+      <td class="best">67.2%</td>
+    </tr>
+    <tr>
+      <td>Route Diversity ↑</td>
+      <td>0.514</td>
+      <td>0.532</td>
+      <td>0.534</td>
+      <td>0.545</td>
+      <td class="best">0.547</td>
+    </tr>
+    <tr>
+      <td>MAPE ↓</td>
+      <td>2.28%</td>
+      <td>1.74%</td>
+      <td>1.90%</td>
+      <td>1.45%</td>
+      <td class="best">1.33%</td>
+    </tr>
+  </table>
+
+  <h3 id="data-scaling">7.5 数据规模消融（ORG 任务）</h3>
+  <table>
+    <tr>
+      <th>数据比例</th>
+      <th>Connectivity</th>
+      <th>Station Grounding</th>
+      <th>Route Exact Match</th>
+      <th>MAPE</th>
+    </tr>
+    <tr>
+      <td>6.25%</td>
+      <td>94.0%</td>
+      <td>93.5%</td>
+      <td>49.9%</td>
+      <td>3.26%</td>
+    </tr>
+    <tr>
+      <td>12.5%</td>
+      <td>95.4%</td>
+      <td>96.4%</td>
+      <td>61.2%</td>
+      <td>2.27%</td>
+    </tr>
+    <tr>
+      <td>25%</td>
+      <td>95.9%</td>
+      <td>97.7%</td>
+      <td>65.6%</td>
+      <td>1.88%</td>
+    </tr>
+    <tr>
+      <td>50%</td>
+      <td>96.8%</td>
+      <td>97.9%</td>
+      <td>68.9%</td>
+      <td>1.51%</td>
+    </tr>
+    <tr class="highlight-row">
+      <td><strong>100%</strong></td>
+      <td><strong>97.0%</strong></td>
+      <td><strong>98.5%</strong></td>
+      <td><strong>71.0%</strong></td>
+      <td><strong>1.33%</strong></td>
+    </tr>
+  </table>
+
+  <div id="chart-scaling" class="echarts-container" style="height:340px"></div>
+
+  <h3 id="gps-ablation">7.6 GPS-only 消融：隐式空间对齐的证据</h3>
+  <div id="chart-gps-ablation" class="echarts-container" style="height:380px"></div>
+
+  <blockquote>
+    <strong>核心发现：</strong>通用 LLM 在仅有 GPS 坐标（无文本提示）时，Station Grounding 从 72.0% 暴跌至 16.8%（DeepSeek-V4），而 Route Exact Match 几乎归零（&lt; 1%）；相比之下，领域专用模型（Qwen3-4B）在同等条件下 Route Exact Match 仅降低 0.6 个百分点（71.0% → 70.4%），证明其空间知识来自训练数据而非文本语义提示。
+  </blockquote>
+
+  <!-- ==================== 8. 核心洞见 ==================== -->
+  <h2 id="insights">8. 核心洞见与读后评注</h2>
+
+  <h3 id="insight-1">8.1 地图知识的隐式习得：规模替代工程</h3>
+  <p>TransitLM 最深刻的洞见在于：<strong>当训练数据足够密集时，语言模型能够从语料的统计共现中习得与地理数据库等价的空间知识</strong>。传统系统需要精心维护的路网图和坐标映射模块，而 TransitLM 仅通过 1300 万条规划日志，就让模型内化了北京、上海、深圳、成都四座城市的公交拓扑。</p>
+  <p>这一发现有更广泛的含义：类似的"隐式结构学习"可能适用于其他领域，只要存在足够规模的行为日志（用户操作序列、推荐系统点击流、导航轨迹），就可能替代显式的知识图谱或规则系统。</p>
+
+  <h3 id="insight-2">8.2 Joint Training 消除负迁移：任务知识的正交性</h3>
+  <p>Joint 模型在三个任务上全面超越或持平单任务模型，且在偏好感知规划上提升最明显（+2.1pp Connectivity，+2.2pp REM）。这说明三个规划任务不是相互竞争的，而是共享底层的<strong>拓扑表示</strong>——偏好约束和多样性要求都是在同一网络知识基础上的高阶约束。</p>
+  <p>这对实际部署很有价值：单模型即可服务所有规划场景，避免了多模型维护的工程复杂度。</p>
+
+  <h3 id="insight-3">8.3 学习层次结构：语法优先，精度其次</h3>
+  <p>数据规模消融揭示了一个清晰的学习层次：</p>
+  <ul>
+    <li>仅用 6.25% 数据（约 810K 条会话）即可达到 94% 连通性——模型快速学会交通网络的<strong>结构"语法"</strong>；</li>
+    <li>Route Exact Match 对数据量极度敏感（从 6.25% 的 49.9% 到 100% 的 71.0%），说明精确路线选择需要密集的<strong>行为覆盖</strong>；</li>
+    <li>数值字段（MAPE）同样对数据敏感，说明票价/时间估计依赖细粒度的距离-时间关系习得。</li>
+  </ul>
+
+  <h3 id="insight-4">8.4 域知识 vs 模型规模：数据是核心瓶颈</h3>
+  <p>一个令人印象深刻的结果是：<strong>0.6B 领域专用模型在更宽松评估条件下全面超越六个最强通用 LLM</strong>（包括 GPT-5.4-pro、Gemini-3.1-Pro 等）。这清楚地表明，对于结构性知识密集型任务，<strong>领域数据是核心瓶颈</strong>，而非模型参数规模。这对资源受限场景（如边缘部署、在线推理成本控制）有重要实践指导意义。</p>
+
+  <h3 id="insight-5">8.5 局限性与未来方向</h3>
+  <ul>
+    <li><strong>地理覆盖有限</strong>：数据仅来自 Amap 平台的四座中国城市，对其他国家城市、小城市或非中文路网的泛化能力未知；</li>
+    <li><strong>静态路网</strong>：当前数据集捕获的是静态路线结构，未包含实时延误、临时线路变更等动态信息；</li>
+    <li><strong>单平台偏差</strong>：所有路线均由 Amap 的生产路由引擎生成，可能带有该平台的排序偏好；</li>
+    <li><strong>多模态接驳建模粗糙</strong>：首末里程的建模依赖距离阈值规则，未充分利用实际步行/骑行网络；</li>
+    <li><strong>未来方向</strong>：扩展至更广泛地理区域、引入实时动态信息、探索更小模型（ &lt; 0.6B）的可行性下限。</li>
+  </ul>
+
+  <!-- ==================== 9. 参考文献 ==================== -->
+  <h2 id="references">9. 主要参考文献</h2>
+  <table>
+    <tr>
+      <th>编号</th>
+      <th>文献</th>
+      <th>贡献</th>
+    </tr>
+    <tr>
+      <td>[1]</td>
+      <td>Achiam et al., GPT-4 Technical Report, arXiv 2303.08774, 2023</td>
+      <td>通用 LLM 基线对比</td>
+    </tr>
+    <tr>
+      <td>[2]</td>
+      <td>Bast et al., Transfer Patterns, ESA, 2010</td>
+      <td>传统公交路由算法</td>
+    </tr>
+    <tr>
+      <td>[8]</td>
+      <td>Delling et al., RAPTOR, Transportation Science, 2015</td>
+      <td>Pareto 最优公交路由</td>
+    </tr>
+    <tr>
+      <td>[10]</td>
+      <td>Dibbelt et al., Connection Scan Algorithm, JEA, 2018</td>
+      <td>连接扫描算法</td>
+    </tr>
+    <tr>
+      <td>[15]</td>
+      <td>Gururangan et al., Don't Stop Pretraining, ACL, 2020</td>
+      <td>领域自适应 CPT 方法论基础</td>
+    </tr>
+    <tr>
+      <td>[18]</td>
+      <td>Hoffmann et al., Chinchilla, NeurIPS, 2022</td>
+      <td>训练规模定律，20B+ tokens 训练量的合理性支撑</td>
+    </tr>
+    <tr>
+      <td>[22]</td>
+      <td>GridRoute, 2024</td>
+      <td>合成网格图 LLM 路径推理基准</td>
+    </tr>
+    <tr>
+      <td>[36]</td>
+      <td>CPTOND-2025</td>
+      <td>静态公交网络数据集（本文对比）</td>
+    </tr>
+    <tr>
+      <td>[38]</td>
+      <td>GTFS General Transit Feed Specification</td>
+      <td>静态公交时刻表标准格式</td>
+    </tr>
+    <tr>
+      <td>[39]</td>
+      <td>Xie et al., TravelPlanner, 2024</td>
+      <td>多日行程规划基准（对比）</td>
+    </tr>
+    <tr>
+      <td>[41]</td>
+      <td>Qwen3 Technical Report, 2025</td>
+      <td>底座模型</td>
+    </tr>
+    <tr>
+      <td>[42]</td>
+      <td>Yuan et al., T-Drive, 2010</td>
+      <td>出租车 GPS 轨迹数据集（对比）</td>
+    </tr>
+  </table>
+
+  <hr>
+  <p style="color:#6c7086; font-size:0.85em; text-align:center;">
+    报告生成时间：2026-05-29 &nbsp;|&nbsp; 论文来源：arXiv:2605.22355 &nbsp;|&nbsp; 数据来源：AMAP-ML (Alibaba Group)
+  </p>
+
+</main>
+
+<!-- ==================== ECharts 脚本 ==================== -->
+<script>
+  // 1. 各城市数据规模分布
+  echarts.init(document.getElementById('chart-city')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '各城市数据规模分布', textStyle: { color: '#89b4fa' }, left: 'center' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['规划会话数(万)', '站点数', '线路数'], textStyle: { color: '#cdd6f4' }, top: 30 },
+    grid: { left: '5%', right: '5%', bottom: '8%', top: '20%', containLabel: true },
+    xAxis: { type: 'category', data: ['北京', '上海', '深圳', '成都'], axisLabel: { color: '#cdd6f4' } },
+    yAxis: [
+      { type: 'value', name: '规划会话(万)', nameTextStyle: { color: '#89b4fa' }, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+      { type: 'value', name: '站点/线路数量', nameTextStyle: { color: '#89b4fa' }, axisLabel: { color: '#cdd6f4' } }
+    ],
+    series: [
+      {
+        name: '规划会话数(万)', type: 'bar', yAxisIndex: 0,
+        data: [480.26, 314.47, 287.74, 212.05],
+        itemStyle: { color: '#89b4fa' }
+      },
+      {
+        name: '站点数', type: 'bar', yAxisIndex: 1,
+        data: [38792, 35617, 14980, 31456],
+        itemStyle: { color: '#a6e3a1' }
+      },
+      {
+        name: '线路数', type: 'bar', yAxisIndex: 1,
+        data: [4234, 3702, 2307, 3423],
+        itemStyle: { color: '#fab387' }
+      }
+    ]
+  });
+
+  // 2. 路线出行方式分布
+  echarts.init(document.getElementById('chart-modality')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '路线出行方式分布', textStyle: { color: '#89b4fa' }, left: 'center' },
+    tooltip: { trigger: 'item', formatter: '{b}: {c}% ({d}%)' },
+    legend: { orient: 'vertical', right: '5%', top: 'middle', textStyle: { color: '#cdd6f4' } },
+    series: [{
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['40%', '55%'],
+      data: [
+        { value: 33.0, name: '纯公交 (Bus-only)', itemStyle: { color: '#89b4fa' } },
+        { value: 30.5, name: '混合 (Mixed: +出租/单车)', itemStyle: { color: '#fab387' } },
+        { value: 19.0, name: '纯地铁 (Subway-only)', itemStyle: { color: '#a6e3a1' } },
+        { value: 16.8, name: '公交+地铁 (Bus+Subway)', itemStyle: { color: '#cba6f7' } },
+        { value: 0.7,  name: '其他 (出租/单车等)', itemStyle: { color: '#6c7086' } }
+      ],
+      label: { color: '#cdd6f4' },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } }
+    }]
+  });
+
+  // 3. 路线距离分布
+  echarts.init(document.getElementById('chart-distance')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '路线距离分布 & 序列长度分布', textStyle: { color: '#89b4fa' }, left: 'center' },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['距离分布(%)', '序列长度分布(%)'], textStyle: { color: '#cdd6f4' }, top: 30 },
+    grid: { left: '5%', right: '5%', bottom: '10%', top: '22%', containLabel: true },
+    xAxis: { type: 'category', data: ['<5km / <1k字符', '5-10km / 1k-2k', '10-20km / 2k-5k', '>20km / >5k'], axisLabel: { color: '#cdd6f4', interval: 0, rotate: 10 } },
+    yAxis: { type: 'value', name: '比例(%)', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      {
+        name: '距离分布(%)', type: 'bar',
+        data: [22.8, 24.2, 23.2, 29.7],
+        itemStyle: { color: '#89b4fa' }
+      },
+      {
+        name: '序列长度分布(%)', type: 'bar',
+        data: [0, 23.6, 58.4, 2.4],
+        itemStyle: { color: '#a6e3a1' }
+      }
+    ]
+  });
+
+  // 4. 数据集规模对比
+  echarts.init(document.getElementById('chart-scale')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '与已有数据集规模对比（规划/轨迹记录数，万）', textStyle: { color: '#89b4fa' }, left: 'center' },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '8%', bottom: '10%', top: '18%', containLabel: true },
+    xAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'category', data: ['GeoLife', 'Porto Taxi', 'T-Drive', 'MobilityBench', 'TransitLM (本文)'], axisLabel: { color: '#cdd6f4' } },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: 1.76, itemStyle: { color: '#6c7086' } },
+        { value: 170, itemStyle: { color: '#6c7086' } },
+        { value: 1500, itemStyle: { color: '#6c7086' } },
+        { value: 0.1, itemStyle: { color: '#6c7086' } },
+        { value: 1390, itemStyle: { color: '#a6e3a1' } }
+      ],
+      label: { show: true, position: 'right', color: '#cdd6f4', formatter: (p) => p.value + '万' }
+    }]
+  });
+
+  // 5. 通用LLM对比柱状图
+  echarts.init(document.getElementById('chart-llm-compare')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '通用LLM vs 领域模型（ORG 关键指标对比）', textStyle: { color: '#89b4fa' }, left: 'center' },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['GPT-5.4-pro', 'DeepSeek-V4', 'Gemini-3.1-Pro', 'Qwen3-0.6B(域内)', 'Qwen3-4B(域内)'], textStyle: { color: '#cdd6f4' }, top: 30 },
+    grid: { left: '5%', right: '5%', bottom: '8%', top: '22%', containLabel: true },
+    xAxis: { type: 'category', data: ['Connectivity', 'Station Grounding', 'Route Exact Match'], axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', name: '%', min: 0, max: 100, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'GPT-5.4-pro',         type: 'bar', data: [60.5, 60.5, 18.4], itemStyle: { color: '#6c7086' } },
+      { name: 'DeepSeek-V4',         type: 'bar', data: [64.9, 72.0, 23.7], itemStyle: { color: '#89dceb' } },
+      { name: 'Gemini-3.1-Pro',      type: 'bar', data: [75.5, 93.9, 40.2], itemStyle: { color: '#fab387' } },
+      { name: 'Qwen3-0.6B(域内)',    type: 'bar', data: [93.5, 96.3, 62.1], itemStyle: { color: '#a6e3a1' } },
+      { name: 'Qwen3-4B(域内)',      type: 'bar', data: [97.0, 98.5, 71.0], itemStyle: { color: '#89b4fa' } }
+    ]
+  });
+
+  // 6. ORG结果对比
+  echarts.init(document.getElementById('chart-org-results')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'ORG 任务 — 模型规模 vs 关键指标（10K 测试样本）', textStyle: { color: '#89b4fa' }, left: 'center' },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['Connectivity', 'Station Grounding', 'Route Exact Match', 'Estimation Acc'], textStyle: { color: '#cdd6f4' }, top: 30 },
+    grid: { left: '5%', right: '5%', bottom: '8%', top: '22%', containLabel: true },
+    xAxis: { type: 'category', data: ['0.6B', '1.7B', '4B-25%', '4B', '4B-Joint'], axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', name: '%', min: 60, max: 100, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'Connectivity',       type: 'line', data: [93.5, 95.0, 95.9, 97.0, 97.9], itemStyle: { color: '#89b4fa' }, smooth: true },
+      { name: 'Station Grounding',  type: 'line', data: [96.3, 96.6, 97.7, 98.5, 98.9], itemStyle: { color: '#a6e3a1' }, smooth: true },
+      { name: 'Route Exact Match',  type: 'line', data: [62.1, 64.1, 65.6, 71.0, 73.7], itemStyle: { color: '#fab387' }, smooth: true },
+      { name: 'Estimation Acc',     type: 'line', data: [97.2, 98.4, 97.8, 98.5, 98.6], itemStyle: { color: '#cba6f7' }, smooth: true }
+    ]
+  });
+
+  // 7. 数据规模消融
+  echarts.init(document.getElementById('chart-scaling')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'CPT 数据规模消融（Qwen3-4B，ORG 任务）', textStyle: { color: '#89b4fa' }, left: 'center' },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['Connectivity', 'Route Exact Match', 'MAPE (×10)'], textStyle: { color: '#cdd6f4' }, top: 30 },
+    grid: { left: '5%', right: '5%', bottom: '8%', top: '22%', containLabel: true },
+    xAxis: { type: 'category', data: ['6.25%', '12.5%', '25%', '50%', '100%'], axisLabel: { color: '#cdd6f4' }, name: '数据比例', nameTextStyle: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', name: '%', min: 0, max: 100, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'Connectivity',       type: 'line', data: [94.0, 95.4, 95.9, 96.8, 97.0], itemStyle: { color: '#89b4fa' }, smooth: true, symbol: 'circle' },
+      { name: 'Route Exact Match',  type: 'line', data: [49.9, 61.2, 65.6, 68.9, 71.0], itemStyle: { color: '#fab387' }, smooth: true, symbol: 'circle' },
+      { name: 'MAPE (×10)',         type: 'line', data: [32.6, 22.7, 18.8, 15.1, 13.3], itemStyle: { color: '#a6e3a1' }, smooth: true, symbol: 'circle' }
+    ]
+  });
+
+  // 8. GPS-only 消融
+  echarts.init(document.getElementById('chart-gps-ablation')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'GPS-only 消融：通用 LLM vs 领域模型（Station Grounding & Route Exact Match）', textStyle: { color: '#89b4fa' }, left: 'center', top: 0 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['有文本提示 SG', '纯GPS SG', '有文本提示 REM', '纯GPS REM'], textStyle: { color: '#cdd6f4' }, top: 30 },
+    grid: { left: '5%', right: '5%', bottom: '12%', top: '25%', containLabel: true },
+    xAxis: { type: 'category', data: ['GPT-5.4', 'DeepSeek-V4', 'Gemini-3.1', 'Claude-4.6', 'Qwen3-4B(域内)', '4B-Joint(域内)'], axisLabel: { color: '#cdd6f4', rotate: 15 } },
+    yAxis: { type: 'value', name: '%', min: 0, max: 100, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: '有文本提示 SG',  type: 'bar', data: [60.5, 72.0, 93.9, 50.7, 98.5, 98.9], itemStyle: { color: '#89b4fa' } },
+      { name: '纯GPS SG',       type: 'bar', data: [14.4, 16.8, 79.9, 15.3, 98.3, 98.8], itemStyle: { color: '#45475a' } },
+      { name: '有文本提示 REM', type: 'bar', data: [18.4, 23.7, 40.2, 15.4, 71.0, 73.7], itemStyle: { color: '#fab387' } },
+      { name: '纯GPS REM',      type: 'bar', data: [0.6,  0.6,  17.7,  0.6, 70.4, 72.9], itemStyle: { color: '#f38ba8' } }
+    ]
+  });
+</script>
+
+<!-- TOC 和滚动高亮 -->
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  hljs.highlightAll();
+
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orca 阅读报告 — 世界基础模型与下一状态预测</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; } a { color: var(--link); } strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; } li { margin: 0.3em 0; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>Orca：The World is in Your Mind — 统一世界基础模型</h1>
+    <p><span class="tag">World Model</span><span class="tag orange">多模态</span><span class="tag green">视频预训练</span><span class="tag purple">具身智能</span></p>
+    <p style="color:#6c7086;font-size:0.9em;">arXiv: 2606.30534 · 2026-06-29 · 57位作者 · HuggingFace本周 #2 (194 upvotes)</p>
+
+    <table>
+      <tr><th>标题</th><td>Orca: The World is in Your Mind</td></tr>
+      <tr><th>核心问题</th><td>如何构建一个统一的世界基础模型，通过"下一状态预测"将视觉理解、预测与具身动作生成统一在一个框架内</td></tr>
+      <tr><th>项目主页</th><td><a href="https://orca-wm.github.io/">orca-wm.github.io</a></td></tr>
+    </table>
+
+    <h2 id="overview">1. 核心问题与动机</h2>
+    <p>现有的 AI 系统通常是<strong>任务孤岛</strong>——视觉模型做分类，语言模型做推理，动作模型做控制。它们共享同一个物理世界，却无法共享一套对世界的统一表征。</p>
+    <p>Orca 提出了一个大胆命题：<strong>"The World is in Your Mind"</strong>——世界状态应当编码在模型的潜在表征（latent representation）中，而非分散在各类专用模型里。通过学习一个统一的世界潜在空间，模型可以同时支持文本生成、图像预测和具身动作输出，无需为每个任务单独设计架构。</p>
+    <blockquote>
+      "Orca learns a unified latent representation from multimodal inputs, centering on Next-State-Prediction modeling — a unified framework for understanding, predicting, and acting in the world."
+    </blockquote>
+
+    <h2 id="background">2. 背景与相关工作</h2>
+    <table>
+      <tr><th>工作</th><th>类型</th><th>局限</th></tr>
+      <tr><td>JEPA (LeCun)</td><td>联合嵌入预测架构</td><td>仅图像，无动作</td></tr>
+      <tr><td>Genie / GameNGen</td><td>视频生成世界模型</td><td>仅特定游戏环境</td></tr>
+      <tr><td>UniSim</td><td>通用模拟器</td><td>以生成为目标，非表征</td></tr>
+      <tr><td>DreamerV3</td><td>强化学习世界模型</td><td>仅RL，不支持语言</td></tr>
+      <tr><td><strong>Orca</strong></td><td><strong>统一世界基础模型</strong></td><td>—</td></tr>
+    </table>
+
+    <h2 id="method">3. 训练框架总览</h2>
+    <pre class="mermaid">
+flowchart TD
+    subgraph Data["预训练数据"]
+      V["125,000小时视频<br>连续状态转换"]
+      E["1.6亿条事件标注<br>语言描述的稀疏转换"]
+    end
+    subgraph Learning["双模态学习"]
+      UL["无意识学习<br>Unconscious Learning<br>密集自然状态转换"]
+      CL["有意识学习<br>Conscious Learning<br>稀疏语言驱动事件 + VQA"]
+    end
+    V --> UL
+    E --> CL
+    UL & CL --> B["Orca主干网络<br>统一潜在世界表征<br>预训练后冻结"]
+    B --> D1["文本生成解码器<br>Text Readout"]
+    B --> D2["图像预测解码器<br>Image Prediction Readout"]
+    B --> D3["具身动作解码器<br>Embodied Action Readout"]
+
+    style B fill:#2a2a3e,stroke:#89b4fa,stroke-width:2px
+    </pre>
+
+    <h2 id="key-tech">4. 关键技术</h2>
+
+    <h3>4.1 下一状态预测（Next-State-Prediction, NSP）</h3>
+    <p>NSP 是 Orca 的核心训练目标，统一了不同任务形式：给定当前状态 $s_t$ 和上下文 $c$（文字、动作等），预测下一状态的表征 $\hat{z}_{t+1}$：</p>
+    <p>$$\mathcal{L}_{\text{NSP}} = \mathbb{E}_{(s_t, c, s_{t+1}) \sim \mathcal{D}} \left[ \| f_\theta(s_t, c) - \text{sg}(z_{t+1}) \|_2^2 \right]$$</p>
+    <p>其中 $\text{sg}(\cdot)$ 为 stop-gradient，$f_\theta$ 为主干网络，$z_{t+1}$ 为目标状态的潜在编码。这一设计来源于 JEPA 架构思想。</p>
+
+    <h3>4.2 双模态学习：无意识 vs. 有意识</h3>
+    <p><strong>无意识学习（Unconscious Learning）</strong>：从大规模视频数据中学习连续的、自然的状态转换规律，不依赖语言标注。这模拟了人类被动观察世界积累经验的过程。</p>
+    <p><strong>有意识学习（Conscious Learning）</strong>：从语言描述的事件（"球滚落桌子"）和视觉问答（VQA）数据中学习稀疏的、有语义意义的状态转换。这模拟了人类通过语言理解和反思世界的过程。</p>
+
+    <h3>4.3 轻量解码器 Readout 设计</h3>
+    <p>预训练后，主干网络被<strong>完全冻结</strong>。针对不同下游任务，只需训练轻量级、模态专属的解码器（Readout）。这种设计：</p>
+    <ul>
+      <li>验证了潜在表征的通用性</li>
+      <li>大幅降低了适应新任务的成本</li>
+      <li>与 CLIP/DINO 的 probing 实验范式类似，但扩展到预测和动作领域</li>
+    </ul>
+
+    <h2 id="experiment">5. 实验结果</h2>
+    <p>Orca 在三类下游任务上验证了世界潜在表征的质量：</p>
+    <table>
+      <tr><th>任务类型</th><th>评估维度</th><th>结论</th></tr>
+      <tr><td>文本生成（Text Readout）</td><td>VQA准确率、描述质量</td><td>与专用视觉语言模型竞争</td></tr>
+      <tr><td>图像预测（Image Prediction）</td><td>未来帧预测质量（FID/LPIPS）</td><td>超越可比专用预测模型</td></tr>
+      <tr><td>具身动作（Embodied Action）</td><td>操控任务成功率</td><td>无需任务特定训练即可泛化</td></tr>
+    </table>
+    <blockquote>"Stronger world latent enables stronger downstream readouts" — 世界表征越强，各类下游任务性能越优。</blockquote>
+
+    <h2 id="ablation">6. 消融实验与关键发现</h2>
+    <ul>
+      <li><strong>双模态 vs. 单一学习模式</strong>：去掉有意识学习，VQA性能下降明显；去掉无意识学习，动作预测能力显著退化</li>
+      <li><strong>数据规模的影响</strong>：从25K小时到125K小时视频，下游任务表现持续提升，未见平台期</li>
+      <li><strong>事件标注密度</strong>：1.6亿条事件标注显著优于随机采样的等量标注</li>
+      <li><strong>冻结主干的必要性</strong>：微调主干反而导致下游任务遗忘，说明表征已包含足够通用信息</li>
+    </ul>
+
+    <h2 id="limitation">7. 局限性</h2>
+    <ul>
+      <li>125K小时视频数据的收集和标注成本极高</li>
+      <li>NSP目标在高维像素空间中对计算资源要求极大</li>
+      <li>具身动作的评估场景还相对有限（主要为桌面操控）</li>
+      <li>57位作者暗示这是大型团队工程，个人研究者难以复现</li>
+    </ul>
+
+    <h2 id="insight">8. 核心洞见与读后评注</h2>
+    <blockquote>
+      <strong>关键洞见</strong>：世界模型的本质是学习状态转换的潜在动力学，而非生成逼真像素。Orca 通过将预测目标从像素空间转移到潜在空间，同时引入语言驱动的有意识监督，实现了多模态理解与行动的统一。
+    </blockquote>
+    <p>Orca 最令人印象深刻的是其<strong>架构哲学</strong>：拒绝为每个任务单独设计头（head），而是相信一个足够强的世界表征可以自然支持所有下游任务。这与 GPT 系列在语言领域的成功路径高度一致，现在被推广到了多模态和动作空间。</p>
+    <p>双模态学习的设计极具洞见——它对应了人类学习的两种模式：被动感知积累经验（unconscious），以及主动反思语言概念（conscious）。将两者结合是本文最重要的贡献之一。</p>
+    <p>从具身智能角度，Orca 提供了一条无需机器人数据就能预训练世界动力学的路径：先从互联网视频中学习世界，再轻量适配机器人动作空间。这对降低机器人学习的数据成本有重要意义。</p>
+
+    <h2 id="ref">参考文献</h2>
+    <ul>
+      <li>[1] Orca Team (57 authors). <em>Orca: The World is in Your Mind</em>. arXiv:2606.30534, 2026.</li>
+      <li>[2] LeCun, Y. <em>A Path Towards Autonomous Machine Intelligence (JEPA)</em>. 2022.</li>
+      <li>[3] Bruce et al. <em>Genie: Generative Interactive Environments</em>. ICML 2024.</li>
+      <li>[4] Yang et al. <em>UniSim: Learning Interactive Real-World Simulators</em>. ICLR 2024.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id; a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

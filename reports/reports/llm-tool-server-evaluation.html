@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM 工具服务器评估指南 — 使用方视角</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8}
+#toc{position:fixed;top:0;left:0;width:235px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border)}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toc a:hover{background:var(--border)}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8}
+main{margin-left:255px;max-width:none;padding:40px 64px}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em}
+p{margin:.6em 0}a{color:var(--link)}strong{color:var(--strong)}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border)}
+td{padding:7px 12px;border:1px solid var(--border);vertical-align:top}
+tr:hover td{background:#2a2a3e}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em}
+code{font-family:'JetBrains Mono','Fira Code',monospace}
+p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+ul,ol{padding-left:1.6em;margin:.5em 0}li{margin:.3em 0}
+/* 组件 */
+.badge{display:inline-block;font-size:.75em;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:4px}
+.red{background:#f38ba8;color:#1e1e2e}.og{background:#fab387;color:#1e1e2e}
+.gn{background:#a6e3a1;color:#1e1e2e}.bl{background:#89b4fa;color:#1e1e2e}
+.pu{background:#cba6f7;color:#1e1e2e}.gy{background:#585b70;color:#cdd6f4}
+.card{background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:.8em 0}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:1em 0}
+.hl{background:#2a2a3e;border-left:4px solid var(--heading);border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.warn{background:#3a2a1e;border-left:4px solid #fab387;border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.danger{background:#3a1e1e;border-left:4px solid #f38ba8;border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.good{background:#1e3a2a;border-left:4px solid #a6e3a1;border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+/* 要求条目 */
+.req-list{list-style:none;display:flex;flex-direction:column;gap:8px;margin:1em 0}
+.req-item{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;background:#2a2a3e;border:1px solid var(--border);border-radius:6px}
+.req-item:hover{border-color:#6c7086}
+.req-body strong{display:block;font-size:.95em;color:var(--strong);margin-bottom:2px}
+.req-body span{font-size:.88em;color:#a6adc8}
+/* 清单 */
+.cl-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px dashed var(--border);font-size:.93em}
+.cl-item:last-child{border-bottom:none}
+.cl-box{width:15px;height:15px;border:2px solid var(--border);border-radius:3px;flex-shrink:0;margin-top:3px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LLM 工具服务器评估指南</h1>
+<p style="color:#6c7086;margin-bottom:1.5em">离线数据蒸馏 · RL 训练使用方视角 · 覆盖可靠性、错误处理、安全性、可观测性、离线在线对齐、资源隔离与离线数据质量保证</p>
+
+<table>
+<tr><th>文档目标</th><td>从<strong>离线数据蒸馏与 RL 训练</strong>使用方视角，评估一个工具服务器是否满足接入要求</td></tr>
+<tr><th>核心诉求（初始）</th><td>离线工具行为与在线工具对齐；离线调用与在线服务资源完全隔离</td></tr>
+<tr><th>深度补充诉求</th><td>幂等性与断点续传；结果完整性与截断控制；RL 奖励信号完整性（基础设施故障 vs 语义错误）；跨训练迭代工具行为稳定性；作业级管理能力；训练数据合规性；Schema 版本治理</td></tr>
+<tr><th>适用范围</th><td>协议无关——不绑定 MCP、OpenAI Function Calling 等特定标准，关注通用工程质量</td></tr>
+<tr><th>目标读者</th><td>接入或评估工具服务器的工程师和研发团队</td></tr>
+<tr><th>不覆盖</th><td>工具接口契约与描述质量（工具名称、参数 schema 等），由独立团队负责维护</td></tr>
+</table>
+
+<!-- ===== 0 ===== -->
+<h2>0. 使用方视角概述</h2>
+
+<h3>0.1 两类核心使用场景</h3>
+
+<p>我们以<strong>离线数据生产方</strong>身份使用工具服务器：大批量调用工具生成训练数据或产生训练轨迹，不直接服务线上用户。两类场景的侧重点有所不同，但共同依赖离线工具与在线工具的<strong>行为一致性</strong>。</p>
+
+<div class="card-grid">
+<div class="card">
+<strong style="color:#89b4fa">📦 离线数据蒸馏</strong><br>
+批量执行包含工具调用的 prompt，生成带工具交互轨迹的标注数据，用于监督微调（SFT）或蒸馏训练。数据质量直接取决于工具输出与在线一致。<br><br>
+<span style="color:#a6adc8;font-size:.9em">核心关注：结果确定性、与在线对齐、高吞吐、无副作用</span>
+</div>
+<div class="card">
+<strong style="color:#a6e3a1">🧠 RL 训练 Rollout</strong><br>
+强化学习框架以大规模并行 episode 方式批量调用工具，生成训练轨迹并计算奖励。工具行为的一致性直接影响奖励信号的稳定性。<br><br>
+<span style="color:#a6adc8;font-size:.9em">核心关注：状态隔离、确定性、高并发、Fail-Fast</span>
+</div>
+</div>
+
+<table>
+<tr><th>维度</th><th>离线数据蒸馏</th><th>RL 训练 Rollout</th></tr>
+<tr><td>调用模式</td><td>批量串行或适度并行，离线作业</td><td>大规模并行 episode（数百~数千并发）</td></tr>
+<tr><td>对延迟敏感度</td><td>中等（影响数据生产吞吐）</td><td>高（单步超时拖垮整批 rollout）</td></tr>
+<tr><td>结果确定性</td><td><strong>严格要求</strong>（数据集可复现）</td><td><strong>严格要求</strong>（奖励信号稳定）</td></tr>
+<tr><td>状态隔离</td><td>任务级隔离</td><td><strong>Episode 级完全隔离</strong></td></tr>
+<tr><td>副作用</td><td>严禁持久化副作用</td><td>严禁持久化副作用</td></tr>
+<tr><td>在线对齐需求</td><td><strong>最高</strong>（数据分布决定模型行为）</td><td>高（奖励函数依赖工具输出语义）</td></tr>
+</table>
+
+<h3>0.2 核心架构诉求：离线-在线对齐</h3>
+
+<p>离线工具与在线工具的<strong>行为偏差</strong>是训练数据质量的最大隐患。若离线工具返回的结果、格式、语义与线上不一致，则：</p>
+
+<ul>
+<li><strong>蒸馏数据</strong>中的工具调用轨迹与模型实际部署环境不匹配，导致训练-推理分布偏移（Train-Serve Skew）。</li>
+<li><strong>RL 训练</strong>的奖励函数基于离线工具输出打分，而线上行为不同，导致策略在真实环境中效果下降。</li>
+</ul>
+
+<div class="warn">
+<span class="badge og">核心风险</span>
+<p style="margin-top:8px"><strong>Train-Serve Skew（训练-服务偏移）：</strong>离线工具与在线工具返回不同格式的结果（如字段顺序、截断长度、空值表达方式不同），模型学到的工具使用模式无法泛化到线上，导致部署后工具调用成功率下降。</p>
+</div>
+
+<p>对齐需要覆盖以下几个层次：</p>
+
+<table>
+<tr><th>对齐层次</th><th>具体含义</th><th>验证方法</th></tr>
+<tr><td><strong>结果对齐</strong></td><td>相同入参，离线与在线返回语义等价的结果（允许时效性差异，如搜索结果随时间变化）</td><td>对相同 golden query 集，对比离线/在线返回差异率</td></tr>
+<tr><td><strong>格式对齐</strong></td><td>响应的 JSON 字段、嵌套结构、null 表达方式完全一致</td><td>JSON Schema 双端校验</td></tr>
+<tr><td><strong>错误行为对齐</strong></td><td>相同错误条件下，离线与在线返回相同的 error_code 和 retryable 语义</td><td>错误注入测试，比对两端响应</td></tr>
+<tr><td><strong>版本同步</strong></td><td>离线工具版本与在线工具版本保持同步，变更时有明确通知机制</td><td>版本号 API + 变更通知订阅</td></tr>
+<tr><td><strong>超时策略对齐</strong></td><td>离线侧允许超时阈值略宽松，但超时行为（返回格式、错误码）须一致</td><td>超时场景 E2E 对比测试</td></tr>
+</table>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>离线工具与在线工具版本严格对应，并提供版本查询接口</strong>
+    <span>工具服务需暴露 <code>version</code> 或等效接口，离线实例版本须与在线保持一致或有明确的版本差异声明，禁止静默升级。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>响应格式（JSON Schema）离线-在线完全一致</strong>
+    <span>字段名称、类型、嵌套结构、null 值表达均须一致；字段顺序若影响下游解析也须固定。格式变更须同步双端，不允许单端先行。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>错误码与错误行为语义离线-在线一致</strong>
+    <span>相同错误条件须触发相同 error_code 和 retryable 值，避免离线数据中学到的错误处理模式在线上失效。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>提供 golden query 对比测试集，定期验证离线-在线结果一致性</strong>
+    <span>工具服务方维护一组标准测试用例（golden set），供使用方定期跑对比测试，量化离线/在线差异率，差异率超阈值须触发告警。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>工具变更时主动通知使用方并提供变更说明</strong>
+    <span>工具行为、格式、策略变更须提前通知使用方（邮件/消息/订阅机制），给使用方留出数据回流验证和重新蒸馏的窗口期。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>提供 shadow 模式：离线请求同步打到在线，对比返回差异</strong>
+    <span>高敏感场景下，离线调用同步发送到在线实例做 shadow 对比，实时检测行为偏差，无需等到模型评估阶段才发现。</span>
+  </div>
+</li>
+</ul>
+
+<h3>0.3 核心架构诉求：资源隔离</h3>
+
+<p>离线数据生产（蒸馏 + RL 训练）的调用量级远高于在线推理，若共用资源，离线作业的高并发流量会直接影响在线用户体验。资源隔离是保护线上 SLA 的工程前提。</p>
+
+<div class="danger">
+<span class="badge red">典型事故</span>
+<p style="margin-top:8px">RL 训练任务发起 512 并发 rollout，工具服务无隔离，在线推理 P99 延迟从 800ms 飙升至 8s，线上告警触发。事后溯源发现离线训练任务与在线推理共用同一服务实例和连接池。</p>
+</div>
+
+<p>资源隔离需覆盖以下层次：</p>
+
+<table>
+<tr><th>隔离层次</th><th>具体手段</th><th>说明</th></tr>
+<tr><td><strong>服务实例隔离</strong></td><td>离线部署独立实例或独立集群</td><td>最彻底的隔离，离线故障不影响在线</td></tr>
+<tr><td><strong>配额隔离</strong></td><td>按调用方 ID 独立分配 QPS / 并发配额</td><td>共享实例时的次选方案，需精细配额管理</td></tr>
+<tr><td><strong>限流隔离</strong></td><td>离线 token 触发限流时不影响在线 token 的 rate limit 计数</td><td>避免离线大流量"挤占"在线限流配额</td></tr>
+<tr><td><strong>优先级队列</strong></td><td>在线请求优先级高于离线请求</td><td>资源紧张时保护在线 SLA，牺牲离线吞吐</td></tr>
+<tr><td><strong>网络隔离</strong></td><td>离线与在线使用独立的网络路径 / 负载均衡</td><td>防止带宽争抢，尤其适用于高带宽工具（如图像检索）</td></tr>
+</table>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>离线调用与在线调用使用独立的资源配额</strong>
+    <span>通过独立实例或独立配额组实现，离线任务触发限流时不影响在线请求的配额计数；禁止共享同一限流计数器。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>工具服务方明确声明离线实例的容量规格</strong>
+    <span>离线实例的最大 QPS、并发数、单次请求数据量上限须有文档声明；使用方需在启动大批量作业前确认容量满足需求。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>提供独立的离线服务实例（而非仅配额隔离）</strong>
+    <span>独立实例是最彻底的隔离手段——离线实例故障、重启、扩缩容均不影响在线实例，反之亦然。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>在线请求优先级高于离线请求（优先级队列）</strong>
+    <span>资源紧张时，工具服务优先处理在线请求，主动降级离线请求的处理速度；使用方需能感知并适应此降级行为。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>离线作业启动前提供容量预检接口</strong>
+    <span>使用方在发起大批量作业前，可调用预检接口确认当前离线实例容量是否满足预期吞吐，避免作业启动后才发现资源不足。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>按作业 ID 级别隔离资源配额</strong>
+    <span>支持为每个数据生产作业或训练任务分配独立配额，不同离线作业之间也互不干扰，便于多团队并行使用。</span>
+  </div>
+</li>
+</ul>
+
+<h3>0.4 评估框架说明</h3>
+
+<p>各章节统一采用以下结构，优先级标签含义如下：</p>
+
+<table>
+<tr><th>优先级</th><th>含义</th><th>不满足的后果</th></tr>
+<tr><td><span class="badge red">必须</span></td><td>不可妥协的硬性要求</td><td>不可接入生产，存在系统性风险</td></tr>
+<tr><td><span class="badge og">推荐</span></td><td>强烈建议实现</td><td>影响稳定性、排查效率或安全水位</td></tr>
+<tr><td><span class="badge gy">可选</span></td><td>进阶能力，按需实现</td><td>影响使用体验，不阻断接入</td></tr>
+</table>
+
+<blockquote>
+<strong>评估流程建议：</strong>先逐条过"必须"项，全部满足后再评估"推荐"项。大批量作业启动前须额外确认 0.2/0.3 节的对齐与隔离要求。
+</blockquote>
+
+<pre class="mermaid">
+flowchart TD
+    A["工具服务器评估"] --> B["0.2 离线-在线对齐\n格式·版本·错误行为"]
+    A --> C["0.3 资源隔离\n实例·配额·优先级"]
+    A --> D["1. 可靠性与性能"]
+    A --> E["2. 错误处理"]
+    A --> F["3. 安全性"]
+    A --> G["4. 可观测性"]
+    A --> H["5. RL 训练专项\n奖励信号·跨迭代稳定性"]
+    A --> I["6. 离线数据质量保证\n幂等·完整性·合规·Schema 治理"]
+    B & C & D & E & F & G & H & I --> J{"全部必须项通过？"}
+    J -->|是| K["✅ 可接入离线作业"]
+    J -->|否| L["❌ 拒绝接入，要求整改"]
+</pre>
+
+<!-- ===== 1 ===== -->
+<h2>1. 可靠性与性能</h2>
+
+<h3>1.1 为什么这个维度最关键</h3>
+
+<p>在离线数据蒸馏场景中，工具调用失败或超时意味着一条训练样本作废，规模化后造成数据集空洞或重跑成本。对 RL 训练而言，大量 rollout 并行发起调用，任何服务抖动都会放大为训练效率的显著下降，严重时导致奖励信号缺失、episode 被迫丢弃。</p>
+
+<div class="hl">
+<span class="badge bl">核心原则</span>
+<p style="margin-top:8px">工具服务的失败模式必须是<strong>快速、明确且可恢复的</strong>——调用方宁可收到一个清晰的错误，也不能被一个永不返回的请求挂起。</p>
+</div>
+
+<h3>1.2 具体要求</h3>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>P99 延迟满足业务 SLA 且有文档声明</strong>
+    <span>离线蒸馏场景通常要求 P99 &lt; 5s（可略宽松于在线）；RL 训练场景视工具复杂度单独约定，但必须明确声明上限。未声明 SLA 的服务视为不满足要求。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>服务可用性 ≥ 99.9%</strong>
+    <span>离线数据生产作业通常不可中途中断，工具服务不可用时需有明确的错误返回，使作业能感知并择机重试，而非静默挂起导致作业假死。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>支持请求级超时控制，超时后服务端主动中止</strong>
+    <span>客户端须能在请求粒度设置超时；工具服务端在超时触发后主动终止处理、释放资源，不产生僵尸请求。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>声明并保证并发容量上限，超限行为明确</strong>
+    <span>文档须注明最大并发数 / QPS 上限；超限时的行为策略（排队 / 拒绝）须明确，调用方需能据此做资源规划。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>提供健康检查接口（/health 或等效端点）</strong>
+    <span>供调用方做 readiness 探针和自动摘流，服务就绪前应返回非 200 状态。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>限流触发时返回标准化错误码（429）</strong>
+    <span>触发限流时返回明确的 429 而非通用 500，便于调用方实现退避重试策略。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>暴露 Prometheus 兼容的性能指标</strong>
+    <span>提供延迟分位数、错误率、并发数等指标，便于调用方接入监控告警体系。</span>
+  </div>
+</li>
+</ul>
+
+<h3>1.3 典型反例</h3>
+
+<div class="danger">
+<span class="badge red">反例</span>
+<ul style="margin-top:8px">
+<li>工具服务超时时不返回任何响应，客户端连接被挂起直到系统级 TCP 超时（数分钟），整条 agent 链路冻结。</li>
+<li>文档中无任何性能数据，使用方只能在生产压测中才能发现容量瓶颈。</li>
+<li>并发达到上限时返回 500 + 无 Retry-After，调用方无法区分服务故障与限流，触发错误告警风暴。</li>
+</ul>
+</div>
+
+<h3>1.4 如何验证</h3>
+
+<div class="good">
+<ul>
+<li>对工具服务发起压测，验证 P50/P95/P99 延迟是否符合声明的 SLA。</li>
+<li>模拟超时场景（阻塞 handler），确认服务端在指定时间内主动中止并返回超时错误，而非挂起。</li>
+<li>并发发送超过声明上限的请求，确认返回 429 而非 500，且响应中包含 <code>Retry-After</code>。</li>
+<li>调用 <code>/health</code> 接口，确认在服务就绪前返回非 200 状态码。</li>
+</ul>
+</div>
+
+<!-- ===== 2 ===== -->
+<h2>2. 错误处理</h2>
+
+<h3>2.1 为什么错误设计会影响 LLM 行为</h3>
+
+<p>工具服务的错误响应会直接注入到 LLM 的上下文中。<strong>模糊的错误信息会让模型"乱猜"</strong>，产生幻觉性的重试行为或错误的自我纠正；过于详细的错误栈则可能泄露内部实现细节或造成安全风险。好的错误设计需要在两者之间找到平衡：</p>
+
+<table>
+<tr><th>错误受众</th><th>需要的信息</th><th>不需要的信息</th></tr>
+<tr><td><strong>LLM（上下文中）</strong></td><td>发生了什么、如何修正、是否应重试</td><td>内部堆栈、类名、SQL、文件路径</td></tr>
+<tr><td><strong>工程师（日志中）</strong></td><td>完整堆栈、请求参数、内部状态</td><td>—</td></tr>
+</table>
+
+<h3>2.2 具体要求</h3>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>明确区分可重试与不可重试错误</strong>
+    <span>通过错误码或专用字段（如 <code>retryable: true/false</code>）区分瞬时错误（可重试）与永久错误（不可重试），调用方据此决策。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>错误消息对 LLM 友好，不含内部实现细节</strong>
+    <span>面向 LLM 上下文的 <code>message</code> 字段描述"发生了什么"及"如何修正"，避免裸露的异常堆栈或内部类名。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>统一错误响应结构，跨所有接口一致</strong>
+    <span>所有错误响应至少包含 <code>error_code</code>、<code>message</code>、<code>retryable</code> 三个字段，不因接口不同而格式各异。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>限流错误附带 Retry-After（毫秒级）</strong>
+    <span>429 类错误在响应 body 中携带 <code>retry_after_ms</code>，使调用方能做智能指数退避而非盲目轮询。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>每次调用分配唯一 request_id 并在错误中返回</strong>
+    <span>便于调用方将 LLM 上下文中的错误与服务端日志关联，跨服务排查问题。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>批量操作支持部分成功表达</strong>
+    <span>批量操作型工具应区分整体失败与部分成功，而非将所有场景均映射为顶层错误。</span>
+  </div>
+</li>
+</ul>
+
+<h3>2.3 标准错误响应示例</h3>
+
+<pre>{
+  "error_code": "RATE_LIMIT_EXCEEDED",
+  "message": "请求频率超出限制，请稍后重试。当前 QPS 上限：100。",
+  "retryable": true,
+  "retry_after_ms": 2000,
+  "request_id": "req_7f3a9c2b"
+}</pre>
+
+<pre>{
+  "error_code": "INVALID_PARAM",
+  "message": "参数 'query' 不能为空字符串，请提供有效的搜索关键词。",
+  "retryable": false,
+  "request_id": "req_4d1e8a5f"
+}</pre>
+
+<h3>2.4 典型反例</h3>
+
+<div class="danger">
+<span class="badge red">反例</span>
+<ul style="margin-top:8px">
+<li>所有错误均返回 <code>{"error": "Internal Server Error"}</code>，LLM 无法判断是否应该重试，倾向于反复尝试或放弃任务。</li>
+<li>参数校验失败时返回 Java 异常堆栈（<code>NullPointerException at com.example.ToolHandler:142</code>），LLM 将堆栈当作上下文信息处理，产生混乱推理。</li>
+<li>不同接口错误格式不一致：有的是 <code>{"code": 400}</code>，有的是 <code>{"status": "fail", "reason": "..."}</code>，调用方需为每个接口写定制化解析逻辑。</li>
+</ul>
+</div>
+
+<h3>2.5 如何验证</h3>
+
+<div class="good">
+<ul>
+<li>发送非法参数请求，确认返回结构化错误、<code>retryable: false</code>，且 message 无内部实现细节。</li>
+<li>触发限流，确认 <code>retryable: true</code> 且 body 中携带 <code>retry_after_ms</code>。</li>
+<li>用 JSON Schema 校验工具覆盖所有接口的错误响应，确认结构一致。</li>
+<li><strong>LLM 友好性测试：</strong>将错误消息原文放入 LLM 上下文，测试模型能否据此给出合理的下一步动作。</li>
+</ul>
+</div>
+
+<!-- ===== 3 ===== -->
+<h2>3. 安全性</h2>
+
+<h3>3.1 为什么工具服务需要独立安全防线</h3>
+
+<p>工具服务器是 LLM 系统中"有执行能力"的组件，一次未授权调用可能造成数据泄露、系统破坏或资源滥用。<strong>LLM 本身容易被提示词注入（Prompt Injection）操控</strong>，因此工具服务必须在应用层之外建立独立的安全防线，不能依赖模型的"判断"来防护。</p>
+
+<div class="danger">
+<span class="badge red">核心风险</span>
+<p style="margin-top:8px">攻击者通过精心构造的用户输入让 LLM 调用高权限工具，例如：让搜索工具读取敏感文件，让写操作工具删除数据库记录。工具服务本身是最后一道防线。</p>
+</div>
+
+<h3>3.2 具体要求</h3>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>所有接口需认证，不允许匿名访问</strong>
+    <span>支持 API Key、OAuth 2.0 或 mTLS 中至少一种认证机制，功能性接口必须有身份验证，匿名请求直接返回 401。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>基于调用方身份的细粒度授权（按工具粒度）</strong>
+    <span>不同调用方（agent、用户、RL 训练任务）应有独立的权限配置，支持按工具粒度控制访问权限，越权返回 403。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>服务端输入验证，不信任任何客户端参数</strong>
+    <span>对所有入参进行服务端校验（类型、范围、长度、字符集），防止路径穿越、SQL 注入、命令注入等攻击，LLM 传入的参数同样不可信。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>高风险操作有明确的范围限定（防越权横移）</strong>
+    <span>写操作、删除操作等高风险工具调用须有操作范围约束（如仅限特定 namespace / 资源 ID），防止攻击者通过 LLM 实现横向移动。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>最小权限原则，默认开放最小权限集</strong>
+    <span>高权限工具需额外申请与审批，默认不开放。按需申请的机制防止权限蔓延。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>传输层 TLS 加密（内网不例外）</strong>
+    <span>所有通信通道使用 TLS 1.2+，内网调用也不作例外，防止中间人截获调用内容（含 LLM 上下文中的敏感信息）。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>按调用方身份独立计量与限流，异常模式告警</strong>
+    <span>异常调用模式（突发高频、异常参数组合）触发告警或自动熔断，防止 LLM 被操控后的批量滥用。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>高权限操作写入不可篡改的审计日志</strong>
+    <span>记录调用方身份、时间、参数摘要（敏感字段脱敏），支持事后追溯和合规审计。</span>
+  </div>
+</li>
+</ul>
+
+<h3>3.3 典型反例</h3>
+
+<div class="danger">
+<span class="badge red">反例</span>
+<ul style="margin-top:8px">
+<li><strong>内网无认证：</strong>工具服务在内网部署默认无认证，"反正内网安全"——LLM 被提示注入后可直接调用任意工具，无需任何凭证。</li>
+<li><strong>路径穿越：</strong>文件读取工具未做路径限制，LLM 被诱导传入 <code>../../etc/passwd</code> 实现路径穿越读取系统文件。</li>
+<li><strong>权限粒度过粗：</strong>所有调用方共享同一 API Key，无法区分合法 agent 与被攻破的 RL 训练任务，一旦泄漏影响全系统。</li>
+</ul>
+</div>
+
+<h3>3.4 如何验证</h3>
+
+<div class="good">
+<ul>
+<li>移除认证头后发送请求，确认返回 401 而非有效响应。</li>
+<li>使用低权限 token 调用高权限工具，确认返回 403。</li>
+<li>发送模糊输入（超长字符串、特殊字符、路径穿越尝试 <code>../../etc/passwd</code>），确认服务端校验拦截并返回 400。</li>
+<li>检查请求日志中是否记录调用方身份（而不仅是 IP），验证审计可追溯性。</li>
+</ul>
+</div>
+
+<!-- ===== 4 ===== -->
+<h2>4. 可观测性与可调试性</h2>
+
+<h3>4.1 为什么 LLM 系统特别需要工具级可观测性</h3>
+
+<p>LLM 系统的调用链路天然复杂——一次用户请求可能经过 agent 编排、多轮工具调用、上下文管理等多个环节。当最终结果异常时，工程师需要能快速回溯到<strong>"是哪次工具调用、传了什么参数、返回了什么结果、耗时多少"</strong>。没有工具级可观测性，排查问题只能靠猜，MTTR（平均修复时间）会数倍增加。</p>
+
+<h3>4.2 具体要求</h3>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>每次调用有唯一 request_id，响应中返回</strong>
+    <span>工具服务生成并在响应中返回 <code>request_id</code>；同时支持调用方透传上游 trace ID，实现端到端追踪。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>结构化日志记录每次调用的完整信息</strong>
+    <span>日志字段至少包含：调用方身份、工具名称、入参摘要（敏感字段脱敏）、耗时、响应状态码、request_id。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>工程师日志与 LLM 错误响应分离维护</strong>
+    <span>面向工程师的服务端错误日志包含完整堆栈和上下文；面向 LLM 的错误响应只含精简的友好信息，两套内容独立维护，互不干扰。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>支持分布式追踪（W3C TraceContext）</strong>
+    <span>接受并传播 <code>traceparent</code> 头，将工具调用 span 接入 Jaeger / Zipkin 等追踪系统，支持跨服务调用链路还原。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>关键指标有告警配置（不依赖调用方发现）</strong>
+    <span>错误率、P99 延迟等指标超过阈值时主动告警，工具服务方主动感知问题，而非等调用方反馈后才介入。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>支持按 request_id / 时间范围查询历史调用记录</strong>
+    <span>允许调用方查询历史调用记录，支持复现历史问题场景。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>支持 Dry-Run 模式</strong>
+    <span>提供 <code>dry_run=true</code> 参数，验证参数合法性、模拟执行路径而不产生真实副作用，便于调用方调试。</span>
+  </div>
+</li>
+</ul>
+
+<h3>4.3 典型反例</h3>
+
+<div class="danger">
+<span class="badge red">反例</span>
+<ul style="margin-top:8px">
+<li>日志只记录 HTTP 状态码，没有工具名称和参数，无法重现问题场景，只能请求工具服务方配合手动检索。</li>
+<li>多个工具服务 request_id 格式各异（有的是 UUID，有的是时间戳），无法在统一日志平台聚合查询。</li>
+<li>没有分布式追踪支持，agent 调用 5 个工具后出现错误，只能逐个服务翻日志手动对时间戳，排查耗时数小时。</li>
+</ul>
+</div>
+
+<h3>4.4 如何验证</h3>
+
+<div class="good">
+<ul>
+<li>发起一次调用，用响应中的 <code>request_id</code> 在日志系统中搜索，确认能找到包含工具名称、参数摘要、耗时的完整记录。</li>
+<li>在请求头中传入 <code>traceparent</code>，确认工具服务在其 span 中正确传播该值，追踪平台中可见完整调用链。</li>
+<li>故意触发服务端错误，确认工程师日志中有完整上下文，而 LLM 响应中只有精简的友好错误消息。</li>
+</ul>
+</div>
+
+<!-- ===== 5 ===== -->
+<h2>5. RL 训练场景专项要求</h2>
+
+<h3>5.1 与推理场景的本质差异</h3>
+
+<p>RL 训练（尤其是 GRPO / PPO 类算法）需要在每个迭代中运行成百上千个并行 episode，每个 episode 都会触发工具调用序列。与推理场景不同，训练场景对工具服务有三个独特的额外要求：</p>
+
+<table>
+<tr><th>维度</th><th>推理场景</th><th>RL 训练场景</th></tr>
+<tr><td>调用并发</td><td>中低并发，用户级</td><td><strong>极高并发，批量 rollout（数百~数千并行）</strong></td></tr>
+<tr><td>状态隔离</td><td>可接受共享部分全局状态</td><td><strong>必须 episode 级完全隔离，防止轨迹污染</strong></td></tr>
+<tr><td>确定性</td><td>允许一定随机性</td><td><strong>相同输入须产生一致输出，保证实验可复现</strong></td></tr>
+<tr><td>副作用</td><td>按需产生</td><td><strong>训练期间默认禁止持久化副作用</strong></td></tr>
+<tr><td>重置能力</td><td>不需要</td><td><strong>需要支持 episode 级状态重置（env.reset）</strong></td></tr>
+</table>
+
+<div class="warn">
+<span class="badge og">关键风险</span>
+<p style="margin-top:8px"><strong>工具服务的非确定性会污染训练信号：</strong>如果相同输入在不同 rollout 中产生不同输出（如工具内部使用时间戳、全局计数器），奖励函数在相同状态下会给出不同分数，导致训练曲线出现无法解释的抖动，且极难复现和定位根因。</p>
+</div>
+
+<h3>5.2 具体要求</h3>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>声明训练场景并发容量，并提供水平扩展方案</strong>
+    <span>文档明确说明训练场景下的最大并发数 / QPS 上限；训练框架在 rollout 开始前需确认服务容量可承载 <code>batch_size × rollout_steps</code> 的峰值并发。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>Episode 级状态完全隔离</strong>
+    <span>通过 <code>session_id</code> 或等效机制区分不同 episode 的调用上下文；不同 episode 的中间状态必须完全隔离，一个 episode 的行为不得影响另一个的奖励计算。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>明确文档说明每个工具的副作用行为</strong>
+    <span>工具服务须在文档中明确声明每个工具是否产生持久化副作用（写 DB、外部 API 调用、发送消息等）；训练阶段默认应使用无副作用模式或沙箱环境。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>Fail-Fast：单步超时不阻塞整批 Rollout</strong>
+    <span>单个工具调用超时后，框架必须在设定时间内收到明确的超时错误，而非等待服务端长时间挂起。一个慢请求不应拖垮整个 rollout batch。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>支持确定性模式（Deterministic Mode）</strong>
+    <span>提供关闭随机性的选项（如固定随机种子、禁用采样），使相同输入产生完全一致的输出，保证训练轨迹可复现、不同实验结果可对比。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>支持 Episode Reset 接口</strong>
+    <span>提供 <code>reset(session_id)</code> 或等效接口，清除指定 episode 的中间状态，对应强化学习框架中 <code>env.reset()</code> 的语义。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>训练流量与推理流量完全服务隔离</strong>
+    <span>为训练任务提供独立的服务实例或命名空间，防止训练产生的高并发压力影响线上推理服务的 SLA。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>支持批量请求（Batch API）</strong>
+    <span>允许在单次请求中打包多个工具调用，减少连接开销，提升训练吞吐效率（对高 QPS 训练场景收益显著）。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>训练场景专用监控视图，按 job ID 聚合</strong>
+    <span>区分推理流量和训练流量的指标，按 training job ID 聚合调用统计，便于分析训练进度与工具服务状态的相关性。</span>
+  </div>
+</li>
+</ul>
+
+<h3>5.3 RL 奖励信号完整性：基础设施故障 vs 语义错误</h3>
+
+<p>这是 RL 场景最容易被忽略、也最致命的问题。工具调用失败有两种本质不同的原因，<strong>对奖励的处理方式完全相反</strong>：</p>
+
+<table>
+<tr><th>错误类型</th><th>典型示例</th><th>对 RL 的正确处理</th></tr>
+<tr><td><span class="badge red">INFRA_ERROR</span> 基础设施故障</td><td>超时、503、OOM、rate limit 打满</td><td><strong>不计入 reward</strong>，应重试或标记为"待重跑"样本</td></tr>
+<tr><td><span class="badge og">TOOL_ERROR</span> 工具语义错误</td><td>搜索无结果、查询语法错误、权限不足（业务权限）</td><td><strong>应计入 reward</strong>，policy 需要学会处理这类情况</td></tr>
+</table>
+
+<div class="danger">
+<span class="badge red">核心风险</span>
+<p style="margin-top:8px">若把基础设施故障（如超时）当作"工具返回空结果"处理，reward = 0 会错误地惩罚 policy，让模型学会"回避工具调用"而不是"正确使用工具"。这种偏差极难从训练曲线上察觉，但会严重影响策略的最终能力。</p>
+</div>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>错误码强类型区分：INFRA_ERROR vs TOOL_ERROR</strong>
+    <span>工具服务的错误响应必须通过 <code>error_class</code> 字段明确区分基础设施故障（<code>INFRA_ERROR</code>）和工具语义错误（<code>TOOL_ERROR</code>），不能仅依赖 HTTP 状态码区分（5xx/4xx 均可能出现在两类场景中）。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>INFRA_ERROR 已在服务端尽力重试后才透出</strong>
+    <span>工具服务端对 INFRA_ERROR 内部重试 N 次后才返回给调用方；调用方收到 INFRA_ERROR 意味着服务已经尽力，训练框架可据此直接标记该样本为"待重跑"而不再重试。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>INFRA_ERROR 率有 SLO 约束，超标主动告警</strong>
+    <span>工具服务对离线作业承诺 INFRA_ERROR 率上限（如 &lt; 0.1%）；超出阈值时主动告警，而非等训练团队发现 reward 异常后才溯源。</span>
+  </div>
+</li>
+</ul>
+
+<pre>{
+  "error_code": "SEARCH_TIMEOUT",
+  "error_class": "INFRA_ERROR",
+  "message": "搜索服务内部超时，已重试 3 次。请将本样本标记为待重跑。",
+  "retryable": false,
+  "request_id": "req_9b2c4d1a"
+}
+
+{
+  "error_code": "NO_RESULTS_FOUND",
+  "error_class": "TOOL_ERROR",
+  "message": "搜索词 'xyzabc123' 未找到相关结果，这是正常的工具返回。",
+  "retryable": false,
+  "request_id": "req_7e3f8c0b"
+}</pre>
+
+<h3>5.4 跨训练迭代的工具行为稳定性</h3>
+
+<p>RL 训练通常持续数天、跨越数十次迭代。若工具的底层数据（搜索索引、知识库、推荐系统）在训练期间发生静默更新，则：</p>
+
+<ul>
+<li>同一 policy 在第 1 轮 rollout 用工具找到了正确答案，在第 10 轮同样的 query 工具返回了不同结果 → reward 信号发生漂移，policy 质量曲线失真</li>
+<li>训练曲线看似在"进步"，实际上可能是工具底层数据变化带来的伪提升，导致错误的 early stopping 判断</li>
+</ul>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>工具底层数据变更须有版本号，且变更前主动通知</strong>
+    <span>每次底层数据更新（索引重建、知识库刷新）须带版本号，并在变更前通知使用方；禁止在进行中的训练 run 期间静默更新底层数据。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>支持数据版本锁定（Snapshot 模式）</strong>
+    <span>一次训练 run 可绑定固定的数据快照版本（<code>X-Tool-Data-Version: snapshot-2026-07</code>），保证整个训练期间工具底层数据不变，奖励 landscape 稳定。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>提供跨版本 diff 能力，量化工具行为漂移</strong>
+    <span>对同一批 golden query，可对比两个数据版本的工具返回差异率；差异率超阈值时触发告警，提醒训练团队评估是否需要重跑受影响的迭代。</span>
+  </div>
+</li>
+</ul>
+
+<h3>5.5 典型反例</h3>
+
+<div class="danger">
+<span class="badge red">反例</span>
+<ul style="margin-top:8px">
+<li><strong>状态隔离缺失：</strong>工具服务无 session 隔离机制，所有 episode 共用同一个"当前搜索历史"状态，前一个 episode 的行为影响后一个的奖励计算，导致训练数据分布偏移。</li>
+<li><strong>真实副作用：</strong>搜索工具实际写入用户行为日志，召回工具实际触发推荐系统更新，训练跑一轮后线上数据被大量污染。</li>
+<li><strong>训练/推理共用：</strong>训练任务高峰期与线上推理流量共用同一服务实例，导致推理 P99 延迟飙升，触发线上告警。</li>
+<li><strong>非确定性：</strong>工具内部结果依赖当前时间戳排序，相同查询在两次 rollout 中返回不同顺序，奖励函数计算结果不一致，训练曲线剧烈抖动。</li>
+</ul>
+</div>
+
+<h3>5.6 如何验证</h3>
+
+<div class="good">
+<ul>
+<li><strong>确定性验证：</strong>开启确定性模式后，用相同参数连续调用同一工具 N 次，对比所有响应是否完全一致（字段顺序、数值均相同）。</li>
+<li><strong>状态隔离验证：</strong>在 session A 中写入状态，在 session B 中读取，确认 B 完全无法感知 A 的状态。</li>
+<li><strong>副作用验证：</strong>在沙箱环境完整跑一轮训练，事后检查所有外部系统（数据库、日志、消息队列）确认无真实副作用产生。</li>
+<li><strong>并发压测：</strong>模拟训练场景下的并发量（如 512 并发 rollout），验证服务 P99 延迟和错误率不超标，且无跨 session 数据污染。</li>
+<li><strong>Fail-Fast 验证：</strong>注入一个永不返回的调用，确认超时错误在设定时间内返回，其他并行调用不受影响。</li>
+</ul>
+</div>
+
+<!-- ===== 6 ===== -->
+<h2>6. 离线数据质量保证</h2>
+
+<h3>6.1 幂等性与断点续传</h3>
+
+<p>离线数据生产作业动辄跑数十小时、跨越数百台 worker。机器 OOM、网络抖动、调度抢占都会导致作业中断重启。若工具调用不具幂等性，重跑时同一请求可能得到不同结果（搜索索引已更新、限流后换了不同副本），导致训练数据集<strong>内部不一致</strong>。</p>
+
+<div class="warn">
+<span class="badge og">核心区别</span>
+<p style="margin-top:8px">在线推理中，用户重试本来就期待最新结果，不幂等是可接受的。离线作业重跑时，<strong>已调用但未落盘的 sample 必须能原样重现</strong>——否则数据集的不同子集是由不同"世界观"的工具产生的，分布不一致。</p>
+</div>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>支持幂等 Key，TTL 覆盖作业最大重试窗口</strong>
+    <span>客户端可携带幂等 Key（建议格式：<code>job_id + sample_idx + call_idx</code>），服务端在 TTL 内返回缓存响应而不重新执行。TTL 须覆盖作业最大重试窗口（通常 ≥ 72h），而非按在线业务设计的几秒钟。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>有副作用的工具支持幂等 token 去重</strong>
+    <span>对会产生写操作的工具（代码执行、数据库写入），须通过幂等 token 确保重复请求不产生重复副作用，而不是每次重跑都再执行一次写操作。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>提供作业级调用日志，支持从 checkpoint 续跑</strong>
+    <span>工具服务或调用方 SDK 维护按 job_id 组织的调用日志，作业恢复时可跳过已成功调用的 sample，不重复消耗配额也不重新发起请求。</span>
+  </div>
+</li>
+</ul>
+
+<h3>6.2 结果完整性与截断策略</h3>
+
+<p>工具服务通常因 token 限制或延迟约束对结果截断。在线场景中用户有感知能力，可识别截断并追问；但训练管道没有这个能力——<strong>模型会把截断后的输出当作完整输出学习</strong>，错误地认为任务已完成，或在 RL 中因关键信息缺失导致任务不可解、reward 为 0（但这不是 policy 的问题）。</p>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>每次响应显式携带截断元数据（is_truncated + total_size）</strong>
+    <span>响应必须包含 <code>is_truncated: true/false</code> 和 <code>total_chars</code>（或 <code>total_tokens</code>）字段，绝不允许静默截断。调用方据此决定是否分页拉取或跳过该样本。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>离线调用可配置更高的返回长度上限</strong>
+    <span>离线请求可通过参数指定比在线更高的返回长度上限（如 64K vs 4K），保证蒸馏数据的信息完整性不因在线约束而被动损失。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>支持分页拉取，覆盖超长结果</strong>
+    <span>对代码执行输出、长文档检索等场景提供游标分页（<code>cursor</code> + <code>has_more</code>），让调用方按需拉取完整结果，而不是被迫接受截断版本。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>截断策略可配置（error / paginate / truncate+flag）</strong>
+    <span>结果超长时的处理策略允许调用方配置：<code>error</code>（报错让调用方决策）、<code>paginate</code>（自动分页）、<code>truncate_with_flag</code>（截断并标记），而不是统一静默截断。</span>
+  </div>
+</li>
+</ul>
+
+<h3>6.3 作业级管理能力</h3>
+
+<p>工具服务器通常以请求粒度管理资源，但离线场景的自然管理单元是<strong>作业（job）</strong>。缺乏作业级管理会导致：某个失控作业独占全部配额、作业取消后 worker 仍持续发请求、无法提前预估成本导致预算失控。</p>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>作业注册与生命周期管理（注册/暂停/取消）</strong>
+    <span>支持通过 job_id 注册作业并管理其生命周期；作业取消后，服务端拒绝该 job 的后续所有请求，防止 zombie worker 持续消耗配额。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>作业级独立配额上限（QPS + 总调用量）</strong>
+    <span>每个 job_id 有独立的 QPS 限制和总调用量上限，超出时返回明确的限流错误；不同作业之间互不影响，一个失控作业不应饿死其他作业。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>提供成本预估接口（启动前可预检）</strong>
+    <span><code>POST /job/estimate</code>：给定样本数、工具类型、预期并发，返回预估调用次数、配额消耗量和完成时间，便于提前做资源规划和预算审批。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>服务端背压信号（X-Backpressure-Delay）</strong>
+    <span>服务端在接近容量瓶颈时在响应头中携带 <code>X-Backpressure-Delay: 500ms</code>，指导客户端主动降速，而不是等到触发 429 才被动退避，平滑控制并发。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>支持作业优先级调度</strong>
+    <span>不同类型的离线作业（数据蒸馏 / RL 训练 / 探索实验）可设置优先级，资源紧张时高优作业优先服务，低优作业自动排队等待。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge gy">可选</span>
+  <div class="req-body">
+    <strong>作业进度可观测（已完成 / 错误分布 / 预计剩余时间）</strong>
+    <span>按 job_id 查询当前进度：已完成调用数、缓存命中率、INFRA_ERROR 率、预计剩余时间，便于及时发现异常（如某个 worker 卡住）。</span>
+  </div>
+</li>
+</ul>
+
+<h3>6.4 训练数据合规性</h3>
+
+<p>这是最容易被工程团队忽视、但后果最严重的维度。在线推理中，工具结果不落盘，实时消费后即丢弃；<strong>离线场景的工具结果会持久化为训练数据，受到更严格的数据监管</strong>——版权、ToS、隐私保护均适用，违规可能导致模型无法商用或引发法律风险。</p>
+
+<div class="danger">
+<span class="badge red">常见法律风险</span>
+<ul style="margin-top:8px">
+<li><strong>ToS 违规：</strong>大多数第三方搜索 API（Bing、Google、Serper）的服务条款<strong>明确禁止</strong>将返回结果用于训练 ML 模型，违反可能导致账号封禁和法律索赔。</li>
+<li><strong>版权风险：</strong>工具返回的网页内容、代码片段可能受 CC BY-NC 或 GPL 等限制，禁止用于商业训练。</li>
+<li><strong>PII 泄露：</strong>工具结果中的姓名、手机、邮箱等 PII 一旦进入训练数据，形成长期隐私风险，且事后难以彻底清除。</li>
+</ul>
+</div>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>每个工具明确标注"是否允许离线训练用途"</strong>
+    <span>工具服务方须在文档中为每个工具标注其数据来源的合规状态：<code>training_allowed</code> / <code>inference_only</code>。不在白名单内的工具不得用于生成训练数据。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>结果落盘前完成 PII 检测与脱敏</strong>
+    <span>工具结果在调用方落盘前须经过 PII 检测（姓名、电话、邮箱、身份证号等）和脱敏；脱敏可在服务端完成（更彻底）或由调用方 SDK 完成（更灵活），但不得跳过。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>响应携带内容 license 标签</strong>
+    <span>工具响应中携带 <code>content_license</code> 字段（如 <code>public_domain</code>、<code>cc_by</code>、<code>cc_by_nc</code>、<code>proprietary</code>），供下游数据管道按 license 类型过滤，避免混入不可用数据。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>每条调用记录保留来源溯源信息</strong>
+    <span>调用日志记录：来源域名、采集时间、工具版本、数据版本，支持事后合规审计和"数据删除传播"（right to be forgotten）场景下的定点清除。</span>
+  </div>
+</li>
+</ul>
+
+<h3>6.5 Schema 版本治理</h3>
+
+<p>离线训练管道（数据清洗、特征提取、reward 计算）通常对工具返回的字段结构有强依赖。工具服务的 schema 变更（字段改名、类型变化、字段删除）会<strong>静默破坏下游解析</strong>，且因为是离线批量作业，往往数据集已全部生产完才在训练时发现问题，造成大量返工。</p>
+
+<ul class="req-list">
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>API 路径携带版本号，旧版本至少维护 6 个月</strong>
+    <span>接口路径须包含版本（如 <code>/v2/tool/search</code>），每个版本的 schema 不可变；旧版本在新版本发布后至少维护 6 个月，给使用方足够的迁移窗口。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge red">必须</span>
+  <div class="req-body">
+    <strong>Breaking Change 提前 2 周通知，附迁移指南</strong>
+    <span>任何 schema breaking change（字段删除/改名/类型变化）须提前至少 2 周通知所有使用方，并提供迁移指南和自动化验证脚本；禁止静默升级。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>每次响应携带 schema_version，调用方可据此做版本适配</strong>
+    <span>响应中携带 <code>schema_version</code> 字段，调用方可在解析前做版本检查，发现版本不符时提前报错而不是静默解析出脏数据。</span>
+  </div>
+</li>
+<li class="req-item">
+  <span class="badge og">推荐</span>
+  <div class="req-body">
+    <strong>CI 中加入 Contract Test，防止 schema 退化</strong>
+    <span>在工具服务的 CI 流水线中对所有对外 schema 跑 contract test，任何 breaking change 在发布前被自动拦截，而非在使用方的离线作业中才被发现。</span>
+  </div>
+</li>
+</ul>
+
+<h3>6.6 典型反例</h3>
+
+<div class="danger">
+<span class="badge red">反例</span>
+<ul style="margin-top:8px">
+<li><strong>幂等性缺失：</strong>蒸馏作业跑到一半因机器故障重启，重跑时搜索索引已更新，前后两批数据是不同时间点的工具输出，数据集内部出现分布不一致，模型在该子集上的表现出现系统性偏差。</li>
+<li><strong>静默截断：</strong>代码执行工具静默截断超长输出但不携带任何标记，训练数据中"执行成功"但结果不完整的样本大量存在，模型学到"执行后直接给出答案"的错误模式。</li>
+<li><strong>合规忽视：</strong>使用某搜索 API 生成大规模蒸馏数据，上线前法务审查发现该 API 的 ToS 禁止用于训练，数百万条训练样本需全部丢弃重新生产。</li>
+<li><strong>Schema 静默变更：</strong>工具服务把 <code>result.score</code> 从 float 改为 string，奖励函数在计算时静默转型出错，RL 训练跑了 3 天才从指标异常中发现，整个 run 作废。</li>
+</ul>
+</div>
+
+<h3>6.7 如何验证</h3>
+
+<div class="good">
+<ul>
+<li><strong>幂等性验证：</strong>用同一幂等 Key 发送两次请求，对比两次响应的每个字段是否完全一致；间隔 24h 后再发送，确认 TTL 覆盖到位。</li>
+<li><strong>完整性验证：</strong>构造超长结果的请求，确认响应携带 <code>is_truncated: true</code> 而非静默截断；调用分页接口确认可拼接出完整结果。</li>
+<li><strong>作业管理验证：</strong>注册一个 job，取消后继续发送该 job_id 的请求，确认服务端返回拒绝而非继续处理。</li>
+<li><strong>合规验证：</strong>对接入的每个工具工具查阅 ToS，确认"离线训练用途"明确允许；对 100 条样本结果跑 PII 检测，确认脱敏覆盖率。</li>
+<li><strong>Schema 稳定性验证：</strong>保存一组 response fixture，每次工具服务升级后对比 schema 是否有 breaking change；集成 contract test 自动化此流程。</li>
+</ul>
+</div>
+
+<!-- ===== 附录 ===== -->
+<h2>附录：快速评估清单</h2>
+
+<p>可在评审会或接入 PR 评审时直接使用，逐项确认。<span class="badge red">必须</span> 项全部通过方可接入离线作业。</p>
+
+<hr>
+
+<h3>🔗 离线-在线对齐</h3>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 离线工具版本与在线严格对应，提供版本查询接口，禁止静默升级</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 响应 JSON Schema 离线-在线完全一致（字段、类型、null 表达）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 错误码与 retryable 语义离线-在线一致</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 提供 golden query 对比测试集，定期量化离线/在线差异率</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 工具行为/格式变更时提前通知使用方，留出验证窗口期</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge gy">可选</span> 支持 shadow 模式：离线请求同步对比在线返回，实时检测偏差</span></div>
+
+<hr>
+
+<h3>🧱 资源隔离</h3>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 离线与在线使用独立资源配额，触发限流时互不影响</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 文档声明离线实例容量规格（最大 QPS / 并发数 / 数据量上限）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 离线使用独立服务实例，而非仅配额隔离</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 在线请求优先级高于离线请求，资源紧张时主动降级离线</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 提供容量预检接口，大批量作业启动前可验证当前可用容量</span></div>
+
+<hr>
+
+<h3>⚡ 可靠性与性能</h3>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> P99 延迟有明确 SLA 且经过压测验证</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 服务可用性 ≥ 99.9%（或与业务另行约定）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 支持请求级超时控制，超时后服务端主动中止，不挂起</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 文档声明并发容量上限，超限有明确策略</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 提供 /health 健康检查接口</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 限流返回 429 + Retry-After，而非 500</span></div>
+
+<hr>
+
+<h3>🔥 错误处理</h3>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 区分可重试与不可重试错误（retryable 字段）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 错误消息对 LLM 友好，不含内部堆栈或类名</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 所有接口错误响应格式统一（error_code + message + retryable）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 限流错误附带 retry_after_ms</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 每次调用返回唯一 request_id</span></div>
+
+<hr>
+
+<h3>🔒 安全性</h3>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 所有接口需认证，匿名访问返回 401</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 支持按调用方身份的细粒度授权（工具级别），越权返回 403</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 服务端输入验证，不信任 LLM 或客户端传入的任何参数</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 高风险操作有范围限定，防止越权横移</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 最小权限原则，默认最低权限</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 传输层 TLS 加密（含内网）</span></div>
+
+<hr>
+
+<h3>🔭 可观测性与可调试性</h3>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 每次调用有唯一 request_id 并在响应中返回</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 结构化日志记录：调用方、工具名、参数摘要、耗时、状态码</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 工程师日志（含完整堆栈）与 LLM 错误响应（精简友好）分离</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 支持分布式追踪（W3C TraceContext / traceparent 头）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 关键指标（错误率、P99）有主动告警配置</span></div>
+
+<hr>
+
+<h3>🧠 RL 训练场景</h3>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 文档声明训练场景并发容量，并提供水平扩展方案</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> Episode 级状态完全隔离（session_id 机制）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 文档明确说明每个工具的副作用行为</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 单步超时 Fail-Fast，不阻塞整批 rollout</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 错误码强类型区分 INFRA_ERROR vs TOOL_ERROR（奖励信号完整性）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> INFRA_ERROR 已在服务端充分重试后才透出，training 框架可直接标记"待重跑"</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 工具底层数据变更须带版本号，变更前主动通知使用方，禁止训练期间静默更新</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 支持确定性模式，相同输入产生相同输出</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 支持 Episode Reset 接口（对应 env.reset 语义）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 支持数据版本锁定（Snapshot 模式），保证整个训练 run 的 reward landscape 稳定</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> INFRA_ERROR 率有 SLO 约束（&lt; 0.1%），超标主动告警</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 训练流量与推理流量服务隔离，互不影响 SLA</span></div>
+
+<hr>
+
+<h3>📦 离线数据质量保证</h3>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 支持幂等 Key，TTL ≥ 72h 覆盖作业最大重试窗口</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 有副作用的工具支持幂等 token 去重，防止重跑产生重复副作用</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 响应显式携带截断元数据（is_truncated + total_size），禁止静默截断</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 离线调用可配置更高的返回长度上限（不受在线约束限制）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 作业注册与生命周期管理（注册/暂停/取消），取消后拒绝后续请求</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 作业级独立配额上限（QPS + 总调用量），不同作业互不影响</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 每个工具明确标注是否允许离线训练用途（training_allowed / inference_only）</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> 结果落盘前完成 PII 检测与脱敏</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> API 路径携带版本号，旧版本至少维护 6 个月</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge red">必须</span> Breaking Change 提前 2 周通知，附迁移指南，禁止静默升级</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 提供作业级调用日志，支持从 checkpoint 续跑</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 支持分页拉取（cursor + has_more），覆盖超长结果</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 提供成本预估接口（/job/estimate），支持启动前资源规划</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 服务端背压信号（X-Backpressure-Delay），指导客户端主动降速</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 响应携带 content_license 标签，供下游按 license 类型过滤</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 调用日志保留来源溯源信息，支持合规审计与数据删除传播</span></div>
+<div class="cl-item"><div class="cl-box"></div><span><span class="badge og">推荐</span> 响应携带 schema_version，CI 中加入 contract test 防止 schema 退化</span></div>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc = document.getElementById('toc');
+document.querySelectorAll('main h2, main h3').forEach((h,i) => {
+  if (!h.id) h.id = 'sec-' + i;
+  const a = document.createElement('a');
+  a.href = '#' + h.id;
+  a.textContent = h.textContent;
+  if (h.tagName === 'H3') a.classList.add('toc-h3');
+  toc.appendChild(a);
+});
+const links = toc.querySelectorAll('a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+    if (link) link.classList.toggle('active', e.isIntersecting);
+  });
+}, {rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

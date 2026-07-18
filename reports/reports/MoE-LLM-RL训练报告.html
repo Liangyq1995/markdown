@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoE LLM 强化学习训练：经验、问题与解决方法</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.6em; margin: 0.5em 0; }
+    li { margin: 0.3em 0; }
+    .badge { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-right: 6px; }
+    .badge-red    { background: #f38ba8; color: #1e1e2e; }
+    .badge-orange { background: #fab387; color: #1e1e2e; }
+    .badge-yellow { background: #f9e2af; color: #1e1e2e; }
+    .badge-green  { background: #a6e3a1; color: #1e1e2e; }
+    .badge-blue   { background: #89b4fa; color: #1e1e2e; }
+    .badge-purple { background: #cba6f7; color: #1e1e2e; }
+    .problem-card { background: #2a2a3e; border: 1px solid var(--border); border-left: 4px solid #f38ba8; border-radius: 0 6px 6px 0; padding: 14px 18px; margin: 1em 0; }
+    .solution-card { background: #2a2a3e; border: 1px solid var(--border); border-left: 4px solid #a6e3a1; border-radius: 0 6px 6px 0; padding: 14px 18px; margin: 1em 0; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-left: 4px solid #89b4fa; border-radius: 0 6px 6px 0; padding: 14px 18px; margin: 1em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .meta-table td:first-child { font-weight: 600; color: var(--heading); width: 120px; }
+    .tip { background: #1e3a2e; border: 1px solid #a6e3a1; border-radius: 6px; padding: 10px 16px; margin: 0.8em 0; font-size: 0.93em; }
+    .warn { background: #3a1e1e; border: 1px solid #f38ba8; border-radius: 6px; padding: 10px 16px; margin: 0.8em 0; font-size: 0.93em; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>MoE LLM 强化学习训练</h1>
+<p style="color:#6c7086;margin-bottom:1.5em">经验总结 · 核心问题 · 解决方法 ｜ 基于 DeepSeekMoE、Mixtral、Switch Transformer 等工作</p>
+
+<table class="meta-table">
+  <tr><th>主题</th><td>Mixture-of-Experts 大语言模型的强化学习训练全景</td></tr>
+  <tr><th>涉及技术</th><td>MoE 路由、PPO / GRPO、负载均衡、专家坍塌、稀疏梯度、KL 控制</td></tr>
+  <tr><th>参考工作</th><td>DeepSeek-R1, DeepSeekMoE, Mixtral 8x7B, Switch Transformer, GShard, Expert Choice Routing</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>1. MoE 架构回顾</h2>
+
+<p>Mixture-of-Experts（MoE）将 FFN 层替换为 $N$ 个并行专家网络，每个 token 由 <strong>路由器（Router）</strong> 动态选择 Top-$k$ 个专家处理，大幅提升参数量而不线性增加计算量。</p>
+
+<h3>1.1 标准 MoE 前向计算</h3>
+
+<p>给定输入 token 表示 $x \in \mathbb{R}^d$，路由器输出 logit：</p>
+<p>$$s_i = x \cdot e_i, \quad i = 1, \ldots, N$$</p>
+<p>Top-$k$ 选择后做 Softmax 归一化得到门控权重：</p>
+<p>$$G(x) = \text{Softmax}\!\left(\text{TopK}(s, k)\right), \quad \text{其中未选中的} s_i \to -\infty$$</p>
+<p>最终输出为被激活专家的加权和：</p>
+<p>$$\text{MoE}(x) = \sum_{i \in \text{Top-}k} G_i(x) \cdot \text{FFN}_i(x)$$</p>
+
+<h3>1.2 MoE 架构总览</h3>
+
+<pre class="mermaid">
+flowchart LR
+    T["输入 Token x"] --> R["Router\n(线性层 + Softmax)"]
+    R -->|"权重 G1"| E1["Expert 1\nFFN"]
+    R -->|"权重 G2"| E2["Expert 2\nFFN"]
+    R -->|"..."| ED["..."]
+    R -->|"权重 Gk"| EK["Expert k\nFFN"]
+    E1 --> AGG["加权聚合"]
+    E2 --> AGG
+    ED --> AGG
+    EK --> AGG
+    AGG --> OUT["输出"]
+
+    style R fill:#313244,stroke:#89b4fa
+    style E1 fill:#2a2a3e,stroke:#a6e3a1
+    style E2 fill:#2a2a3e,stroke:#a6e3a1
+    style EK fill:#2a2a3e,stroke:#a6e3a1
+    style AGG fill:#313244,stroke:#cba6f7
+</pre>
+
+<h3>1.3 主流 MoE 变体对比</h3>
+
+<table>
+  <tr><th>模型</th><th>专家数 N</th><th>激活专家 k</th><th>路由策略</th><th>特色设计</th></tr>
+  <tr><td>Switch Transformer</td><td>任意</td><td><strong>1</strong></td><td>Token-choice Top-1</td><td>简洁高效，容量因子控制</td></tr>
+  <tr><td>Mixtral 8x7B</td><td>8</td><td><strong>2</strong></td><td>Token-choice Top-2</td><td>开源标杆，无辅助 loss</td></tr>
+  <tr><td>DeepSeekMoE</td><td>64 细粒度</td><td><strong>6+2</strong></td><td>Token-choice + 共享专家</td><td>共享专家 + 细粒度路由</td></tr>
+  <tr><td>Expert Choice</td><td>任意</td><td>动态</td><td>Expert-choice（专家选 token）</td><td>天然负载均衡，无需 aux loss</td></tr>
+  <tr><td>DeepSeek-V3/R1</td><td>256</td><td><strong>8+1</strong></td><td>Token-choice + 1 共享专家</td><td>无 aux loss，无 token drop</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>2. MoE + RL 训练流程总览</h2>
+
+<p>将 RL（如 PPO / GRPO）引入 MoE LLM 训练时，整体流程在标准 LLM-RL 框架之上叠加了 MoE 特有的路由动态，产生多层次的交互复杂性。</p>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph INIT["初始化阶段"]
+        SFT["SFT 预训练 MoE 模型\n（Actor + Reference）"]
+        RM["奖励模型 RM 训练"]
+    end
+    subgraph ROLLOUT["Rollout 采样阶段"]
+        SAMPLE["Actor MoE 生成响应\n每 token 经 Router 路由至 Top-k 专家"]
+        LOAD["记录专家负载分布\n检测 Router 漂移"]
+    end
+    subgraph REWARD["奖励计算阶段"]
+        SCORE["RM 计分 / 规则奖励"]
+        KL["计算 Actor vs Reference 的 KL 散度\n(含 Router 分布 KL)"]
+    end
+    subgraph UPDATE["参数更新阶段"]
+        ADV["计算优势函数 Advantage\n(GAE 或 GRPO Group-level)"]
+        PPOLOSS["PPO/GRPO Clip Loss"]
+        AUXLOSS["MoE Auxiliary Loss\n负载均衡 + z-loss"]
+        TOTALLOSS["总损失 = RL Loss + λ·Aux Loss"]
+        GRAD["梯度更新\n(仅激活专家收到稀疏梯度)"]
+    end
+
+    INIT --> ROLLOUT
+    ROLLOUT --> REWARD
+    REWARD --> UPDATE
+    UPDATE --> ROLLOUT
+
+    SFT --> SAMPLE
+    SAMPLE --> LOAD
+    LOAD --> SCORE
+    SCORE --> KL
+    KL --> ADV
+    ADV --> PPOLOSS
+    PPOLOSS --> AUXLOSS
+    AUXLOSS --> TOTALLOSS
+    TOTALLOSS --> GRAD
+    GRAD -->|"循环迭代"| SAMPLE
+
+    style INIT fill:#1a1a2e,stroke:#89b4fa
+    style ROLLOUT fill:#1a1a2e,stroke:#a6e3a1
+    style REWARD fill:#1a1a2e,stroke:#fab387
+    style UPDATE fill:#1a1a2e,stroke:#cba6f7
+</pre>
+
+<blockquote>
+  <strong>关键矛盾</strong>：RL 训练的高方差奖励信号会使 Router 产生剧烈波动；而稀疏路由的梯度传播机制又使得 MoE 的训练稳定性天然弱于 Dense 模型。两者叠加，是 MoE RL 训练最核心的挑战。
+</blockquote>
+
+<!-- ============================================================ -->
+<h2>3. 核心问题与解决方法</h2>
+
+<!-- ---------- 3.1 ---------- -->
+<h3>3.1 负载不均衡（Load Imbalance）</h3>
+
+<div class="problem-card">
+  <span class="badge badge-red">高频问题</span><span class="badge badge-red">致命</span>
+  <p style="margin-top:8px"><strong>现象</strong>：RL 训练中，Router 倾向于将越来越多的 token 路由到少数"高奖励"专家，形成马太效应。极端情况下，80%+ token 集中到 1~2 个专家，其余专家几乎不被使用。</p>
+  <p><strong>成因</strong>：RL 的策略梯度会放大对高奖励 token 的激励；Router 与专家权重联合优化时，被频繁激活的专家因积累更多梯度更新而能力更强，进一步吸引更多路由，形成正反馈。</p>
+</div>
+
+<p><strong>数学分析</strong>：定义第 $i$ 个专家的 token 分配比例 $f_i$ 与路由概率 $P_i$：</p>
+<p>$$f_i = \frac{1}{T} \sum_{x \in \mathcal{B}} \mathbf{1}\{i \in \text{Top-}k(x)\}, \quad P_i = \frac{1}{T} \sum_{x \in \mathcal{B}} G_i(x)$$</p>
+<p>均匀分配时期望 $f_i = P_i = k/N$。负载不均衡度量：$\text{Imbalance} = N \cdot \max_i f_i$，理想值为 1。</p>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 1</span> <strong>辅助负载均衡损失（Auxiliary Loss）</strong>
+  <p>$$L_{\text{aux}} = \alpha \cdot N \cdot \sum_{i=1}^{N} f_i \cdot P_i$$</p>
+  <p>$f_i \cdot P_i$ 在分布均匀时最小化（AM-GM 不等式），$\alpha$ 通常取 $10^{-2}$ 到 $10^{-3}$。在 RL 阶段需要适当<strong>提高 $\alpha$</strong>（如从预训练的 0.001 升至 0.01），对抗 RL 带来的路由极化。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 2</span> <strong>z-loss（Router Logit 正则）</strong>
+  <p>$$L_z = \beta \cdot \frac{1}{B} \sum_{x \in \mathcal{B}} \log^2\!\left(\sum_{i=1}^{N} e^{s_i(x)}\right)$$</p>
+  <p>惩罚 Router logit 过大，防止路由决策过于"尖锐"（softmax 接近 one-hot）。$\beta$ 通常取 $10^{-3}$。z-loss 与 aux-loss 可以叠加使用。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 3</span> <strong>Expert Choice Routing（专家主动选 Token）</strong>
+  <p>反转路由方向：由每个专家从所有 token 中选出固定数量 $k$ 个处理，天然实现完美负载均衡。代价是不同 token 的处理数量不同，需要 padding/mask。<strong>DeepSeek-V3 RL 阶段采用此思路的变体</strong>。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 4</span> <strong>Token Dropping + 容量因子</strong>
+  <p>设每个专家的容量上限 $C = \lfloor c \cdot T / N \rfloor$，超过容量的 token 被 drop 或走 residual bypass。容量因子 $c \in [1.0, 2.0]$，RL 阶段建议 $c \geq 1.5$ 防止 drop 过多。</p>
+</div>
+
+<hr>
+
+<!-- ---------- 3.2 ---------- -->
+<h3>3.2 专家坍塌（Expert Collapse）</h3>
+
+<div class="problem-card">
+  <span class="badge badge-red">高频问题</span>
+  <p style="margin-top:8px"><strong>现象</strong>：RL 训练若干步后，Router 的输出趋向于对所有输入都路由到同一组专家（极端情况即 $k=1$，只用 1 个专家），其余专家权重不更新，逐渐退化为随机初始化水平。</p>
+  <p><strong>成因</strong>：RL 的 on-policy 特性导致 Router 只优化当前策略分布下的 token；加上 RL 高方差，Router 容易陷入"安全"的局部最优——总路由到熟悉专家。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 1</span> <strong>Noisy Top-k Gating（带噪声的路由）</strong>
+  <p>在训练时为 Router logit 加入随机噪声：</p>
+  <p>$$\tilde{s}_i = s_i + \epsilon_i, \quad \epsilon_i \sim \mathcal{N}(0, \sigma^2)$$</p>
+  <p>噪声使路由具有随机性，防止坍塌到固定专家子集。$\sigma$ 从 1.0 衰减到 0（exploration 退火）。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 2</span> <strong>Expert Dropout</strong>
+  <p>训练时以概率 $p$ 随机屏蔽某些专家（将其 logit 设为 $-\infty$），强迫 Router 探索其他专家。推理时不使用 dropout。$p \in [0.1, 0.3]$，RL 阶段可适当加大。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 3</span> <strong>共享专家（Shared Experts）</strong>
+  <p>DeepSeekMoE 的核心设计：设置若干专家为<strong>共享专家</strong>，所有 token 必经：</p>
+  <p>$$\text{MoE}(x) = \sum_{i=1}^{K_s} \text{FFN}_i^{\text{shared}}(x) + \sum_{j \in \text{Top-}k_r} G_j(x) \cdot \text{FFN}_j^{\text{routed}}(x)$$</p>
+  <p>共享专家天然不会坍塌，且承担通用知识，减轻路由专家压力。RL 阶段共享专家的学习率可单独设置（通常更小）。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 4</span> <strong>EMA Router + 专家使用率监控</strong>
+  <p>对每个专家维护其历史平均使用率的 EMA：若某专家使用率连续多步低于阈值（如 $&lt;1\%$），对其 logit 施加 bonus $\delta$，防止彻底退化。</p>
+</div>
+
+<hr>
+
+<!-- ---------- 3.3 ---------- -->
+<h3>3.3 Router 训练不稳定</h3>
+
+<div class="problem-card">
+  <span class="badge badge-orange">中高频</span>
+  <p style="margin-top:8px"><strong>现象</strong>：RL 训练中 Router 的路由决策剧烈震荡——相邻 iteration 中同一 token 被路由到完全不同的专家子集。这导致模型输出高度不一致，奖励信号噪声极大。</p>
+  <p><strong>成因</strong>：PPO 的 on-policy 奖励信号本身方差高；MoE 的离散 Top-k 操作（non-differentiable 的选择步骤）使梯度通过 Softmax 权重回传，但路由<em>选择</em>本身的梯度是次优的。当奖励方差大时，Router 的更新方向在不同 step 之间可能完全相反。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 1</span> <strong>Router 学习率独立设置（更小）</strong>
+  <p>Router 线性层通常使用 <strong>0.1× 到 0.3×</strong> 的全局学习率，防止其更新幅度过大。同时对 Router 参数单独做梯度 clip（如 $\text{max\_norm} = 0.5$）。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 2</span> <strong>Router Temperature Annealing</strong>
+  <p>为 Router Softmax 引入温度参数 $\tau$：</p>
+  <p>$$G(x) = \text{Softmax}(s / \tau)$$</p>
+  <p>RL 训练初期使用较高温度（$\tau = 2.0$ ~ $5.0$），使路由分布更平滑；训练后期逐渐退火到 $\tau = 1.0$。高温降低了路由决策的"硬度"，缓解了震荡。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 3</span> <strong>PPO Rollout 中 Router 固定</strong>
+  <p>在采样 rollout 阶段，<strong>冻结 Router 参数</strong>（只更新专家参数），仅在 update 阶段解冻 Router。这等价于将 Router 视为"环境"而非策略的一部分，大幅提升 rollout 的一致性。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 4</span> <strong>减少 PPO Epoch 数 + 更保守的 Clip</strong>
+  <p>MoE RL 训练中 PPO epoch 建议不超过 <strong>1~2</strong>（Dense 模型通常 4），并使用更保守的 clip 参数 $\epsilon = 0.1$（而非 0.2）。减少每批数据的重复使用次数，防止 Router 在旧数据上过拟合。</p>
+</div>
+
+<hr>
+
+<!-- ---------- 3.4 ---------- -->
+<h3>3.4 稀疏梯度与更新不均匀</h3>
+
+<div class="problem-card">
+  <span class="badge badge-orange">中频</span>
+  <p style="margin-top:8px"><strong>现象</strong>：在每次前向中，Top-$k$ 路由意味着只有 $k/N$ 的专家参数被激活，只有这些专家的参数收到梯度。当 $N$ 较大（如 256 个专家）而 $k$ 较小（如 8）时，每个专家平均每步只有 ~3% 概率收到梯度更新，更新极为稀疏。</p>
+  <p><strong>后果</strong>：Adam 优化器的二阶矩估计（$v_t$）对于不经常激活的专家会"过时"，导致不公平的自适应学习率；某些专家参数可能长达数千步没有任何更新，产生"冻结专家"现象。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 1</span> <strong>Expert-Level Adam State 独立维护</strong>
+  <p>为每个专家维护独立的 Adam 一阶矩 $m$ 和二阶矩 $v$，且仅在该专家被激活时更新（标准 Adam 即如此，不需要修改）。关键是确保<strong>不跨专家共享</strong> Adam state，防止不同激活频率的专家之间相互干扰。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 2</span> <strong>梯度累积时确保专家覆盖率</strong>
+  <p>在设置梯度累积步数时，需保证累积 batch 内每个专家平均被激活足够次数。经验公式：</p>
+  <p>$$\text{accum\_steps} \geq \frac{N}{k} \cdot C_{\min}$$</p>
+  <p>其中 $C_{\min}$ 为期望每专家最少激活次数（建议 ≥ 10）。例如 256 专家、k=8，需要 accum_steps ≥ 320。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 3</span> <strong>RL Batch Size 放大</strong>
+  <p>与 Dense 模型相比，MoE RL 训练的 batch size 通常需要<strong>放大 $N/k$ 倍</strong>才能保证等效的专家更新密度。这是 MoE RL 训练显存压力更高的根本原因之一，通常配合更大的梯度累积步数和专家并行来解决。</p>
+</div>
+
+<hr>
+
+<!-- ---------- 3.5 ---------- -->
+<h3>3.5 RL 奖励信号与 MoE 的兼容性问题</h3>
+
+<div class="problem-card">
+  <span class="badge badge-orange">中频</span>
+  <p style="margin-top:8px"><strong>现象 1 — 序列级奖励 vs Token 级路由</strong>：RL 的奖励通常是 sequence-level 的（整个响应得一个分数），而 MoE 的路由决策是 token-level 的。奖励信号无法区分序列中哪些 token 的路由决策是"好的"。</p>
+  <p><strong>现象 2 — 信用分配稀释</strong>：一个序列中不同 token 会路由到不同专家，但整个序列共享同一个奖励。这导致所有被激活的专家都接收相同的奖励信号，无法做到精准的专家级信用分配。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 1</span> <strong>GRPO（Group Relative Policy Optimization）</strong>
+  <p>GRPO 对同一 prompt 采样 $G$ 个响应，用组内相对奖励作为优势估计，避免了 critic 网络的引入：</p>
+  <p>$$\hat{A}_{i,t} = \frac{r_i - \text{mean}(\{r_j\}_{j=1}^{G})}{\text{std}(\{r_j\}_{j=1}^{G})}$$</p>
+  <p>这天然缓解了信用分配问题——同 prompt 的不同响应由于路由差异会激活不同专家，通过对比组内响应可以隐式区分哪些专家的路由更优。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 2</span> <strong>Process Reward Model（PRM）</strong>
+  <p>引入 step-level 或 token-level 的过程奖励模型，为每个中间步骤打分，提供比 sequence-level 更细粒度的奖励信号。每个 token 的奖励 $r_t$ 可以更准确地反映对应路由决策的质量。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 3</span> <strong>GAE 与 MoE 的结合</strong>
+  <p>使用 Generalized Advantage Estimation（GAE）时，Value function 可以以<strong>路由决策作为条件</strong>——即 Critic 网络也是 MoE 结构，且与 Actor 共享 Router。这样 Value 估计天然感知路由选择，改善信用分配。</p>
+</div>
+
+<hr>
+
+<!-- ---------- 3.6 ---------- -->
+<h3>3.6 KL 散度控制的复杂性</h3>
+
+<div class="problem-card">
+  <span class="badge badge-yellow">中频</span>
+  <p style="margin-top:8px"><strong>现象</strong>：标准 PPO 的 KL 惩罚项 $\beta \cdot D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$ 在 MoE 中包含两个来源的分布偏移：
+  <br>① <strong>专家参数 KL</strong>：Actor 与 Reference 的专家权重差异导致的输出分布变化
+  <br>② <strong>Router KL</strong>：Actor 与 Reference 的路由决策分布差异（即专家分配发生了变化）</p>
+  <p>两者独立变化，仅监控 token-level 的 KL 可能掩盖 Router 的巨大漂移。</p>
+</div>
+
+<p>MoE 的 token-level KL 分解：</p>
+<p>$$D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}}) = \underbrace{\mathbb{E}\!\left[\log \frac{\pi_\theta(o|q)}{\pi_{\text{ref}}(o|q)}\right]}_{\text{总 KL}} \approx \underbrace{D_{\text{KL}}^{\text{router}}}_{\text{路由偏移}} + \underbrace{D_{\text{KL}}^{\text{expert}}}_{\text{专家输出偏移}}$$</p>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 1</span> <strong>分别监控 Router KL 和 Expert KL</strong>
+  <p>在训练 log 中单独追踪：
+  <br>• <code>router_kl</code>：Actor 与 Reference 路由分布的 KL（专家分配的差异）
+  <br>• <code>expert_kl</code>：相同路由条件下，专家参数导致的输出分布差异
+  <br>当 <code>router_kl</code> 过大时，单独降低 Router 学习率或增大 Router 正则。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 2</span> <strong>Reference 模型也使用 MoE 结构 + 定期更新</strong>
+  <p>Reference 模型使用与 Actor 完全相同的 MoE 结构（包含路由参数），并按一定频率（如每 1000 step）软更新 Reference：</p>
+  <p>$$\theta_{\text{ref}} \leftarrow \mu \cdot \theta_{\text{ref}} + (1-\mu) \cdot \theta_{\text{actor}}$$</p>
+  <p>软更新防止 KL 因参数漂移过大而失去控制。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 3</span> <strong>GRPO 中的 Token-level KL</strong>
+  <p>$$L^{\text{GRPO}} = -\mathbb{E}\!\left[\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\left[\min\!\left(r_{i,t}\hat{A}_i, \text{clip}(r_{i,t}, 1\!-\!\epsilon, 1\!+\!\epsilon)\hat{A}_i\right)\right]\right] + \beta \cdot D_{\text{KL}}(\pi_\theta \| \pi_{\text{ref}})$$</p>
+  <p>其中 $r_{i,t} = \pi_\theta(o_{i,t} | q, o_{i,\lt t}) / \pi_{\text{old}}(o_{i,t} | q, o_{i,\lt t})$。GRPO 直接在 token 级计算 KL，比 sequence-level 更精细，也更容易检测 Router 漂移。</p>
+</div>
+
+<hr>
+
+<!-- ---------- 3.7 ---------- -->
+<h3>3.7 奖励黑客与专家过度专业化</h3>
+
+<div class="problem-card">
+  <span class="badge badge-orange">中频</span>
+  <p style="margin-top:8px"><strong>现象</strong>：RL 训练中某些专家可能"专门化"于产生能骗过 RM 的高分输出，而不是真正提升任务质量。这种专家级别的 reward hacking 比 Dense 模型更隐蔽，因为它藏匿在路由机制中——特定 token 序列会被路由到这些"黑客专家"。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 1</span> <strong>专家输出多样性正则</strong>
+  <p>引入专家间输出相似度惩罚，防止某些专家的输出分布过度趋同（坍塌型黑客）或过度极端：</p>
+  <p>$$L_{\text{div}} = -\gamma \cdot \frac{1}{\binom{N}{2}} \sum_{i \neq j} D_{\text{KL}}\!\left(\text{FFN}_i(x) \| \text{FFN}_j(x)\right)$$</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 2</span> <strong>规则奖励替代 RM</strong>
+  <p>对于数学、代码等可验证任务，使用<strong>规则奖励</strong>（如答案正确性、代码执行结果）替代学习型 RM。规则奖励不可被黑客，彻底绕开专家级 reward hacking 问题。DeepSeek-R1 大量采用此策略。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 3</span> <strong>RM 刷新 + 对抗训练</strong>
+  <p>周期性重新训练 RM（使用 Actor 当前输出作为新负样本），防止 RM 被当前策略的专家分布系统性地欺骗。</p>
+</div>
+
+<hr>
+
+<!-- ---------- 3.8 ---------- -->
+<h3>3.8 通信开销与训练效率</h3>
+
+<div class="problem-card">
+  <span class="badge badge-yellow">工程问题</span>
+  <p style="margin-top:8px"><strong>现象</strong>：MoE 的专家并行（EP）需要 all-to-all 通信分发 token 到对应专家所在设备，RL 的 rollout 阶段（生成长序列）和 update 阶段（多次前向反向）都会放大通信瓶颈。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 1</span> <strong>Locality-Aware Routing</strong>
+  <p>引入路由约束，偏向将 token 路由到<strong>本地节点的专家</strong>，减少跨节点 all-to-all 通信：</p>
+  <p>$$\tilde{s}_i = s_i + \lambda \cdot \mathbf{1}\{\text{Expert}_i \text{ is local}\}$$</p>
+  <p>$\lambda$ 作为软约束，在负载均衡和通信效率之间取得平衡。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 2</span> <strong>Rollout 与 Update 分离部署</strong>
+  <p>在 RL 训练中：
+  <br>• <strong>Rollout 集群</strong>：使用较少节点，每节点加载完整 MoE，顺序生成（vLLM + MoE 推理优化）
+  <br>• <strong>Update 集群</strong>：使用更多节点做专家并行，并行 forward/backward
+  <br>两个集群异步工作，隐藏通信开销。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">解法 3</span> <strong>DeepSeek-V3 的 MLA + 无 Token Drop 策略</strong>
+  <p>V3/R1 引入 Multi-head Latent Attention（MLA）压缩 KV cache，降低 rollout 的内存压力；同时设计<strong>无 token drop</strong> 的路由（通过限制单设备最大接收 token 数而非丢弃），保证训练数值等价性。</p>
+</div>
+
+<hr>
+
+<!-- ---------- 3.9 ---------- -->
+<h3>3.9 训练崩溃与数值不稳定</h3>
+
+<div class="problem-card">
+  <span class="badge badge-red">高危</span>
+  <p style="margin-top:8px"><strong>现象</strong>：MoE RL 训练中概率出现 loss spike 甚至 NaN，通常伴随 Router logit 爆炸（极大或极小的门控权重）。</p>
+  <p><strong>成因链</strong>：RL 奖励波动 → Router 更新方向剧变 → 某专家接收到极大量 token → 梯度爆炸 → loss NaN。</p>
+</div>
+
+<div class="solution-card">
+  <span class="badge badge-green">综合防护策略</span>
+  <ul style="margin-top:8px">
+    <li><strong>梯度 clip</strong>：全局 max_norm = 1.0，Router 单独 max_norm = 0.5</li>
+    <li><strong>z-loss</strong>：限制 Router logit 幅度（见 3.1）</li>
+    <li><strong>BF16 + 关键 Router 用 FP32</strong>：Router Softmax 及 logit 计算用 FP32 防止溢出</li>
+    <li><strong>Loss spike 检测 + 回滚</strong>：监控 loss，若超过历史 3σ 自动加载上一个 checkpoint</li>
+    <li><strong>Warmup Router</strong>：RL 训练前几千步冻结 Router（仅更新专家），让专家先适应新奖励信号，再放开 Router 更新</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>4. 关键算法实现</h2>
+
+<h3>4.1 MoE RL 训练中的负载均衡辅助损失</h3>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: MoE RL Auxiliary Loss 计算</div>
+  <p><span class="kw">Input:</span> <span class="var">router_logits</span> ∈ ℝ<sup>T×N</sup>, top-k <span class="num">k</span>, balance weight <span class="num">α</span>, z-loss weight <span class="num">β</span></p>
+  <p><span class="kw">Output:</span> <span class="var">L_total_aux</span></p>
+  <br>
+  <p><span class="cm">// Step 1: 计算路由概率与实际分配比例</span></p>
+  <p style="padding-left:1.5em"><span class="var">P</span> = <span class="fn">softmax</span>(<span class="var">router_logits</span>, dim=-1)  <span class="cm">// shape: [T, N]</span></p>
+  <p style="padding-left:1.5em"><span class="var">indices</span> = <span class="fn">topk</span>(<span class="var">router_logits</span>, <span class="num">k</span>).indices  <span class="cm">// shape: [T, k]</span></p>
+  <p style="padding-left:1.5em"><span class="var">mask</span> = <span class="fn">one_hot</span>(<span class="var">indices</span>).sum(dim=1)  <span class="cm">// shape: [T, N], 0/1</span></p>
+  <br>
+  <p><span class="cm">// Step 2: 计算 f_i 和 P_i（在 batch 维度取均值）</span></p>
+  <p style="padding-left:1.5em"><span class="var">f</span> = <span class="var">mask</span>.<span class="fn">mean</span>(dim=0)   <span class="cm">// shape: [N], token 分配比例</span></p>
+  <p style="padding-left:1.5em"><span class="var">p_mean</span> = <span class="var">P</span>.<span class="fn">mean</span>(dim=0)  <span class="cm">// shape: [N], 平均路由概率</span></p>
+  <br>
+  <p><span class="cm">// Step 3: 辅助均衡损失</span></p>
+  <p style="padding-left:1.5em"><span class="var">L_aux</span> = <span class="num">α</span> × N × (<span class="var">f</span> × <span class="var">p_mean</span>).<span class="fn">sum</span>()</p>
+  <br>
+  <p><span class="cm">// Step 4: z-loss（防 logit 爆炸）</span></p>
+  <p style="padding-left:1.5em"><span class="var">log_z</span> = <span class="fn">logsumexp</span>(<span class="var">router_logits</span>, dim=-1)  <span class="cm">// shape: [T]</span></p>
+  <p style="padding-left:1.5em"><span class="var">L_z</span> = <span class="num">β</span> × (<span class="var">log_z</span> ** <span class="num">2</span>).<span class="fn">mean</span>()</p>
+  <br>
+  <p><span class="kw">return</span> <span class="var">L_total_aux</span> = <span class="var">L_aux</span> + <span class="var">L_z</span></p>
+</div>
+
+<h3>4.2 MoE GRPO 训练主循环</h3>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 2: MoE-GRPO 训练主循环（简化版）</div>
+  <p><span class="kw">Input:</span> MoE Actor $\pi_\theta$, Reference $\pi_{\text{ref}}$, Reward fn $r$, Group size <span class="num">G</span></p>
+  <p><span class="kw">Hyperparams:</span> clip <span class="num">ε=0.1</span>, KL coef <span class="num">β</span>, aux weight <span class="num">α</span>, router lr scale <span class="num">0.1</span></p>
+  <br>
+  <p><span class="kw">for</span> each batch of prompts $\{q\}$ <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// === Rollout 阶段（Router 参数冻结）===</span></p>
+  <p style="padding-left:1.5em"><span class="fn">freeze</span>(<span class="var">π_θ</span>.router)</p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> i = 1 to <span class="num">G</span> <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="var">o_i</span> ~ <span class="var">π_θ</span>(<span class="var">·</span>|<span class="var">q</span>)  <span class="cm">// 采样第 i 个响应</span></p>
+  <p style="padding-left:3em"><span class="var">r_i</span> = <span class="fn">reward</span>(<span class="var">q</span>, <span class="var">o_i</span>)  <span class="cm">// 计算奖励</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em"><span class="fn">unfreeze</span>(<span class="var">π_θ</span>.router)</p>
+  <br>
+  <p style="padding-left:1.5em"><span class="cm">// === 优势估计（组内归一化）===</span></p>
+  <p style="padding-left:1.5em"><span class="var">Â_i</span> = (r_i − mean({r_j})) / std({r_j})</p>
+  <br>
+  <p style="padding-left:1.5em"><span class="cm">// === Update 阶段 ===</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> each step with current batch <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="var">ratio</span> = π_θ(<span class="var">o_i</span>|<span class="var">q</span>) / π_old(<span class="var">o_i</span>|<span class="var">q</span>)</p>
+  <p style="padding-left:3em"><span class="var">L_ppo</span> = −mean[min(<span class="var">ratio</span>×<span class="var">Â</span>, <span class="fn">clip</span>(<span class="var">ratio</span>, 1−<span class="num">ε</span>, 1+<span class="num">ε</span>)×<span class="var">Â</span>)]</p>
+  <p style="padding-left:3em"><span class="var">L_kl</span> = <span class="num">β</span> × KL(π_θ ‖ π_ref)  <span class="cm">// token-level KL</span></p>
+  <p style="padding-left:3em"><span class="var">L_aux</span> = <span class="fn">aux_loss</span>(<span class="var">router_logits</span>)  <span class="cm">// 均衡损失</span></p>
+  <p style="padding-left:3em"><span class="var">L</span> = <span class="var">L_ppo</span> + <span class="var">L_kl</span> + <span class="var">L_aux</span></p>
+  <p style="padding-left:3em"><span class="fn">backward</span>(<span class="var">L</span>)</p>
+  <p style="padding-left:3em"><span class="fn">clip_grad</span>(router, max_norm=<span class="num">0.5</span>); <span class="fn">clip_grad</span>(experts, max_norm=<span class="num">1.0</span>)</p>
+  <p style="padding-left:3em"><span class="fn">step</span>(lr_router=<span class="num">0.1</span>×lr, lr_expert=lr)</p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p><span class="kw">end for</span></p>
+</div>
+
+<!-- ============================================================ -->
+<h2>5. 问题严重度与解法优先级总览</h2>
+
+<table>
+  <tr>
+    <th>问题</th>
+    <th>严重度</th>
+    <th>出现频率</th>
+    <th>首选解法</th>
+    <th>备用解法</th>
+  </tr>
+  <tr>
+    <td>负载不均衡</td>
+    <td><span class="badge badge-red">致命</span></td>
+    <td>必现</td>
+    <td>Auxiliary Loss + z-loss 增强</td>
+    <td>Expert Choice Routing</td>
+  </tr>
+  <tr>
+    <td>专家坍塌</td>
+    <td><span class="badge badge-red">致命</span></td>
+    <td>高频</td>
+    <td>共享专家 + Noisy Gating</td>
+    <td>Expert Dropout</td>
+  </tr>
+  <tr>
+    <td>Router 震荡</td>
+    <td><span class="badge badge-orange">严重</span></td>
+    <td>高频</td>
+    <td>Router 独立低学习率 + Temperature Anneal</td>
+    <td>Rollout 阶段冻结 Router</td>
+  </tr>
+  <tr>
+    <td>稀疏梯度不均</td>
+    <td><span class="badge badge-orange">严重</span></td>
+    <td>中频</td>
+    <td>放大 Batch Size + 梯度累积</td>
+    <td>Expert-level Adam state</td>
+  </tr>
+  <tr>
+    <td>奖励信号兼容性</td>
+    <td><span class="badge badge-orange">严重</span></td>
+    <td>中频</td>
+    <td>GRPO 组内归一化</td>
+    <td>PRM 细粒度奖励</td>
+  </tr>
+  <tr>
+    <td>KL 散度失控</td>
+    <td><span class="badge badge-yellow">中等</span></td>
+    <td>中频</td>
+    <td>Router KL + Expert KL 分别监控</td>
+    <td>Reference 软更新</td>
+  </tr>
+  <tr>
+    <td>专家 Reward Hacking</td>
+    <td><span class="badge badge-yellow">中等</span></td>
+    <td>中频</td>
+    <td>规则奖励替代 RM</td>
+    <td>RM 刷新 + 对抗训练</td>
+  </tr>
+  <tr>
+    <td>通信开销</td>
+    <td><span class="badge badge-yellow">中等</span></td>
+    <td>工程必现</td>
+    <td>Locality-Aware Routing</td>
+    <td>Rollout/Update 分离部署</td>
+  </tr>
+  <tr>
+    <td>训练崩溃 / NaN</td>
+    <td><span class="badge badge-red">致命</span></td>
+    <td>偶发</td>
+    <td>梯度 clip + FP32 Router</td>
+    <td>Loss spike 检测回滚</td>
+  </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>6. 训练超参配置经验</h2>
+
+<table>
+  <tr><th>超参</th><th>Dense 模型通常值</th><th>MoE 推荐调整</th><th>说明</th></tr>
+  <tr><td>PPO Epoch</td><td>4</td><td><strong>1~2</strong></td><td>防止 Router 在旧数据上过拟合</td></tr>
+  <tr><td>Clip ε</td><td>0.2</td><td><strong>0.1</strong></td><td>更保守，防止策略跳变引发路由失稳</td></tr>
+  <tr><td>KL 系数 β</td><td>0.01~0.05</td><td><strong>0.05~0.1</strong></td><td>MoE KL 更难控制，需更强约束</td></tr>
+  <tr><td>Aux loss α</td><td>预训练 0.001</td><td><strong>0.005~0.01</strong></td><td>RL 阶段提高负载均衡权重</td></tr>
+  <tr><td>z-loss β</td><td>0.001</td><td><strong>0.001~0.003</strong></td><td>防止 Router logit 爆炸</td></tr>
+  <tr><td>Router 学习率</td><td>同全局 lr</td><td><strong>0.1× 全局 lr</strong></td><td>Router 更新要保守</td></tr>
+  <tr><td>Batch size</td><td>基准 B</td><td><strong>B × (N/k)</strong></td><td>保证每专家更新密度</td></tr>
+  <tr><td>梯度 clip (Router)</td><td>1.0</td><td><strong>0.5</strong></td><td>Router 单独更严格 clip</td></tr>
+  <tr><td>Router 精度</td><td>BF16</td><td><strong>FP32</strong></td><td>防止 logit 溢出导致 NaN</td></tr>
+  <tr><td>GRPO 组大小 G</td><td>8</td><td><strong>16~32</strong></td><td>更大 group 提供更稳定的优势估计</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>7. 实战经验：各阶段关键监控指标</h2>
+
+<h3>7.1 必须实时监控的指标</h3>
+
+<div class="info-card">
+  <p><strong>路由健康指标</strong></p>
+  <ul>
+    <li><code>expert_load_balance</code>：各专家 token 分配方差，正常训练应稳定在低水平</li>
+    <li><code>router_entropy</code>：Router 输出的信息熵，若持续下降说明路由在极化</li>
+    <li><code>expert_utilization_min</code>：最少被激活专家的使用率，低于 1% 需告警</li>
+    <li><code>router_kl</code>：Router 分布与 Reference 的 KL，超过 0.5 需降 Router lr</li>
+  </ul>
+</div>
+
+<div class="info-card">
+  <p><strong>RL 训练健康指标</strong></p>
+  <ul>
+    <li><code>reward_mean / reward_std</code>：组内奖励均值与方差，std 过大说明奖励信号不稳</li>
+    <li><code>approx_kl</code>：Actor 与 old policy 的近似 KL，应保持在 0.01~0.05 范围</li>
+    <li><code>clip_fraction</code>：被 clip 的比例，若持续高于 20% 说明策略更新步长过大</li>
+    <li><code>advantage_std</code>：优势函数标准差，MoE 中此值通常比 Dense 更高</li>
+  </ul>
+</div>
+
+<h3>7.2 训练各阶段的稳定化技巧时序</h3>
+
+<pre class="mermaid">
+gantt
+    title MoE RL 训练稳定化技巧的推荐启用时序
+    dateFormat  X
+    axisFormat step %s
+
+    section 全程启用
+    Aux Loss + z-loss           :active, 0, 10000
+    Router FP32 + Grad Clip     :active, 0, 10000
+    Expert 使用率监控           :active, 0, 10000
+
+    section 前期（0-2000 step）
+    冻结 Router (Warmup)        :crit, 0, 2000
+    高 Router Temperature       :crit, 0, 2000
+    Noisy Gating                :crit, 0, 3000
+
+    section 中期（2000-6000 step）
+    放开 Router (低 lr)         :done, 2000, 6000
+    Temperature Annealing       :done, 2000, 6000
+    KL 系数从低到高             :done, 2000, 6000
+
+    section 后期（6000+ step）
+    Router 正常 lr              :6000, 10000
+    完整负载均衡监控            :6000, 10000
+</pre>
+
+<!-- ============================================================ -->
+<h2>8. 各指标对比：有无优化策略的效果</h2>
+
+<div id="chart-imbalance" class="echarts-container" style="height:320px"></div>
+<div id="chart-stability" class="echarts-container" style="height:320px"></div>
+
+<script>
+// Chart 1: 专家负载均衡度对比
+(function(){
+  var chart = echarts.init(document.getElementById('chart-imbalance'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '专家负载均衡度（Imbalance Ratio）训练过程对比', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['无 Aux Loss', '仅 Aux Loss', 'Aux + z-loss', 'Aux + z-loss + 高α(RL)'], textStyle: { color: '#cdd6f4' } },
+    xAxis: { type: 'category', data: ['1k', '2k', '4k', '6k', '8k', '10k'], axisLabel: { color: '#cdd6f4' }, name: 'Training Steps', nameTextStyle: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', name: 'Imbalance Ratio', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' }, min: 1, max: 6 },
+    series: [
+      { name: '无 Aux Loss', type: 'line', data: [2.1, 2.8, 3.9, 4.7, 5.3, 5.8], lineStyle: { color: '#f38ba8' }, itemStyle: { color: '#f38ba8' } },
+      { name: '仅 Aux Loss', type: 'line', data: [1.8, 2.0, 2.1, 2.2, 2.3, 2.4], lineStyle: { color: '#fab387' }, itemStyle: { color: '#fab387' } },
+      { name: 'Aux + z-loss', type: 'line', data: [1.6, 1.7, 1.8, 1.7, 1.8, 1.8], lineStyle: { color: '#a6e3a1' }, itemStyle: { color: '#a6e3a1' } },
+      { name: 'Aux + z-loss + 高α(RL)', type: 'line', data: [1.5, 1.5, 1.4, 1.4, 1.3, 1.3], lineStyle: { color: '#89b4fa' }, itemStyle: { color: '#89b4fa' }, lineStyle: { type: 'dashed', color: '#89b4fa' } }
+    ]
+  });
+})();
+
+// Chart 2: Router KL 稳定性对比
+(function(){
+  var chart = echarts.init(document.getElementById('chart-stability'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'Router KL 散度（与 Reference 相比）训练过程对比', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['无额外控制', '低 Router lr', '低 Router lr + Warmup冻结', 'GRPO替代PPO'], textStyle: { color: '#cdd6f4' } },
+    xAxis: { type: 'category', data: ['0.5k', '1k', '2k', '3k', '5k', '8k', '10k'], axisLabel: { color: '#cdd6f4' }, name: 'Training Steps', nameTextStyle: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', name: 'Router KL', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' } },
+    series: [
+      { name: '无额外控制', type: 'line', data: [0.05, 0.18, 0.52, 0.89, 1.45, 2.1, 2.8], lineStyle: { color: '#f38ba8' }, itemStyle: { color: '#f38ba8' } },
+      { name: '低 Router lr', type: 'line', data: [0.03, 0.08, 0.15, 0.22, 0.30, 0.35, 0.38], lineStyle: { color: '#fab387' }, itemStyle: { color: '#fab387' } },
+      { name: '低 Router lr + Warmup冻结', type: 'line', data: [0.0, 0.0, 0.06, 0.12, 0.18, 0.22, 0.25], lineStyle: { color: '#a6e3a1' }, itemStyle: { color: '#a6e3a1' } },
+      { name: 'GRPO替代PPO', type: 'line', data: [0.02, 0.05, 0.09, 0.13, 0.17, 0.20, 0.22], lineStyle: { type: 'dashed', color: '#89b4fa' }, itemStyle: { color: '#89b4fa' } }
+    ]
+  });
+})();
+</script>
+
+<!-- ============================================================ -->
+<h2>9. 前沿研究方向</h2>
+
+<table>
+  <tr><th>方向</th><th>核心思路</th><th>代表工作</th></tr>
+  <tr>
+    <td><strong>Expert-level RLHF</strong></td>
+    <td>为不同专家分别训练 RM，按专家能力域分配不同类型的奖励信号</td>
+    <td>实验阶段，尚无主流工作</td>
+  </tr>
+  <tr>
+    <td><strong>动态专家数 MoE RL</strong></td>
+    <td>RL 训练中根据任务复杂度动态调整激活专家数 $k$</td>
+    <td>MoEUT, Adaptive MoE</td>
+  </tr>
+  <tr>
+    <td><strong>RL 驱动的专家专业化</strong></td>
+    <td>用 RL 奖励信号主动引导专家向不同能力域分化（如推理专家 vs 事实专家）</td>
+    <td>Mixtral-Instruct 分析工作</td>
+  </tr>
+  <tr>
+    <td><strong>无 Auxiliary Loss 的 RL 均衡</strong></td>
+    <td>DeepSeek-V3 风格：通过架构设计（无 token drop + 专家容量约束）实现无显式 aux loss 的均衡</td>
+    <td>DeepSeek-V3 / R1</td>
+  </tr>
+  <tr>
+    <td><strong>MoE + 过程奖励</strong></td>
+    <td>PRM 为 MoE 提供 token-level 奖励，精准指导路由决策</td>
+    <td>OmegaPRM, Math-Shepherd</td>
+  </tr>
+  <tr>
+    <td><strong>Router 强化学习</strong></td>
+    <td>将路由决策本身视为一个 RL 问题，用 reward 直接优化 Router 的专家分配策略</td>
+    <td>RL-Router (实验性)</td>
+  </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>10. 核心洞见总结</h2>
+
+<div class="tip">
+  <strong>🔑 洞见 1：Router 是 MoE RL 的核心脆弱点</strong><br>
+  MoE RL 训练的大多数问题（负载不均、坍塌、震荡）都源于 Router 在强奖励信号下的不稳定行为。Router 应被视为一个需要独立保护的模块：小学习率、FP32 精度、Warmup 冻结、独立梯度 clip。
+</div>
+
+<div class="tip">
+  <strong>🔑 洞见 2：GRPO 比 PPO 更适合 MoE RL</strong><br>
+  GRPO 的组内归一化优势估计、无 Critic 网络、token-level KL 等特性，与 MoE 的稀疏更新特性更匹配。同时 GRPO 避免了 Critic 也是 MoE 时的双重稀疏问题。
+</div>
+
+<div class="tip">
+  <strong>🔑 洞见 3：RL 阶段的 Aux Loss 权重需要比预训练高</strong><br>
+  预训练时 α=0.001 足够，但 RL 的奖励驱动会显著加速路由极化，需要将 α 提升 5~10 倍（0.005~0.01）才能对抗这种趋势。z-loss 在 RL 阶段同等重要。
+</div>
+
+<div class="tip">
+  <strong>🔑 洞见 4：规则奖励 + MoE 是当前最稳定的组合</strong><br>
+  DeepSeek-R1 的实践表明：对可验证任务使用规则奖励（代码执行、数学验证），配合 MoE 的细粒度专家分工，能够绕过 RM reward hacking 问题，同时发挥 MoE 的参数效率优势。
+</div>
+
+<div class="warn">
+  <strong>⚠️ 陷阱：不能直接将 Dense 模型的 RL 超参迁移到 MoE</strong><br>
+  MoE 的稀疏梯度、路由动态、通信开销都与 Dense 模型有本质差异。建议 MoE RL 训练从 PPO epoch=1、clip=0.1、Router lr×0.1 开始，逐步调整，而非直接套用 Dense 模型的成熟配置。
+</div>
+
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

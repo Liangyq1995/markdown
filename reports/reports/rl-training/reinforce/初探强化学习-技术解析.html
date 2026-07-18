@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>初探强化学习 · 动手学强化学习 第1章</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --red: #f38ba8;
+      --yellow: #f9e2af;
+      --purple: #cba6f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.9; }
+    #toc { position: fixed; top: 0; left: 0; width: 232px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 12.5px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 11.5px; opacity: 0.8; }
+    main { margin-left: 252px; max-width: none; padding: 40px 52px 80px; }
+    h1 { color: var(--heading); font-size: 1.85em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.38em; margin: 2.4em 0 0.65em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.08em; margin: 1.5em 0 0.45em; }
+    h4 { color: var(--yellow); font-size: 1em; margin: 1.2em 0 0.35em; }
+    p { margin: 0.65em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 9px 13px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 8px 13px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.87em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 6px; border-radius: 3px; font-size: 0.86em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.2em 0; }
+
+    /* 技术卡片 */
+    .card { background: #23233a; border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; margin: 1.2em 0; }
+    .card.blue   { border-left: 4px solid var(--heading); }
+    .card.green  { border-left: 4px solid var(--strong); }
+    .card.yellow { border-left: 4px solid var(--yellow); }
+    .card.purple { border-left: 4px solid var(--purple); }
+    .card.red    { border-left: 4px solid var(--red); }
+    .card-title  { font-weight: 700; color: var(--heading); margin-bottom: 10px; font-size: 1em; }
+
+    /* 公式框 */
+    .fbox { background: #2a2a3e; border-radius: 6px; padding: 14px 20px; margin: 0.9em 0; overflow-x: auto; border-left: 3px solid var(--heading); }
+    .fbox.derive { border-left-color: var(--strong); }
+    .fbox.def    { border-left-color: var(--yellow); }
+
+    /* 推导步骤编号 */
+    .steps { counter-reset: step; margin: 0.8em 0; }
+    .step  { display: flex; gap: 12px; align-items: flex-start; margin: 0.7em 0; }
+    .step-n { counter-increment: step; display: inline-flex; align-items: center; justify-content: center;
+              min-width: 26px; height: 26px; border-radius: 50%; background: var(--heading); color: #1e1e2e;
+              font-weight: 700; font-size: 0.8em; flex-shrink: 0; margin-top: 4px; }
+    .step-n::before { content: counter(step); }
+    .step-body { flex: 1; }
+
+    /* 对比网格 */
+    .cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.2em 0; }
+    .cmp-col { border-radius: 8px; padding: 16px 18px; }
+    .cmp-col.a { background: #1e2840; border: 1px solid var(--heading); }
+    .cmp-col.b { background: #1e3028; border: 1px solid var(--strong); }
+    .cmp-label { font-size: 0.78em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+    .cmp-label.a { color: var(--heading); }
+    .cmp-label.b { color: var(--strong); }
+
+    /* 高亮文字 */
+    .hl-g { color: var(--strong);  font-weight: 700; }
+    .hl-r { color: var(--red);     font-weight: 700; }
+    .hl-y { color: var(--yellow);  font-weight: 700; }
+    .hl-b { color: var(--heading); font-weight: 700; }
+
+    /* 符号表 */
+    .sym-table td:first-child { font-family: 'JetBrains Mono','Fira Code',monospace; color: var(--yellow); font-size: 0.88em; white-space: nowrap; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<!-- ===== 标题 ===== -->
+<h1>第 1 章 · 初探强化学习</h1>
+<blockquote>
+  <strong>来源</strong>：<a href="https://hrl.boyuai.com/chapter/1/%E5%88%9D%E6%8E%A2%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0" target="_blank">动手学强化学习 hrl.boyuai.com</a>
+  &nbsp;|&nbsp; 章节覆盖：1.1–1.7 &nbsp;|&nbsp; 所有公式含完整推导
+</blockquote>
+
+<!-- ===== 符号总表 ===== -->
+<h2 id="sym">符号总表</h2>
+<p>以下是本章涉及的全部核心符号，统一说明以便后文公式阅读。</p>
+<table class="sym-table">
+  <tr><th>符号</th><th>含义</th><th>备注</th></tr>
+  <tr><td>$t$</td><td>离散时间步</td><td>$t = 0, 1, 2, \ldots$</td></tr>
+  <tr><td>$\mathcal{S}$</td><td>状态空间</td><td>有限或连续</td></tr>
+  <tr><td>$\mathcal{A}$</td><td>动作空间</td><td>有限或连续</td></tr>
+  <tr><td>$s_t \in \mathcal{S}$</td><td>$t$ 时刻的状态</td><td>随机变量 $S_t$</td></tr>
+  <tr><td>$a_t \in \mathcal{A}$</td><td>$t$ 时刻的动作</td><td>随机变量 $A_t$</td></tr>
+  <tr><td>$r_{t+1} \in \mathbb{R}$</td><td>$t \to t+1$ 的即时奖励</td><td>随机变量 $R_{t+1}$</td></tr>
+  <tr><td>$\pi(a \mid s)$</td><td>策略：在状态 $s$ 下选动作 $a$ 的概率</td><td>随机策略；确定策略写作 $\pi(s)=a$</td></tr>
+  <tr><td>$P(s' \mid s, a)$</td><td>状态转移概率</td><td>$p(s',r\mid s,a)$ 为联合分布</td></tr>
+  <tr><td>$r(s,a)$</td><td>即时奖励的条件期望</td><td>$\mathbb{E}[R_{t+1}\mid S_t=s, A_t=a]$</td></tr>
+  <tr><td>$\gamma \in [0,1]$</td><td>折扣因子</td><td>连续任务通常取 $\gamma &lt; 1$</td></tr>
+  <tr><td>$G_t$</td><td>$t$ 时刻起的累积折扣回报</td><td>$\sum_{k=0}^{\infty}\gamma^k r_{t+k+1}$</td></tr>
+  <tr><td>$V^\pi(s)$</td><td>状态价值函数</td><td>$\mathbb{E}_\pi[G_t \mid s_t = s]$</td></tr>
+  <tr><td>$Q^\pi(s,a)$</td><td>动作价值函数（Q 函数）</td><td>$\mathbb{E}_\pi[G_t \mid s_t=s, a_t=a]$</td></tr>
+  <tr><td>$A^\pi(s,a)$</td><td>优势函数</td><td>$Q^\pi(s,a) - V^\pi(s)$</td></tr>
+  <tr><td>$\rho^\pi(s,a)$</td><td>归一化占用度量</td><td>$(1-\gamma)\sum_{t=0}^\infty \gamma^t P_\pi(s_t=s,a_t=a)$</td></tr>
+  <tr><td>$J(\pi)$</td><td>策略的期望回报（优化目标）</td><td>$\mathbb{E}_{(s,a)\sim\rho^\pi}[r(s,a)]$（等价形式）</td></tr>
+</table>
+
+<!-- ===== 1.1 简介 ===== -->
+<h2 id="s1">1.1 简介</h2>
+
+<p>强化学习（Reinforcement Learning，RL）是机器学习的一个重要分支，处理<strong>序贯决策（sequential decision making）</strong>任务。与预测任务不同，序贯决策中每次动作都会带来"后果"——改变环境状态，进而影响未来所有的决策和回报。</p>
+
+<div class="card blue">
+  <div class="card-title">强化学习与预测的本质区别</div>
+  <ul>
+    <li><strong>预测（监督学习）：</strong>给定输入，产生对目标的估计，不改变未来的数据分布。</li>
+    <li><strong>决策（强化学习）：</strong>给定状态，选择动作，动作会改变环境，进而影响后续所有可观测的数据分布。</li>
+  </ul>
+  <p>正因如此，强化学习的数学形式与优化逻辑与有监督学习有根本性差异，本章将逐步揭示这一差异。</p>
+</div>
+
+<!-- ===== 1.2 什么是强化学习 ===== -->
+<h2 id="s2">1.2 什么是强化学习</h2>
+
+<p>强化学习的核心是一个<strong>智能体（agent）与环境（environment）持续交互</strong>的过程。智能体通过感知环境状态、执行动作、接收奖励信号，逐步学习一个能最大化长期累积回报的决策策略。</p>
+
+<pre class="mermaid">
+sequenceDiagram
+  participant Agent as 智能体 Agent
+  participant Env   as 环境 Environment
+
+  Note over Agent,Env: 时刻 t
+  Env  ->> Agent: 状态 s_t
+  Agent->> Env  : 动作 a_t
+  Env  ->> Agent: 奖励 r_{t+1}，新状态 s_{t+1}
+  Note over Agent,Env: 时刻 t+1，循环继续
+</pre>
+
+<h3 id="s2-1">三大核心要素</h3>
+<div class="card blue">
+  <table>
+    <tr><th>要素</th><th>形式</th><th>说明</th></tr>
+    <tr><td><strong>感知</strong></td><td>$s_t \in \mathcal{S}$</td><td>智能体观测到当前环境状态</td></tr>
+    <tr><td><strong>决策（策略）</strong></td><td>$a_t \sim \pi(\cdot \mid s_t)$</td><td>根据状态按策略采样动作</td></tr>
+    <tr><td><strong>奖励</strong></td><td>$r_{t+1} \in \mathbb{R}$</td><td>环境产生标量信号，衡量动作的即时好坏</td></tr>
+  </table>
+  <p style="margin-top:0.8em">智能体不仅<em>感知</em>环境，还能通过决策<strong>直接改变环境</strong>——这是与被动观测模型最本质的区别。</p>
+</div>
+
+<h3 id="s2-2">策略的数学定义</h3>
+
+<div class="card yellow">
+  <div class="card-title">随机策略与确定性策略</div>
+  <div class="fbox def">
+    <p><strong>随机策略：</strong>$\pi(a \mid s) = P[A_t = a \mid S_t = s]$，在每个状态 $s$ 给出动作的概率分布。</p>
+    <p><strong>确定性策略：</strong>$a = \pi(s)$，在每个状态确定性地输出一个动作。</p>
+  </div>
+  <p>随机策略是更一般的形式，确定性策略是其特例（某个动作概率为 1，其余为 0）。许多理论分析在随机策略框架下进行，实际算法（如 DQN）常输出确定性策略。</p>
+</div>
+
+<!-- ===== 1.3 强化学习的环境 ===== -->
+<h2 id="s3">1.3 强化学习的环境</h2>
+
+<p>强化学习的环境是一个<strong>动态随机过程</strong>——每轮交互中存在两类叠加的随机性，正是这两层随机性使得以"期望回报"作为优化目标成为必要。</p>
+
+<h3 id="s3-2">两方面随机性</h3>
+
+<div class="card yellow">
+  <p>每轮状态转移中存在两类随机性，相互叠加：</p>
+  <ol>
+    <li><strong>动作的随机性：</strong>智能体按策略 $\pi(a \mid s_t)$ 随机采样动作 $a_t$</li>
+    <li><strong>转移的随机性：</strong>环境按 $P(s_{t+1} \mid s_t, a_t)$ 随机采样下一状态 $s_{t+1}$</li>
+  </ol>
+  <p>正是这两层随机性，使得即使策略和初始状态完全固定，每次交互产生的轨迹仍可能不同——这直接导致了以"回报的<em>期望</em>"作为优化目标的必要性。</p>
+</div>
+
+<!-- ===== 1.4 强化学习的目标 ===== -->
+<h2 id="s4">1.4 强化学习的目标</h2>
+
+<p>智能体与环境交互时，每步都会获得即时奖励 $r_{t+1}$。强化学习的目标不是最大化单步奖励，而是最大化整个交互过程的<strong>累积折扣回报的期望</strong>——即<strong>价值（value）</strong>。本节依次定义回报、折扣因子、状态价值函数、动作价值函数及优势函数，并给出完整的推导。</p>
+
+<!-- 1.4.1 回报 -->
+<h3 id="s4-1">1.4.1 回报（Return）$G_t$ 的定义</h3>
+
+<div class="card blue">
+  <div class="card-title">定义：累积折扣回报</div>
+  <div class="fbox def">
+    $$G_t \;\triangleq\; \sum_{k=0}^{\infty} \gamma^k\, r_{t+k+1} \;=\; r_{t+1} + \gamma r_{t+2} + \gamma^2 r_{t+3} + \cdots$$
+  </div>
+  <p>其中 $\gamma \in [0,1]$ 为折扣因子（见下节）；在有限回合（episodic）任务中，回合结束后 $r=0$，和式自然截断。</p>
+</div>
+
+<h4>回报的递归形式（用于后续所有推导的基础）</h4>
+
+<div class="card green">
+  <div class="card-title">推导：$G_t = r_{t+1} + \gamma G_{t+1}$</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        <strong>展开定义</strong>，将 $k=0$ 项分离：
+        <div class="fbox derive">
+          $$G_t = \sum_{k=0}^{\infty} \gamma^k r_{t+k+1} = r_{t+1} + \sum_{k=1}^{\infty} \gamma^k r_{t+k+1}$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        对余下的和式<strong>变量替换</strong> $j = k-1$（即 $k = j+1$）：
+        <div class="fbox derive">
+          $$\sum_{k=1}^{\infty} \gamma^k r_{t+k+1} = \sum_{j=0}^{\infty} \gamma^{j+1} r_{t+j+2} = \gamma \sum_{j=0}^{\infty} \gamma^j r_{(t+1)+j+1}$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        认出右侧即为 $G_{t+1}$ 的定义：
+        <div class="fbox derive">
+          $$\gamma \sum_{j=0}^{\infty} \gamma^j r_{(t+1)+j+1} = \gamma G_{t+1}$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        合并得到递归式：
+        <div class="fbox">
+          $$\boxed{G_t = r_{t+1} + \gamma G_{t+1}}$$
+        </div>
+        <p>此式表明：当前回报 = 即时奖励 + 折扣后的未来回报。这一递归是贝尔曼方程的直接来源。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 1.4.2 折扣因子 -->
+<h3 id="s4-2">1.4.2 折扣因子 $\gamma$ 的含义</h3>
+
+<div class="card yellow">
+  <table>
+    <tr><th>$\gamma$ 取值</th><th>行为语义</th><th>典型场景</th></tr>
+    <tr><td>$\gamma = 0$</td><td>完全短视，只关注即时奖励 $r_{t+1}$</td><td>单步决策</td></tr>
+    <tr><td>$0 &lt; \gamma &lt; 1$</td><td>兼顾即时与未来，距离越远权重指数衰减</td><td>连续任务（需保证级数收敛）</td></tr>
+    <tr><td>$\gamma = 1$</td><td>完全长远，等权重求和所有未来奖励</td><td>有限回合任务（和式有限，可收敛）</td></tr>
+  </table>
+  <p style="margin-top:0.8em"><strong>收敛性：</strong>当 $\gamma &lt; 1$ 且奖励有界（$|r_t| \leq r_{\max}$）时，$G_t \leq r_{\max} \cdot \frac{1}{1-\gamma} &lt; \infty$，和式绝对收敛。</p>
+  <p><strong>直观解释：</strong>距当前时刻 $k$ 步后的奖励 $r_{t+k+1}$ 的权重为 $\gamma^k$，指数衰减体现了"近期回报比远期回报更确定、更可信"的归纳偏置。</p>
+</div>
+
+<!-- 1.4.3 价值函数 -->
+<h3 id="s4-3">1.4.3 状态价值函数 $V^\pi(s)$</h3>
+
+<p>由于交互具有随机性，即使在相同状态和策略下，不同轨迹的回报 $G_t$ 也可能不同。因此强化学习关注的是<strong>回报的期望</strong>。</p>
+
+<div class="card blue">
+  <div class="card-title">定义：状态价值函数</div>
+  <div class="fbox def">
+    $$V^\pi(s) \;\triangleq\; \mathbb{E}_\pi\bigl[G_t \mid s_t = s\bigr]$$
+  </div>
+  <p>含义：在策略 $\pi$ 下，从状态 $s$ 出发，沿轨迹交互所能获得的<strong>期望累积折扣回报</strong>。</p>
+  <p>下标 $\mathbb{E}_\pi$ 表示：期望对策略 $\pi$ 诱导的动作分布和环境的状态转移分布同时积分。</p>
+</div>
+
+<!-- 1.4.4 Q函数 -->
+<h3 id="s4-4">1.4.4 动作价值函数 $Q^\pi(s,a)$（Q 函数）</h3>
+
+<div class="card blue">
+  <div class="card-title">定义：动作价值函数</div>
+  <div class="fbox def">
+    $$Q^\pi(s,a) \;\triangleq\; \mathbb{E}_\pi\bigl[G_t \mid s_t = s,\; a_t = a\bigr]$$
+  </div>
+  <p>含义：在策略 $\pi$ 下，从状态 $s$ 先<strong>固定执行动作 $a$</strong>，之后再按策略 $\pi$ 交互，所能获得的期望累积折扣回报。</p>
+  <p>$Q^\pi$ 比 $V^\pi$ 更细粒度——它区分了同一状态下不同动作的好坏，是策略改进的直接依据。</p>
+</div>
+
+<!-- V 与 Q 的关系 -->
+<h3 id="s4-5">1.4.5 $V^\pi$ 与 $Q^\pi$ 的关系推导</h3>
+
+<div class="card green">
+  <div class="card-title">推导：$V^\pi(s) = \sum_a \pi(a \mid s)\, Q^\pi(s,a)$</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        从 $V^\pi$ 的定义出发：
+        <div class="fbox derive">$$V^\pi(s) = \mathbb{E}_\pi[G_t \mid s_t = s]$$</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        应用<strong>条件期望的迭代法则（law of iterated expectation）</strong>，在 $a_t$ 上进一步条件化：
+        <div class="fbox derive">
+          $$V^\pi(s) = \mathbb{E}_\pi\bigl[\mathbb{E}_\pi[G_t \mid s_t = s,\; a_t]\;\big|\; s_t=s\bigr]$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">
+        内层期望正是 $Q^\pi(s, a_t)$ 的定义；外层期望对 $a_t$ 按策略 $\pi(\cdot \mid s)$ 加权求和：
+        <div class="fbox">
+          $$\boxed{V^\pi(s) = \sum_{a \in \mathcal{A}} \pi(a \mid s)\, Q^\pi(s,a)}$$
+        </div>
+        <p>物理含义：状态 $s$ 的价值 = 在该状态下按策略选取各动作的概率 × 对应动作价值的加权平均。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Q 的递归 -->
+<h3 id="s4-6">1.4.6 $Q^\pi(s,a)$ 的递归展开</h3>
+
+<div class="card green">
+  <div class="card-title">推导：$Q^\pi(s,a) = r(s,a) + \gamma \sum_{s'} P(s'\mid s,a)\, V^\pi(s')$</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">从 $Q^\pi$ 的定义代入回报递归式 $G_t = r_{t+1} + \gamma G_{t+1}$：
+        <div class="fbox derive">
+          $$Q^\pi(s,a) = \mathbb{E}_\pi\bigl[r_{t+1} + \gamma G_{t+1} \mid s_t=s,\; a_t=a\bigr]$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">利用<strong>期望的线性性</strong>拆分：
+        <div class="fbox derive">
+          $$= \mathbb{E}_\pi[r_{t+1} \mid s_t=s, a_t=a] + \gamma\, \mathbb{E}_\pi[G_{t+1} \mid s_t=s, a_t=a]$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">第一项为即时奖励的条件期望，记作 $r(s,a)$：
+        <div class="fbox derive">
+          $$\mathbb{E}_\pi[r_{t+1} \mid s_t=s, a_t=a] = r(s,a)$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">第二项对 $s_{t+1}$ 应用<strong>全概率公式</strong>，将期望展开为对下一状态的求和：
+        <div class="fbox derive">
+          $$\mathbb{E}_\pi[G_{t+1} \mid s_t=s, a_t=a] = \sum_{s' \in \mathcal{S}} P(s'\mid s,a)\;\mathbb{E}_\pi[G_{t+1} \mid s_{t+1}=s']$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">认出 $\mathbb{E}_\pi[G_{t+1} \mid s_{t+1}=s'] = V^\pi(s')$（价值函数定义），代入得最终结果：
+        <div class="fbox">
+          $$\boxed{Q^\pi(s,a) = r(s,a) + \gamma \sum_{s' \in \mathcal{S}} P(s'\mid s,a)\, V^\pi(s')}$$
+        </div>
+        <p>含义：动作价值 = 即时奖励期望 + 折扣后的下一状态价值的转移期望。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 优势函数 -->
+<h3 id="s4-9">1.4.9 优势函数 $A^\pi(s,a)$</h3>
+
+<div class="card yellow">
+  <div class="card-title">定义：优势函数衡量动作相对于平均水平的"超额价值"</div>
+  <div class="fbox def">
+    $$A^\pi(s,a) \;\triangleq\; Q^\pi(s,a) - V^\pi(s)$$
+  </div>
+  <p><strong>含义：</strong>在状态 $s$ 下采取动作 $a$，相比按策略 $\pi$ 平均选择动作，<em>额外</em>带来的期望回报。</p>
+  <ul>
+    <li>$A^\pi(s,a) > 0$：动作 $a$ 比平均水平好，策略改进应提高其概率</li>
+    <li>$A^\pi(s,a) &lt; 0$：动作 $a$ 比平均水平差，策略改进应降低其概率</li>
+    <li>$A^\pi(s,a) = 0$：动作 $a$ 与平均水平持平</li>
+  </ul>
+  <p><strong>重要性质：</strong>$\sum_a \pi(a\mid s) A^\pi(s,a) = \sum_a \pi(a\mid s)[Q^\pi(s,a) - V^\pi(s)] = V^\pi(s) - V^\pi(s) = 0$，即策略 $\pi$ 下所有动作的加权平均优势为零。</p>
+  <p>优势函数在策略梯度算法（PPO、TRPO 等）中用于减小梯度估计的方差（以 $V^\pi(s)$ 作为基线）。</p>
+</div>
+
+<!-- ===== 1.5 强化学习中的数据 ===== -->
+<h2 id="s5">1.5 强化学习中的数据</h2>
+
+<p>强化学习的训练数据来自智能体与环境的交互，与监督学习的固定数据集有根本差异。本节引入<strong>占用度量（occupancy measure）</strong>，用数学语言精确刻画"策略决定数据分布"这一核心事实。</p>
+
+<h3 id="s5-1">占用度量的定义</h3>
+
+<div class="card blue">
+  <div class="card-title">定义：归一化折扣占用度量</div>
+  <div class="fbox def">
+    $$\rho^\pi(s,a) \;\triangleq\; (1-\gamma)\sum_{t=0}^{\infty} \gamma^t\, P_\pi(S_t=s,\; A_t=a)$$
+  </div>
+  <p>其中 $P_\pi(S_t=s, A_t=a)$ 是在策略 $\pi$ 下，$t$ 时刻恰好处于状态 $s$ 并采取动作 $a$ 的概率。</p>
+  <p>前置因子 $(1-\gamma)$ 保证归一化（当 $\gamma &lt; 1$ 时 $\sum_{s,a}\rho^\pi(s,a) = 1$），使其成为状态-动作空间上的合法概率分布。</p>
+  <p><strong>直觉：</strong>$\rho^\pi(s,a)$ 衡量的是在整个交互过程中，以 $\gamma^t$ 折扣权重加权，智能体处于状态 $s$ 并执行动作 $a$ 的概率——即"哪些状态-动作对会被访问、访问多频繁"的分布。</p>
+</div>
+
+<h3 id="s5-2">用占用度量重写优化目标</h3>
+
+<div class="card green">
+  <div class="card-title">推导：期望回报 = 奖励函数在占用度量下的期望</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">策略 $\pi$ 的优化目标——期望累积折扣回报：
+        <div class="fbox derive">
+          $$J(\pi) = \mathbb{E}_\pi[G_0] = \mathbb{E}_\pi\!\left[\sum_{t=0}^{\infty}\gamma^t r_{t+1}\right]$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">利用<strong>期望的线性性</strong>将无限和与期望交换：
+        <div class="fbox derive">
+          $$J(\pi) = \sum_{t=0}^{\infty} \gamma^t\, \mathbb{E}_\pi[r_{t+1}]$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">对 $\mathbb{E}_\pi[r_{t+1}]$ 应用<strong>全概率公式</strong>，展开为对 $(s,a)$ 的求和：
+        <div class="fbox derive">
+          $$\mathbb{E}_\pi[r_{t+1}] = \sum_{s,a} P_\pi(S_t=s,A_t=a)\, r(s,a)$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">代入并<strong>交换求和次序</strong>：
+        <div class="fbox derive">
+          $$J(\pi) = \sum_{s,a}\left[\sum_{t=0}^{\infty}\gamma^t P_\pi(S_t=s,A_t=a)\right]r(s,a)$$
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n"></div>
+      <div class="step-body">令 $\mu^\pi(s,a) = \sum_{t=0}^{\infty}\gamma^t P_\pi(S_t=s,A_t=a)$（未归一化占用），则归一化后 $\rho^\pi = (1-\gamma)\mu^\pi$，从而：
+        <div class="fbox">
+          $$\boxed{J(\pi) = \frac{1}{1-\gamma}\sum_{s,a}\rho^\pi(s,a)\, r(s,a) = \frac{1}{1-\gamma}\,\mathbb{E}_{(s,a)\sim\rho^\pi}[r(s,a)]}$$
+        </div>
+        <p>结论：<strong>最大化期望回报等价于最大化奖励函数在占用度量 $\rho^\pi$ 下的期望</strong>。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 id="s5-3">占用度量的核心性质</h3>
+
+<div class="card yellow">
+  <div class="card-title">性质：占用度量与策略一一对应</div>
+  <blockquote>
+    给定两个策略 $\pi_1, \pi_2$ 及其与同一 MDP 交互得到的占用度量 $\rho^{\pi_1}, \rho^{\pi_2}$：<br>
+    <strong>$\pi_1 = \pi_2 \;\Longleftrightarrow\; \rho^{\pi_1} = \rho^{\pi_2}$</strong>
+  </blockquote>
+  <p>即：<span class="hl-g">策略唯一确定占用度量，占用度量唯一确定策略</span>——两者之间存在双射关系。</p>
+  <p><strong>逆向重构策略：</strong>给定占用度量 $\rho^\pi$，可按下式恢复策略：</p>
+  <div class="fbox">
+    $$\pi(a\mid s) = \frac{\rho^\pi(s,a)}{\sum_{a'}\rho^\pi(s,a')}$$
+  </div>
+  <p><strong>此性质的两个关键推论：</strong></p>
+  <ol>
+    <li>策略改变 → 占用度量改变 → 训练数据分布改变（强化学习的核心难点）</li>
+    <li>寻找最优策略等价于寻找最优占用度量（可将 RL 转化为分布优化问题）</li>
+  </ol>
+</div>
+
+<!-- ===== 1.6 强化学习的独特性 ===== -->
+<h2 id="s6">1.6 强化学习的独特性</h2>
+
+<p>了解了强化学习的数学结构后，我们回过头来从<strong>优化视角</strong>对比有监督学习与强化学习的本质差异。</p>
+
+<h3 id="s6-1">优化目标的公式对比</h3>
+
+<div class="cmp">
+  <div class="cmp-col a">
+    <div class="cmp-label a">有监督学习</div>
+    <div class="fbox">
+      $$\min_f\; \mathbb{E}_{(x,y)\sim\mathcal{D}}\bigl[\mathcal{L}(y,\, f(x))\bigr]$$
+    </div>
+    <ul>
+      <li>优化变量：模型参数（$f$ 的参数）</li>
+      <li>数据分布 $\mathcal{D}$：<span class="hl-b">固定不变</span></li>
+      <li>损失函数 $\mathcal{L}$：固定</li>
+      <li>数据：独立同分布（i.i.d.）</li>
+    </ul>
+  </div>
+  <div class="cmp-col b">
+    <div class="cmp-label b">强化学习</div>
+    <div class="fbox">
+      $$\max_\pi\; \mathbb{E}_{(s,a)\sim\rho^\pi}\bigl[r(s,a)\bigr]$$
+    </div>
+    <ul>
+      <li>优化变量：策略 $\pi$</li>
+      <li>奖励函数 $r(s,a)$：<span class="hl-g">固定不变</span></li>
+      <li>数据分布 $\rho^\pi$：<span class="hl-r">随策略改变</span></li>
+      <li>数据：非独立、非同分布</li>
+    </ul>
+  </div>
+</div>
+
+<h3 id="s6-2">本质差异的深度分析</h3>
+
+<div class="card purple">
+  <div class="card-title">一句话总结：监督学习改变目标函数，强化学习改变数据分布</div>
+  <table>
+    <tr><th>维度</th><th>有监督学习</th><th>强化学习</th></tr>
+    <tr><td>改变什么</td><td>模型 $f$（目标函数的形状）</td><td>策略 $\pi$（数据分布 $\rho^\pi$）</td></tr>
+    <tr><td>不变什么</td><td>训练数据分布 $\mathcal{D}$</td><td>奖励函数 $r(s,a)$</td></tr>
+    <tr><td>数据特性</td><td>i.i.d.，分布稳定</td><td>非 i.i.d.，分布随策略漂移</td></tr>
+    <tr><td>优化稳定性</td><td>标准凸优化/SGD 可直接适用</td><td>需处理"分布漂移"（distribution shift）</td></tr>
+    <tr><td>泛化依据</td><td>泛化误差（generalization error）</td><td>价值估计误差 + 策略改进单调性</td></tr>
+  </table>
+</div>
+
+<h3 id="s6-3">为什么数据分布随策略改变是核心难点</h3>
+
+<div class="card red">
+  <div class="card-title">强化学习三大独特挑战</div>
+  <ol>
+    <li>
+      <strong>数据分布漂移（Distribution Shift）：</strong>
+      策略 $\pi$ 更新一步后，$\rho^\pi$ 随之改变，之前采集的样本不再来自新策略的分布。直接用旧数据优化新策略会引入偏差——这是 on-policy 与 off-policy 算法的根本分野。
+    </li>
+    <li>
+      <strong>探索-利用权衡（Exploration-Exploitation Dilemma）：</strong>
+      智能体如果不执行某个动作，就永远无法观测到该动作的回报——"未观测到的数据"无法用于监督学习式的优化。智能体必须主动探索，但探索本身消耗学习资源。
+    </li>
+    <li>
+      <strong>奖励信号稀疏与延迟（Sparse &amp; Delayed Reward）：</strong>
+      奖励往往只在任务结束时给出（如棋局胜负），中间步骤的功劳无法直接分配——即<em>信用分配问题（credit assignment problem）</em>。
+    </li>
+  </ol>
+</div>
+
+<!-- ===== 1.7 小结 ===== -->
+<h2 id="s7">1.7 小结</h2>
+
+<p>本章系统介绍了强化学习的基本数学框架，以下是核心知识点的整体梳理。</p>
+
+<pre class="mermaid">
+graph TD
+  RL["强化学习<br>Sequential Decision Making"] --> ENV["环境<br>P(s'|s,a)"]
+  RL --> AGT["智能体<br>策略 π(a|s)"]
+  RL --> OBJ["优化目标<br>max J(π)"]
+
+  ENV --> MDP["MDP 五元组<br>S, A, P, R, ρ₀"]
+  ENV --> RND["两类随机性<br>动作随机 + 转移随机"]
+
+  AGT --> POL["策略类型<br>随机策略 / 确定性策略"]
+  AGT --> DAT["数据来源<br>智能体与环境交互"]
+
+  OBJ --> RET["回报 G_t<br>Σ γ^k r_{t+k+1}"]
+  OBJ --> VF["价值函数<br>V^π(s) = E[G_t|s_t=s]"]
+  OBJ --> QF["Q函数<br>Q^π(s,a) = E[G_t|s_t=s,a_t=a]"]
+  OBJ --> OM["占用度量 ρ^π<br>J(π) = E_{ρ^π}[r(s,a)]"]
+
+  VF --> BEV["贝尔曼期望方程 V"]
+  QF --> BEQ["贝尔曼期望方程 Q"]
+  QF --> ADV["优势函数 A^π<br>= Q^π - V^π"]
+</pre>
+
+<div class="card blue">
+  <div class="card-title">章节核心公式速查</div>
+  <table>
+    <tr><th>公式名称</th><th>表达式</th></tr>
+    <tr><td>回报定义</td><td>$G_t = \sum_{k=0}^\infty \gamma^k r_{t+k+1}$</td></tr>
+    <tr><td>回报递归</td><td>$G_t = r_{t+1} + \gamma G_{t+1}$</td></tr>
+    <tr><td>状态价值函数</td><td>$V^\pi(s) = \mathbb{E}_\pi[G_t \mid s_t = s]$</td></tr>
+    <tr><td>动作价值函数</td><td>$Q^\pi(s,a) = \mathbb{E}_\pi[G_t \mid s_t=s, a_t=a]$</td></tr>
+    <tr><td>$V$ 与 $Q$ 的关系</td><td>$V^\pi(s) = \sum_a \pi(a\mid s)\, Q^\pi(s,a)$</td></tr>
+    <tr><td>$Q$ 的展开</td><td>$Q^\pi(s,a) = r(s,a) + \gamma\sum_{s'} P(s'\mid s,a)\, V^\pi(s')$</td></tr>
+    <tr><td>贝尔曼方程（V）</td><td>$V^\pi(s) = \sum_a \pi(a\mid s)\!\left[r(s,a) + \gamma\sum_{s'} P(s'\mid s,a) V^\pi(s')\right]$</td></tr>
+    <tr><td>贝尔曼方程（Q）</td><td>$Q^\pi(s,a) = r(s,a) + \gamma\sum_{s'} P(s'\mid s,a)\sum_{a'}\pi(a'\mid s') Q^\pi(s',a')$</td></tr>
+    <tr><td>优势函数</td><td>$A^\pi(s,a) = Q^\pi(s,a) - V^\pi(s)$</td></tr>
+    <tr><td>占用度量</td><td>$\rho^\pi(s,a) = (1-\gamma)\sum_{t=0}^\infty \gamma^t P_\pi(S_t=s, A_t=a)$</td></tr>
+    <tr><td>优化目标（等价形式）</td><td>$J(\pi) = \frac{1}{1-\gamma}\mathbb{E}_{(s,a)\sim\rho^\pi}[r(s,a)]$</td></tr>
+  </table>
+</div>
+
+<div class="card green">
+  <div class="card-title">强化学习与监督学习的本质差异（一句话）</div>
+  <p>监督学习<span class="hl-b">在固定数据分布下优化模型</span>；强化学习<span class="hl-r">通过改变策略来改变数据分布</span>，进而最大化固定奖励函数下的期望——这一"数据分布随学习动态变化"的特性，是强化学习独有难点与算法设计的根本出发点。</p>
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:0.82em;text-align:center">
+  基于《动手学强化学习》第 1 章（hrl.boyuai.com）生成，公式推导参照 Sutton &amp; Barto《Reinforcement Learning: An Introduction》标准形式。生成日期：2026-05-14
+</p>
+
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'sec-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const lk = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (lk) lk.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+</script>
+</body>
+</html>

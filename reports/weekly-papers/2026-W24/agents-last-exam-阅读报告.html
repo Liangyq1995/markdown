@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agents' Last Exam | 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-right: 6px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; }
+    .tag.green { background: #a6e3a1; }
+    .tag.purple { background: #cba6f7; }
+    .tag.red { background: #f38ba8; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 1em 0; }
+    .tier-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 1em 0; }
+    .tier-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .tier-card h4 { color: var(--heading); margin-bottom: 8px; font-size: 1em; }
+    .tier-card .pass-rate { font-size: 2em; font-weight: 700; color: #f38ba8; }
+    .tier-card .pass-rate.mid { color: #fab387; }
+    .tier-card .pass-rate.low { color: #a6e3a1; }
+    .failure-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 1em 0; }
+    .failure-item { background: #2a2a3e; border-left: 3px solid var(--quote-bar); border-radius: 0 6px 6px 0; padding: 12px 16px; }
+    .failure-item h4 { color: var(--heading); margin-bottom: 4px; font-size: 0.95em; }
+    ul, ol { margin: 0.6em 0 0.6em 1.5em; }
+    li { margin-bottom: 4px; }
+    .highlight-box { background: #2a2a3e; border: 1px solid var(--heading); border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .highlight-box h4 { color: var(--heading); margin-bottom: 8px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+  <!-- ===== 论文信息表 ===== -->
+  <h1>Agents' Last Exam (ALE)</h1>
+  <p style="color:#6c7086; font-size:0.9em;">阅读报告 · 2026-W24 · UC Berkeley RDI</p>
+
+  <table>
+    <tr><th>标题</th><td>Agents' Last Exam (ALE): A Benchmark for Long-Horizon, Economically Valuable, Real-World Agent Tasks</td></tr>
+    <tr><th>核心问题</th><td>AI 在基准测试上表现亮眼，却未能在专业领域实现广泛经济部署——存在"评估鸿沟"；ALE 旨在通过长水平、可验证的真实世界任务基准来弥合这一鸿沟</td></tr>
+    <tr><th>作者</th><td>Yiyou Sun, Xinyang Han, Weichen Zhang 等（核心团队）+ 300+ 数据贡献者与顾问</td></tr>
+    <tr><th>机构</th><td>University of California, Berkeley (RDI) 为主导机构，联合 Stanford、MIT、Harvard 等 80+ 高校与机构</td></tr>
+    <tr><th>arXiv</th><td><a href="https://arxiv.org/abs/2606.05405" target="_blank">2606.05405</a></td></tr>
+    <tr><th>项目主页</th><td><a href="https://agents-last-exam.org" target="_blank">agents-last-exam.org</a></td></tr>
+    <tr><th>GitHub</th><td><a href="https://github.com/rdi-berkeley/agents-last-exam" target="_blank">rdi-berkeley/agents-last-exam</a></td></tr>
+    <tr><th>HuggingFace 热度</th><td>571 upvotes（本周第 2 名，截至 2026-W24）</td></tr>
+    <tr><th>关键数据</th><td>1,490 任务实例 · 55 子领域 · 13 行业集群 · 250+ 行业专家 · Last-Exam 层平均通过率 &lt; 1%</td></tr>
+  </table>
+
+  <!-- ===== 概述 ===== -->
+  <h2>概述</h2>
+
+  <p>近年来，AI 系统在各类基准测试上屡创佳绩：AlphaGo 击败世界冠军、Gemini 在国际数学奥林匹克竞赛中摘得金牌、大模型在编程竞赛中名列前茅。然而，这些令人瞩目的基准成就并未转化为经济上可衡量的专业部署——金融、法律、工程、医疗等核心行业的实际 AI 渗透率依然有限。这种"基准成功与 GDP 影响之间的鸿沟"，正是 <strong>Agents' Last Exam (ALE)</strong> 所要直接回应的核心问题。</p>
+
+  <p>ALE 是由 UC Berkeley RDI 主导、联合 250+ 行业专家共同开发的大规模 Agent 评估基准。其核心设计哲学是：<strong>以真实专业工作流作为评估单元</strong>，而非人工构造的合成场景或简化问答。基准覆盖依据美国联邦职业分类体系 O*NET/SOC 2018 定义的非物理行业，形成 <strong>13 个行业集群 × 55 个子领域</strong> 的二级分类，现有 1,490 个可运行任务实例。</p>
+
+  <p>ALE 的评估对象是 <strong>通用计算机使用 Agent（GCUA, Generalist Computer-Use Agent）</strong>，即能够同时处理 GUI 交互（桌面应用、浏览器、专业软件）与 CLI 操作（Shell 脚本、代码执行、文件操作）的 Agent，如 Claude Code、OpenAI Codex 等。这一设计有意超越了仅测试 GUI 或仅测试 CLI 能力的现有基准，要求 Agent 在单一任务流程中综合运用视觉感知、代码执行、工具调用与长期规划。</p>
+
+  <p>当前实验结果令人警醒：在最难的 Last-Exam 层级（38 个任务），<strong>几乎所有主流 Agent 配置的完整通过率均为 0%</strong>，最强配置（Codex + GPT-5.5）的整体通过率也仅约 24%。这与同一系统在 Terminal-Bench 上高达 82% 的通过率形成鲜明对比，说明当前 AI 系统在处理真实专业工作流时，距离实际部署仍有巨大差距。</p>
+
+  <p>ALE 被设计为"活体基准"（Living Benchmark）：任务池持续扩充，私有任务定期轮换至公开集，以防止基准污染。其更宏大的目标，是成为推动 AI 从"能通过考试"到"能完成真实经济价值工作"这一跨越的量化工具——当 AI 系统能够通过这场"最后的考试"，意味着其已具备在真实工业场景中持续工作的能力。</p>
+
+  <!-- ===== 研究背景与动机 ===== -->
+  <h2>研究背景与动机</h2>
+
+  <h3>AI 评估鸿沟问题</h3>
+  <p>AI 研究的进展在很大程度上由基准测试所塑造。基准不仅记录能力，更聚焦研究注意力、定义工程目标、决定哪些领域能够快速改进。ImageNet 在计算机视觉领域扮演了这一角色，推动了深度学习的爆发式发展。然而，对于经济上至关重要的金融、法律、工程、制造等行业，<strong>可比较的评估体系至今仍不完善</strong>。</p>
+
+  <blockquote>
+    "benchmark victories have accumulated faster than measurable transformation in core industries" — ALE 论文
+  </blockquote>
+
+  <p>这一"效用问题"（utility problem）的根源在于：现有基准在以下三个维度上存在系统性缺陷：</p>
+  <ul>
+    <li><strong>任务时间跨度短</strong>：多数基准测试单步或短序列任务，而真实专业工作往往需要数小时乃至数天的持续工作</li>
+    <li><strong>行业覆盖窄</strong>：现有基准大多聚焦软件工程、通用助手或少数几个领域，无法代表整个劳动力市场</li>
+    <li><strong>验证依赖人工</strong>：真实工作流的输出高度异质（文件、电子表格、3D 模型、视频等），难以自动验证，导致评估成本高昂</li>
+  </ul>
+
+  <h3>现有基准局限性对比</h3>
+  <table>
+    <tr>
+      <th>基准</th>
+      <th>规模</th>
+      <th>行业覆盖 (/ 55)</th>
+      <th>任务来源</th>
+      <th>验证方式</th>
+      <th>任务时长</th>
+      <th>核心局限</th>
+    </tr>
+    <tr>
+      <td><strong>MMLU</strong></td>
+      <td>~16K</td>
+      <td>26 / 55</td>
+      <td>学术题库挖掘</td>
+      <td>精确匹配</td>
+      <td>秒级</td>
+      <td>仅测知识，不测行动能力</td>
+    </tr>
+    <tr>
+      <td><strong>GPQA</strong></td>
+      <td>~500</td>
+      <td>8 / 55</td>
+      <td>领域专家</td>
+      <td>精确匹配</td>
+      <td>分钟级</td>
+      <td>局限于硬科学问答</td>
+    </tr>
+    <tr>
+      <td><strong>HLE</strong></td>
+      <td>~2.5K</td>
+      <td>20 / 55</td>
+      <td>领域专家</td>
+      <td>精确 / LLM 评判</td>
+      <td>分钟级</td>
+      <td>学术问答，非工作流</td>
+    </tr>
+    <tr>
+      <td><strong>SWE-bench</strong></td>
+      <td>~2K</td>
+      <td>5 / 55</td>
+      <td>GitHub 挖掘</td>
+      <td>单元测试</td>
+      <td>分钟~小时</td>
+      <td>仅限 OSS Python 代码修复</td>
+    </tr>
+    <tr>
+      <td><strong>OSWorld</strong></td>
+      <td>~400</td>
+      <td>5 / 55</td>
+      <td>策展人构造</td>
+      <td>状态检查</td>
+      <td>分钟级</td>
+      <td>仅桌面 GUI，无代码/CLI</td>
+    </tr>
+    <tr>
+      <td><strong>GAIA</strong></td>
+      <td>~500</td>
+      <td>—</td>
+      <td>策展人构造</td>
+      <td>精确匹配</td>
+      <td>分钟级</td>
+      <td>通用助手任务，非专业工作流</td>
+    </tr>
+    <tr>
+      <td><strong>Terminal-Bench</strong></td>
+      <td>~100</td>
+      <td>6 / 55</td>
+      <td>策展人构造</td>
+      <td>状态检查</td>
+      <td>分钟~小时</td>
+      <td>仅 CLI，无 GUI，覆盖有限</td>
+    </tr>
+    <tr>
+      <td><strong>GDPval</strong></td>
+      <td>~200</td>
+      <td>16 / 55</td>
+      <td>行业专家</td>
+      <td><strong>人工（专家）</strong></td>
+      <td>小时~天</td>
+      <td>行业覆盖不足，依赖人工评判</td>
+    </tr>
+    <tr>
+      <td><strong>RLI</strong></td>
+      <td>~250</td>
+      <td>14 / 55</td>
+      <td>Upwork 挖掘</td>
+      <td><strong>人工（专家）</strong></td>
+      <td>小时~天</td>
+      <td>依赖人工，覆盖不完整</td>
+    </tr>
+    <tr style="background: #2a2a3e;">
+      <td><strong>ALE（本文）</strong></td>
+      <td><strong>~1.5K</strong></td>
+      <td><strong>55 / 55</strong></td>
+      <td><strong>行业专家真实项目</strong></td>
+      <td><strong>自动（确定性脚本）</strong></td>
+      <td><strong>小时~周</strong></td>
+      <td>—</td>
+    </tr>
+  </table>
+
+  <p>即便将 16 个主要先前基准的覆盖范围取并集，仍有 <strong>13 个子领域完全未被覆盖</strong>（如量子计算、精准农业、海事与港口操作等）。ALE 首次实现了对全部 55 个 SOC/O*NET 行业子领域的覆盖。</p>
+
+  <!-- ===== ALE 基准设计 ===== -->
+  <h2>ALE 基准设计</h2>
+
+  <h3>三大设计原则</h3>
+  <p>ALE 的任务准入由三条高层原则决定：</p>
+  <ul>
+    <li><strong>代表性（Representativeness）</strong>：工作流必须与真实专业实践相符，使用领域专家实际使用的软件（如建筑设计用 SolidWorks/Rhino，而非简化替代品）</li>
+    <li><strong>复杂性（Complexity）</strong>：任务必须是端到端的可交付成果，需要专家花费大量时间完成，而非仅几步 UI 操作。关键区别在于"工作流"与"单一动作"之间的差异</li>
+    <li><strong>可验证性（Verifiability）</strong>：输出必须支持确定性检查或与可观测制品绑定的明确评分标准。最强情形是可直接与参考输出对比的确定性可交付成果</li>
+  </ul>
+
+  <h3>行业分类体系（13 × 55）</h3>
+  <p>ALE 以 SOC 2018 为职业骨架，以 O*NET 解释职业内容，通过以下步骤构建分类体系：</p>
+  <ol>
+    <li>对 O*NET 30.2 中 1,016 个职业条目进行数字工作流筛查（GPT-4o mini，temperature=0）</li>
+    <li>合并 SOC 变体后保留 117 个唯一 SOC 基础代码</li>
+    <li>将相似工作流的 SOC 代码聚合为 51 个 SOC 锚定子领域</li>
+    <li>补充 4 个前沿子领域（量子计算等）+ 7 个扩展，最终形成 <strong>55 个子领域</strong></li>
+  </ol>
+
+  <pre class="mermaid">
+graph TD
+    ALE["ALE 基准\n1,490 任务实例"]
+
+    ALE --> EA["工程与建筑\n368 个实例"]
+    ALE --> CS["计算与数学科学\n237 个实例"]
+    ALE --> VMA["视觉与媒体艺术\n226 个实例"]
+    ALE --> BF["商业与金融\n189 个实例"]
+    ALE --> HM["健康与医学\n155 个实例"]
+    ALE --> LS["生命科学\n111 个实例"]
+    ALE --> PS["物理科学\n46 个实例"]
+    ALE --> TS["交通与安全\n35 个实例"]
+    ALE --> EI["教育与信息\n33 个实例"]
+    ALE --> PN["心理与神经科学\n27 个实例"]
+    ALE --> SS["社会科学\n26 个实例"]
+    ALE --> AE["农业与环境\n19 个实例"]
+    ALE --> LG["法律\n15 个实例"]
+
+    EA --> EA1["制造与工业系统 (173)"]
+    EA --> EA2["航空航天与机械工程 (47)"]
+    EA --> EA3["土木、建筑与地理空间工程 (33)"]
+    EA --> EA4["机器人与自主系统 (29)"]
+    EA --> EA5["半导体与微电子设计 (28)"]
+    EA --> EA6["电子工程 (23)"]
+
+    CS --> CS1["数据与分析工程 (57)"]
+    CS --> CS2["AI 工程与 CS 研究 (50)"]
+    CS --> CS3["软件工程 (38)"]
+    CS --> CS4["数学与运筹研究 (35)"]
+    CS --> CS5["网络安全与取证 (28)"]
+    CS --> CS6["量子计算 (16)"]
+
+    VMA --> VMA1["3D、动画与交互媒体 (133)"]
+    VMA --> VMA2["音频、音乐与后期制作 (69)"]
+    VMA --> VMA3["图形、视觉与产品设计 (24)"]
+  </pre>
+
+  <h3>任务构建五阶段流程</h3>
+  <p>ALE 的任务无法众包给普通工人，必须来自领域专业人员的实际工作例程，并经过严格筛选。构建协议包含五个关卡：</p>
+
+  <pre class="mermaid">
+flowchart LR
+    A["1. 专家招募\nExpert Sourcing\n顾问委员会定向招募\n各领域专家"] -->|覆盖分类体系| B["2. 任务提交\nTask Submission\n专家上传过去项目\nAI 辅助细化规格"]
+    B -->|会议式评审| C["3. 初审\nFirst-pass Review\nMajor/Minor Revision\nAccept/Strong Accept"]
+    C -->|修订循环| B
+    C -->|通过| D["4. 任务实现\nTask Implementation\n工程师转化为可运行环境\n干运行验证"]
+    D -->|发现问题| E["通知专家\n补充信息"]
+    E --> D
+    D -->|完成| F["5. 最终 QC\nFinal QC\n专家委员会同行评审\n验证参考输出正确性"]
+    F -->|通过| G["基准实例\nBenchmark Instance\n公开 150 个\n私有 1,017 个"]
+    F -->|问题| D
+  </pre>
+
+  <p>每个任务实例须完整指定五个核心组件：<strong>自然语言描述、输入文件、目标软件、预期可交付成果、评估规格</strong>。在 960 个外部提交中，最终通过各阶段审核的分布如下：</p>
+  <ul>
+    <li>Strong Accept：428 个（44.6%）</li>
+    <li>Accept：344 个（35.8%）</li>
+    <li>Borderline Accept：35 个（3.6%）</li>
+    <li>Minor Revision：49 个（5.1%）</li>
+    <li>Major Revision：148 个（15.4%，退回修改）</li>
+  </ul>
+
+  <p>此外，还有 530 个内部委托构建的任务实例。最终形成 <strong>150 个公开实例 + 1,017 个私有实例 + 323 个待 QC 实例</strong>。</p>
+
+  <h3>软件生态覆盖</h3>
+  <p>ALE 覆盖了数十种专业软件工具，包括但不限于：</p>
+  <ul>
+    <li><strong>工程类</strong>：Moldex3D（注塑模流分析）、SolidWorks、Blender、Rhino、MATLAB</li>
+    <li><strong>媒体类</strong>：DaVinci Resolve（视频后期）、Dorico（乐谱编写）、Blender（3D 动画）、RPGMaker XP</li>
+    <li><strong>科学类</strong>：分子对接软件、基因组分析工具、气候模型工具链</li>
+    <li><strong>商业类</strong>：Excel/会计软件、ERP 系统、统计分析工具</li>
+  </ul>
+
+  <!-- ===== 评估体系 ===== -->
+  <h2>评估体系</h2>
+
+  <h3>流水线架构</h3>
+  <p>评估流水线围绕三个解耦组件构建，通过定义良好的接口交互：</p>
+
+  <pre class="mermaid">
+graph LR
+    subgraph TS ["任务规格 (main.py)"]
+        L["load()\n声明任务与计算需求"]
+        S["start()\n启动软件，加载资产"]
+        E["evaluate()\n对比输出与参考\n评分 0.0-1.0"]
+    end
+
+    subgraph AG ["Agent (Harness + LLM)"]
+        Brain["Brain\nLLM 推理规划"]
+        Eyes["Eyes\nGUI 截图感知"]
+        Body["Body\n编排与控制流"]
+        Hands["Hands\n工具 API 调用"]
+        Feet["Feet\nVM/Docker/Shell"]
+    end
+
+    subgraph ENV ["环境 (虚拟机)"]
+        IN["input/\n只读输入资产"]
+        SW["software/\n预装应用程序"]
+        OUT["output/\nAgent 写入目标"]
+        REF["reference/\n参考输出（隐藏）"]
+    end
+
+    TS --> AG
+    AG -->|动作循环| ENV
+    ENV -->|反馈| AG
+    OUT --> E
+    REF --> E
+  </pre>
+
+  <h3>Agent 能力五层分解</h3>
+  <p>论文将 Agent 的操作能力分解为五个功能层，明确区分不同 Agent 家族的能力边界：</p>
+  <table>
+    <tr>
+      <th>能力层</th>
+      <th>功能描述</th>
+      <th>CLI Agent (SWE-agent)</th>
+      <th>GUI Agent (AutoGLM)</th>
+      <th>GCUA (Claude Code)</th>
+    </tr>
+    <tr>
+      <td><strong>Brain（大脑）</strong></td>
+      <td>LLM 推理与规划</td>
+      <td>✓ 完整</td>
+      <td>✓ 完整</td>
+      <td>✓ 完整</td>
+    </tr>
+    <tr>
+      <td><strong>Eyes（视觉）</strong></td>
+      <td>GUI 截图感知</td>
+      <td>✗ 缺失</td>
+      <td>✓ 完整</td>
+      <td>✓ 完整</td>
+    </tr>
+    <tr>
+      <td><strong>Body（躯体）</strong></td>
+      <td>编排与控制流</td>
+      <td>✓ 完整</td>
+      <td>△ 有限</td>
+      <td>✓ 完整</td>
+    </tr>
+    <tr>
+      <td><strong>Hands（双手）</strong></td>
+      <td>结构化工具调用</td>
+      <td>✓ 完整</td>
+      <td>△ 主要为鼠标键盘</td>
+      <td>✓ 完整</td>
+    </tr>
+    <tr>
+      <td><strong>Feet（双脚）</strong></td>
+      <td>运行时基础设施</td>
+      <td>✓ 完整</td>
+      <td>△ 受限</td>
+      <td>✓ 完整</td>
+    </tr>
+  </table>
+
+  <p>ALE 的评估对象是 <strong>GCUA（Generalist Computer-Use Agent）</strong>，即在所有五层均具备完整能力的 Agent。GUI 能力的集成通过两种模式实现：</p>
+  <ul>
+    <li><strong>GUI-as-Tool</strong>：将 GUI 操作作为普通工具暴露在主循环中（主要评估模式）</li>
+    <li><strong>GUI-as-SubAgent</strong>：将 GUI 交互委托给专用视觉语言子 Agent（用于无原生视觉输入的模型，如 DeepSeek V4）</li>
+  </ul>
+
+  <h3>评估模式分类</h3>
+  <p>由于真实工作流的可交付成果高度异质（CAM 刀具路径、财务工作簿、3D 网格、游戏世界状态等），ALE 沿两个正交轴组合评估：</p>
+  <ul>
+    <li><strong>比较形式</strong>：精确/哈希值、结构化数值/表格字段（带容差）、几何表面/点云距离、视觉外观（视觉 LLM 评判）、固定输入轨迹下的行为世界状态、自由文本评分标准</li>
+    <li><strong>组合方式</strong>：门控评分（gate-and-score）或二元检查列表平均</li>
+  </ul>
+
+  <blockquote>
+    门控评分（最常见模式）：二元前置条件（如"无刀具路径碰撞"、"文件解析无误"）必须通过，才会评估连续质量指标；前置条件失败则强制任务得分为 0，无论其他标准的部分进展如何。
+  </blockquote>
+
+  <p>ALE <strong>刻意避免将 LLM 作为评判者</strong>，凡是仅能通过"询问模型结果是否正确"来评分的任务工作流，在 QC 阶段即被拒绝并重新工程化。少数确实需要 LLM 评判的任务（视频片段、游戏截图等），使用的是基于证据的窄范围是/否探针，而非通用整体性提示。</p>
+
+  <h3>三级难度设计</h3>
+  <div class="tier-grid">
+    <div class="tier-card">
+      <h4>Near-Term（近期层）</h4>
+      <div class="pass-rate low">~40%</div>
+      <p style="font-size:0.85em; margin-top:8px;">67 个任务 · 当前前沿 Agent 可部分完成 · 适合短期排行榜竞争与快速迭代</p>
+    </div>
+    <div class="tier-card">
+      <h4>Full-Spectrum（全谱层）</h4>
+      <div class="pass-rate mid">~20%</div>
+      <p style="font-size:0.85em; margin-top:8px;">55 个任务 · 每个子领域至少一个实例 · 适合全面领域覆盖评估</p>
+    </div>
+    <div class="tier-card">
+      <h4>Last-Exam（最后考试层）</h4>
+      <div class="pass-rate">&lt;1%</div>
+      <p style="font-size:0.85em; margin-top:8px;">38 个任务 · 最难工作流 · 大多数 Agent 得分 0% · 适合里程碑评估</p>
+    </div>
+  </div>
+
+  <h3>"活体基准"机制</h3>
+  <p>ALE 采取公私分离策略以防止基准污染：</p>
+  <ul>
+    <li>仅公开 1,490 个实例中的约 10%（150 个）</li>
+    <li>私有任务池周期性轮换至公开集，同时退役的公开任务被替换</li>
+    <li>任务池持续增长，随着新工作流和行业的加入而扩充</li>
+    <li>公开子集的代表性已通过实证验证（附录 D.1）</li>
+  </ul>
+
+  <!-- ===== 实验结果 ===== -->
+  <h2>实验结果</h2>
+
+  <h3>主要结果概览</h3>
+  <p>所有 Agent 系统均以 GCUA 配置评估，通过统一的 CUA MCP 桥接暴露 14 个桌面动作工具。每次运行上限为 5 小时，总超时率约 3.8%。</p>
+
+  <p>以下图表展示主流 Agent 配置在三个难度层级的整体通过率（Overall Pass Rate）：</p>
+
+  <div id="chart-main-results" class="echarts-container" style="height:420px"></div>
+  <script>
+    echarts.init(document.getElementById('chart-main-results')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '主流 Agent 配置整体通过率 (%)', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: ['Near-Term Pass%', 'Full-Spectrum Pass%', 'Last-Exam Pass%'], textStyle: { color: '#cdd6f4' }, top: 40 },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '80px', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['Codex\n(GPT-5.5)', 'ALE-Claw\n(GPT-5.5)', 'Claude Code\n(Fable 5)', 'Cursor\n(GPT-5.5)', 'Cursor\n(Opus 4.7)', 'ALE-Claw\n(Opus 4.7)', 'Claude Code\n(Opus 4.8)', 'Claude Code\n(Opus 4.7)', 'Gemini CLI\n(Gem 3.1)', 'Grok CLI\n(Grok 4.3)'],
+        axisLabel: { color: '#cdd6f4', fontSize: 10, interval: 0 }
+      },
+      yAxis: { type: 'value', axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, max: 75 },
+      series: [
+        {
+          name: 'Near-Term Pass%',
+          type: 'bar',
+          data: [64.7, 67.4, 63.4, 60.8, 61.2, 60.5, 60.2, 54.3, 53.5, 30.4],
+          itemStyle: { color: '#a6e3a1' }
+        },
+        {
+          name: 'Full-Spectrum Pass%',
+          type: 'bar',
+          data: [38.1, 32.8, 34.3, 32.1, 29.9, 28.4, 26.9, 20.9, 26.9, 9.0],
+          itemStyle: { color: '#fab387' }
+        },
+        {
+          name: 'Last-Exam Pass%',
+          type: 'bar',
+          data: [22.7, 23.6, 20.9, 20.0, 20.0, 18.2, 12.7, 12.7, 12.7, 7.3],
+          itemStyle: { color: '#f38ba8' }
+        }
+      ]
+    });
+  </script>
+
+  <h3>各行业领域得分</h3>
+  <p>以下图表展示 Claude Fable 5 和 GPT-5.5 在各行业领域的平均得分（均值取自各 Harness 配置的完整运行结果）：</p>
+
+  <div id="chart-domain-scores" class="echarts-container" style="height:350px"></div>
+  <script>
+    echarts.init(document.getElementById('chart-domain-scores')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '各行业领域平均得分 (%)', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: ['Claude Fable 5', 'GPT-5.5'], textStyle: { color: '#cdd6f4' }, top: 40 },
+      grid: { left: '3%', right: '4%', bottom: '3%', top: '80px', containLabel: true },
+      xAxis: { type: 'value', axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, max: 90 },
+      yAxis: {
+        type: 'category',
+        data: ['教育', '心理/神经科学', '工程/建筑', '物理科学', '视觉媒体', '生命科学', '社会科学', '健康/医学', '法律', '商业/金融', '农业/环境', '计算/数学'],
+        axisLabel: { color: '#cdd6f4', fontSize: 11 }
+      },
+      series: [
+        {
+          name: 'Claude Fable 5',
+          type: 'bar',
+          data: [22, 28, 32, 38, 40, 42, 46, 48, 52, 54, 78, 82],
+          itemStyle: { color: '#89b4fa' }
+        },
+        {
+          name: 'GPT-5.5',
+          type: 'bar',
+          data: [20, 26, 30, 36, 38, 40, 44, 46, 50, 52, 75, 80],
+          itemStyle: { color: '#a6e3a1' }
+        }
+      ]
+    });
+  </script>
+
+  <h3>模型对比（固定 OpenClaw Harness）</h3>
+  <div id="chart-model-comparison" class="echarts-container" style="height:350px"></div>
+  <script>
+    echarts.init(document.getElementById('chart-model-comparison')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '不同基础模型整体通过率（固定 OpenClaw Harness）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '60px', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['GPT-5.5', 'GPT-5.4', 'Opus 4.7', 'Gemini 3.1', 'Opus 4.6', 'DeepSeek V4', 'Qwen3.7', 'GLM 5.1', 'Sonnet 4.6', 'Kimi K2.6', 'MiMo v2.5', 'Grok 4.3'],
+        axisLabel: { color: '#cdd6f4', fontSize: 10, interval: 0, rotate: 15 }
+      },
+      yAxis: { type: 'value', axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, max: 25 },
+      series: [{
+        name: '整体通过率 %',
+        type: 'bar',
+        data: [21.1, 20.5, 15.1, 14.1, 14.1, 12.4, 11.8, 11.5, 9.9, 9.2, 8.6, 4.3],
+        itemStyle: {
+          color: function(params) {
+            const colors = ['#89b4fa', '#89b4fa', '#a6e3a1', '#f38ba8', '#a6e3a1', '#cba6f7', '#fab387', '#fab387', '#a6e3a1', '#fab387', '#fab387', '#f38ba8'];
+            return colors[params.dataIndex];
+          }
+        },
+        label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 10, formatter: '{c}%' }
+      }]
+    });
+  </script>
+
+  <h3>ALE-CLI 子基准：与 Terminal-Bench 对比</h3>
+  <p>ALE-CLI 是 ALE 中仅含 Linux 任务的子集（105 个任务），可与 Terminal-Bench 进行比较：</p>
+  <table>
+    <tr>
+      <th>系统</th>
+      <th>Terminal-Bench 通过率</th>
+      <th>ALE-CLI 整体通过率</th>
+      <th>ALE-CLI Near-Term</th>
+      <th>ALE-CLI Last-Exam</th>
+    </tr>
+    <tr>
+      <td>Codex (GPT-5.5)</td>
+      <td><strong>82%</strong></td>
+      <td>23.3%</td>
+      <td>37.2%</td>
+      <td>0.0%</td>
+    </tr>
+    <tr>
+      <td>Claude Code (Sonnet 4.6)</td>
+      <td>—</td>
+      <td>16.7%</td>
+      <td>24.5%</td>
+      <td>0.0%</td>
+    </tr>
+    <tr>
+      <td>ForgeCode (Sonnet 4.6)</td>
+      <td>—</td>
+      <td>13.3%</td>
+      <td>22.0%</td>
+      <td>0.0%</td>
+    </tr>
+  </table>
+  <p>Codex 在 Terminal-Bench 上达到 82%，但在 ALE-CLI 上仅有 23.3%，且在 Last-Exam 层级得分为 0%，充分说明 ALE 任务的实质性难度远超现有 CLI 基准。</p>
+
+  <h3>与人类专家对比</h3>
+  <p>ALE 的任务来自专家实际完成的项目，通常需要专家花费<strong>数天至数周</strong>才能完成。当前最强 Agent 配置（Codex + GPT-5.5）在整体通过率上约为 24%，而在 Last-Exam 层级仅约 23%（部分任务得分），完整通过率接近 0%。这意味着：</p>
+  <blockquote>
+    当前最先进的 AI Agent 系统，在完成真实专业工作流方面，仍远未达到可替代人类专家的水平。
+  </blockquote>
+
+  <!-- ===== 关键发现与分析 ===== -->
+  <h2>关键发现与分析</h2>
+
+  <h3>失败模式分类</h3>
+  <p>对 Claude Code + Opus 4.7 失败任务的分类分析揭示了两级失败分类体系：</p>
+
+  <div id="chart-failure" class="echarts-container" style="height:320px"></div>
+  <script>
+    var chart = echarts.init(document.getElementById('chart-failure'));
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '失败根因分类（Claude Code + Opus 4.7）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+      tooltip: { trigger: 'item', formatter: '{b}: {c}%' },
+      series: [
+        {
+          name: '一级分类',
+          type: 'pie',
+          radius: ['20%', '40%'],
+          center: ['30%', '55%'],
+          data: [
+            { value: 31, name: '理解失败\nUnderstanding', itemStyle: { color: '#f38ba8' } },
+            { value: 47, name: '方法失败\nApproach', itemStyle: { color: '#fab387' } },
+            { value: 22, name: '执行失败\nExecution', itemStyle: { color: '#a6e3a1' } }
+          ],
+          label: { color: '#cdd6f4', fontSize: 11 }
+        },
+        {
+          name: '二级分类',
+          type: 'pie',
+          radius: ['50%', '70%'],
+          center: ['30%', '55%'],
+          data: [
+            { value: 25, name: '领域知识缺失', itemStyle: { color: '#f38ba8' } },
+            { value: 6, name: '幻觉', itemStyle: { color: '#eba0ac' } },
+            { value: 30, name: '错误策略', itemStyle: { color: '#fab387' } },
+            { value: 17, name: '实现不完整', itemStyle: { color: '#f9e2af' } },
+            { value: 8, name: '实现 Bug', itemStyle: { color: '#a6e3a1' } },
+            { value: 10, name: '格式错误', itemStyle: { color: '#94e2d5' } },
+            { value: 4, name: 'GUI 失败', itemStyle: { color: '#89dceb' } }
+          ],
+          label: { color: '#cdd6f4', fontSize: 10 }
+        }
+      ]
+    });
+    var chart2 = echarts.init(document.getElementById('chart-failure-bar'));
+    chart2.setOption({
+      backgroundColor: '#2a2a3e',
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'value', axisLabel: { color: '#cdd6f4', formatter: '{value}%' } },
+      yAxis: { type: 'category', data: ['GUI 失败', '格式错误', '实现 Bug', '实现不完整', '错误策略', '幻觉', '领域知识缺失'], axisLabel: { color: '#cdd6f4' } },
+      series: [{ type: 'bar', data: [4, 10, 8, 17, 30, 6, 25], itemStyle: { color: '#89b4fa' } }]
+    });
+  </script>
+  <div id="chart-failure-bar" class="echarts-container" style="height:280px; margin-top:0;"></div>
+
+  <div class="failure-grid">
+    <div class="failure-item">
+      <h4>理解失败（31%）</h4>
+      <p>Agent 无法正确理解任务要求，主要由<strong>领域知识缺失</strong>（25%）和<strong>幻觉</strong>（6%）导致。缺乏专业领域知识的 Agent 会默认使用临时脚本，而非预期的专业软件。</p>
+    </div>
+    <div class="failure-item">
+      <h4>方法失败（47%）</h4>
+      <p>Agent 理解了任务但选择了错误的解决策略，包括<strong>错误策略</strong>（30%）和<strong>实现不完整</strong>（17%）。这是最主要的失败类别，反映了专业工作流中规划能力的不足。</p>
+    </div>
+    <div class="failure-item">
+      <h4>执行失败（22%）</h4>
+      <p>策略正确但执行出错，包括<strong>实现 Bug</strong>（8%）、<strong>格式错误</strong>（10%）和<strong>GUI 失败</strong>（4%）。GUI 失败率相对较低，但考虑到 34% 的任务以图形软件为主要工具，实际 GUI 能力利用率严重不足。</p>
+    </div>
+    <div class="failure-item">
+      <h4>GUI 能力利用不足</h4>
+      <p>34% 的公开任务实例将图形软件作为主要工具，但在大多数配置中，GUI 使用占比仍然偏小——Agent 倾向于通过 Bash/CLI 替代方式执行 GUI 任务，导致专业软件功能无法充分利用。</p>
+    </div>
+  </div>
+
+  <h3>模型 vs. Harness 效应</h3>
+  <p>附录 D.4 的分析发现：在工程化良好的系统中，<strong>基础模型的选择对性能差异的影响约为 Agent Harness 选择的 3 倍</strong>。这意味着提升基础模型能力比优化 Harness 架构更为关键。</p>
+
+  <h3>资源消耗与性能关系</h3>
+  <p>成本、时间和 Token 效率分析（附录 D.5）显示：<strong>更高的资源消耗并不可靠地转化为更好的性能</strong>。例如，Claude Code + Opus 4.7 在 Full-Spectrum 层级的成本高达 $496，但整体通过率仅为 13.2%，而 ALE-Claw + GPT-5.5 以 $148 的成本实现了 23.0% 的整体通过率。</p>
+
+  <h3>典型任务案例分析</h3>
+  <p>以下三个任务卡片展示了不同失败模式：</p>
+
+  <div class="highlight-box">
+    <h4>任务卡 1：注塑模流分析（部分通过，得分 0.476）</h4>
+    <p><span class="tag">制造业</span><span class="tag orange">Moldex3D CAE</span></p>
+    <p>Agent 成功进入正确的 Moldex3D 设置工作流并提交了 results.json，但得分仅为 0.476，因为提交的指标并非从完成的求解器输出中可靠提取，部分值是估算而非实测的 CAE 结果。<strong>失败根因</strong>：成功的 GUI 设置不足以完成任务，还需要等待结果文件、检查/导出求解器数据，再填充 JSON。</p>
+  </div>
+
+  <div class="highlight-box">
+    <h4>任务卡 2：管弦乐音乐转录（完全失败，得分 0.000）</h4>
+    <p><span class="tag purple">音频制作</span><span class="tag orange">Dorico</span></p>
+    <p>Agent 找到了匹配的 Dorico 项目并导出了 transcription.mid，但未确认 transcription.pdf 和 overview.png。由于评分硬门控要求完整的乐谱/MIDI/截图包，在音乐准确性评估之前即触发零分。<strong>失败根因</strong>：部分工具使用未能可靠地交付多制品，创意生产任务需要完整的制品包。</p>
+  </div>
+
+  <div class="highlight-box">
+    <h4>任务卡 3：基于参考的色度键合成（完全失败，得分 0.000）</h4>
+    <p><span class="tag green">视觉特效</span><span class="tag orange">DaVinci Resolve</span></p>
+    <p>Agent 使用了 Resolve 并导出了 MP4，但输出未满足基于参考的色度键变换要求——将一个看似合理的"鸟在天空上"片段作为目标，而非保留参考材料中预期的前景/背景关系。<strong>失败根因</strong>：错误在于视觉任务理解，而非软件操作本身。</p>
+  </div>
+
+  <!-- ===== 局限性 ===== -->
+  <h2>局限性</h2>
+
+  <ul>
+    <li><strong>非物理行业偏向</strong>：ALE 明确排除了核心工作无法数字化的行业（如体力劳动、现场操作），这在设计上是合理的，但限制了对整个经济体的覆盖</li>
+    <li><strong>任务实例规模</strong>：尽管 1,490 个实例在规模上已属大型基准，但每个子领域的覆盖密度仍然有限（平均约 27 个），可能无法代表各子领域的全部工作流多样性</li>
+    <li><strong>评估成本高昂</strong>：单次 Agent 运行平均成本 $3-10，耗时数十分钟至数小时，全量评估成本极高，限制了快速迭代</li>
+    <li><strong>Windows 任务支持有限</strong>：当前可运行任务实例以 Linux 为主，Windows 环境支持仍在扩展中</li>
+    <li><strong>基准污染风险</strong>：尽管采取了公私分离策略，但随着基准影响力增大，未来仍可能面临针对性优化的风险</li>
+    <li><strong>验证边界</strong>：部分创意性任务（视频、渲染场景等）仍需依赖 LLM 评判，尽管已尽量采用窄范围探针，但这仍引入了一定的主观性</li>
+    <li><strong>专家偏差</strong>：任务来自特定专家群体（主要为学术界和部分工业界），可能无法完整代表所有行业的工作实践</li>
+    <li><strong>时效性</strong>：作为"活体基准"，任务池持续变化，不同时期的评估结果可能难以直接比较</li>
+  </ul>
+
+  <!-- ===== 总结与启发 ===== -->
+  <h2>总结与启发</h2>
+
+  <h3>核心贡献总结</h3>
+  <p>ALE 在 AI 评估领域做出了三项核心贡献：</p>
+  <ol>
+    <li><strong>首次全覆盖的职业锚定分类体系</strong>：以 SOC 2018/O*NET 为骨架，构建了覆盖全部 55 个非物理行业子领域的任务分类，填补了现有 16 个主流基准联合仍留下的 13 个子领域空白</li>
+    <li><strong>真实专业工作流 + 自动化验证的结合</strong>：首次在大规模基准中同时实现"任务来自专家真实项目"和"无需人工评判的自动化验证"，解决了此前经济价值导向基准（GDPval、RLI）依赖昂贵人工评判的瓶颈</li>
+    <li><strong>清醒的能力边界揭示</strong>：在当前最强配置（Codex + GPT-5.5）已能在 Terminal-Bench 达到 82% 的情况下，ALE Last-Exam 层级的 0% 通过率提供了一个客观、可量化的能力边界标尺</li>
+  </ol>
+
+  <h3>对 AI 研究的深层启示</h3>
+
+  <p><strong>1. 基准选择塑造研究方向——需要更审慎地选择"下一个 ImageNet"</strong></p>
+  <p>ALE 的核心洞见之一是：AI 进步在很大程度上由基准所塑造。ImageNet 推动了计算机视觉的爆发；SWE-bench 推动了代码修复能力的快速提升。ALE 试图为专业工作流领域扮演类似角色。然而，这也意味着一旦 ALE 被广泛采用，研究资源将集中流向其覆盖的特定任务类型，可能在无意中忽视其未覆盖的能力维度。</p>
+
+  <p><strong>2. 领域知识是当前最大瓶颈，而非执行能力</strong></p>
+  <p>失败分析显示，理解+方法失败合计占约 78%，而执行失败仅占 22%。这意味着当前 AI 系统的核心短板不是"如何操作软件"，而是"是否具备足够的专业领域知识来制定正确策略"。这对训练数据的构成、领域专家知识的注入方式提出了新的挑战——仅靠扩大通用预训练数据规模，可能难以解决这一问题。</p>
+
+  <p><strong>3. GUI 能力的系统性低估与低利用</strong></p>
+  <p>尽管 34% 的任务以图形软件为主要工具，但 Agent 在实际执行中大量绕过 GUI，转而使用 CLI/脚本替代。这一现象揭示了当前 Agent 设计的一个深层问题：<strong>GUI 能力虽已集成，但 Agent 尚未学会"何时应该使用 GUI"</strong>。专业软件的核心价值往往体现在其 GUI 工作流的精密设计中，绕过 GUI 意味着绕过了专业工具的核心功能。</p>
+
+  <p><strong>4. 模型能力 vs. Harness 设计的权重</strong></p>
+  <p>基础模型的选择对性能差异的影响约为 Harness 设计的 3 倍，这为研究资源分配提供了重要参考：在当前阶段，提升基础模型的专业领域能力比精心设计 Agent Harness 架构更具杠杆效应。但这并不意味着 Harness 不重要——在相同模型下，不同 Harness 之间仍有显著差异。</p>
+
+  <p><strong>5. "活体基准"理念的重要性与挑战</strong></p>
+  <p>ALE 的滚动评估设计是对抗基准饱和与污染的重要机制。随着 AI 能力的快速提升，静态基准往往在发布后数月内即被饱和（如 HumanEval、MMLU）。ALE 的持续扩充机制试图保持评估的长期有效性，但这也带来了可比性挑战：如何确保不同时期的评估结果具有可比性，需要更精细的版本控制与统计方法。</p>
+
+  <p><strong>6. 经济影响导向评估的范式转变意义</strong></p>
+  <p>ALE 最深层的贡献，是将 AI 评估的终极目标从"在测试上表现优秀"重新锚定到"能否产生实际经济价值"。这一范式转变要求研究社区重新思考：什么样的能力提升真正重要？如何设计能够指导实际部署决策的评估体系？如果 AI 系统真的能够通过这场"最后的考试"，那将不仅仅是一个基准上的成就，而是 AI 大规模进入专业劳动力市场的真实信号。</p>
+
+  <div class="highlight-box">
+    <h4>一句话核心洞见</h4>
+    <p>ALE 用数据告诉我们：当前最强的 AI Agent，在真实专业工作中距离"可用"还有相当距离——不是因为它不会操作软件，而是因为它不具备足够的专业判断力来制定正确的工作策略。这是基础模型能力的问题，也是训练数据分布的问题，更是整个 AI 研究社区需要正视的"最后一公里"挑战。</p>
+  </div>
+
+  <!-- ===== 参考文献 ===== -->
+  <h2>参考文献</h2>
+  <ol style="font-size:0.88em; line-height:1.7;">
+    <li>Yiyou Sun et al. Agents' Last Exam (ALE). arXiv:2606.05405, 2026. <a href="https://arxiv.org/abs/2606.05405" target="_blank">arxiv.org/abs/2606.05405</a></li>
+    <li>Anthropic. Claude Code: An Agentic Coding Tool. <a href="https://docs.anthropic.com/en/docs/claude-code" target="_blank">docs.anthropic.com</a>, 2025.</li>
+    <li>OpenAI. Codex: A Cloud-Based Software Engineering Agent. 2025.</li>
+    <li>Carlos E. Jimenez et al. SWE-bench: Can Language Models Resolve Real-World GitHub Issues? ICLR 2024.</li>
+    <li>Tianbao Xie et al. OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments. NeurIPS 2024.</li>
+    <li>Grégoire Mialon et al. GAIA: A Benchmark for General AI Assistants. ICLR 2024.</li>
+    <li>Mike A. Merrill et al. Terminal-Bench: Benchmarking Agents on Hard, Realistic Tasks in Command Line Interfaces. ICLR 2026.</li>
+    <li>Tejal Patwardhan et al. GDPval: Evaluating AI Model Performance on Real-World Economically Valuable Tasks. 2025.</li>
+    <li>Mantas Mazeika et al. Remote Labor Index: Measuring AI Automation of Remote Work. 2025.</li>
+    <li>Dan Hendrycks et al. Measuring Massive Multitask Language Understanding. ICLR 2021.</li>
+    <li>David Rein et al. GPQA: A Graduate-Level Google-Proof Q&amp;A Benchmark. 2023.</li>
+    <li>Long Phan et al. A Benchmark of Expert-Level Academic Questions to Assess AI Capabilities (HLE). Nature, 2026.</li>
+    <li>Shunyu Yao et al. ReAct: Synergizing Reasoning and Acting in Language Models. ICLR 2023.</li>
+    <li>John Yang et al. SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering. NeurIPS 2024.</li>
+    <li>N.G. Peterson et al. Understanding Work Using the Occupational Information Network (O*NET). Personnel Psychology, 2001.</li>
+    <li>U.S. Bureau of Labor Statistics. 2018 Standard Occupational Classification Definitions. 2018.</li>
+    <li>Xingyao Wang et al. OpenHands: An Open Platform for AI Software Developers as Generalist Agents. ICLR 2025.</li>
+    <li>Shuyan Zhou et al. WebArena: A Realistic Web Environment for Building Autonomous Agents. ICLR 2024.</li>
+  </ol>
+
+  <hr>
+  <p style="color:#6c7086; font-size:0.82em; text-align:center;">
+    报告生成时间：2026-06-12 · 基于 arXiv:2606.05405 · UC Berkeley RDI
+  </p>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 's' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const l = toc.querySelector('a[href="#' + e.target.id + '"]');
+      if (l) l.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+</script>
+</body>
+</html>

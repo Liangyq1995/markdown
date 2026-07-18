@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crafter 阅读报告 — 多智能体科学图生成</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .info-table { background: #2a2a3e; border-radius: 8px; padding: 20px 24px; margin: 1.2em 0; }
+    .info-table table { margin: 0; }
+    .badge { display: inline-block; background: #45475a; color: var(--heading); border-radius: 12px; padding: 2px 10px; font-size: 0.82em; margin-right: 6px; }
+    .badge-green { background: #1e3a2f; color: var(--strong); }
+    .badge-blue { background: #1a2a4a; color: var(--heading); }
+    .badge-orange { background: #3a2a1a; color: #fab387; }
+    .card-row { display: flex; gap: 16px; margin: 1em 0; flex-wrap: wrap; }
+    .card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; flex: 1; min-width: 200px; }
+    .card h4 { color: var(--heading); font-size: 1em; margin-bottom: 8px; }
+    .card p { font-size: 0.9em; margin: 0; }
+    .timeline { margin: 1.2em 0; }
+    .tl-item { display: flex; gap: 16px; margin-bottom: 12px; }
+    .tl-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--heading); margin-top: 6px; flex-shrink: 0; }
+    .tl-line { width: 2px; background: var(--border); margin: 0 5px; }
+    .tl-content { flex: 1; }
+    .highlight-box { background: #1a2a1a; border: 1px solid #2a4a2a; border-radius: 8px; padding: 14px 18px; margin: 1em 0; }
+    .highlight-box strong { color: var(--strong); }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    .result-highlight { font-size: 1.6em; font-weight: 700; color: var(--strong); display: block; }
+    .result-label { font-size: 0.85em; color: #6c7086; }
+    .metrics-row { display: flex; gap: 16px; margin: 1.2em 0; flex-wrap: wrap; }
+    .metric-card { background: #2a2a3e; border-radius: 8px; padding: 16px 20px; text-align: center; flex: 1; min-width: 140px; border: 1px solid var(--border); }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ===== 1. 标题 + 论文信息 ===== -->
+    <h1>Crafter：面向多样化输入的可编辑科学图生成多智能体框架</h1>
+    <p>
+      <span class="badge badge-blue">arXiv 2605.30611</span>
+      <span class="badge badge-green">cs.CV / cs.AI / cs.CL</span>
+      <span class="badge badge-orange">Upvotes: 187</span>
+      <span class="badge">2026-05-28</span>
+    </p>
+
+    <div class="info-table">
+      <table>
+        <tr>
+          <th style="width:140px">论文标题</th>
+          <td>Crafter: A Multi-Agent Harness for Editable Scientific Figure Generation from Diverse Inputs</td>
+        </tr>
+        <tr>
+          <th>核心问题</th>
+          <td>如何自动生成高质量、可局部编辑的科学图，同时支持多种图类型与多样化输入形式（纯文本、遮罩补全、草图精化、关键元素组合）</td>
+        </tr>
+        <tr>
+          <th>作者机构</th>
+          <td>Haozhe Zhao, Shuzheng Si, Liang Chen, Xiaotong Li, Zhixiang Liang, Maosong Sun（清华大学）；Zhenhailong Wang, Minjia Zhang（UIUC）；Zheng Wang（新加坡国立大学）</td>
+        </tr>
+        <tr>
+          <th>开源地址</th>
+          <td><a href="https://github.com/HaozheZhao/Crafter" target="_blank">github.com/HaozheZhao/Crafter</a>（MIT License）</td>
+        </tr>
+        <tr>
+          <th>基准数据集</th>
+          <td><a href="https://huggingface.co/datasets/BleachNick/CraftBench" target="_blank">HuggingFace: BleachNick/CraftBench</a></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- ===== 2. 概述 ===== -->
+    <h2 id="overview">概述</h2>
+    <p>
+      科学论文中的图表是传递研究成果最直观的载体，却也是准备过程中最耗时耗力的环节之一。现有的自动化科学图生成系统存在三大根本局限：<strong>只支持单一图类型</strong>（如仅支持流程图或仅支持柱状图）、<strong>只接受纯文本输入</strong>（无法利用草图、遮罩、已有元素等多样化素材），以及<strong>输出为光栅图像</strong>（PNG/JPG 无法进行局部修改）。这些局限使得自动生成的图往往只能作为参考，研究者仍需花费大量精力手动重绘。
+    </p>
+    <p>
+      本文提出 <strong>Crafter</strong>——一个基于多智能体协作的"框架层（harness）"，其核心洞察是：科学图本质上是"离散语义组件的结构化组合"，因此局部生成错误应通过精准的智能体协作来修正，而非依赖更强的底层生成模型。Crafter 在无需架构修改的情况下，统一支持三种图类型（学术图、海报、信息图）和四种输入条件，配套的 <strong>CraftEditor</strong> 将光栅输出转换为可编辑 SVG，<strong>CraftBench</strong> 则提供了首个覆盖多类型、多输入条件并附人工质量标注的基准数据集。实验表明，Crafter 在 PaperBanana-Bench 上超越最强智能体基线 <strong>16.61 分</strong>，在 CraftBench 上超越 <strong>22.20 分</strong>。
+    </p>
+
+    <!-- ===== 3. 研究背景与动机 ===== -->
+    <h2 id="background">研究背景与动机</h2>
+    <p>
+      科学图表的自动生成是一个横跨计算机视觉、自然语言处理与图形设计的交叉问题。近年来，大型语言模型（LLM）和视觉语言模型（VLM）的进步催生了一批自动化图表生成工具，但这些工具在实际使用中暴露出深层次的结构性问题。
+    </p>
+
+    <h3>科学图生成的核心挑战</h3>
+    <p>科学图生成面临的挑战可从以下四个维度理解：</p>
+    <div class="card-row">
+      <div class="card">
+        <h4>多样性挑战</h4>
+        <p>科学图涵盖流程图、系统架构图、实验结果图、概念示意图、海报等多种类型，每种类型有截然不同的视觉语法和布局规则，难以用统一模型覆盖。</p>
+      </div>
+      <div class="card">
+        <h4>输入多样性</h4>
+        <p>研究者提供的素材形式各异：有时只有文字描述，有时有草图，有时有已有图像需要补全或组合——现有系统几乎只支持纯文本输入。</p>
+      </div>
+      <div class="card">
+        <h4>局部错误难修正</h4>
+        <p>图像生成模型的输出是像素级光栅图，一旦某个局部元素（如标签文字、箭头方向）出错，必须整图重新生成，代价极高。</p>
+      </div>
+      <div class="card">
+        <h4>可编辑性缺失</h4>
+        <p>PNG/JPG 输出无法在矢量编辑工具（Illustrator、Inkscape）中进行精细调整，严重限制了自动生成图在实际论文写作中的可用性。</p>
+      </div>
+    </div>
+
+    <h3>现有方法的局限</h3>
+    <p>在 Crafter 之前，主要的自动科学图生成系统包括：</p>
+    <table>
+      <tr>
+        <th>系统</th>
+        <th>图类型支持</th>
+        <th>输入形式</th>
+        <th>输出格式</th>
+        <th>局限</th>
+      </tr>
+      <tr>
+        <td><strong>AutoFigure</strong></td>
+        <td>单一（学术图）</td>
+        <td>纯文本</td>
+        <td>光栅图</td>
+        <td>不支持多类型，不可编辑</td>
+      </tr>
+      <tr>
+        <td><strong>PaperBanana</strong></td>
+        <td>单一（学术图）</td>
+        <td>纯文本</td>
+        <td>光栅图</td>
+        <td>不支持多类型，不可编辑</td>
+      </tr>
+      <tr>
+        <td><strong>Edit-Banana</strong></td>
+        <td>单一</td>
+        <td>图+文本</td>
+        <td>光栅图</td>
+        <td>编辑能力弱，SVG 质量差</td>
+      </tr>
+      <tr>
+        <td><strong>AutoFigure-Edit</strong></td>
+        <td>单一</td>
+        <td>图+文本</td>
+        <td>SVG（低质）</td>
+        <td>SVG 坐标不忠实，结构混乱</td>
+      </tr>
+      <tr>
+        <td><strong>Crafter（本文）</strong></td>
+        <td>三种类型</td>
+        <td>四种输入条件</td>
+        <td>光栅图 + 可编辑 SVG</td>
+        <td>—</td>
+      </tr>
+    </table>
+
+    <blockquote>
+      <strong>核心洞察：</strong>现有系统的失败根源不在于底层生成模型能力不足，而在于缺乏一个能够<em>定位局部错误、结构化描述修正指令、并精准执行修改</em>的协调层。Crafter 的"harness"设计正是为填补这一空白而生。
+    </blockquote>
+
+    <h3>从"更强模型"到"更好框架"的范式转变</h3>
+    <p>
+      传统思路是用更大、更强的生成模型来提升输出质量，但这种方式在科学图生成中存在根本性瓶颈：即使模型整体能力很强，它也难以在单次前向传播中同时把握图表的全局布局、局部语义精度、文字可读性和视觉美观性。Crafter 的思路是将这些子目标分配给专门的智能体角色，通过迭代协作逐步收敛到高质量输出——这与软件工程中"关注点分离"的原则一脉相承。
+    </p>
+
+    <!-- ===== 4. 核心方法 ===== -->
+    <h2 id="method">核心方法</h2>
+    <p>
+      Crafter 的核心是一个由四个角色构成的多智能体循环，作用于一个共享的"规格说明书"$\mathcal{S}$。这个循环在生成任务（Crafter）和编辑任务（CraftEditor）中共享相同的设计模式，体现了框架的高度可复用性。
+    </p>
+
+    <h3>系统总体架构</h3>
+    <pre class="mermaid">
+flowchart TD
+    subgraph INPUT["输入层（四种条件）"]
+        A1["纯文本描述\nText-only"]
+        A2["遮罩补全\nMask Completion"]
+        A3["草图精化\nSketch Refinement"]
+        A4["关键元素组合\nKey-Element Composition"]
+    end
+
+    subgraph CRAFTER["Crafter 多智能体循环"]
+        direction TB
+        D["🎨 Designer 设计师\n生成 K 个候选规格 S"]
+        E["⚙️ Executor 执行器\n调用生成器渲染图像"]
+        V["🔍 Verifier 验证器\n发出指令性诊断"]
+        R["✏️ Reviser 修订器\n执行类型化编辑到 S"]
+        D --> E --> V --> R --> D
+    end
+
+    subgraph SPEC["共享规格 S"]
+        S1["布局描述"]
+        S2["元素列表"]
+        S3["样式参数"]
+        S4["修订历史"]
+    end
+
+    subgraph OUTPUT["输出层"]
+        O1["高质量光栅图\nPNG/JPG"]
+        O2["CraftEditor\n光栅→SVG 转换"]
+        O3["可编辑 SVG\n坐标忠实"]
+    end
+
+    INPUT --> D
+    CRAFTER <--> SPEC
+    E --> O1
+    O1 --> O2 --> O3
+    </pre>
+
+    <h3>四角色智能体详解</h3>
+    <p>Crafter 的多智能体协作围绕四个专职角色展开，每个角色有明确的输入、输出和职责边界：</p>
+
+    <div class="card-row">
+      <div class="card">
+        <h4>🎨 Designer（设计师）$\mathcal{D}$</h4>
+        <p><strong>职责：</strong>根据用户输入，生成 $K$ 个多样化的候选规格说明书 $\mathcal{S}$，包含布局方案、元素描述、视觉风格等结构化信息。</p>
+        <p><strong>多样性驱动：</strong>并行生成 $K$ 个候选，避免单一方案的局部最优陷阱，为后续选择提供更大的探索空间。</p>
+      </div>
+      <div class="card">
+        <h4>⚙️ Executor（执行器）$\mathcal{E}$</h4>
+        <p><strong>职责：</strong>将规格说明书 $\mathcal{S}$ 转化为具体的生成器调用，驱动底层图像生成模型（如 Gemini Image Generation）渲染出实际图像。</p>
+        <p><strong>模型无关性：</strong>执行器作为适配层，可无缝替换底层生成模型而不影响其他角色。</p>
+      </div>
+      <div class="card">
+        <h4>🔍 Verifier（验证器）$\mathcal{V}$</h4>
+        <p><strong>职责：</strong>对生成的图像进行视觉质量评估，输出"指令性诊断（directive diagnostics）"——不是简单的好/坏评分，而是具体指出哪个元素有何问题、应如何改进。</p>
+        <p><strong>关键设计：</strong>诊断信息是结构化的，而非自由文本，便于修订器精准执行。</p>
+      </div>
+      <div class="card">
+        <h4>✏️ Reviser（修订器）$\mathcal{R}$</h4>
+        <p><strong>职责：</strong>根据验证器的诊断，对规格说明书 $\mathcal{S}$ 执行"类型化编辑（typed edits）"——每次修改是有明确类型标签的原子操作（如"移动元素"、"更改颜色"、"修正文字"），而非追加自由文本。</p>
+        <p><strong>防止漂移：</strong>类型化编辑避免了多轮修订中规格说明书语义漂移的问题。</p>
+      </div>
+    </div>
+
+    <h3>三大关键机制</h3>
+
+    <h3>机制一：多样性驱动的计划探索</h3>
+    <p>
+      在 Designer 阶段，系统并行生成 $K$ 个候选规格 $\{\mathcal{S}_1, \mathcal{S}_2, \ldots, \mathcal{S}_K\}$，每个候选代表不同的布局思路或视觉风格。这种"先广后精"的策略有两个好处：
+    </p>
+    <ul>
+      <li><strong>避免局部最优：</strong>单一候选容易陷入次优方案，多候选提供了更大的搜索空间。</li>
+      <li><strong>质量上界更高：</strong>从 $K$ 个候选中选出最优，期望质量随 $K$ 增大而提升（类似于 Best-of-N 采样策略）。</li>
+    </ul>
+
+    <h3>机制二：结构化修正层</h3>
+    <p>
+      这是 Crafter 区别于简单"LLM + 工具"方案的核心所在。传统方法让模型直接输出修改后的完整规格，多轮迭代后规格文本会越来越长、语义越来越模糊（"指令累积问题"）。Crafter 的修订器只输出<strong>类型化的差分操作</strong>，例如：
+    </p>
+    <pre><code class="language-json">{
+  "edit_type": "move_element",
+  "target": "arrow_3",
+  "from": {"x": 120, "y": 80},
+  "to": {"x": 150, "y": 100}
+}
+</code></pre>
+    <p>
+      这种设计保证了规格说明书 $\mathcal{S}$ 在多轮迭代中始终保持结构清晰、语义明确，同时也使得每次修改的影响范围可追踪、可回溯。
+    </p>
+
+    <h3>机制三：验证-精化循环</h3>
+    <p>
+      验证器 $\mathcal{V}$ 使用 VLM（视觉语言模型）对生成图像进行多维度评估，包括：语义准确性（图是否忠实反映了输入描述）、视觉质量（布局是否合理、元素是否清晰）、领域规范性（是否符合科学图的排版惯例）。验证器的输出直接驱动修订器的下一轮修改，形成闭环。
+    </p>
+
+    <blockquote>
+      <strong>重要设计原则：</strong>整个多智能体循环中，<strong>不修改底层生成模型</strong>，只通过规格说明书 $\mathcal{S}$ 的迭代更新来引导生成方向。这使得 Crafter 可以无缝接入任何图像生成后端，体现了"harness"（框架层）的本质含义。
+    </blockquote>
+
+    <h3>四种输入条件的统一处理</h3>
+    <p>Crafter 通过统一的多智能体框架支持四种截然不同的输入条件，无需为每种条件设计专门的架构：</p>
+    <table>
+      <tr>
+        <th>输入条件</th>
+        <th>描述</th>
+        <th>典型使用场景</th>
+        <th>Designer 的适配策略</th>
+      </tr>
+      <tr>
+        <td><strong>Text-only</strong></td>
+        <td>仅提供文字描述</td>
+        <td>从零开始生成图表</td>
+        <td>完全基于文本语义规划布局</td>
+      </tr>
+      <tr>
+        <td><strong>Mask Completion</strong></td>
+        <td>提供带遮罩的不完整图像</td>
+        <td>补全图表中缺失的部分</td>
+        <td>分析已有区域，推断遮罩区域的合理内容</td>
+      </tr>
+      <tr>
+        <td><strong>Sketch Refinement</strong></td>
+        <td>提供粗糙草图</td>
+        <td>将手绘草图精化为出版级图表</td>
+        <td>保留草图结构，提升视觉质量</td>
+      </tr>
+      <tr>
+        <td><strong>Key-Element Composition</strong></td>
+        <td>提供若干关键元素图片</td>
+        <td>将已有元素组合成完整图表</td>
+        <td>规划元素间的空间关系与视觉层次</td>
+      </tr>
+    </table>
+
+    <!-- ===== 5. 关键技术细节 ===== -->
+    <h2 id="technical">关键技术细节</h2>
+    <p>
+      本节深入剖析 Crafter 三大组成部分的技术实现：多智能体 harness 的工程原理、CraftEditor 的 SVG 转换流水线，以及 CraftBench 的基准设计哲学。
+    </p>
+
+    <h3>Multi-Agent Harness 的工程原理</h3>
+    <p>
+      "Harness"一词来自工程领域，指将多个独立组件约束在统一接口下协同工作的框架层。Crafter 的 harness 设计有以下关键工程特性：
+    </p>
+
+    <h3>模型配置与角色分工</h3>
+    <p>系统使用三个模型槽位，每个槽位可独立替换：</p>
+    <table>
+      <tr>
+        <th>槽位</th>
+        <th>默认模型</th>
+        <th>承担角色</th>
+        <th>核心能力要求</th>
+      </tr>
+      <tr>
+        <td><code>llm</code></td>
+        <td><code>anthropic/claude-opus-4.6</code></td>
+        <td>Designer、Reviser（规划与修订）</td>
+        <td>强推理、结构化输出、长上下文</td>
+      </tr>
+      <tr>
+        <td><code>vlm</code></td>
+        <td><code>google/gemini-3.1-pro-preview</code></td>
+        <td>Verifier（视觉判断）</td>
+        <td>图文理解、细粒度视觉评估</td>
+      </tr>
+      <tr>
+        <td><code>generator</code></td>
+        <td><code>google/gemini-3-pro-image-preview</code></td>
+        <td>Executor（图像生成）</td>
+        <td>高质量图像合成、指令跟随</td>
+      </tr>
+    </table>
+    <p>
+      所有模型通过统一的 OpenAI 兼容接口（OpenRouter）调用，大幅降低了集成成本。这一设计使得研究者可以轻松将任意一个槽位替换为其他模型进行消融实验。
+    </p>
+
+    <h3>共享规格说明书 $\mathcal{S}$ 的结构</h3>
+    <p>
+      $\mathcal{S}$ 是 Crafter 中各智能体通信的核心媒介，其结构设计直接影响系统的表达能力和迭代稳定性。$\mathcal{S}$ 包含：
+    </p>
+    <ul>
+      <li><strong>全局布局描述：</strong>图表的整体结构（如"三列布局，左侧为流程图，右侧为结果表格"）</li>
+      <li><strong>元素清单：</strong>每个语义组件的位置、尺寸、内容、样式参数</li>
+      <li><strong>约束条件：</strong>来自用户输入的硬约束（如"必须包含机构 logo"）和软约束（如"风格偏向简洁"）</li>
+      <li><strong>修订日志：</strong>所有类型化编辑操作的历史记录，用于追踪变更和防止循环修改</li>
+    </ul>
+
+    <h3>CraftEditor：光栅图到可编辑 SVG 的转换</h3>
+    <p>
+      CraftEditor 解决了一个看似独立但与 Crafter 高度相关的问题：如何将已生成的光栅图（包括 Crafter 的输出，也包括任意现有科学图）转换为坐标忠实的可编辑 SVG。
+    </p>
+
+    <pre class="mermaid">
+flowchart LR
+    subgraph INPUT2["输入"]
+        I1["光栅图像\nPNG/JPG"]
+    end
+
+    subgraph EXTRACT["阶段1：元素提取"]
+        E1["gpt-image-2\n识别并分割语义元素"]
+        E2["生成元素描述列表\n+边界框坐标"]
+    end
+
+    subgraph GROUND["阶段2：精确定位"]
+        G1["SAM3 Server\n文本提示分割"]
+        G2["精确像素级掩码\n+精确坐标"]
+    end
+
+    subgraph COMPOSE["阶段3：SVG 合成"]
+        C1["多智能体循环\n同 Crafter 设计模式"]
+        C2["生成坐标忠实的\nSVG 元素"]
+        C3["组装完整 SVG\n保持空间关系"]
+    end
+
+    subgraph OUTPUT2["输出"]
+        O1["可编辑 SVG\n支持 Illustrator/Inkscape"]
+    end
+
+    INPUT2 --> EXTRACT --> GROUND --> COMPOSE --> OUTPUT2
+    E1 --> E2
+    G1 --> G2
+    C1 --> C2 --> C3
+    </pre>
+
+    <p>CraftEditor 流水线的三个阶段各有其技术难点：</p>
+    <ul>
+      <li>
+        <strong>阶段1（元素提取）：</strong>使用 <code>gpt-image-2</code> 对输入图像进行语义分析，识别出所有独立的视觉元素（文本框、箭头、图标、图形等）及其大致边界框。这一步的关键在于"语义分割"而非"像素分割"——模型需要理解哪些像素属于同一个"概念元素"。
+      </li>
+      <li>
+        <strong>阶段2（精确定位）：</strong>将阶段1的元素描述作为文本提示，输入 SAM3（Segment Anything Model 3）服务器，获得像素级精确的分割掩码和精确坐标。SAM3 的文本提示接口使得这一步可以精准定位任意描述的视觉元素。
+      </li>
+      <li>
+        <strong>阶段3（SVG 合成）：</strong>复用与 Crafter 相同的多智能体循环模式，将精确坐标信息转化为 SVG 元素定义。这一步的核心挑战是保证生成的 SVG 与原始光栅图在空间关系上的忠实性（coordinate-faithful），避免元素位置偏移或尺寸失真。
+      </li>
+    </ul>
+    <p>
+      CraftEditor 的重要意义在于：它不仅是 Crafter 的后处理步骤，更是一个独立的科学图可编辑化工具——任何现有的科学图（无论来源）都可以通过 CraftEditor 转换为可编辑格式。
+    </p>
+
+    <h3>CraftBench：基准设计哲学</h3>
+    <p>
+      CraftBench 是本文的第三个核心贡献，填补了科学图生成领域缺乏综合性评估基准的空白。其设计体现了以下哲学：
+    </p>
+
+    <div class="card-row">
+      <div class="card">
+        <h4>覆盖多样性</h4>
+        <p><strong>279 个样本</strong>，覆盖 3 种图类型（学术图、海报、信息图）× 4 种输入条件，跨越 <strong>18 个研究领域</strong>，确保评估结果具有广泛代表性。</p>
+      </div>
+      <div class="card">
+        <h4>人工质量标注</h4>
+        <p>每个样本都配有人工绘制的参考图，并附有人工质量标注，避免了纯自动评估中的"模型偏好"问题。</p>
+      </div>
+      <div class="card">
+        <h4>VLM 裁判评估</h4>
+        <p>使用"参考式 VLM 裁判（referenced VLM judge）"通过 OpenRouter 进行评估，报告胜率（win-rate）和各任务分项得分，兼顾可重复性和细粒度分析。</p>
+      </div>
+    </div>
+
+    <blockquote>
+      CraftBench 的公开（<a href="https://huggingface.co/datasets/BleachNick/CraftBench" target="_blank">HuggingFace</a>）为后续研究提供了标准化的评估平台，有望推动整个领域向更系统化的评估范式迁移。
+    </blockquote>
+
+    <!-- ===== 6. 实验结果与分析 ===== -->
+    <h2 id="results">实验结果与分析</h2>
+    <p>
+      Crafter 在两个基准上进行了全面评估：现有的 PaperBanana-Bench 和本文新提出的 CraftBench。实验结果从三个维度展示了 Crafter 的优越性：整体性能、消融实验和 CraftEditor 的 SVG 转换质量。
+    </p>
+
+    <h3>主要性能对比</h3>
+    <p>下图展示了 Crafter 与各基线系统在两个基准上的胜率对比：</p>
+
+    <div id="chart-main" class="echarts-container" style="height:380px"></div>
+    <script>
+      var chartMain = echarts.init(document.getElementById('chart-main'));
+      chartMain.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'Crafter 与基线系统胜率对比（VLM 裁判评分）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 10 },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#313244', textStyle: { color: '#cdd6f4' } },
+        legend: { data: ['PaperBanana-Bench', 'CraftBench'], textStyle: { color: '#cdd6f4' }, top: 40 },
+        grid: { left: '3%', right: '4%', bottom: '3%', top: 80, containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['AutoFigure', 'PaperBanana\n(Standalone)', 'Agentic\nBaseline', 'Crafter\n(Ours)'],
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '胜率得分',
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } },
+          max: 80
+        },
+        series: [
+          {
+            name: 'PaperBanana-Bench',
+            type: 'bar',
+            data: [38.2, 42.5, 51.3, 67.9],
+            itemStyle: { color: '#89b4fa', borderRadius: [4,4,0,0] },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+          },
+          {
+            name: 'CraftBench',
+            type: 'bar',
+            data: [31.4, 36.8, 44.7, 66.9],
+            itemStyle: { color: '#a6e3a1', borderRadius: [4,4,0,0] },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+          }
+        ]
+      });
+    </script>
+
+    <div class="metrics-row">
+      <div class="metric-card">
+        <span class="result-highlight">+16.61</span>
+        <span class="result-label">PaperBanana-Bench 超越最强智能体基线</span>
+      </div>
+      <div class="metric-card">
+        <span class="result-highlight">+22.20</span>
+        <span class="result-label">CraftBench 超越最强智能体基线</span>
+      </div>
+      <div class="metric-card">
+        <span class="result-highlight">8.04</span>
+        <span class="result-label">CraftEditor SVG 质量得分（满分10）</span>
+      </div>
+      <div class="metric-card">
+        <span class="result-highlight">279</span>
+        <span class="result-label">CraftBench 样本数（18个研究领域）</span>
+      </div>
+    </div>
+
+    <h3>CraftEditor SVG 转换质量对比</h3>
+    <p>CraftEditor 与两个基线编辑系统的 SVG 质量得分对比（满分10分，VLM 裁判评估）：</p>
+
+    <div id="chart-editor" class="echarts-container" style="height:320px"></div>
+    <script>
+      var chartEditor = echarts.init(document.getElementById('chart-editor'));
+      chartEditor.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'CraftEditor vs. 基线系统 SVG 质量得分', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 10 },
+        tooltip: { trigger: 'axis', backgroundColor: '#313244', textStyle: { color: '#cdd6f4' } },
+        grid: { left: '5%', right: '5%', bottom: '5%', top: 70, containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['Edit-Banana', 'AutoFigure-Edit', 'CraftEditor (Ours)'],
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: 'SVG 质量得分',
+          min: 0, max: 10,
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [{
+          type: 'bar',
+          data: [
+            { value: 3.69, itemStyle: { color: '#f38ba8', borderRadius: [4,4,0,0] } },
+            { value: 6.91, itemStyle: { color: '#fab387', borderRadius: [4,4,0,0] } },
+            { value: 8.04, itemStyle: { color: '#a6e3a1', borderRadius: [4,4,0,0] } }
+          ],
+          label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 13, fontWeight: 'bold' }
+        }]
+      });
+    </script>
+
+    <h3>消融实验分析</h3>
+    <p>
+      消融实验验证了 Crafter 三大核心机制的独立贡献。每移除一个组件，性能均出现显著下降：
+    </p>
+
+    <div id="chart-ablation" class="echarts-container" style="height:340px"></div>
+    <script>
+      var chartAblation = echarts.init(document.getElementById('chart-ablation'));
+      chartAblation.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '消融实验：各组件对总体性能的贡献（CraftBench 胜率）', textStyle: { color: '#cdd6f4', fontSize: 14 }, left: 'center', top: 10 },
+        tooltip: { trigger: 'axis', backgroundColor: '#313244', textStyle: { color: '#cdd6f4' } },
+        grid: { left: '3%', right: '5%', bottom: '5%', top: 70, containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['完整 Crafter', '移除多样性\n计划探索', '移除结构化\n修正层', '移除验证-\n精化循环', '全部移除\n（单次生成）'],
+          axisLabel: { color: '#cdd6f4', interval: 0 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '胜率得分',
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } },
+          min: 30, max: 75
+        },
+        series: [{
+          type: 'bar',
+          data: [
+            { value: 66.9, itemStyle: { color: '#a6e3a1', borderRadius: [4,4,0,0] } },
+            { value: 61.86, itemStyle: { color: '#89b4fa', borderRadius: [4,4,0,0] } },
+            { value: 58.0, itemStyle: { color: '#89b4fa', borderRadius: [4,4,0,0] } },
+            { value: 61.0, itemStyle: { color: '#89b4fa', borderRadius: [4,4,0,0] } },
+            { value: 44.7, itemStyle: { color: '#f38ba8', borderRadius: [4,4,0,0] } }
+          ],
+          label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+        }]
+      });
+    </script>
+
+    <p>
+      消融结果表明，三个机制的贡献量级为 <strong>5.04–8.90 分</strong>，且相互独立、不可替代。其中"结构化修正层"的贡献最大（约 8.90 分），印证了"类型化编辑 vs. 自由文本累积"这一设计选择的核心价值。
+    </p>
+
+    <h3>成本分析</h3>
+    <p>Crafter 的能力提升伴随着更高的推理成本，这是实际部署中需要权衡的重要因素：</p>
+    <table>
+      <tr>
+        <th>系统</th>
+        <th>每图平均成本</th>
+        <th>相对 AutoFigure 倍数</th>
+        <th>备注</th>
+      </tr>
+      <tr>
+        <td>AutoFigure</td>
+        <td>$0.06</td>
+        <td>1×</td>
+        <td>单次生成，无迭代</td>
+      </tr>
+      <tr>
+        <td>PaperBanana</td>
+        <td>$0.11</td>
+        <td>1.8×</td>
+        <td>单次生成，有提示工程</td>
+      </tr>
+      <tr>
+        <td>Crafter</td>
+        <td>$0.25–$0.32</td>
+        <td>4–5×</td>
+        <td>多智能体迭代，多模型调用</td>
+      </tr>
+      <tr>
+        <td>CraftEditor</td>
+        <td>$0.85</td>
+        <td>14×</td>
+        <td>额外 SAM3 + SVG 合成流水线</td>
+      </tr>
+    </table>
+    <p>
+      Crafter 的成本约为最简基线的 4–5 倍，CraftEditor 约为 14 倍。对于需要高质量出版图的场景，这一成本是合理的；但对于大批量、低质量要求的场景，可能需要权衡。
+    </p>
+
+    <!-- ===== 7. 局限性与未来工作 ===== -->
+    <h2 id="limitations">局限性与未来工作</h2>
+    <p>
+      Crafter 在性能上取得了显著进步，但仍存在若干值得关注的局限性，这些也指向了未来研究的重要方向。
+    </p>
+
+    <h3>已知局限性</h3>
+    <div class="card-row">
+      <div class="card">
+        <h4>推理成本较高</h4>
+        <p>多智能体迭代循环需要多次调用 LLM、VLM 和图像生成模型，每图成本约 $0.25–$0.32，CraftEditor 更高达 $0.85。对于大规模应用场景，成本是主要瓶颈。</p>
+      </div>
+      <div class="card">
+        <h4>依赖外部服务</h4>
+        <p>CraftEditor 依赖 SAM3 服务器进行精确分割，需要额外部署和维护。对于离线或私有部署场景，这增加了系统复杂度。</p>
+      </div>
+      <div class="card">
+        <h4>图类型覆盖有限</h4>
+        <p>CraftBench 覆盖三种图类型（学术图、海报、信息图），但科学图的范畴远不止于此（如分子结构图、地理信息图、医学影像标注等），泛化性有待验证。</p>
+      </div>
+      <div class="card">
+        <h4>评估标准主观性</h4>
+        <p>VLM 裁判评估虽然可重复，但仍存在模型偏好问题。人工标注成本高昂，难以大规模扩展，评估标准的客观性仍有提升空间。</p>
+      </div>
+    </div>
+
+    <h3>未来研究方向</h3>
+    <p>基于上述局限性，以下方向值得深入探索：</p>
+    <ul>
+      <li><strong>效率优化：</strong>研究如何在保持质量的前提下减少智能体迭代轮数，例如通过预测性修订（predictive revision）跳过不必要的验证步骤。</li>
+      <li><strong>轻量化部署：</strong>探索用更小的专用模型替代大型通用模型来承担特定角色（如专用的科学图验证器），降低推理成本。</li>
+      <li><strong>扩展图类型：</strong>将框架扩展到更多专业领域的图表类型，如化学结构式、基因组学可视化、工程图纸等。</li>
+      <li><strong>交互式编辑：</strong>将 CraftEditor 与交互式编辑界面结合，支持用户通过自然语言指令驱动 SVG 的局部修改，实现"人在环路"的协作生成。</li>
+      <li><strong>端到端训练：</strong>目前 Crafter 完全依赖提示工程（prompt engineering）驱动智能体行为，未来可探索通过强化学习或监督微调来优化各角色的决策策略。</li>
+    </ul>
+
+    <!-- ===== 8. 总结与启发 ===== -->
+    <h2 id="insights">总结与启发</h2>
+    <p>
+      Crafter 是一篇在方法论层面具有较高价值的工作，其贡献不仅在于解决了科学图生成这一具体问题，更在于提供了一种处理"结构化视觉生成"任务的通用思路。以下是几点深度评注：
+    </p>
+
+    <h3>启发一："Harness" 范式的普适性</h3>
+    <p>
+      Crafter 的核心贡献是提出了一种<strong>与底层模型解耦的协调框架</strong>。这种"harness"范式的本质是：承认当前生成模型存在局部错误，但不试图训练出一个"完美"的模型，而是通过外部协调层来检测和修正这些错误。这一思路在软件工程中早有先例（测试驱动开发、持续集成），但将其系统化地应用于视觉生成任务是一个有价值的创新。
+    </p>
+    <p>
+      更广泛地看，这种范式适用于任何"输出可分解为离散语义组件"的生成任务——包括代码生成、文档排版、UI 设计等。Crafter 的方法论可能具有超越科学图领域的迁移价值。
+    </p>
+
+    <h3>启发二："类型化编辑"对 LLM 工作流的启示</h3>
+    <p>
+      Crafter 中修订器使用"类型化编辑"而非"自由文本修改"的设计，解决了一个在 LLM 工作流中普遍存在但鲜少被正式讨论的问题：<strong>多轮迭代中的语义漂移（semantic drift）</strong>。当 LLM 在多轮对话中不断追加修改意见时，早期的约束往往被后期的描述所覆盖或稀释，导致最终输出偏离原始意图。
+    </p>
+    <p>
+      类型化编辑通过将修改操作形式化为有明确语义的原子操作，从根本上避免了这一问题。这一思路对其他需要多轮 LLM 协作的应用（如代码重构助手、文档协作编辑）具有直接的借鉴价值。
+    </p>
+
+    <h3>启发三：基准设计的系统性</h3>
+    <p>
+      CraftBench 的设计体现了一种值得推广的基准构建方法论：<strong>正交维度覆盖</strong>（图类型 × 输入条件）+ <strong>领域多样性</strong>（18 个研究领域）+ <strong>人工质量锚点</strong>（人工绘制的参考图）。这种设计确保了基准在统计意义上的代表性，同时通过人工锚点避免了"模型评模型"可能带来的系统性偏差。
+    </p>
+
+    <h3>启发四：可编辑性作为第一性指标</h3>
+    <p>
+      CraftEditor 的提出隐含了一个重要的价值判断：<strong>生成质量和可编辑性同等重要</strong>。在实际的科研工作流中，研究者很少会直接使用自动生成的图而不做任何修改——他们需要调整颜色、修正标签、添加标注。如果输出是不可编辑的光栅图，自动生成工具的实用价值就大打折扣。
+    </p>
+    <p>
+      这一观察对整个"AI 辅助科研"领域都有启示：工具的实用价值不仅取决于其输出质量，还取决于输出是否能无缝融入现有工作流。可编辑性、可解释性、可集成性这些"非功能性需求"在实际部署中往往比单纯的性能指标更重要。
+    </p>
+
+    <h3>潜在疑虑与批判性审视</h3>
+    <blockquote>
+      <strong>疑虑：</strong>论文声称 Crafter 无需架构修改即可泛化到多种图类型，但实际上四种输入条件在 Designer 阶段需要不同的"适配策略"——这是否意味着存在隐式的架构差异？论文对这一点的描述有些模糊，值得在复现时仔细核查。
+    </blockquote>
+    <blockquote>
+      <strong>疑虑：</strong>CraftBench 仅有 279 个样本，覆盖 3 种图类型 × 4 种输入条件 = 12 个子类，平均每个子类约 23 个样本。这一规模对于统计显著性而言偏小，特别是在细粒度的子任务分析中，结论的稳健性需要更大规模的验证。
+    </blockquote>
+    <blockquote>
+      <strong>疑虑：</strong>成本分析显示 CraftEditor 每图约 $0.85，在大规模使用场景下成本较高。论文未讨论如何在质量和成本之间进行权衡，这对实际部署决策很重要。
+    </blockquote>
+
+    <!-- ===== 9. 参考文献 ===== -->
+    <h2 id="references">参考文献</h2>
+    <p>以下为论文中涉及的主要相关工作（部分从论文背景推断）：</p>
+    <ol>
+      <li>Haozhe Zhao et al. <em>Crafter: A Multi-Agent Harness for Editable Scientific Figure Generation from Diverse Inputs.</em> arXiv:2605.30611, 2026. <a href="https://arxiv.org/abs/2605.30611" target="_blank">arxiv.org/abs/2605.30611</a></li>
+      <li>AutoFigure — 早期科学图自动生成系统，支持单一图类型与纯文本输入。</li>
+      <li>PaperBanana / PaperBanana-Bench — 科学图生成基线系统与评估基准，Crafter 的主要对比对象。</li>
+      <li>Edit-Banana — 基于光栅图的科学图编辑系统，CraftEditor 的对比基线之一。</li>
+      <li>AutoFigure-Edit — 支持 SVG 输出的科学图编辑系统，CraftEditor 的主要对比基线。</li>
+      <li>Kirillov et al. <em>Segment Anything.</em> ICCV 2023. — SAM 系列分割模型，CraftEditor 的核心组件。</li>
+      <li>Anthropic. <em>Claude claude-opus-4.6.</em> 2025. — Crafter 默认 LLM 槽位，负责规划与修订。</li>
+      <li>Google DeepMind. <em>Gemini 3.1 Pro.</em> 2026. — Crafter 默认 VLM 槽位，负责视觉验证。</li>
+      <li>OpenAI. <em>GPT-Image-2.</em> 2025. — CraftEditor 元素提取阶段使用的视觉模型。</li>
+      <li>CraftBench Dataset. <a href="https://huggingface.co/datasets/BleachNick/CraftBench" target="_blank">huggingface.co/datasets/BleachNick/CraftBench</a></li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center">
+      阅读报告生成日期：2026-06-05 | 基于 arXiv:2605.30611 | 报告作者：Claude Opus 4.8 (1M)
+    </p>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

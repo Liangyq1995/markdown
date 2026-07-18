@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SpectraReward：预训练 MLLM 即开箱即用的 T2I 奖励模型 — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .pill { display:inline-block; font-size:0.72em; font-weight:700; padding:1px 7px; border-radius:10px; margin-right:5px; background:#313244; color:var(--heading); }
+    .pill.green { background:#a6e3a1; color:#1e1e2e; }
+    .pill.orange { background:#fab387; color:#1e1e2e; }
+    .pill.purple { background:#cba6f7; color:#1e1e2e; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>SpectraReward：把预训练 MLLM 变成零样本 T2I 奖励模型</h1>
+    <p style="color:#6c7086;font-size:0.9em">Read It Back: Pretrained MLLMs Are Zero-Shot Reward Models for Text-to-Image Generation · arXiv:2607.11886 · 2026-W29 HuggingFace 排名 #9（71 upvotes）</p>
+
+    <h2 id="section-0">1. 概述</h2>
+
+    <table>
+      <tr><th style="width:22%">标题</th><td>Read It Back: Pretrained MLLMs Are Zero-Shot Reward Models for Text-to-Image Generation</td></tr>
+      <tr><th>核心问题</th><td>如何在<strong>无需偏好标签、无需奖励模型微调、无需问题分解</strong>的前提下，把任意预训练 MLLM 直接当作文本到图像生成强化学习的奖励模型？SpectraReward 给出的答案是：度量原始 prompt 能否从生成图像中“读回”——用单次 image-conditioned teacher-forced 前向得到 prompt 的平均 log-likelihood 作为奖励。</td></tr>
+      <tr><th>核心贡献</th><td>(1) <strong>SpectraReward</strong>：training-free、开箱即用的 prompt-likelihood 奖励函数；(2) <strong>Self-SpectraReward</strong>：统一多模态模型（UMM）中策略自身的理解分支充当其生成分支的奖励模型，形成无外部依赖的闭环自改进；(3) 覆盖 2 个扩散模型 / 3 种 RL 算法 / 9 个 reward MLLM backbone（4B–235B，4 个 MLLM 家族）/ 5 个 OOD 基准的大规模 RL 研究。</td></tr>
+      <tr><th>作者 / 机构</th><td>Runhui Huang, Qihui Zhang, Zhe Liu, Yu Gao, Jie Wu, Hengshuang Zhao · <strong>The University of Hong Kong</strong>（港大）、<strong>ByteDance Seed</strong>（字节跳动）、<strong>Peking University</strong>（北京大学）</td></tr>
+      <tr><th>开源地址</th><td>Project Page: <a href="https://huangrh99.github.io/SpectraReward/">https://huangrh99.github.io/SpectraReward/</a></td></tr>
+    </table>
+
+    <p>图像生成强化学习（RL）的成败取决于两大支柱：优化算法决定长程训练的稳定性，而<strong>奖励模型决定策略最终能达到的上限</strong>。后者尤其难设计——既要在判别力上足够强，又要工程上高效、可复现。当前主流要么依赖昂贵的人类偏好标注与奖励模型微调（成本高、迭代重、与 MLLM 预训练分布存在偏移），要么用预训练 MLLM 做 zero-shot 判官（直接打分或问题分解），但前者受判分校准与噪声影响、后者引入两阶段流水线与分解质量瓶颈。</p>
+
+    <p>本文提出 <strong>SpectraReward</strong>，跳过“让 MLLM 判断图像”或“让 MLLM 回答分解问题”这两条路径，转而直接调用 MLLM 最根本的能力——<strong>看图并把它与语言描述对齐</strong>。具体做法：把生成图像作为视觉条件喂给冻结的 MLLM，对原始 prompt 做一次 teacher-forced 前向，得到每个 prompt token 的 image-conditioned log-likelihood；这些逐 token 似然构成所谓“<strong>语义谱（semantic spectrum）</strong>”，对其取平均即得到标量奖励。该奖励直接复用 MLLM 在大规模预训练中学到的图文对齐知识，无需偏好标签、无需奖励模型微调、无需打分提示或问题分解。</p>
+
+    <p>在统一多模态模型（UMM，如 BAGEL）上，SpectraReward 退化为一个特例 <strong>Self-SpectraReward</strong>：策略自身的<strong>理解分支</strong>充当其<strong>生成分支</strong>的奖励模型，二者共享 tokenizer、视觉编码器与预训练分布，从而奖励信号天然对齐于策略自身的生成图像分布，形成无外部奖励模型、无外部知识的闭环自改进。实验表明：SpectraReward 与 Self-SpectraReward 在 5 个 OOD 基准上一致显著超越 BAGEL 基线与 AlphaGRPO；更反直觉的是——更大的 reward MLLM 并不总更好，而 <strong>Self-SpectraReward 可匹敌甚至超过大 4×–30× 的外部 reward MLLM</strong>，提示“奖励-策略对齐”是与“奖励模型规模”同等关键的因素。</p>
+
+    <h2 id="section-1">2. 研究背景与动机</h2>
+
+    <h3>2.1 T2I 强化学习与奖励模型的三条技术路线</h3>
+    <p>图像生成 RL 的成功依赖两个互补支柱：优化算法（如 FlowGRPO、AWM、DiffusionNFT）与奖励模型。论文把现有 T2I 奖励模型归纳为三条谱系，并逐一指出其局限：</p>
+    <ul>
+      <li><strong>偏好数据训练的奖励模型</strong>（ImageReward、Pick-a-Pic、HPSv2/v3、VisionReward、OneReward、RewardDance 等）：基于大规模人类偏好或 prompt–image 对齐数据训练判别器。能力强，但<strong>受限于对“与文本无关的美学细节”的固有偏置</strong>，且需要昂贵标注、训练开销大，并使分布偏离 MLLM 预训练知识。</li>
+      <li><strong>微调 MLLM 作奖励架构</strong>：把判别器升级为微调后的 MLLM，提升上限，但仍需大量标注数据与训练开销，且分布偏移问题依旧。</li>
+      <li><strong>预训练 MLLM 作 zero-shot 判官</strong>（VIEScore、Uniworld-V2 隐式反馈等）：免训练，但通常走两条子路——<em>(a) 直接标量打分</em>，对判分校准与打分噪声敏感；<em>(b) 问题分解</em>（AlphaGRPO 的 DVReward），把 prompt 拆成原子问题逐一验证，可靠但引入两阶段流水线、依赖分解质量、工程复杂度高。</li>
+    </ul>
+
+    <p>由此留下一个空白：<strong>能否设计一个既高效、又免偏好标签、又开箱即用的奖励模型</strong>，尤其面向开源图像生成器。SpectraReward 正是填补该空白——它既不需要偏好标签也不需要奖励模型微调，更回避了“打分”与“分解”两条 zero-shot 子路的固有缺陷。</p>
+
+    <h3>2.2 与最相关工作的关键区别</h3>
+    <p>论文专门对比了两类最切近的工作，划清边界：</p>
+    <table>
+      <tr><th>方法</th><th>奖励形态</th><th>是否训练</th><th>流水线</th><th>关键局限 / 与 SpectraReward 的区别</th></tr>
+      <tr><td>Scalar Scoring（VIEScore 类）</td><td>离散标量分</td><td>免训练</td><td>单次前向</td><td>依赖判分校准，打分噪声大；SpectraReward 用稠密 likelihood 替代离散分</td></tr>
+      <tr><td>VQA 分解（AlphaGRPO / DVReward）</td><td>原子问题置信度聚合</td><td>免训练</td><td><strong>两阶段</strong>（分解+验证）</td><td>依赖分解质量、工程复杂；SpectraReward 单次前向、无需分解</td></tr>
+      <tr><td>偏好训练奖励（HPS / ImageReward / VisionReward）</td><td>学习标量</td><td>需偏好数据+RM 微调</td><td>单次前向</td><td>昂贵标注、分布偏移、对美学细节偏置</td></tr>
+      <tr><td>PromptEcho（concurrent）</td><td>cross-entropy 似然</td><td>免训练</td><td>单次前向</td><td><strong>仅在领域专用 T2I backbone 上评估</strong>；SpectraReward 覆盖通用扩散模型与 UMM</td></tr>
+      <tr><td>SRUM / GvU（concurrent self-rewarding UMM）</td><td>理解分支的全局+局部信号 / token 级 logits</td><td>免训练</td><td>UMM 内部</td><td><strong>仅做 UMM 内部评估，未与外部 reward MLLM 对比</strong>；SpectraReward 系统比较了 9 个外部 backbone</td></tr>
+      <tr><td><strong>SpectraReward（本文）</strong></td><td>image-conditioned prompt log-likelihood 均值</td><td>免训练</td><td>单次前向</td><td>受限于 MLLM 视觉推理能力；隐式物理/常识蕴含弱</td></tr>
+    </table>
+
+    <h3>2.3 核心动机：把“判断”降维成“读回”</h3>
+    <p>作者的关键洞察是：与其要求 MLLM 输出一个抽象的“这张图好不好”的判断（这本质上是一个对齐不良、噪声大的判别任务），不如<strong>逆向提问</strong>——<em>从 MLLM 的视角看，这张生成图像能多好地被翻译回原始 prompt？</em> 这一逆问题恰好就是 MLLM 预训练阶段已经在海量图文对上求解的目标函数：image-conditioned next-token likelihood。因此该奖励<strong>直接调用 MLLM 最根本的图文对齐能力</strong>，而非要求其完成一个额外训练才能胜任的判别任务。</p>
+
+    <blockquote>“SpectraReward reuses the fundamental visual-language grounding ability already learned during MLLM pretraining.”</blockquote>
+
+    <p>进一步，在 UMM 中，理解分支与生成分支共享 tokenizer、视觉编码器与预训练分布，于是<strong>理解分支“读图”的方式天然匹配生成分支“采样图像”的分布</strong>。作者据此假设：这种内在的分布对齐使策略自身的理解分支成为对其自身生成尤其合适的奖励来源——即便该理解分支在通用视觉理解上未必强于外部 MLLM。这一假设被第 4 节的 backbone 规模实验直接验证：Self-SpectraReward（7B）反超大 4×–30× 的外部 reward MLLM。</p>
+
+    <h2 id="section-2">3. 核心方法</h2>
+
+    <h3 id="section-2-0">3.1 方法总览</h3>
+    <p>SpectraReward 的完整流程可概括为：扩散策略从 prompt 采样图像 → 冻结 MLLM 以图像为条件对 prompt 做 teacher-forced 前向 → 逐 token 的 image-conditioned log-likelihood 构成“语义谱” → 取均值得标量奖励 → 组内 G=16 个 rollout 计算相对优势 → 用 RL 算法（默认 AWM）在采样的去噪步上更新扩散策略，形成闭环。下图刻画了该数据流。</p>
+
+    <pre class="mermaid">
+flowchart TD
+    A["Prompt x"] --> B["Diffusion Policy"]
+    B --> C["Generated Image y"]
+    C --> D["Frozen MLLM M<br/>image-conditioned<br/>teacher-forced forward"]
+    A --> D
+    D --> E["Token-level Likelihoods<br/>(Semantic Spectrum)"]
+    E --> F["Mean Aggregation<br/>EOS masked"]
+    F --> G["Scalar Reward R"]
+    G --> H["Group-Relative Advantage<br/>G=16 rollouts per prompt"]
+    H --> I["RL Update via AWM<br/>on 6 sampled denoising steps"]
+    I --> B
+    </pre>
+
+    <h3 id="section-2-1">3.2 SpectraReward 奖励函数推导</h3>
+    <p>记文本到图像策略为 $G_\theta$，它从 prompt $x=(x_1,\dots,x_T)$ 采样图像 $y\sim G_\theta(\cdot\mid x)$；$M$ 为冻结的预训练 MLLM。目标是：在<strong>不</strong>需要偏好标签、奖励模型微调或任何辅助流水线的前提下，从 $M$ 中提取一个标量奖励 $R_M(x,y)$，度量生成图像 $y$ 对 prompt $x$ 的实现程度。</p>
+
+    <p>核心思想是把评估图像转化为一个<strong>逆问题</strong>：从 $M$ 的视角，生成图像 $y$ 能多好地被“翻译回”prompt $x$？为此把 $y$ 作为视觉条件输入 $M$，对 prompt token 序列 $x$ 做单次 teacher-forced 前向，得到逐 token 的 image-conditioned 似然。最终奖励为：</p>
+
+    <p>$$R_M(x, y) = \frac{1}{T-1} \sum_{t=1}^{T-1} \log p_M\left(x_{t+1} \mid x_{\leq t},\, y\right)$$</p>
+
+    <p>即<strong>在 M 下 prompt 的平均 image-conditioned log-likelihood</strong>。其中 $x_{\leq t}$ 表示到位置 $t$ 为止的 prompt 前缀，$y$ 是生成图像。求和从 $t=1$ 到 $T-1$，对应预测 $x_2,\dots,x_T$ 这 $T-1$ 个 token（首个 token 不计，因其无条件前缀；EOS 亦被屏蔽，见 3.3）。</p>
+
+    <p>逐 token 似然构成图像-文本对的<strong>语义谱</strong>：</p>
+
+    <p>$$\mathcal{S}(x, y) = \left\{\,\log p_M\left(x_{t+1} \mid x_{\leq t},\, y\right)\,\right\}_{t=1}^{T-1}$$</p>
+
+    <p>它描述图像 $y$ 中的视觉证据如何在 prompt 的不同 token 上支撑语义 $x$。SpectraReward 把该语义谱聚合为标量：<strong>奖励越高，说明 prompt 越能从图像中预测出来，即生成图像越能支撑 prompt 的语义内容</strong>。</p>
+
+    <blockquote><strong>设计要点</strong>：该奖励直接调用预训练 MLLM 最根本的能力——“理解图像并把它与对应语言描述关联”——而非训练一个独立奖励模型或提示 MLLM 产出抽象判断分。因此它把“奖励建模”问题还原为“image-conditioned 语言建模”问题，复用预训练已习得的图文对齐。</blockquote>
+
+    <h3 id="section-2-2">3.3 Teacher-Forced 前向与语义谱的性质</h3>
+    <p><strong>Teacher-forced 前向</strong>：计算奖励时，prompt 的每个 token $x_{t+1}$ 作为“答案”被喂给 $M$（教师强制），$M$ 在已见前缀 $x_{\leq t}$ 与图像 $y$ 的条件下输出对 $x_{t+1}$ 的概率。整个过程只需<strong>单次前向</strong>（一次性算出所有 $T-1$ 个位置），无自回归生成、无多轮问答，因此高效且确定性。</p>
+
+    <p><strong>语言先验抵消（Language-prior cancellation）</strong>：一个自然顾虑是式 (1) 包含 MLLM 对 prompt 的<strong>语言先验</strong>（有些词无论图像如何都更容易预测）。一个可能的修正项是减去纯文本似然，得到 PMI 风格奖励：</p>
+
+    <p>$$R^{\mathrm{PMI}}_M(x, y) = \log p_M(x \mid y) - \log p_M(x)$$</p>
+
+    <p>但作者论证：由于采用 <strong>group-relative RL</strong>，这一修正<strong>并非必要</strong>。对同一固定 prompt，纯文本似然 $\log p_M(x)$ 在该 prompt 组内所有生成图像间共享，在计算组内相对优势时<strong>被自动抵消</strong>。因此 PMI 归一化只会影响跨 prompt 的绝对奖励校准，而不提供组内额外优化信号。这意味着 SpectraReward 的朴素均值形式已对 group-relative RL 足够。</p>
+
+    <p><strong>EOS 屏蔽</strong>：作者在检查逐 token 似然分布时发现，[EOS] token 的似然往往远低于普通 prompt token；因 SpectraReward 对 token 取均值，这个异常低的似然会显著拉偏最终奖励，尤其对短 prompt（EOS 占比大）。由于 EOS 仅表示序列终止、不承载图文对齐语义，故计算时将其屏蔽。消融（附录 C）显示屏蔽 EOS 在 GenEval 上提升 1.0、TIIF-Bench 持平。</p>
+
+    <p><strong>奖励前缀</strong>：默认不给 reward MLLM 加任何“请描述图像”之类的前缀——这类前缀虽改变绝对似然值，但不实质影响组内相对排序（group-relative RL 所用量）。唯一例外是 InternVL3.5 家族，经验上需加前缀 “Describe the image” 才能获得稳定奖励值。</p>
+
+    <h4>逐 token 语义敏感性（Figure 3 复现）</h4>
+    <p>作者构造正/负图像对，验证语义谱是否对局部视觉错误敏感。同一正 prompt 评估正、负图像，观察似然下降是否集中在“错配词”上：</p>
+    <table>
+      <tr><th>错配类型（prompt）</th><th>关键 token</th><th>正图像 log-lik</th><th>负图像 log-lik</th><th>序列级奖励 R（正 / 负）</th></tr>
+      <tr><td>属性错配·计数（“Two cats sitting on a sofa”，负图含 5 只）</td><td>“Two”</td><td>−5.66</td><td>−7.44</td><td>−1.932 / −2.298</td></tr>
+      <tr><td>物体身份错配（“A wooden guitar leaning against the wall”，负图换为 chair）</td><td>“guitar”</td><td>−1.19</td><td>−9.61</td><td>−2.822 / −3.891</td></tr>
+    </table>
+    <p>结果：似然下降<strong>集中在错配的语义词上</strong>（计数错误主要拉低 “Two”，物体替换剧烈拉低 “guitar”），而其他 token 基本稳定；序列级奖励（图中虚线）对正图像也始终更高。这说明逐 token 的 image-conditioned 似然对定向语义错误敏感，其均值（即 SpectraReward）仍能提供可靠的标量奖励与组内排序信号（Figure 4 进一步表明奖励排序与视觉质量排序一致）。</p>
+
+    <h3 id="section-2-3">3.4 Self-SpectraReward：统一多模态模型的自闭环</h3>
+    <p>当策略 $G_\theta$ 本身是<strong>统一多模态模型（UMM）</strong>时，它同时含生成分支 $G^{\mathrm{gen}}_\theta$ 与理解分支 $G^{\mathrm{und}}_\theta$。Self-SpectraReward 即 SpectraReward 在 UMM 上的特例——用 $G^{\mathrm{und}}_\theta$ 作为 $G^{\mathrm{gen}}_\theta$ 所采样图像的奖励 MLLM $M$：</p>
+
+    <p>$$R^{\mathrm{Self}}_\theta(x, y) = R_{G^{\mathrm{und}}_\theta}(x, y), \qquad y \sim G^{\mathrm{gen}}_\theta(\cdot \mid x)$$</p>
+
+    <p>模型用自身的理解能力给自身生成的图像打分——衡量原始 prompt 在自身 image-conditioned 理解分支下的似然——形成<strong>无外部奖励模型、无外部知识</strong>的闭环自改进框架。这同时消除了部署大规模外部 MLLM 的算力开销，简化了 RL 流水线。</p>
+
+    <p><strong>奖励-策略对齐（Reward-policy alignment）</strong>：Self-SpectraReward 在同一 UMM 内耦合了两种对偶能力——生成分支把文本映射到图像，奖励函数用理解分支度量生成图像能多好地翻译回文本。由于两分支共享 <strong>tokenizer、视觉编码器与预训练分布</strong>，奖励信号天然兼容于策略自身的生成知识。关键在于：这<strong>并不要求理解分支在通用视觉理解上强于外部 MLLM</strong>，而是提供一个对策略自身生成图像分布<strong>校准更好</strong>的奖励信号。用此自奖励优化生成分支，会鼓励 T2I 策略变得与其自身的“图→文”理解能力更一致。下图刻画该闭环与共享结构。</p>
+
+    <pre class="mermaid">
+graph TD
+    PROMPT["Prompt x"] --> GEN["Generation Branch<br/>text to image"]
+    GEN -->|"image y"| UND["Understanding Branch<br/>image to text (reward)"]
+    UND -->|"prompt log-likelihood R"| ADV["Group-Relative Advantage"]
+    ADV -->|"RL update"| GEN
+    SHARED["Shared: tokenizer<br/>vision encoder<br/>pretraining distribution"] -.-> GEN
+    SHARED -.-> UND
+    </pre>
+
+    <p>在 BAGEL 实现中，BAGEL 同时含<strong>语义视觉特征</strong>（ViT）与<strong>VAE 特征</strong>（生成编码器），其理解分支可可选地纳入 VAE 特征。Self-SpectraReward 默认纳入 VAE 特征（消融显示平均更优，尤其 TIIF-Long），使理解分支读图时更贴近生成分支的表示空间。</p>
+
+    <h3 id="section-2-4">3.5 RL 训练流程（伪代码）</h3>
+    <p>SpectraReward 作为代理奖励在训练期使用，并在 5 个 OOD 基准上评估真实泛化提升。默认 RL 算法为 AWM（见 4.3 消融为何 AWM 最优）。训练在 AlphaGRPO20k 数据集上，512 分辨率，380 步。算法 1 给出训练循环。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: SpectraReward 驱动的 T2I 强化学习训练（AWM）</div>
+      <p><span class="kw">Input:</span> 策略 <span class="var">G_θ</span>（扩散模型 / UMM）；冻结奖励 MLLM <span class="var">M</span>；提示集 <span class="var">D</span>（AlphaGRPO20k）</p>
+      <p><span class="kw">Hyperparameters:</span> 组大小 <span class="num">G=16</span>；采样步 <span class="num">T=16</span>；训练步 <span class="num">380</span>；lr <span class="num">1e-4</span>；CFG <span class="num">4</span>；timestep shift <span class="num">3</span>；分辨率 <span class="num">512</span></p>
+      <p style="padding-left:0.5em"><span class="cm">// 每个 training step（32 个 prompt / step，32×A100，batch 2 × accum 8）</span></p>
+      <p><span class="kw">1:</span> 从 <span class="var">D</span> 采样 <span class="num">32</span> 个 prompt</p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> each prompt <span class="var">x</span> <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="kw">2:</span> 采样 <span class="num">G=16</span> 张图像 <span class="var">{y_i}</span> ~ <span class="fn">G_θ(·|x)</span>  <span class="cm">// T=16 步去噪</span></p>
+      <p style="padding-left:3em"><span class="kw">for</span> each <span class="var">(x, y_i)</span> <span class="kw">do</span></p>
+      <p style="padding-left:4.5em"><span class="kw">3:</span> 将 <span class="var">y_i</span> 作视觉条件输入冻结 <span class="var">M</span>，对 <span class="var">x</span> 做单次 teacher-forced 前向</p>
+      <p style="padding-left:4.5em"><span class="kw">4:</span> 按式 (1) 计算 token 级 log-likelihood，<span class="kw">屏蔽</span> <span class="var">[EOS]</span></p>
+      <p style="padding-left:4.5em"><span class="kw">5:</span> <span class="var">R_i</span> ← 对 token 取均值  <span class="cm">// = SpectraReward R_M(x, y_i)</span></p>
+      <p style="padding-left:3em"><span class="kw">end for</span></p>
+      <p style="padding-left:3em"><span class="kw">6:</span> 组内 <span class="num">G=16</span> 奖励做均值-方差归一化得相对优势 <span class="var">A_i</span>  <span class="cm">// group-relative</span></p>
+      <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+      <p><span class="kw">7:</span> 从前 <span class="num">10</span> 个去噪步中随机选 <span class="num">6</span> 步作为训练步</p>
+      <p><span class="kw">8:</span> 用 <span class="fn">AWM</span> 目标在采样去噪步上更新 <span class="var">G_θ</span></p>
+      <p><span class="kw">9:</span> 重复直至 <span class="num">380</span> 步，<span class="kw">return</span> 更新后的 <span class="var">G_θ</span></p>
+      <p style="margin-top:8px"><span class="cm">注：Self-SpectraReward 将 M 设为 G_θ 自身理解分支 G^und_θ，并在理解分支中纳入 VAE 特征；其余流程不变。</span></p>
+    </div>
+
+    <p>下图用时序图说明单次奖励计算（teacher-forced 前向）的交互细节：</p>
+
+    <pre class="mermaid">
+sequenceDiagram
+    participant P as Policy
+    participant M as Frozen MLLM
+    participant A as Aggregator
+    P->>M: image y and prompt x
+    M->>M: condition on y, teacher-force prompt tokens
+    loop each prompt token position
+        M->>M: compute next-token log-likelihood given y
+    end
+    M->>>A: token log-likelihoods (semantic spectrum)
+    A->>A: mean over tokens, mask EOS
+    A->>>P: scalar reward R
+    P->>P: group-relative advantage and RL update
+    </pre>
+
+    <h3 id="section-2-5">3.6 奖励信号的判别性质分析</h3>
+    <p>论文在第 3.3 节围绕三个问题分析了 SpectraReward 的判别性：(1) 语言先验是否影响准确性——答：group-relative 下被抵消，无需 PMI 修正；(2) token 级似然是否对视觉错配敏感——答：是，下降集中在错配词（见 3.3 表）；(3) 标量奖励能否在同 prompt 组内可靠区分样本——答：能，奖励排序与视觉质量排序一致（Figure 4）。这三点共同支撑“image-conditioned prompt likelihood 是 T2I RL 可靠的组内排序信号”这一结论。</p>
+
+    <h2 id="section-3">4. 实验结果与分析</h2>
+
+    <h3 id="section-3-0">4.1 实验设置</h3>
+    <p><strong>默认配置</strong>：RL 算法为 AWM（4.3 节消融证明其在三种 RL 算法中总体最佳）；策略模型为 BAGEL（原生 AR-Diffusion 统一多模态模型，预训练兼图像理解与生成）；SpectraReward 默认 reward MLLM 为 Qwen3-VL-30B-A3B；Self-SpectraReward 用 BAGEL 自身理解分支算奖励。<strong>训练设置</strong>：T=16 采样步，从前 10 个去噪步随机选 6 步训练；每步 32 prompt，组大小 G=16；图像 512×512；CFG=4，timestep shift=3；lr=1e-4；32×A100，batch 2 × 梯度累积 8；共 380 步；在 AlphaGRPO20k 上训练。<strong>评估</strong>：5 个 OOD 基准——GenEval、TIIF-Bench、DPG-Bench、GenEval2、WISE，均用与训练不同的协议与测试集。</p>
+
+    <h3 id="section-3-1">4.2 主实验结果（Table 1）</h3>
+    <p>下表比较 SpectraReward / Self-SpectraReward 与代表性 T2I 生成器（SD3-Medium、FLUX.1-dev）及 UMM（Show-o、JanusPro）和 BAGEL 基线、AlphaGRPO。S 表示 Short prompt，L 表示 Long prompt；WISE 第二个分数为带 CoT 评估。</p>
+
+    <p><strong>Table 1a：512 分辨率推理</strong>（训练分辨率，主结果）</p>
+    <table>
+      <tr><th>模型</th><th>TIIF-Short ↑</th><th>TIIF-Long ↑</th><th>GenEval ↑</th><th>GenEval2 ↑</th><th>DPG-Overall ↑</th></tr>
+      <tr><td>SD3 Medium</td><td>64.8</td><td>64.8</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>FLUX.1 dev</td><td>71.1</td><td>71.8</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>Show-o</td><td>59.7</td><td>58.9</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>JanusPro</td><td>66.5</td><td>65.0</td><td>—</td><td>—</td><td>—</td></tr>
+      <tr><td>BAGEL（基线）</td><td>75.2</td><td>78.6</td><td>84.0</td><td>86.6</td><td>90.37</td></tr>
+      <tr><td>AlphaGRPO</td><td>78.9</td><td>79.5</td><td>85.0</td><td>87.4</td><td>90.93</td></tr>
+      <tr><td><strong>SpectraReward</strong></td><td>85.2</td><td><strong>84.8</strong></td><td>88.3</td><td>88.3</td><td><strong>92.17</strong></td></tr>
+      <tr><td><strong>Self-SpectraReward</strong></td><td><strong>85.1</strong></td><td>84.3</td><td><strong>89.5</strong></td><td><strong>89.8</strong></td><td>91.94</td></tr>
+    </table>
+    <p>注：表中 TIIF/GenEval/GenEval2/DPG 列均取 Overall 分数；DPG-Overall 取自 Table 10。SD3/FLUX/Show-o/JanusPro 的 GenEval 等列原文以其他形式给出，此处仅列 TIIF Overall 以保持可读。</p>
+
+    <p><strong>Table 1b：1024 分辨率推理</strong>（验证 512 训练的奖励信号迁移到高分辨率）</p>
+    <table>
+      <tr><th>模型</th><th>TIIF-Short ↑</th><th>TIIF-Long ↑</th><th>GenEval ↑</th><th>GenEval2 ↑</th><th>WISE (Overall / w-CoT) ↑</th></tr>
+      <tr><td>BAGEL（基线）</td><td>76.4</td><td>76.2</td><td>84.0</td><td>86.6</td><td>0.53 / 0.70</td></tr>
+      <tr><td>AlphaGRPO</td><td>78.7</td><td>79.5</td><td>85.0</td><td>87.4</td><td>0.50 / 0.69</td></tr>
+      <tr><td><strong>SpectraReward</strong></td><td><strong>83.3</strong></td><td>81.7</td><td>88.3</td><td>88.1</td><td>0.53 / 0.74</td></tr>
+      <tr><td><strong>Self-SpectraReward</strong></td><td>82.7</td><td><strong>82.5</strong></td><td><strong>89.5</strong></td><td><strong>89.8</strong></td><td>0.52 / <strong>0.76</strong></td></tr>
+    </table>
+
+    <p><strong>关键结论</strong>：</p>
+    <ul>
+      <li>512 分辨率下，SpectraReward 相对 BAGEL 基线在 TIIF-Short/Long 上提升 <strong>+10.0 / +6.2</strong>，在 GenEval 上 +4.3；Self-SpectraReward 取得可比的 85.1/84.3，并在 GenEval 上再 +5.5 达 89.5。</li>
+      <li>相对 AlphaGRPO，SpectraReward 在 TIIF-Short/Long 上 +6.3/+5.3、GenEval +3.3；Self-SpectraReward +6.2/+4.8、GenEval +4.5。<strong>两者全面超越先前的 MLLM 派生奖励训练方法</strong>。</li>
+      <li>改进从 512 训练迁移到 1024 推理：Self-SpectraReward 在 GenEval2 达 <strong>89.8</strong>、WISE 带 CoT 达 <strong>0.76</strong>，均超过 BAGEL 与 AlphaGRPO。这表明 prompt-likelihood 奖励比分解式验证（DVReward）提供了更有效的监督信号。</li>
+    </ul>
+
+    <div id="chart-main" class="echarts-container" style="height:380px"></div>
+    <p style="color:#6c7086;font-size:0.85em;text-align:center">图：512 分辨率下 4 种方法在 5 个 OOD 基准上的 Overall 分数对比（数据来自 Table 1 / Table 10）。</p>
+
+    <h3 id="section-3-2">4.3 奖励 MLLM backbone 的影响（Table 2）</h3>
+    <p>该实验固定 BAGEL 策略，更换 9 个 reward MLLM backbone（4 个家族：Gemma3、InternVL3.5、Qwen3-VL、BAGEL 自身），并额外报告 SD3.5-M 上的两组以验证跨扩散模型一致性。</p>
+    <table>
+      <tr><th>策略</th><th>Reward MLLM</th><th>GenEval ↑</th><th>TIIF-Short ↑</th><th>TIIF-Long ↑</th></tr>
+      <tr><td>SD3.5-M</td><td>—（基线）</td><td>79.8</td><td>74.0</td><td>73.2</td></tr>
+      <tr><td>SD3.5-M</td><td>Qwen3-VL-8B</td><td>85.7</td><td>84.4</td><td>84.6</td></tr>
+      <tr><td>BAGEL</td><td>—（基线）</td><td>84.0</td><td>75.2</td><td>78.6</td></tr>
+      <tr><td>BAGEL</td><td>Gemma3-4B</td><td>83.6</td><td>83.1</td><td>83.0</td></tr>
+      <tr><td>BAGEL</td><td>Gemma3-12B-Pretrain</td><td>88.7</td><td>84.3</td><td>82.6</td></tr>
+      <tr><td>BAGEL</td><td>Gemma3-12B（Instruct）</td><td>87.5</td><td>82.0</td><td>82.6</td></tr>
+      <tr><td>BAGEL</td><td>InternVL3.5-8B</td><td>84.5</td><td>80.4</td><td>80.0</td></tr>
+      <tr><td>BAGEL</td><td>InternVL3.5-14B</td><td>84.9</td><td>78.5</td><td>79.9</td></tr>
+      <tr><td>BAGEL</td><td>Qwen3-VL-8B</td><td>87.8</td><td>85.0</td><td>83.8</td></tr>
+      <tr><td>BAGEL</td><td>Qwen3-VL-30B-A3B</td><td>88.3</td><td>85.2</td><td>84.8</td></tr>
+      <tr><td>BAGEL</td><td>Qwen3-VL-235B-A22B</td><td>86.8</td><td>84.3</td><td>83.4</td></tr>
+      <tr><td>BAGEL</td><td><strong>BAGEL（Self-SpectraReward）</strong></td><td><strong>89.5</strong></td><td><strong>85.1</strong></td><td><strong>84.3</strong></td></tr>
+    </table>
+
+    <div id="chart-backbone" class="echarts-container" style="height:400px"></div>
+    <p style="color:#6c7086;font-size:0.85em;text-align:center">图：BAGEL 策略下 9 个 reward MLLM backbone 的 scaling 效应（含无奖励基线与 Self-SpectraReward）。可清晰看到非单调：Qwen3-VL 8B→30B 提升，30B→235B 反降；Self-SpectraReward（7B）反超大 30× 的 235B。</p>
+
+    <p><strong>四大发现</strong>：</p>
+    <ul>
+      <li><strong>跨扩散模型与跨家族一致提升</strong>：SpectraReward 在 SD3.5-M 与 BAGEL 上都提升基线，体现 caption-likelihood 奖励的架构无关性；Gemma3 / InternVL3.5 / Qwen3-VL 多个家族均能在 BAGEL 上带来 TIIF-Bench 提升，说明可从多样 backbone 提取有用奖励。</li>
+      <li><strong>Self-SpectraReward：对齐可匹敌外部规模</strong>：用 BAGEL 自身理解分支，Self-SpectraReward 在同量级 reward 模型中最佳、匹敌最强 30B 级外部 reward，并<strong>反超大 30× 的 Qwen3-VL-235B-A22B</strong>。相对最优外部 backbone（Qwen3-VL-30B），Self 在 GenEval +1.2、GenEval2 +2.1、WISE +0.02（原文记为 +2）。这证明奖励质量不单由规模决定，而由与策略的分布对齐决定。</li>
+      <li><strong>规模有帮助但非单调</strong>：Qwen3-VL 8B→30B 全指标提升，但 30B→235B 明显回落；Gemma3 4B→12B 提升 GenEval 但不持续提升 TIIF。作者推测更大 MLLM 把更多容量投入高级视觉推理与指令跟随，而 SpectraReward 所需的更基础的 image-conditioned caption 能力在中等规模已饱和——<strong>30B 已足够解锁 SpectraReward 大部分收益</strong>。</li>
+      <li><strong>预训练阶段 MLLM 可作更优 backbone</strong>：Gemma3-12B-Pretrain 在三个基准上一致优于 Gemma3-12B-Instruct。推测预训练学到的 image-captioning / 图文对齐目标与该奖励函数更契合，而指令微调强调的高级视觉任务与多任务指令跟随并非 SpectraReward 直接所需。</li>
+    </ul>
+
+    <h3 id="section-3-3">4.4 RL 算法与奖励模型对比（Table 3）</h3>
+    <p>下表在统一设置下比较 3 种 RL 算法（FlowGRPO、AWM、DiffusionNFT）与多种奖励模型（HPSv3、UnifiedReward、VIEScore、DVReward、Self-SpectraReward）。</p>
+    <table>
+      <tr><th>RL 算法</th><th>Reward Model</th><th>GenEval ↑</th><th>TIIF-Short ↑</th><th>TIIF-Long ↑</th></tr>
+      <tr><td>—（基线）</td><td>—</td><td>84.0</td><td>75.2</td><td>78.6</td></tr>
+      <tr><td>AlphaGRPO</td><td>HPSv3</td><td>83.4</td><td>78.5</td><td>77.1</td></tr>
+      <tr><td>AlphaGRPO</td><td>UnifiedReward</td><td>83.7</td><td>79.2</td><td>77.3</td></tr>
+      <tr><td>AlphaGRPO</td><td>VIEScore</td><td>81.7</td><td>79.1</td><td>77.9</td></tr>
+      <tr><td>AlphaGRPO</td><td>DVReward</td><td>85.0</td><td>78.9</td><td>79.5</td></tr>
+      <tr><td>AWM</td><td>DVReward</td><td>88.0</td><td>83.3</td><td>83.7</td></tr>
+      <tr><td>FlowGRPO</td><td>Self-SpectraReward</td><td>85.3</td><td>82.1</td><td>79.8</td></tr>
+      <tr><td>DiffusionNFT</td><td>Self-SpectraReward</td><td>89.1</td><td>84.8</td><td>83.5</td></tr>
+      <tr><td><strong>AWM</strong></td><td><strong>Self-SpectraReward</strong></td><td><strong>89.5</strong></td><td><strong>85.1</strong></td><td><strong>84.3</strong></td></tr>
+    </table>
+    <p><strong>两个结论</strong>：(1) <strong>RL 算法</strong>——在 Self-SpectraReward 设置下，AWM 在 GenEval/TIIF-Short/TIIF-Long 三项均最佳，优于 SDE-based 的 FlowGRPO 与 DiffusionNFT，故主实验采用 AWM。(2) <strong>奖励模型</strong>——在可比 RL 训练下（同为 AWM），Self-SpectraReward（89.5/85.1/84.3）一致优于 DVReward（88.0/83.3/83.7）；而 AlphaGRPO+各类判别式奖励（HPSv3/UnifiedReward/VIEScore）均显著弱于 SpectraReward 家族，再次印证 likelihood 奖励优于标量/判别式奖励。</p>
+
+    <h3 id="section-3-4">4.5 消融实验</h3>
+
+    <p><strong>Table 4：奖励函数消融</strong>（Self-SpectraReward + AWM 设置）。Scalar Scoring 让 MLLM 打 1–5 分；VQA-Score 问“这张图是否展示{caption}?”取 P(yes)。</p>
+    <table>
+      <tr><th>Reward Function</th><th>GenEval ↑</th><th>TIIF-Short ↑</th><th>TIIF-Long ↑</th></tr>
+      <tr><td>—（基线）</td><td>84.0</td><td>75.2</td><td>78.6</td></tr>
+      <tr><td>Scalar Scoring（1–5）</td><td>77.7 <span class="pill orange">↓6.3</span></td><td>67.5</td><td>76.0</td></tr>
+      <tr><td>VQA-Score（P(yes)）</td><td>83.1</td><td>77.4</td><td>78.9</td></tr>
+      <tr><td><strong>Prompt Likelihood（SpectraReward）</strong></td><td><strong>89.5</strong></td><td><strong>85.1</strong></td><td><strong>84.3</strong></td></tr>
+    </table>
+    <p>奖励函数对 RL 性能影响巨大：标量打分使 GenEval 相对基线<strong>下降 6.3</strong>；VQA-Score 仅在 TIIF-Bench 上小涨、GenEval 无改进；而 image-conditioned prompt likelihood 在所有指标上最佳。<strong>likelihood 奖励是更有效地利用 MLLM 作 T2I RL 奖励的方式</strong>。</p>
+
+    <div id="chart-rewardfn" class="echarts-container" style="height:360px"></div>
+    <p style="color:#6c7086;font-size:0.85em;text-align:center">图：四种奖励函数在三个基准上的对比，Prompt Likelihood（SpectraReward）全面领先，Scalar Scoring 严重退化。</p>
+
+    <p><strong>Table 5：奖励粒度消融</strong>。Sequence-level 先把 token log-likelihood 平均成序列级奖励再算组内相对优势；Token-level 把每个 token 位置视作独立奖励信号、算 token 级组内优势再平均。测试三种 token 级 std 范围：global std、group std（组内所有文本 token）、per-token std。</p>
+    <table>
+      <tr><th>Method</th><th>GenEval ↑</th><th>TIIF-Short ↑</th><th>TIIF-Long ↑</th></tr>
+      <tr><td><strong>Sequence-level Adv.（默认）</strong></td><td><strong>89.5</strong></td><td><strong>85.1</strong></td><td>84.3</td></tr>
+      <tr><td>Token-level Adv. + Group std</td><td>88.4</td><td>84.0</td><td><strong>84.8</strong></td></tr>
+      <tr><td>Token-level Adv. + Per-token std</td><td>88.8</td><td>84.1</td><td>82.1</td></tr>
+    </table>
+    <p>Token-level 优势虽能强调 rollout 差异大的视觉接地 token，但<strong>未带来明显改进</strong>，且更不稳。故默认用 sequence-level 以获得更稳定训练。</p>
+
+    <p><strong>Table 6/7：实现细节消融</strong>（Self-SpectraReward + AWM）。</p>
+    <table>
+      <tr><th>设置</th><th>选项</th><th>GenEval ↑</th><th>TIIF-Short ↑</th><th>TIIF-Long ↑</th></tr>
+      <tr><td rowspan="2">EOS token（Table 6）</td><td>Include EOS</td><td>88.5</td><td>85.5</td><td>84.3</td></tr>
+      <tr><td><strong>Mask EOS（默认）</strong></td><td><strong>89.5</strong></td><td>85.1</td><td>84.3</td></tr>
+      <tr><td rowspan="2">VAE 特征（Table 7，仅 Self-SpectraReward）</td><td>No VAE input</td><td>87.8</td><td>83.6</td><td><strong>84.7</strong></td></tr>
+      <tr><td><strong>Use VAE input（默认）</strong></td><td><strong>89.5</strong></td><td><strong>85.1</strong></td><td>84.3</td></tr>
+    </table>
+    <p>屏蔽 EOS 在 GenEval +1.0、TIIF 持平；纳入 VAE 特征提升 GenEval 与 TIIF-Short、对齐于生成分支表示空间。两项均印证 3.3/3.4 节的设计选择。</p>
+
+    <script>
+    // ECharts 公共配置
+    var cat_colors = ['#89b4fa','#a6e3a1','#fab387','#cba6f7','#f9e2af','#94e2d5','#f38ba8','#74c7ec'];
+    function baseGrid(opt){
+      opt.backgroundColor = '#2a2a3e';
+      opt.textStyle = {color:'#cdd6f4'};
+      opt.legend = {textStyle:{color:'#cdd6f4'}, top:6};
+      opt.tooltip = {trigger:'axis', axisPointer:{type:'shadow'}};
+      opt.grid = {left:48, right:24, bottom:70, top:48, containLabel:true};
+      opt.xAxis = Object.assign({type:'category', axisLabel:{color:'#cdd6f4', rotate:28, interval:0, fontSize:11}}, opt.xAxis||{});
+      opt.yAxis = Object.assign({type:'value', axisLabel:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#313244'}}}, opt.yAxis||{});
+      return opt;
+    }
+
+    // Chart: 主结果 512
+    var c1 = echarts.init(document.getElementById('chart-main'));
+    c1.setOption(baseGrid({
+      legend:{data:['BAGEL','AlphaGRPO','SpectraReward','Self-SpectraReward'], textStyle:{color:'#cdd6f4'}, top:6},
+      xAxis:{data:['TIIF-Short','TIIF-Long','GenEval','GenEval2','DPG-Overall']},
+      series:[
+        {name:'BAGEL', type:'bar', data:[75.2,78.6,84.0,86.6,90.37], color:'#6c7086'},
+        {name:'AlphaGRPO', type:'bar', data:[78.9,79.5,85.0,87.4,90.93], color:'#fab387'},
+        {name:'SpectraReward', type:'bar', data:[85.2,84.8,88.3,88.3,92.17], color:'#89b4fa'},
+        {name:'Self-SpectraReward', type:'bar', data:[85.1,84.3,89.5,89.8,91.94], color:'#a6e3a1',
+         label:{show:true,position:'top',fontSize:10,color:'#cdd6f4'}}
+      ]
+    }));
+
+    // Chart: backbone scaling
+    var c2 = echarts.init(document.getElementById('chart-backbone'));
+    c2.setOption(baseGrid({
+      legend:{data:['GenEval','TIIF-Short','TIIF-Long'], textStyle:{color:'#cdd6f4'}, top:6},
+      xAxis:{data:['Baseline\n(BAGEL)','Gemma3\n4B','Gemma3\n12B-PT','Gemma3\n12B','InternVL3.5\n8B','InternVL3.5\n14B','Qwen3-VL\n8B','Qwen3-VL\n30B-A3B','Qwen3-VL\n235B','Self\n(BAGEL)']},
+      series:[
+        {name:'GenEval', type:'bar', data:[84.0,83.6,88.7,87.5,84.5,84.9,87.8,88.3,86.8,89.5], color:'#89b4fa'},
+        {name:'TIIF-Short', type:'bar', data:[75.2,83.1,84.3,82.0,80.4,78.5,85.0,85.2,84.3,85.1], color:'#a6e3a1'},
+        {name:'TIIF-Long', type:'bar', data:[78.6,83.0,82.6,82.6,80.0,79.9,83.8,84.8,83.4,84.3], color:'#fab387'}
+      ]
+    }));
+
+    // Chart: reward function ablation
+    var c3 = echarts.init(document.getElementById('chart-rewardfn'));
+    c3.setOption(baseGrid({
+      legend:{data:['GenEval','TIIF-Short','TIIF-Long'], textStyle:{color:'#cdd6f4'}, top:6},
+      xAxis:{data:['No Reward\n(Baseline)','Scalar Scoring\n(1-5)','VQA-Score\nP(yes)','Prompt Likelihood\n(SpectraReward)']},
+      series:[
+        {name:'GenEval', type:'bar', data:[84.0,77.7,83.1,89.5], color:'#89b4fa'},
+        {name:'TIIF-Short', type:'bar', data:[75.2,67.5,77.4,85.1], color:'#a6e3a1'},
+        {name:'TIIF-Long', type:'bar', data:[78.6,76.0,78.9,84.3], color:'#fab387'}
+      ]
+    }));
+    </script>
+
+    <h2 id="section-4">5. 总结与启发</h2>
+
+    <h3>5.1 局限性与未来工作（附录 A）</h3>
+    <ul>
+      <li><strong>受限于 MLLM 视觉推理能力</strong>：SpectraReward 依赖预训练 MLLM 的 image-conditioned prompt likelihood，奖励质量受所选 reward backbone 的视觉理解与推理能力上限制约。</li>
+      <li><strong>主要捕捉显式语义对齐，弱化隐式蕴含</strong>：因为似然仅在原始 prompt token 上计算，奖励主要刻画生成图像与 prompt 间的<strong>显式</strong>语义对齐，对未直接写进文本的隐式视觉蕴含可能欠关注。例如 “hot coffee” 物理上隐含“冒蒸汽”，但该蕴含在原始 prompt token 的似然上可能很弱。可缓解方案：用具备丰富世界知识的更强 MLLM backbone，或把 SpectraReward 扩展到<strong>推理式 T2I 生成</strong>，让中间推理把隐式需求显式化。</li>
+      <li><strong>不直接优化美学与安全</strong>：可通过与互补的专门奖励模型（美学、安全）结合来补足。</li>
+      <li><strong>闭环自奖励的安全隐患</strong>（Broader Impacts）：Self-SpectraReward 的闭环会进一步鼓励模型对齐其自身理解分支，可能不完全反映人类偏好或安全要求；作者建议部署时配合标准安全过滤、偏差审计与人工评估。</li>
+    </ul>
+
+    <h3>5.2 核心洞见与读后评注</h3>
+    <p><strong>洞见一：把奖励建模“降维”为预训练已求解的逆问题。</strong>本文最漂亮的转身是<strong>回避判别任务、改用生成式似然</strong>。让 MLLM 打分或答原子问题，本质是在预训练目标之外要求一个判别头——校准差、噪声大、或需分解工程。而“图像能否读回 prompt”恰是 image-conditioned 语言建模本身，预训练已为其准备了海量监督。这一设计选择把奖励的可靠性从“判别校准”转移到“预训练对齐质量”，是 training-free 奖励能跑通的根本原因。</p>
+
+    <p><strong>洞见二：group-relative 让 PMI 修正变得不必要。</strong>语言先验本可能污染奖励，但因为相对优势在同一 prompt 组内比较，纯文本似然项被天然抵消。这是一个常被忽视的工程性结论：<strong>选择 group-relative RL 等价于免费获得 PMI 归一化</strong>，简化了奖励设计。也提示绝对奖励校准对这类方法无关紧要，只需组内排序可靠——作者用 Figure 3/4 的 token 敏感性与排序一致性给出了直接证据。</p>
+
+    <p><strong>洞见三：奖励-策略对齐 ≥ 奖励模型规模（反直觉）。</strong>最具冲击力的实验是 Self-SpectraReward（7B 自身理解分支）反超大 4×–30× 的外部 reward MLLM，且 reward 规模<strong>非单调</strong>（30B→235B 反降）。这说明：(a) SpectraReward 所需的“基础 image-captioning 能力”在中等规模已饱和，更大的 MLLM 把容量投到了与该奖励无关的高级推理/指令任务；(b) 与策略共享 tokenizer/视觉编码器/预训练分布带来的<strong>分布对齐</strong>，比通用判别力更值钱。这对工业界的启示是——<strong>不必盲目堆大 reward MLLM，而应优先保证 reward 与 policy 的表示对齐</strong>。</p>
+
+    <p><strong>洞见四：预训练阶段 > 指令微调阶段（作为 reward backbone）。</strong>Gemma3-12B-Pretrain 一致优于 -Instruct，呼应了洞见一：SpectraReward 要的是“图文对齐”，而这正是预训练目标本身；指令微调反而把模型推向与该奖励不直接相关的能力。这是一个反直觉但可复用的选型经验：<strong>做 likelihood 奖励，优先选预训练/基础模型，而非 instruct 版</strong>。</p>
+
+    <p><strong>洞见五：闭环自改进的工程意义。</strong>Self-SpectraReward 让 UMM 用自身理解分支奖励自身生成分支，去除了外部大 MLLM 的部署/服务开销，简化 RL 流水线，并提供了对齐更好的信号。这与 LLM 自奖励（Self-Rewarding LM）范式一脉相承，但在多模态生成上首次系统证明“自奖励可比外部更强”。潜在风险也正在于此：闭环可能放大自身偏差、偏离人类偏好，需安全护栏。</p>
+
+    <p><strong>读后评注</strong>：SpectraReward 的“读回”思想与 PromptEcho（concurrent，cross-entropy）高度相似，但本文把它从“领域专用 T2I backbone”推广到通用扩散模型与 UMM，并首次系统量化了 reward backbone 的规模/家族/阶段效应与 reward-policy 对齐效应，是该方向目前最完整的实证。其局限性也清晰：奖励只覆盖 prompt 显式语义，对美学/安全/隐式常识无能为力，需与互补奖励组合。可作为 T2I RL 的一条“base reward”，与美学/安全奖励正交叠加，构成多目标奖励栈。</p>
+
+    <h2 id="section-5">6. 参考文献（关键文献）</h2>
+    <ol style="line-height:1.9">
+      <li>Runhui Huang, Jie Wu, Rui Yang, Zhe Liu, Hengshuang Zhao. <strong>AlphaGRPO: Unlocking Self-Reflective Multimodal Generation in Unified Multimodal Models via Decompositional Verifiable Reward.</strong> ICML 2026.（本文主对照基线，DVReward/问题分解，训练数据 AlphaGRPO20k 来源）</li>
+      <li>Chaorui Deng et al. <strong>Emerging Properties in Unified Multimodal Pretraining (BAGEL).</strong> arXiv:2505.14683, 2025.（默认策略模型 / Self-SpectraReward 载体）</li>
+      <li>Shuai Bai et al. <strong>Qwen3-VL Technical Report.</strong> arXiv:2511.21631, 2025.（默认外部 reward MLLM，含 8B/30B-A3B/235B-A22B）</li>
+      <li>Shuchen Xue, Chongjian Ge, Shilong Zhang, Yichen Li, Zhi-Ming Ma. <strong>Advantage Weighted Matching: Aligning RL with Pretraining in Diffusion Models (AWM).</strong> arXiv:2509.25050, 2025.（默认 RL 算法）</li>
+      <li>Jie Liu et al. <strong>Flow-GRPO: Training Flow Matching Models via Online RL.</strong> arXiv:2505.05470, 2025.（对比 RL 算法，SDE-based）</li>
+      <li>Kaiwen Zheng et al. <strong>DiffusionNFT: Online Diffusion Reinforcement with Forward Process.</strong> arXiv:2509.16117, 2025.（对比 RL 算法）</li>
+      <li>Jinlong Liu et al. <strong>PromptEcho: Annotation-free Reward from Vision-Language Models for Text-to-Image RL.</strong> arXiv:2604.12652, 2026.（concurrent 似然奖励，仅限领域专用 T2I backbone）</li>
+      <li>Jiadong Pan et al. <strong>Learning to Generate via Understanding: Understanding-Driven Intrinsic Rewarding for UMMs (GvU).</strong> arXiv:2603.06043, 2026.（concurrent 自奖励 UMM，token 级 logits）</li>
+      <li>Weiyang Jin et al. <strong>SRUM: Fine-grained Self-Rewarding for Unified Multimodal Models.</strong> arXiv:2510.12784, 2025.（concurrent 自奖励 UMM，全局+局部信号）</li>
+      <li>Weizhe Yuan et al. <strong>Self-Rewarding Language Models.</strong> arXiv:2401.10020, 2024.（LLM 自奖励范式源头）</li>
+      <li>Dhruba Ghosh, Hannaneh Hajishirzi, Ludwig Schmidt. <strong>GenEval: An Object-Focused Framework for Evaluating Text-to-Image Alignment.</strong> NeurIPS 2023.（OOD 基准）</li>
+      <li>Xinyu Wei et al. <strong>TIIF-Bench: How Does Your T2I Model Follow Your Instructions?</strong> arXiv:2506.02161, 2025.（OOD 基准）</li>
+      <li>Yuwei Niu et al. <strong>WISE: A World Knowledge-Informed Semantic Evaluation for Text-to-Image Generation.</strong> arXiv:2503.07265, 2025.（知识接地 OOD 基准）</li>
+      <li>Max Ku et al. <strong>VIEScore: Towards Explainable Metrics for Conditional Image Synthesis Evaluation.</strong> ACL 2024.（标量打分类 zero-shot 奖励对照）</li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086;font-size:0.85em">本报告基于论文原文（arXiv:2607.11886v1，含正文与附录 A–F）撰写，所有数值与结论均来自原文 Tables 1–11 与正文叙述，未作编造。机构标注：港大 / ByteDance Seed / 北大。</p>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+    hljs.highlightAll();
+    // 自动生成目录
+    var toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach(function(h, i){
+      if (!h.id) h.id = 'section-' + i;
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    // 滚动高亮
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        var link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(function(h){ observer.observe(h); });
+  </script>
+</body>
+</html>

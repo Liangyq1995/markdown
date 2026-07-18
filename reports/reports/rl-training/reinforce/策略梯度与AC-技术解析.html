@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>策略梯度与 Actor-Critic · 动手学强化学习 第9-10章</title>
+
+<!-- MathJax -->
+<script>
+MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    packages: {'[+]': ['ams']},
+    tags: 'ams'
+  },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<style>
+/* ===== 全局变量 ===== */
+:root {
+  --bg: #1e1e2e;
+  --bg2: #252538;
+  --bg3: #2d2d44;
+  --bg4: #333350;
+  --surface: #313244;
+  --border: #45475a;
+  --text: #cdd6f4;
+  --text-muted: #a6adc8;
+  --text-dim: #6c7086;
+  --accent: #89b4fa;
+  --accent2: #cba6f7;
+  --accent3: #94e2d5;
+  --accent4: #a6e3a1;
+  --accent5: #f9e2af;
+  --accent6: #fab387;
+  --red: #f38ba8;
+  --green: #a6e3a1;
+  --yellow: #f9e2af;
+  --sidebar-w: 280px;
+  --header-h: 56px;
+  --radius: 10px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ===== 滚动条 ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ===== 侧边栏 ===== */
+#sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 18px 16px 14px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  color: #1e1e2e;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.sidebar-header .chapter-tag {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+nav#toc {
+  padding: 12px 0;
+  flex: 1;
+}
+
+nav#toc a {
+  display: block;
+  padding: 5px 16px 5px 20px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 13px;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+  line-height: 1.5;
+}
+
+nav#toc a:hover {
+  color: var(--accent);
+  background: rgba(137,180,250,0.08);
+  border-left-color: var(--accent);
+}
+
+nav#toc a.active {
+  color: var(--accent);
+  background: rgba(137,180,250,0.12);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+nav#toc .toc-h2 { padding-left: 20px; font-weight: 600; color: var(--text); font-size: 13px; }
+nav#toc .toc-h3 { padding-left: 32px; font-size: 12.5px; }
+nav#toc .toc-h4 { padding-left: 44px; font-size: 12px; color: var(--text-dim); }
+
+nav#toc .toc-section-label {
+  padding: 10px 16px 4px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+/* ===== 主内容 ===== */
+#main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== 顶部 Hero ===== */
+#hero {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+  padding: 56px 64px 48px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+#hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 320px; height: 320px;
+  background: radial-gradient(circle, rgba(137,180,250,0.12) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+#hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: 200px;
+  width: 240px; height: 240px;
+  background: radial-gradient(circle, rgba(203,166,247,0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: rgba(137,180,250,0.15);
+  border: 1px solid rgba(137,180,250,0.3);
+  color: var(--accent);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+}
+
+#hero h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.3;
+  margin-bottom: 12px;
+}
+
+#hero h1 span { color: var(--accent); }
+
+#hero .subtitle {
+  color: var(--text-muted);
+  font-size: 15px;
+  max-width: 600px;
+}
+
+/* ===== 内容区 ===== */
+#content {
+  padding: 48px 64px 80px;
+  max-width: none;
+}
+
+/* ===== 标题 ===== */
+h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 52px 0 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border);
+  position: relative;
+}
+
+h2::before {
+  content: '';
+  position: absolute;
+  bottom: -2px; left: 0;
+  width: 60px; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+
+h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 36px 0 14px;
+}
+
+h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent3);
+  margin: 24px 0 10px;
+}
+
+p { margin-bottom: 14px; color: var(--text); }
+
+/* ===== Tech Card ===== */
+.tech-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  margin: 20px 0;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.tech-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 3px; height: 100%;
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+}
+
+.tech-card.green::before { background: linear-gradient(180deg, var(--accent4), var(--accent3)); }
+.tech-card.orange::before { background: linear-gradient(180deg, var(--accent6), var(--accent5)); }
+.tech-card.red::before { background: linear-gradient(180deg, var(--red), var(--accent6)); }
+.tech-card.purple::before { background: linear-gradient(180deg, var(--accent2), #89b4fa); }
+
+.tech-card .card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tech-card.green .card-title { color: var(--accent4); }
+.tech-card.orange .card-title { color: var(--accent6); }
+.tech-card.red .card-title { color: var(--red); }
+.tech-card.purple .card-title { color: var(--accent2); }
+
+.card-icon {
+  width: 20px; height: 20px;
+  background: rgba(137,180,250,0.15);
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+/* ===== 公式块 ===== */
+.formula-block {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 16px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.formula-block.highlight {
+  border-color: rgba(137,180,250,0.4);
+  background: rgba(137,180,250,0.05);
+  box-shadow: 0 0 20px rgba(137,180,250,0.08);
+}
+
+/* ===== 推导步骤 ===== */
+.derivation {
+  margin: 20px 0;
+  counter-reset: step;
+}
+
+.step {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+.step-num {
+  counter-increment: step;
+  width: 32px; height: 32px;
+  min-width: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #1e1e2e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  margin-top: 2px;
+  box-shadow: 0 2px 8px rgba(137,180,250,0.3);
+}
+
+.step-content {
+  flex: 1;
+  background: var(--bg3);
+  border-radius: 8px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+}
+
+.step-content .step-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* ===== 表格 ===== */
+.table-wrap {
+  overflow-x: auto;
+  margin: 20px 0;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+thead tr {
+  background: linear-gradient(135deg, var(--bg3), var(--bg4));
+}
+
+thead th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+tbody tr {
+  border-bottom: 1px solid rgba(69,71,90,0.5);
+  transition: background 0.1s;
+}
+
+tbody tr:hover { background: rgba(137,180,250,0.04); }
+tbody tr:last-child { border-bottom: none; }
+
+tbody td {
+  padding: 11px 16px;
+  color: var(--text);
+  vertical-align: top;
+}
+
+tbody td:first-child { font-weight: 600; color: var(--accent3); }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-green { background: rgba(166,227,161,0.15); color: var(--green); }
+.badge-red { background: rgba(243,139,168,0.15); color: var(--red); }
+.badge-yellow { background: rgba(249,226,175,0.15); color: var(--yellow); }
+.badge-blue { background: rgba(137,180,250,0.15); color: var(--accent); }
+
+/* ===== Psi表格 ===== */
+.psi-table {
+  margin: 20px 0;
+}
+
+.psi-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: var(--bg3);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.psi-row:hover {
+  border-color: var(--accent);
+  background: rgba(137,180,250,0.05);
+}
+
+.psi-index {
+  width: 28px; height: 28px;
+  min-width: 28px;
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent5);
+}
+
+.psi-formula { flex: 1; font-size: 14px; }
+
+.psi-tag {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ===== Mermaid ===== */
+pre.mermaid {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 20px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ===== 符号表 ===== */
+.symbol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.symbol-item {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.15s;
+}
+
+.symbol-item:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.symbol-sym {
+  min-width: 48px;
+  text-align: center;
+  font-size: 18px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.symbol-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.symbol-desc strong { color: var(--text); }
+
+/* ===== 信息块 ===== */
+.info-box {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 8px;
+  margin: 16px 0;
+  font-size: 13.5px;
+}
+
+.info-box.info { background: rgba(137,180,250,0.08); border: 1px solid rgba(137,180,250,0.25); }
+.info-box.success { background: rgba(166,227,161,0.08); border: 1px solid rgba(166,227,161,0.25); }
+.info-box.warning { background: rgba(249,226,175,0.08); border: 1px solid rgba(249,226,175,0.25); }
+.info-box.danger { background: rgba(243,139,168,0.08); border: 1px solid rgba(243,139,168,0.25); }
+
+.info-box .ib-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.info-box .ib-text { flex: 1; }
+.info-box .ib-text strong { display: block; margin-bottom: 4px; }
+
+/* ===== ECharts ===== */
+.chart-container {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin: 20px 0;
+}
+
+.chart-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ===== 演进时间线 ===== */
+.timeline {
+  position: relative;
+  padding-left: 28px;
+  margin: 20px 0;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px; top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, var(--accent), var(--accent2), var(--accent3));
+}
+
+.tl-item {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.tl-item::before {
+  content: '';
+  position: absolute;
+  left: -24px; top: 6px;
+  width: 10px; height: 10px;
+  background: var(--accent);
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.tl-item .tl-title {
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.tl-item .tl-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ===== 代码块 ===== */
+code {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12.5px;
+  color: var(--accent3);
+}
+
+/* ===== 分隔线 ===== */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 40px 0;
+}
+
+/* ===== 章节标签 ===== */
+.chapter-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #1e1e2e;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 768px) {
+  #sidebar { display: none; }
+  #main { margin-left: 0; }
+  #hero { padding: 32px 24px; }
+  #content { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 侧边栏 ===== -->
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <div class="chapter-tag">动手学强化学习 · 第9-10章</div>
+    策略梯度与 Actor-Critic
+  </div>
+  <nav id="toc">
+    <div class="toc-section-label">概览</div>
+    <a href="#symbols" class="toc-h2">符号总表</a>
+
+    <div class="toc-section-label">第9章 策略梯度</div>
+    <a href="#ch9" class="toc-h2">第9章 策略梯度算法</a>
+    <a href="#s9-1" class="toc-h3">9.1 基于策略 vs 基于价值</a>
+    <a href="#s9-2" class="toc-h3">9.2 策略梯度定理（完整证明）</a>
+    <a href="#s9-3" class="toc-h3">9.3 REINFORCE 算法</a>
+    <a href="#s9-4" class="toc-h3">9.4 六种梯度估计形式</a>
+
+    <div class="toc-section-label">第10章 Actor-Critic</div>
+    <a href="#ch10" class="toc-h2">第10章 Actor-Critic 算法</a>
+    <a href="#s10-1" class="toc-h3">10.1 动机：用 Critic 降低方差</a>
+    <a href="#s10-2" class="toc-h3">10.2 Actor-Critic 架构</a>
+    <a href="#s10-3" class="toc-h3">10.3 A2C：完整更新公式</a>
+    <a href="#s10-4" class="toc-h3">10.4 AC vs REINFORCE 对比</a>
+    <a href="#s10-5" class="toc-h3">10.5 AC 框架的重要性</a>
+
+    <div class="toc-section-label">小结</div>
+    <a href="#summary" class="toc-h2">小结与演进图</a>
+  </nav>
+</aside>
+
+<!-- ===== 主内容 ===== -->
+<div id="main">
+
+<!-- Hero -->
+<div id="hero">
+  <div class="hero-badge">动手学强化学习 · 第 9-10 章</div>
+  <h1>策略梯度与 <span>Actor-Critic</span></h1>
+  <p class="subtitle">从策略梯度定理的完整六步证明，到 A2C 的双网络协同训练——深入理解基于策略的强化学习方法族</p>
+</div>
+
+<div id="content">
+
+<!-- ===== 符号总表 ===== -->
+<h2 id="symbols">符号总表</h2>
+
+<div class="symbol-grid">
+  <div class="symbol-item">
+    <div class="symbol-sym">$\theta$</div>
+    <div class="symbol-desc"><strong>策略参数</strong><br>策略网络（Actor）的可学习参数向量</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$\pi_\theta$</div>
+    <div class="symbol-desc"><strong>参数化策略</strong><br>$\pi_\theta(a|s)$：在状态 $s$ 下选择动作 $a$ 的概率</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$J(\theta)$</div>
+    <div class="symbol-desc"><strong>目标函数</strong><br>策略的期望累积折扣回报，优化目标</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$\varphi$</div>
+    <div class="symbol-desc"><strong>价值网络参数</strong><br>Critic 网络（价值函数）的可学习参数</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$V_\varphi$</div>
+    <div class="symbol-desc"><strong>状态价值函数</strong><br>$V_\varphi(s)$：神经网络对 $V^\pi(s)$ 的近似</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$\delta_t$</div>
+    <div class="symbol-desc"><strong>TD 误差</strong><br>$r_t + \gamma V_\varphi(s_{t+1}) - V_\varphi(s_t)$，优势函数的无偏估计</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$Q^\pi$</div>
+    <div class="symbol-desc"><strong>动作价值函数</strong><br>$Q^\pi(s,a)$：策略 $\pi$ 下状态-动作对的期望回报</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$A^\pi$</div>
+    <div class="symbol-desc"><strong>优势函数</strong><br>$A^\pi(s,a) = Q^\pi(s,a) - V^\pi(s)$，动作相对于平均水平的优势</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$d^\pi$</div>
+    <div class="symbol-desc"><strong>状态访问分布</strong><br>策略 $\pi$ 下各状态的折扣访问频率分布</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$G_t$</div>
+    <div class="symbol-desc"><strong>蒙特卡洛回报</strong><br>$G_t = \sum_{t'=t}^T \gamma^{t'-t} r_{t'}$，从 $t$ 时刻起的折扣累积回报</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$\tau$</div>
+    <div class="symbol-desc"><strong>轨迹</strong><br>$(s_0, a_0, r_0, s_1, a_1, r_1, \ldots)$，策略与环境交互的完整序列</div>
+  </div>
+  <div class="symbol-item">
+    <div class="symbol-sym">$\gamma$</div>
+    <div class="symbol-desc"><strong>折扣因子</strong><br>$\gamma \in [0,1]$，控制未来奖励的权重衰减</div>
+  </div>
+</div>
+
+<!-- ===== 第9章 ===== -->
+<div class="chapter-badge" style="margin-top: 52px;">第 9 章</div>
+<h2 id="ch9">策略梯度算法</h2>
+
+<!-- 9.1 -->
+<h3 id="s9-1">9.1 基于策略的方法 vs 基于价值的方法</h3>
+
+<p>强化学习中存在两大主流范式：<strong>基于价值（Value-Based）</strong>方法通过学习价值函数间接导出策略；<strong>基于策略（Policy-Based）</strong>方法直接对策略参数 $\theta$ 进行梯度优化。</p>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>对比维度</th>
+        <th>基于价值的方法</th>
+        <th>基于策略的方法</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>代表算法</td>
+        <td>DQN, Q-Learning, SARSA</td>
+        <td>REINFORCE, PPO, TRPO</td>
+      </tr>
+      <tr>
+        <td>动作空间</td>
+        <td><span class="badge badge-green">离散动作</span> 友好</td>
+        <td><span class="badge badge-blue">离散 + 连续</span> 均可</td>
+      </tr>
+      <tr>
+        <td>策略类型</td>
+        <td>确定性策略（argmax）</td>
+        <td><span class="badge badge-blue">随机策略</span>（概率分布）</td>
+      </tr>
+      <tr>
+        <td>收敛性</td>
+        <td>可能震荡，不保证收敛</td>
+        <td><span class="badge badge-green">局部最优</span>收敛保证</td>
+      </tr>
+      <tr>
+        <td>样本效率</td>
+        <td><span class="badge badge-green">较高</span>（可经验回放）</td>
+        <td><span class="badge badge-yellow">较低</span>（on-policy）</td>
+      </tr>
+      <tr>
+        <td>连续控制</td>
+        <td><span class="badge badge-red">困难</span>（需离散化）</td>
+        <td><span class="badge badge-green">天然支持</span></td>
+      </tr>
+      <tr>
+        <td>随机策略</td>
+        <td>需要额外探索机制（$\epsilon$-greedy）</td>
+        <td><span class="badge badge-green">内置随机性</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="info-box info">
+  <span class="ib-icon">💡</span>
+  <div class="ib-text">
+    <strong>核心直觉</strong>
+    基于策略的方法直接优化"做什么"，而不是"某状态有多好"。对于连续动作空间（如机器人控制），输出高斯分布的均值和方差远比离散化动作空间更自然。
+  </div>
+</div>
+
+<!-- 9.2 -->
+<h3 id="s9-2">9.2 策略梯度定理（完整证明）</h3>
+
+<p>策略梯度定理（Policy Gradient Theorem）是策略优化的理论基础，它给出了目标函数 $J(\theta)$ 关于策略参数 $\theta$ 的梯度的精确表达式。</p>
+
+<div class="tech-card">
+  <div class="card-title"><span class="card-icon">📐</span>目标函数定义</div>
+  <div class="formula-block highlight">
+    $$J(\theta) = \mathbb{E}_{\tau \sim \pi_\theta}\left[\sum_{t=0}^T \gamma^t r_t\right] = \mathbb{E}_{s \sim d^\pi}\left[V^\pi(s)\right]$$
+  </div>
+  <p style="font-size:13px; color: var(--text-muted); margin:0;">其中 $d^\pi(s) \propto \sum_{k=0}^\infty \gamma^k \Pr(s_k = s \mid s_0, \pi)$ 为折扣状态访问分布。</p>
+</div>
+
+<h4>完整六步推导</h4>
+
+<div class="derivation">
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <div class="step-label">出发点：展开目标函数</div>
+      <p>将 $J(\theta)$ 写成对状态分布的期望：</p>
+      <div class="formula-block">
+        $$J(\theta) = \sum_s d^\pi(s)\, V^\pi(s)$$
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin:0;">对 $\theta$ 求梯度：$\nabla_\theta J(\theta) = \sum_s \nabla_\theta \left[d^\pi(s)\, V^\pi(s)\right]$</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <div class="step-label">展开状态价值函数</div>
+      <p>利用 $V^\pi(s) = \sum_a \pi_\theta(a|s)\, Q^\pi(s,a)$，对 $\nabla_\theta V^\pi(s)$ 展开：</p>
+      <div class="formula-block">
+        $$\nabla_\theta V^\pi(s) = \nabla_\theta \sum_a \pi_\theta(a|s)\, Q^\pi(s,a)$$
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <div class="step-label">乘积法则展开</div>
+      <p>对每个 $(a,s)$ 对应用乘积法则 $\nabla(fg) = f\nabla g + g\nabla f$：</p>
+      <div class="formula-block">
+        $$\nabla_\theta V^\pi(s) = \sum_a \left[\nabla_\theta \pi_\theta(a|s)\, Q^\pi(s,a) + \pi_\theta(a|s)\, \nabla_\theta Q^\pi(s,a)\right]$$
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <div class="step-label">递归展开 $\nabla_\theta Q^\pi(s,a)$</div>
+      <p>利用 Bellman 方程 $Q^\pi(s,a) = r(s,a) + \gamma \sum_{s'} P(s'|s,a) V^\pi(s')$，其中奖励 $r$ 与 $\theta$ 无关：</p>
+      <div class="formula-block">
+        $$\nabla_\theta Q^\pi(s,a) = \gamma \sum_{s'} P(s'|s,a)\, \nabla_\theta V^\pi(s')$$
+      </div>
+      <p style="font-size:13px; color:var(--text-muted); margin:0;">代入步骤3，得到关于 $\nabla_\theta V^\pi(s')$ 的递推关系，可以无限展开。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <div class="step-label">定义转移概率并迭代展开</div>
+      <p>定义 $\phi(s \to s', k)$ 为策略 $\pi$ 下从状态 $s$ 出发，经过 $k$ 步到达状态 $s'$ 的概率。反复代入递推关系：</p>
+      <div class="formula-block">
+        $$\nabla_\theta V^\pi(s) = \sum_{s'}\sum_{k=0}^\infty \gamma^k\, \phi(s \to s', k) \sum_{a'} \nabla_\theta \pi_\theta(a'|s')\, Q^\pi(s', a')$$
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-content">
+      <div class="step-label">对初始分布取期望，得到策略梯度定理</div>
+      <p>对初始状态 $s_0 \sim \mu$ 取期望，令 $d^\pi(s) \propto \sum_{k=0}^\infty \gamma^k \phi(s_0 \to s, k)$，并应用 log-trick：</p>
+      <div class="formula-block highlight">
+        $$\boxed{\nabla_\theta J(\theta) = \mathbb{E}_{s \sim d^\pi,\, a \sim \pi_\theta}\!\left[\nabla_\theta \log \pi_\theta(a|s) \cdot Q^\pi(s,a)\right]}$$
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="tech-card green">
+  <div class="card-title"><span class="card-icon">🔑</span>Log-Trick 推导</div>
+  <p>策略梯度定理的关键技巧是将 $\nabla_\theta \pi_\theta$ 转化为对数形式，使得期望可以用采样估计：</p>
+  <div class="formula-block">
+    $$\nabla_\theta \pi_\theta(a|s) = \pi_\theta(a|s) \cdot \frac{\nabla_\theta \pi_\theta(a|s)}{\pi_\theta(a|s)} = \pi_\theta(a|s) \cdot \nabla_\theta \log \pi_\theta(a|s)$$
+  </div>
+  <p style="font-size:13px; color:var(--text-muted); margin:0;">因此 $\sum_a \nabla_\theta \pi_\theta(a|s)\, Q^\pi = \mathbb{E}_{a \sim \pi_\theta}[\nabla_\theta \log \pi_\theta(a|s)\, Q^\pi(s,a)]$，可以用蒙特卡洛采样无偏估计。</p>
+</div>
+
+<!-- 9.3 -->
+<h3 id="s9-3">9.3 REINFORCE 算法</h3>
+
+<p>REINFORCE 是策略梯度定理最直接的实现：用整条轨迹的蒙特卡洛回报 $G_t$ 替代无法直接计算的 $Q^\pi(s_t, a_t)$。</p>
+
+<div class="tech-card">
+  <div class="card-title"><span class="card-icon">📊</span>蒙特卡洛估计与梯度更新</div>
+  <p>采集 $N$ 条轨迹，梯度估计为：</p>
+  <div class="formula-block">
+    $$\nabla_\theta J(\theta) \approx \frac{1}{N}\sum_{\tau=1}^N \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot G_t$$
+  </div>
+  <p>其中 $G_t = \sum_{t'=t}^T \gamma^{t'-t} r_{t'}$。参数更新：</p>
+  <div class="formula-block highlight">
+    $$\theta \leftarrow \theta + \alpha \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot G_t$$
+  </div>
+</div>
+
+<h4>方差分析与基线减方差</h4>
+
+<p>REINFORCE 是无偏估计，但 $G_t$ 的高方差导致训练不稳定。引入基线 $b(s_t)$ 可以在不引入偏差的前提下降低方差：</p>
+
+<div class="formula-block">
+  $$\nabla_\theta J(\theta) \approx \sum_{t=0}^T \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot \left(G_t - b(s_t)\right)$$
+</div>
+
+<div class="tech-card green">
+  <div class="card-title"><span class="card-icon">✓</span>基线不影响期望的证明</div>
+  <p>对任意基线 $b(s)$，有：</p>
+  <div class="formula-block">
+    $$\mathbb{E}_{a \sim \pi_\theta}\left[\nabla_\theta \log \pi_\theta(a|s) \cdot b(s)\right] = b(s) \sum_a \nabla_\theta \pi_\theta(a|s) = b(s) \cdot \nabla_\theta \underbrace{\sum_a \pi_\theta(a|s)}_{=1} = 0$$
+  </div>
+  <p style="font-size:13px; color:var(--text-muted); margin:0;">因此基线 $b$ 不影响梯度期望，但能减小 $(G_t - b)$ 的方差。最优基线通常取 $b(s_t) = V^\pi(s_t)$，此时 $G_t - b = A^\pi(s_t, a_t)$（优势函数）。</p>
+</div>
+
+<div class="info-box warning">
+  <span class="ib-icon">⚠️</span>
+  <div class="ib-text">
+    <strong>REINFORCE 的局限性</strong>
+    必须等待整条轨迹结束才能计算 $G_t$，无法在线更新；高方差导致需要大量样本；对学习率敏感。这些问题促使了 Actor-Critic 方法的诞生。
+  </div>
+</div>
+
+<!-- 9.4 -->
+<h3 id="s9-4">9.4 六种梯度估计形式</h3>
+
+<p>策略梯度定理给出了一个通用框架：$\nabla_\theta J(\theta) = \mathbb{E}\left[\sum_t \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot \Psi_t\right]$，其中 $\Psi_t$ 有以下六种等价或近似形式，在偏差/方差上各有权衡：</p>
+
+<div class="psi-table">
+  <div class="psi-row">
+    <div class="psi-index">①</div>
+    <div class="psi-formula">$\Psi_t = \displaystyle\sum_{t'=0}^T \gamma^{t'} r_{t'}$</div>
+    <span class="psi-tag" style="background:rgba(243,139,168,0.15);color:var(--red);">总轨迹回报</span>
+  </div>
+  <div class="psi-row">
+    <div class="psi-index">②</div>
+    <div class="psi-formula">$\Psi_t = \displaystyle\sum_{t'=t}^T \gamma^{t'-t} r_{t'} = G_t$</div>
+    <span class="psi-tag" style="background:rgba(249,226,175,0.15);color:var(--yellow);">因果性回报</span>
+  </div>
+  <div class="psi-row">
+    <div class="psi-index">③</div>
+    <div class="psi-formula">$\Psi_t = \displaystyle\sum_{t'=t}^T \gamma^{t'-t} r_{t'} - b(s_t)$</div>
+    <span class="psi-tag" style="background:rgba(166,227,161,0.15);color:var(--green);">带基线</span>
+  </div>
+  <div class="psi-row">
+    <div class="psi-index">④</div>
+    <div class="psi-formula">$\Psi_t = Q^\pi(s_t, a_t)$</div>
+    <span class="psi-tag" style="background:rgba(137,180,250,0.15);color:var(--accent);">动作价值</span>
+  </div>
+  <div class="psi-row">
+    <div class="psi-index">⑤</div>
+    <div class="psi-formula">$\Psi_t = A^\pi(s_t, a_t) = Q^\pi(s_t, a_t) - V^\pi(s_t)$</div>
+    <span class="psi-tag" style="background:rgba(203,166,247,0.15);color:var(--accent2);">优势函数</span>
+  </div>
+  <div class="psi-row">
+    <div class="psi-index">⑥</div>
+    <div class="psi-formula">$\Psi_t = r_t + \gamma V^\pi(s_{t+1}) - V^\pi(s_t) = \delta_t$</div>
+    <span class="psi-tag" style="background:rgba(148,226,213,0.15);color:var(--accent3);">TD 残差</span>
+  </div>
+</div>
+
+<div class="info-box info">
+  <span class="ib-icon">📈</span>
+  <div class="ib-text">
+    <strong>偏差-方差权衡</strong>
+    从 ① 到 ⑥，方差逐渐降低，但部分形式引入了偏差（当用近似 $V_\varphi$ 代替真实 $V^\pi$ 时）。⑥ 的 TD 残差方差最低，但依赖 $V_\varphi$ 的精度，是 Actor-Critic 方法的核心。
+  </div>
+</div>
+
+<hr>
+
+<!-- ===== 第10章 ===== -->
+<div class="chapter-badge">第 10 章</div>
+<h2 id="ch10">Actor-Critic 算法</h2>
+
+<!-- 10.1 -->
+<h3 id="s10-1">10.1 动机：用 Critic 降低方差</h3>
+
+<p>REINFORCE 使用完整轨迹的蒙特卡洛回报 $G_t$ 估计 $Q^\pi$，这导致了两个核心问题：</p>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0;">
+  <div class="tech-card red">
+    <div class="card-title"><span class="card-icon">❌</span>REINFORCE 的问题</div>
+    <ul style="font-size:13.5px; padding-left:16px; color:var(--text-muted);">
+      <li style="margin-bottom:8px;">需要等整条轨迹结束才能更新，无法在线学习</li>
+      <li style="margin-bottom:8px;">$G_t$ 是高方差估计，训练不稳定</li>
+      <li>样本效率低，收敛慢</li>
+    </ul>
+  </div>
+  <div class="tech-card green">
+    <div class="card-title"><span class="card-icon">✓</span>Actor-Critic 的解决方案</div>
+    <ul style="font-size:13.5px; padding-left:16px; color:var(--text-muted);">
+      <li style="margin-bottom:8px;">引入价值网络 $V_\varphi(s)$ 近似 $V^\pi(s)$</li>
+      <li style="margin-bottom:8px;">用 TD 残差 $\delta_t$ 代替 $G_t$，方差显著降低</li>
+      <li>每步更新，无需等轨迹结束</li>
+    </ul>
+  </div>
+</div>
+
+<div class="formula-block">
+  $$\underbrace{G_t}_{\text{MC，高方差}} \longrightarrow \underbrace{r_t + \gamma V_\varphi(s_{t+1}) - V_\varphi(s_t)}_{\delta_t,\;\text{TD，低方差但有偏差（当 }V_\varphi \neq V^\pi\text{）}}$$
+</div>
+
+<!-- 10.2 -->
+<h3 id="s10-2">10.2 Actor-Critic 架构</h3>
+
+<pre class="mermaid">
+graph TB
+    subgraph ENV["🌍 环境 (Environment)"]
+        S["状态 s_t"]
+        R["奖励 r_t"]
+        S2["下一状态 s_{t+1}"]
+    end
+
+    subgraph ACTOR["🎭 Actor（策略网络 π_θ）"]
+        A_NET["神经网络\n输入: s_t\n输出: π_θ(·|s_t)"]
+        A_SAMPLE["采样动作 a_t"]
+        A_UPDATE["梯度上升\nθ ← θ + α∇log π·δ_t"]
+    end
+
+    subgraph CRITIC["🧠 Critic（价值网络 V_φ）"]
+        C_NET["神经网络\n输入: s_t\n输出: V_φ(s_t)"]
+        C_TD["计算 TD 误差\nδ_t = r_t + γV_φ(s_{t+1}) - V_φ(s_t)"]
+        C_UPDATE["梯度下降\nφ ← φ - α∇δ_t²"]
+    end
+
+    S --> A_NET
+    S --> C_NET
+    A_NET --> A_SAMPLE
+    A_SAMPLE -->|"执行 a_t"| ENV
+    ENV --> R
+    ENV --> S2
+    S2 --> C_NET
+    R --> C_TD
+    C_NET --> C_TD
+    C_TD -->|"δ_t（优势信号）"| A_UPDATE
+    C_TD --> C_UPDATE
+    A_UPDATE -->|"更新 θ"| A_NET
+    C_UPDATE -->|"更新 φ"| C_NET
+
+    style ACTOR fill:#1a2a4a,stroke:#89b4fa,color:#cdd6f4
+    style CRITIC fill:#2a1a3a,stroke:#cba6f7,color:#cdd6f4
+    style ENV fill:#1a3a2a,stroke:#a6e3a1,color:#cdd6f4
+</pre>
+
+<div class="info-box info">
+  <span class="ib-icon">🔄</span>
+  <div class="ib-text">
+    <strong>双网络协同</strong>
+    Actor 依赖 Critic 提供的 $\delta_t$ 作为学习信号；Critic 在 Actor 与环境交互产生的数据上训练。两者相互依赖、协同进化——Critic 越准确，Actor 梯度方向越可靠；Actor 越好，Critic 的训练数据质量越高。
+  </div>
+</div>
+
+<!-- 10.3 -->
+<h3 id="s10-3">10.3 A2C：优势 Actor-Critic（完整更新公式）</h3>
+
+<p>A2C（Advantage Actor-Critic）是最基础的 Actor-Critic 实现，使用 TD 误差 $\delta_t$ 作为优势函数的单步估计。</p>
+
+<div class="tech-card purple">
+  <div class="card-title"><span class="card-icon">🧮</span>Critic 更新：最小化 TD 误差</div>
+  <div class="formula-block">
+    $$\delta_t = r_t + \gamma V_\varphi(s_{t+1}) - V_\varphi(s_t)$$
+  </div>
+  <div class="formula-block">
+    $$\mathcal{L}_{\text{critic}}(\varphi) = \delta_t^2 = \left(r_t + \gamma V_\varphi(s_{t+1}) - V_\varphi(s_t)\right)^2$$
+  </div>
+  <div class="formula-block highlight">
+    $$\varphi \leftarrow \varphi - \alpha_\varphi \nabla_\varphi \mathcal{L}_{\text{critic}} = \varphi + \alpha_\varphi \cdot \delta_t \cdot \nabla_\varphi V_\varphi(s_t)$$
+  </div>
+  <p style="font-size:13px; color:var(--text-muted); margin:0;">注意：计算 $\delta_t$ 时，$V_\varphi(s_{t+1})$ 视为常数（stop gradient），只对 $V_\varphi(s_t)$ 求梯度。</p>
+</div>
+
+<div class="tech-card">
+  <div class="card-title"><span class="card-icon">🎭</span>Actor 更新：策略梯度</div>
+  <div class="formula-block">
+    $$\nabla_\theta J(\theta) \approx \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot \delta_t$$
+  </div>
+  <div class="formula-block highlight">
+    $$\theta \leftarrow \theta + \alpha_\theta \cdot \nabla_\theta \log \pi_\theta(a_t|s_t) \cdot \delta_t$$
+  </div>
+  <p style="font-size:13px; color:var(--text-muted); margin:0;">$\delta_t > 0$ 时增大 $a_t$ 的概率（该动作比预期好）；$\delta_t < 0$ 时减小概率（该动作比预期差）。</p>
+</div>
+
+<div class="tech-card green">
+  <div class="card-title"><span class="card-icon">📐</span>为什么 $\delta_t$ 是优势函数的无偏估计</div>
+  <p>对 $\delta_t$ 在给定 $(s_t, a_t)$ 下取期望：</p>
+  <div class="formula-block">
+    $$\mathbb{E}\left[\delta_t \mid s_t, a_t\right] = \mathbb{E}\left[r_t + \gamma V^\pi(s_{t+1}) \mid s_t, a_t\right] - V^\pi(s_t)$$
+  </div>
+  <div class="formula-block">
+    $$= Q^\pi(s_t, a_t) - V^\pi(s_t) = A^\pi(s_t, a_t)$$
+  </div>
+  <p style="font-size:13px; color:var(--text-muted); margin:0;">因此 $\delta_t$ 是 $A^\pi(s_t, a_t)$ 的无偏估计（当使用真实 $V^\pi$ 时）；使用近似 $V_\varphi$ 时引入偏差，但方差大幅降低。</p>
+</div>
+
+<h4>A2C 完整算法流程</h4>
+
+<pre class="mermaid">
+flowchart TD
+    INIT["初始化 θ, φ"] --> LOOP
+
+    subgraph LOOP["主循环"]
+        direction TB
+        OBS["观测状态 s_t"] --> ACT["Actor 采样\na_t ~ π_θ(·|s_t)"]
+        ACT --> EXEC["执行 a_t，获得 r_t, s_{t+1}"]
+        EXEC --> TD["计算 TD 误差\nδ_t = r_t + γV_φ(s_{t+1}) - V_φ(s_t)"]
+        TD --> CUPDATE["Critic 更新\nφ ← φ - α_φ · δ_t · ∇_φ V_φ(s_t) · (-1)"]
+        TD --> AUPDATE["Actor 更新\nθ ← θ + α_θ · ∇_θ log π_θ(a_t|s_t) · δ_t"]
+        AUPDATE --> OBS
+        CUPDATE --> OBS
+    end
+
+    style INIT fill:#1e1e2e,stroke:#89b4fa,color:#cdd6f4
+    style LOOP fill:#1e1e2e,stroke:#45475a,color:#cdd6f4
+</pre>
+
+<!-- 10.4 -->
+<h3 id="s10-4">10.4 Actor-Critic vs REINFORCE 对比</h3>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>对比维度</th>
+        <th>REINFORCE</th>
+        <th>Actor-Critic (A2C)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>更新时机</td>
+        <td>轨迹结束后（episode-based）</td>
+        <td><span class="badge badge-green">每步更新</span>（online）</td>
+      </tr>
+      <tr>
+        <td>梯度估计量</td>
+        <td>$G_t$（蒙特卡洛回报）</td>
+        <td>$\delta_t$（TD 残差）</td>
+      </tr>
+      <tr>
+        <td>方差</td>
+        <td><span class="badge badge-red">高</span>（MC 累积误差）</td>
+        <td><span class="badge badge-green">低</span>（单步 TD）</td>
+      </tr>
+      <tr>
+        <td>偏差</td>
+        <td><span class="badge badge-green">无偏</span>（渐近）</td>
+        <td><span class="badge badge-yellow">有偏</span>（$V_\varphi \neq V^\pi$ 时）</td>
+      </tr>
+      <tr>
+        <td>样本效率</td>
+        <td><span class="badge badge-red">低</span></td>
+        <td><span class="badge badge-green">高</span></td>
+      </tr>
+      <tr>
+        <td>是否需要价值网络</td>
+        <td>否（可选基线）</td>
+        <td><span class="badge badge-blue">是</span>（Critic 必须）</td>
+      </tr>
+      <tr>
+        <td>适用场景</td>
+        <td>短 episode，简单环境</td>
+        <td>长 episode，连续控制</td>
+      </tr>
+      <tr>
+        <td>网络数量</td>
+        <td>1 个（策略网络）</td>
+        <td>2 个（策略 + 价值）</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- 10.5 -->
+<h3 id="s10-5">10.5 AC 框架的重要性</h3>
+
+<p>Actor-Critic 框架是现代深度强化学习的基石。几乎所有主流算法都可以视为 AC 框架的扩展或变体：</p>
+
+<pre class="mermaid">
+graph TD
+    AC["Actor-Critic 框架\n(A2C)"]
+
+    AC --> TRPO["TRPO\n(Trust Region Policy Optimization)\n置信域约束，保证策略单调改进"]
+    AC --> A3C["A3C\n(Asynchronous Advantage AC)\n异步并行多 Worker"]
+    AC --> DDPG["DDPG\n(Deep Deterministic PG)\n确定性策略 + 经验回放"]
+
+    TRPO --> PPO["PPO\n(Proximal Policy Optimization)\nClip 目标替代置信域，更实用"]
+    DDPG --> TD3["TD3\n(Twin Delayed DDPG)\n双 Critic + 延迟更新"]
+    DDPG --> SAC["SAC\n(Soft Actor-Critic)\n最大熵框架，自动调温度"]
+
+    PPO --> PPO_NOTES["OpenAI Five\nAlphaCode\n大多数 RLHF 实现"]
+    SAC --> SAC_NOTES["机器人控制\n连续动作空间 SOTA"]
+
+    style AC fill:#1a2a4a,stroke:#89b4fa,color:#cdd6f4,font-weight:bold
+    style TRPO fill:#252538,stroke:#cba6f7,color:#cdd6f4
+    style PPO fill:#1a3a2a,stroke:#a6e3a1,color:#cdd6f4,font-weight:bold
+    style SAC fill:#3a2a1a,stroke:#fab387,color:#cdd6f4,font-weight:bold
+    style A3C fill:#252538,stroke:#cba6f7,color:#cdd6f4
+    style DDPG fill:#252538,stroke:#94e2d5,color:#cdd6f4
+    style TD3 fill:#252538,stroke:#94e2d5,color:#cdd6f4
+    style PPO_NOTES fill:#1e1e2e,stroke:#45475a,color:#a6adc8
+    style SAC_NOTES fill:#1e1e2e,stroke:#45475a,color:#a6adc8
+</pre>
+
+<hr>
+
+<!-- ===== 小结 ===== -->
+<h2 id="summary">小结</h2>
+
+<h3>策略梯度家族演进时间线</h3>
+
+<div class="timeline">
+  <div class="tl-item">
+    <div class="tl-title">Williams (1992) — REINFORCE</div>
+    <div class="tl-desc">提出策略梯度的基本思想，用蒙特卡洛回报估计梯度。奠定了基于策略方法的理论基础。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-title">Sutton et al. (1999) — 策略梯度定理</div>
+    <div class="tl-desc">严格证明了策略梯度定理，建立了 $\nabla_\theta J(\theta) = \mathbb{E}[Q^\pi \nabla_\theta \log \pi_\theta]$ 的理论框架。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-title">Konda & Tsitsiklis (2000) — Actor-Critic</div>
+    <div class="tl-desc">提出双时间尺度 Actor-Critic 算法，用价值函数近似 Critic 降低方差，证明了收敛性。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-title">Mnih et al. (2016) — A3C</div>
+    <div class="tl-desc">异步并行 AC，多个 Worker 并发探索，显著提升样本效率，在 Atari 游戏上取得突破。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-title">Schulman et al. (2017) — PPO</div>
+    <div class="tl-desc">用 Clip 目标简化 TRPO，成为当前最广泛使用的策略梯度算法，RLHF 的标准实现。</div>
+  </div>
+  <div class="tl-item">
+    <div class="tl-title">Haarnoja et al. (2018) — SAC</div>
+    <div class="tl-desc">引入最大熵框架，自动调整温度系数，在连续控制任务上达到当前 SOTA 水平。</div>
+  </div>
+</div>
+
+<h3>各形式 $\Psi_t$ 的偏差/方差对比</h3>
+
+<div class="chart-container">
+  <div class="chart-title">六种梯度估计量的偏差 vs 方差权衡</div>
+  <div id="chart-bias-var" style="height:320px;"></div>
+</div>
+
+<div class="chart-container">
+  <div class="chart-title">策略梯度方法的样本效率与稳定性对比（示意）</div>
+  <div id="chart-compare" style="height:320px;"></div>
+</div>
+
+<div class="tech-card" style="margin-top:32px;">
+  <div class="card-title"><span class="card-icon">🎯</span>核心结论</div>
+  <p>策略梯度方法的核心是在<strong>偏差与方差之间寻找最优权衡</strong>：</p>
+  <ul style="padding-left:20px; color:var(--text-muted); font-size:14px; line-height:2;">
+    <li><strong style="color:var(--text);">REINFORCE</strong>：无偏但高方差，适合简单环境</li>
+    <li><strong style="color:var(--text);">带基线的 REINFORCE</strong>：无偏低方差，$b = V^\pi$ 时最优</li>
+    <li><strong style="color:var(--text);">Actor-Critic (A2C)</strong>：有偏低方差，可在线更新，实用性强</li>
+    <li><strong style="color:var(--text);">PPO/SAC</strong>：在 AC 基础上进一步稳定训练，是当前实践首选</li>
+  </ul>
+  <div class="formula-block highlight" style="margin-top:16px;">
+    $$\text{策略梯度定理} \xrightarrow{\text{MC估计}} \text{REINFORCE} \xrightarrow{\text{引入Critic}} \text{Actor-Critic} \xrightarrow{\text{约束/熵}} \text{PPO/SAC}$$
+  </div>
+</div>
+
+</div><!-- end #content -->
+
+<script>
+// Mermaid 初始化
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#313244',
+    primaryTextColor: '#cdd6f4',
+    primaryBorderColor: '#45475a',
+    lineColor: '#89b4fa',
+    secondaryColor: '#252538',
+    tertiaryColor: '#1e1e2e',
+    background: '#1e1e2e',
+    mainBkg: '#313244',
+    nodeBorder: '#45475a',
+    clusterBkg: '#252538',
+    titleColor: '#cdd6f4',
+    edgeLabelBackground: '#252538',
+    attributeBackgroundColorEven: '#252538',
+    attributeBackgroundColorOdd: '#2d2d44'
+  },
+  flowchart: { curve: 'basis', htmlLabels: true }
+});
+
+// ===== ECharts: 偏差/方差对比 =====
+window.addEventListener('load', function() {
+  // 图1：偏差/方差雷达图 + 散点图
+  var chart1 = echarts.init(document.getElementById('chart-bias-var'), null, {
+    renderer: 'canvas',
+    backgroundColor: 'transparent'
+  });
+
+  var methods = [
+    '① 总回报', '② G_t', '③ G_t-b', '④ Q^π', '⑤ A^π', '⑥ δ_t(TD)'
+  ];
+  var biasData = [0, 0, 0, 0, 0, 3];
+  var varData = [10, 8, 6, 4, 3, 1.5];
+  var colors = ['#f38ba8','#fab387','#f9e2af','#89b4fa','#cba6f7','#a6e3a1'];
+
+  chart1.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#252538',
+      borderColor: '#45475a',
+      textStyle: { color: '#cdd6f4' },
+      axisPointer: { type: 'shadow' }
+    },
+    legend: {
+      data: ['方差（相对值）', '偏差（相对值）'],
+      textStyle: { color: '#a6adc8', fontSize: 12 },
+      top: 8
+    },
+    grid: { left: 60, right: 20, top: 50, bottom: 60 },
+    xAxis: {
+      type: 'category',
+      data: methods,
+      axisLabel: { color: '#a6adc8', fontSize: 11, rotate: 15 },
+      axisLine: { lineStyle: { color: '#45475a' } },
+      splitLine: { show: false }
+    },
+    yAxis: {
+      type: 'value',
+      name: '相对大小',
+      nameTextStyle: { color: '#6c7086', fontSize: 11 },
+      axisLabel: { color: '#a6adc8', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#45475a' } },
+      splitLine: { lineStyle: { color: '#2d2d44' } }
+    },
+    series: [
+      {
+        name: '方差（相对值）',
+        type: 'bar',
+        data: varData,
+        itemStyle: {
+          color: function(params) {
+            return new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+              { offset: 0, color: colors[params.dataIndex] },
+              { offset: 1, color: colors[params.dataIndex] + '44' }
+            ]);
+          },
+          borderRadius: [4, 4, 0, 0]
+        },
+        barWidth: '35%',
+        label: {
+          show: true,
+          position: 'top',
+          color: '#a6adc8',
+          fontSize: 11
+        }
+      },
+      {
+        name: '偏差（相对值）',
+        type: 'line',
+        data: biasData,
+        symbol: 'circle',
+        symbolSize: 8,
+        lineStyle: { color: '#f38ba8', width: 2, type: 'dashed' },
+        itemStyle: { color: '#f38ba8' },
+        label: {
+          show: true,
+          position: 'top',
+          color: '#f38ba8',
+          fontSize: 11,
+          formatter: function(p) { return p.value > 0 ? p.value : '0'; }
+        }
+      }
+    ]
+  });
+
+  // 图2：算法对比雷达图
+  var chart2 = echarts.init(document.getElementById('chart-compare'), null, {
+    renderer: 'canvas',
+    backgroundColor: 'transparent'
+  });
+
+  chart2.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      backgroundColor: '#252538',
+      borderColor: '#45475a',
+      textStyle: { color: '#cdd6f4' }
+    },
+    legend: {
+      data: ['REINFORCE', 'REINFORCE+基线', 'A2C', 'PPO'],
+      textStyle: { color: '#a6adc8', fontSize: 12 },
+      top: 8,
+      right: 10
+    },
+    radar: {
+      indicator: [
+        { name: '样本效率', max: 10 },
+        { name: '稳定性', max: 10 },
+        { name: '无偏性', max: 10 },
+        { name: '低方差', max: 10 },
+        { name: '在线更新', max: 10 },
+        { name: '实现简单', max: 10 }
+      ],
+      center: ['50%', '55%'],
+      radius: '60%',
+      axisName: { color: '#a6adc8', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#2d2d44' } },
+      splitArea: { areaStyle: { color: ['rgba(45,45,68,0.3)', 'rgba(37,37,56,0.3)'] } },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    series: [
+      {
+        name: '算法对比',
+        type: 'radar',
+        data: [
+          {
+            value: [3, 4, 10, 2, 1, 9],
+            name: 'REINFORCE',
+            lineStyle: { color: '#f38ba8', width: 2 },
+            itemStyle: { color: '#f38ba8' },
+            areaStyle: { color: 'rgba(243,139,168,0.08)' }
+          },
+          {
+            value: [4, 5, 10, 5, 1, 8],
+            name: 'REINFORCE+基线',
+            lineStyle: { color: '#f9e2af', width: 2 },
+            itemStyle: { color: '#f9e2af' },
+            areaStyle: { color: 'rgba(249,226,175,0.08)' }
+          },
+          {
+            value: [6, 6, 7, 8, 9, 7],
+            name: 'A2C',
+            lineStyle: { color: '#89b4fa', width: 2 },
+            itemStyle: { color: '#89b4fa' },
+            areaStyle: { color: 'rgba(137,180,250,0.1)' }
+          },
+          {
+            value: [8, 9, 7, 8, 9, 6],
+            name: 'PPO',
+            lineStyle: { color: '#a6e3a1', width: 2.5 },
+            itemStyle: { color: '#a6e3a1' },
+            areaStyle: { color: 'rgba(166,227,161,0.12)' }
+          }
+        ]
+      }
+    ]
+  });
+
+  window.addEventListener('resize', function() {
+    chart1.resize();
+    chart2.resize();
+  });
+});
+
+// ===== 目录高亮 =====
+(function() {
+  var tocLinks = document.querySelectorAll('#toc a');
+  var sections = [];
+
+  tocLinks.forEach(function(link) {
+    var id = link.getAttribute('href').slice(1);
+    var el = document.getElementById(id);
+    if (el) sections.push({ id: id, el: el, link: link });
+  });
+
+  function onScroll() {
+    var scrollY = window.scrollY + 100;
+    var current = null;
+    sections.forEach(function(s) {
+      if (s.el.offsetTop <= scrollY) current = s;
+    });
+    tocLinks.forEach(function(l) { l.classList.remove('active'); });
+    if (current) current.link.classList.add('active');
+  }
+
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  // 平滑滚动
+  tocLinks.forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      var id = this.getAttribute('href').slice(1);
+      var el = document.getElementById(id);
+      if (el) {
+        window.scrollTo({ top: el.offsetTop - 24, behavior: 'smooth' });
+      }
+    });
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoE Manifold Power Iteration | 阅读报告</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1}
+    *{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border)}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #toc a:hover{background:var(--border)}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8}
+    main{margin-left:240px;max-width:none;padding:40px 64px}h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px}h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em}
+    p{margin:.6em 0}a{color:var(--link)}strong{color:var(--strong)}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em}th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border)}
+    td{padding:7px 12px;border:1px solid var(--border)}tr:hover td{background:#2a2a3e}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em}code{font-family:'JetBrains Mono','Fira Code',monospace}
+    p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center}.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+    .algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9}
+    .algo-box .algo-title{color:var(--heading);font-weight:700;font-size:1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+    .algo-box .kw{color:#cba6f7;font-weight:700}.algo-box .cm{color:#6c7086;font-style:italic}.algo-box .var{color:#94e2d5}.algo-box .fn{color:#a6e3a1}.algo-box .num{color:#f9e2af}
+    ul{margin:.5em 0 .5em 1.5em}li{margin:.25em 0}
+    .badge{display:inline-block;background:#313244;border:1px solid var(--border);border-radius:12px;padding:2px 10px;font-size:.82em;margin:2px 3px;color:var(--heading)}
+    .info-table td:first-child{font-weight:600;color:var(--heading);width:140px;white-space:nowrap}
+    .highlight-row td{background:#252540!important;font-weight:700;color:var(--strong)}
+    .timeline-wrap{overflow-x:auto;margin:1em 0}
+    .timeline{display:flex;gap:0;min-width:900px}
+    .tl-col{flex:1;display:flex;flex-direction:column}
+    .tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;font-size:.95em;border-radius:6px 6px 0 0}
+    .tl-body{flex:1;padding:10px 8px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px}
+    .tl-item{background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em;line-height:1.5}
+    .tl-item:last-child{margin-bottom:0}
+    .tl-tag{display:inline-block;font-size:.75em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:4px;background:var(--heading);color:#1e1e2e}
+    .tl-tag.orange{background:#fab387}.tl-tag.green{background:#a6e3a1}.tl-tag.purple{background:#cba6f7}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}}</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Redesign Mixture-of-Experts Routers with Manifold Power Iteration</h1>
+<p>
+  <span class="badge">MoE</span>
+  <span class="badge">Router Design</span>
+  <span class="badge">Power Iteration</span>
+  <span class="badge">Pretraining</span>
+  <span class="badge">arXiv 2606.12397</span>
+  <span class="badge">HF 76 Upvotes · W24 #9</span>
+</p>
+
+<h2>论文信息</h2>
+<table class="info-table">
+  <tr><td>标题</td><td>Redesign Mixture-of-Experts Routers with Manifold Power Iteration</td></tr>
+  <tr><td>作者</td><td>Songhao Wu, Ang Lv, Ruobing Xie, Yankai Lin</td></tr>
+  <tr><td>机构</td><td>中国人民大学高瓴人工智能学院（Wu / Lv / Lin）；腾讯大语言模型部门（Xie）</td></tr>
+  <tr><td>arXiv</td><td><a href="https://arxiv.org/abs/2606.12397" target="_blank">2606.12397</a></td></tr>
+  <tr><td>核心问题</td><td>MoE 路由器行向量缺乏与对应专家矩阵主奇异方向对齐的设计原则，导致路由表达次优</td></tr>
+  <tr><td>核心方法</td><td>Manifold Power Iteration (MPI)：Power-then-Retract 范式，在训练时以轻量幂迭代驱动路由行趋向专家主奇异方向</td></tr>
+  <tr><td>实验规模</td><td>1B / 3B / 11B 参数预训练，最多 350B tokens（FineWeb-Edu）</td></tr>
+  <tr><td>代码框架</td><td>TorchTitan + MegaBlocks（PyTorch）</td></tr>
+</table>
+
+<h2>概述</h2>
+<p>
+  Mixture-of-Experts（MoE）已成为当前大语言模型扩展算力的核心范式。其中路由器（Router）是 MoE 的心脏组件：对每个输入 token，路由器通过计算其与路由矩阵各行的相似度，决定激活哪些专家。然而本文的核心洞察在于：<strong>传统路由器设计从未系统地约束路由矩阵的行向量去编码其对应专家的内在特征</strong>。这一设计缺口导致路由行向量与专家矩阵之间的语义耦合不足，可能造成路由决策的次优性。
+</p>
+<p>
+  本文从线性代数角度出发，提出一个清晰的设计原则：<strong>路由矩阵第 $i$ 行 $R_{[i]}$ 应与其对应专家权重矩阵 $W_i$ 的主奇异方向（Principal Singular Direction）对齐</strong>。主奇异方向是矩阵最具信息量的压缩表示——它在 Frobenius 意义下最大化保留了矩阵的几何结构。因此，让路由行指向这个方向，就是在有限维向量中对专家做最优的"代理编码"。
+</p>
+<p>
+  基于此原则，作者提出 <strong>Manifold Power Iteration（MPI）</strong>。其核心是"Power-then-Retract"两步范式：（1）幂迭代步：将路由权重与专家矩阵做矩阵乘积，将其推向主奇异方向；（2）收缩步：对更新后的路由行施加 L2 范数约束，防止数值爆炸并消除专家偏置。从优化视角，MPI 等价于在球面流形上对最大投影目标（Rayleigh 商）做自适应步长的最速上升，理论上保证路由行收敛至主奇异方向。
+</p>
+<p>
+  实验层面，作者在 1B、3B、11B 三个规模上进行了充分的预训练验证。MPI 在所有规模、所有优化器（AdamW / Muon / AdamH / MuonH）下均带来一致的收益：更快的训练收敛、更低的验证困惑度、更好的下游任务表现，以及意外改善的负载均衡。更重要的是，MPI 引入的额外计算开销不足 0.2%，推理阶段零开销，具备极强的工程可落地性。
+</p>
+
+<h2>研究背景</h2>
+
+<h3>MoE 架构基础</h3>
+<p>
+  标准 Transformer 的 FFN 层被替换为 $N$ 个并行专家模块 $\{E_k\}$，每个专家是一个独立的 GLU（Gated Linear Unit）网络。对于输入 token $x \in \mathbb{R}^D$，路由矩阵 $R \in \mathbb{R}^{N \times D}$ 计算门控权重：
+</p>
+<p>$$w = \text{Softmax}\!\left(\text{TopK}\!\left(xR^\top\right)\right)$$</p>
+<p>
+  激活 Top-K 个专家后，MoE 层输出为加权和：
+</p>
+<p>$$\text{MoE}(x) = \sum_{k=1}^{K} w_k \cdot E_k(x)$$</p>
+<p>
+  每个专家 $E_k$ 的结构为：
+</p>
+<p>$$E_k(x) = \left(\text{SiLU}(xW_g^k) \odot (xW_p^k)\right) W_o^k$$</p>
+<p>
+  其中 $W_g^k, W_p^k \in \mathbb{R}^{D \times d}$ 为门控和投影矩阵，$W_o^k \in \mathbb{R}^{d \times D}$ 为输出矩阵。MoE 的稀疏激活特性使得在相同计算预算下可以大幅扩展模型参数量。
+</p>
+
+<h3>现有路由设计的问题</h3>
+<p>
+  传统路由设计存在以下根本性缺陷：
+</p>
+<ul>
+  <li><strong>无显式耦合约束</strong>：路由矩阵行 $R_{[i]}$ 作为第 $i$ 个专家的"代理向量"，但训练过程中没有任何机制强制其编码专家的内在特征。</li>
+  <li><strong>范数偏置问题</strong>：不同专家对应的路由行范数可能差异悬殊，范数较大的行天然获得更高的门控分数，导致专家负载不均衡。</li>
+  <li><strong>收敛次优</strong>：路由行与专家特征的弱耦合使得 token-expert 亲和度估计不准确，降低训练效率。</li>
+</ul>
+
+<h3>相关工作对比</h3>
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">Switch Transformer (2021)</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">路由策略</span><br>Top-1 稀疏路由，引入辅助负载均衡损失；路由矩阵无专家对齐约束</div>
+        <div class="tl-item"><span class="tl-tag orange">问题</span><br>训练不稳定，需要精细的 capacity factor 调参</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">GShard / GLaM (2021-22)</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">路由策略</span><br>Top-2 路由 + expert capacity；关注负载均衡</div>
+        <div class="tl-item"><span class="tl-tag orange">问题</span><br>路由器设计仍为标准线性映射，无原则性约束</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">DeepSeek-MoE (2024)</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">路由策略</span><br>细粒度专家分割 + Top-K 路由；引入共享专家机制</div>
+        <div class="tl-item"><span class="tl-tag orange">问题</span><br>路由器仍缺乏与专家奇异方向的对齐机制</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">OLMoE / Mixtral (2024)</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">路由策略</span><br>开源 MoE 基准；标准 Softmax Top-K 路由</div>
+        <div class="tl-item"><span class="tl-tag green">本文对比基线</span><br>MPI 在相同架构下以 &lt;0.2% 开销带来一致提升</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">本文 MPI (2026)</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag purple">创新</span><br>首次从奇异值分解视角为路由设计提供原则性基础</div>
+        <div class="tl-item"><span class="tl-tag purple">创新</span><br>Power-then-Retract 范式：理论保证 + 工程高效</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>问题形式化</h2>
+
+<h3>路由矩阵与专家矩阵</h3>
+<p>
+  设路由矩阵 $R \in \mathbb{R}^{N \times D}$，其中 $N$ 为专家数量，$D$ 为隐层维度。第 $i$ 行 $R_{[i]} \in \mathbb{R}^{1 \times D}$ 作为第 $i$ 个专家的代理向量。对应专家的门控权重矩阵记为 $W_g^i \in \mathbb{R}^{D \times d}$（论文中简写为 $W_i^{*}$）。
+</p>
+
+<h3>SVD 分解与主奇异方向</h3>
+<p>
+  对专家矩阵进行 SVD 分解：
+</p>
+<p>$$W_i = U_i \Sigma_i V_i^\top$$</p>
+<p>
+  其中 $U_i \in \mathbb{R}^{D \times D}$，$\Sigma_i = \text{diag}(\sigma_1^{(i)}, \sigma_2^{(i)}, \ldots)$ 为奇异值（$\sigma_1^{(i)} \geq \sigma_2^{(i)} \geq \cdots \geq 0$），$V_i \in \mathbb{R}^{d \times d}$。
+</p>
+<p>
+  <strong>主奇异方向</strong>（Principal Singular Direction）是 $U_i$ 的第一列 $u_i^{(1)}$（左奇异向量）或 $V_i$ 的第一列 $v_i^{(1)}$（右奇异向量），对应最大奇异值 $\sigma_1^{(i)}$。由 Eckart-Young 定理，主奇异方向是在 Frobenius 范数意义下对矩阵做秩一近似时保留信息最多的方向。
+</p>
+
+<h3>对齐目标：Rayleigh 商最大化</h3>
+<p>
+  理想的路由行 $R_{[i]}$ 应最大化其在专家行空间上的投影，等价于最大化 Rayleigh 商：
+</p>
+<p>$$\max_{R_{[i]}} \varphi(W_i^{*}, R_{[i]}) = \frac{\|R_{[i]} W_i^{*}\|_2^2}{\|R_{[i]}\|_2^2}$$</p>
+<p>
+  由矩阵分析理论，上述优化问题的解恰好是 $W_i^{*} W_i^{*\top}$ 的主特征向量，即 $W_i^{*}$ 的主左奇异向量。因此，<strong>对齐目标为</strong>：
+</p>
+<p>$$R_{[i]} \approx v_i^{(1)} \quad \text{（趋向 } W_i^{*} \text{ 的主奇异方向）}$$</p>
+<p>
+  直观理解：让路由行指向专家矩阵"最具表达力"的方向，使得 token 与路由行的内积能最大程度反映 token 与该专家的真实亲和度。
+</p>
+
+<h3>对齐度量 $\lambda$</h3>
+<p>
+  作者定义如下归一化对齐度量来量化路由行与主奇异方向的对齐程度：
+</p>
+<p>$$\lambda = \frac{\|R_{[i]}' W_g^i\|_2}{\|R_{[i]}'\|_2 \cdot \|W_g^i\|_2}$$</p>
+<p>
+  其中分母用谱范数归一化，使 $\lambda \in [0, 1]$。$\lambda$ 越大表示路由行与专家主奇异方向越对齐。实验表明，MPI 将 $\lambda$ 从约 0.25–0.37 大幅提升至 0.62–0.70。
+</p>
+
+<h2>MPI 算法</h2>
+
+<h3>Power-then-Retract 范式</h3>
+<p>
+  MPI 在每个训练步对路由矩阵执行两步操作：
+</p>
+
+<p><strong>步骤一：幂迭代（Power Iteration）</strong></p>
+<p>
+  对路由矩阵第 $i$ 行执行单步幂迭代：
+</p>
+<p>$$\hat{R}_{[i]} = R_{[i]} W_g^i W_g^{i\top}$$</p>
+<p>
+  幂迭代的原理：反复乘以 $M = W_g W_g^\top$（一个半正定矩阵），向量会指数级快速向 $M$ 的主特征向量（即 $W_g$ 的主左奇异向量）收敛。单步迭代已足够有效，更多迭代反而引入不稳定（实验验证）。
+</p>
+
+<p><strong>步骤二：收缩（Retraction）</strong></p>
+<p>
+  将 $\hat{R}_{[i]}$ 的 L2 范数约束至超参数 $C$：
+</p>
+<p>$$R_{[i]}' = C \cdot \frac{\hat{R}_{[i]}}{\|\hat{R}_{[i]}\|_2}$$</p>
+<p>
+  收缩步将路由行投影回以原点为中心、半径为 $C$ 的球面流形（Spherical Manifold），防止幂迭代引起的范数爆炸或坍塌，同时消除专家间的范数偏置。
+</p>
+
+<p><strong>超参数 $C$ 的设计原则</strong></p>
+<p>
+  为使路由 logit 的无穷范数保持 $O(1)$ 量级（防止爆炸），推导得：
+</p>
+<p>$$\|xR^{\prime\top}\|_\infty \leq \sqrt{\sum_{i=1}^{N}(xR_{[i]}^{\prime\top})^2} \sim O(C\sqrt{N})$$</p>
+<p>
+  因此令 $C = C' / \sqrt{N}$，其中 $C'$ 为与专家数无关的全局超参数（实验最优值为 $C' = 2$）。
+</p>
+
+<h3>MPI 伪代码</h3>
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: Manifold Power Iteration (MPI) — PyTorch 风格</div>
+  <p><span class="kw">Input:</span> <span class="var">x</span> ∈ ℝ<sup>B×D</sup> (token 批次)，路由矩阵 <span class="var">R</span> ∈ ℝ<sup>N×D</sup>，专家门控权重 <span class="var">W_g</span> ∈ ℝ<sup>N×D×d</sup>，超参 <span class="num">C'</span>，Top-K 数 <span class="num">K</span></p>
+  <p><span class="kw">Output:</span> MoE 层输出 <span class="var">y</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 1: Power Iteration — 将路由行推向专家主奇异方向</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// R: [N, D], W_g: [N, D, d]</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// [N,1,D] @ [N,D,d] @ [N,d,D] → [N,D]</span></p>
+  <p style="padding-left:1.5em"><span class="var">R_hat</span> = (<span class="var">R</span>.unsqueeze(<span class="num">1</span>) @ <span class="var">W_g</span> @ <span class="var">W_g</span>.transpose(<span class="num">1</span>,<span class="num">2</span>)).squeeze(<span class="num">1</span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 2: Retraction — L2 范数约束到球面流形</span></p>
+  <p style="padding-left:1.5em"><span class="var">C</span> = <span class="num">C'</span> * (N ** -<span class="num">0.5</span>)  <span class="cm">// 按专家数缩放</span></p>
+  <p style="padding-left:1.5em"><span class="var">R_prime</span> = <span class="fn">normalize</span>(<span class="var">R_hat</span>, p=<span class="num">2</span>, dim=-<span class="num">1</span>) * <span class="var">C</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 3: 计算路由 logits</span></p>
+  <p style="padding-left:1.5em"><span class="var">logits</span> = <span class="var">x</span> @ <span class="var">R_prime</span>.T  <span class="cm">// [B, N]</span></p>
+  <p style="padding-left:1.5em"><span class="var">scores</span> = <span class="fn">softmax</span>(<span class="fn">topk</span>(<span class="var">logits</span>, <span class="num">K</span>))</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 4: 加权求和专家输出</span></p>
+  <p style="padding-left:1.5em"><span class="var">y</span> = <span class="fn">weighted_sum</span>(<span class="var">scores</span>, <span class="fn">experts</span>(<span class="var">x</span>))</p>
+  <p><span class="kw">return</span> <span class="var">y</span></p>
+</div>
+
+<h3>流形约束的几何直觉</h3>
+<pre class="mermaid">flowchart TD
+    A["初始路由行 R[i] 在 D 维空间中随机初始化"] --> B["幂迭代步\nR_hat = R[i] · Wg · Wg^T\n将向量推向 Wg 的主奇异方向"]
+    B --> C{"范数是否爆炸?"}
+    C -- "是 (Power Iter 累积)" --> D["收缩步\nR' = C · R_hat / ||R_hat||₂\n投影回球面流形"]
+    C -- "否" --> D
+    D --> E["更新后的 R'[i] 位于\n半径为 C 的球面上"]
+    E --> F["下一训练步\n继续幂迭代"]
+    F --> B
+    E --> G["收敛时\nR'[i] ≈ 主奇异方向 v1(Wg)"]
+
+    style A fill:#313244,stroke:#45475a,color:#cdd6f4
+    style B fill:#2a2a3e,stroke:#89b4fa,color:#89b4fa
+    style D fill:#2a2a3e,stroke:#fab387,color:#fab387
+    style E fill:#2a2a3e,stroke:#a6e3a1,color:#a6e3a1
+    style G fill:#1a1a2e,stroke:#a6e3a1,color:#a6e3a1
+</pre>
+
+<h3>收敛性分析</h3>
+<p>
+  幂迭代收敛速度由专家矩阵奇异值的<strong>间隔比</strong>（Gap Ratio）决定。设 $M = W_g W_g^\top$ 的特征值为 $\lambda_1 \geq \lambda_2 \geq \cdots$，则经过 $t$ 步迭代后：
+</p>
+<p>$$\sin\theta_t \leq \left(\frac{\lambda_2}{\lambda_1}\right)^t \cdot \sin\theta_0$$</p>
+<p>
+  其中 $\theta_t$ 为当前路由行与主特征向量的夹角。当 $\lambda_1 \gg \lambda_2$ 时（即专家矩阵具有明显主导奇异方向），单步迭代已能快速收敛。论文实验验证单步迭代效果最优，10 步迭代反而因过度对齐干扰路由优化稳定性（预训练 loss 上升 0.002–0.003）。
+</p>
+
+<h2>理论保证</h2>
+
+<h3>MPI 等价于流形上的最速上升</h3>
+<p>
+  本节给出 MPI 与最大投影约束优化等价性的推导。考虑如下约束优化问题（以 $C=1$ 为例）：
+</p>
+<p>$$\max_{\Delta r} \Phi(W_g, R_{[i]}' + \Delta r), \quad \text{s.t.} \; \|R_{[i]}' + \Delta r\|_2 = 1, \; \|\Delta r\|_2 \leq \eta$$</p>
+<p>
+  其中目标函数 $\Phi = \|R_{[i]}' W_g\|_2^2 = R_{[i]}' W_g W_g^\top R_{[i]}^{\prime\top}$。
+</p>
+<p>
+  <strong>第一步</strong>：对目标函数做一阶 Taylor 展开：
+</p>
+<p>$$\Phi(W_g, R_{[i]}' + \Delta r) \approx \Phi(W_g, R_{[i]}') + \langle G, \Delta r \rangle$$</p>
+<p>
+  其中梯度 $G = 2 R_{[i]}' W_g W_g^\top = 2 R_{[i]}' M$（令 $M = W_g W_g^\top$）。
+</p>
+<p>
+  <strong>第二步</strong>：将梯度 $G$ 投影到球面流形的切空间（Tangent Space），得到流形梯度上升更新量：
+</p>
+<p>$$\Delta r_g = \eta \left(I - R_{[i]}' R_{[i]}^{\prime\top}\right) R_{[i]}' M = \eta \left(R_{[i]}' M - R_{[i]}'(R_{[i]}' M R_{[i]}^{\prime\top})\right)$$</p>
+<p>
+  <strong>第三步</strong>：推导 MPI 引入的实际更新量 $\Delta r_M$。由幂迭代和收缩的组合，可以证明：
+</p>
+<p>$$\Delta r_M \approx \frac{1}{R_{[i]}' M R_{[i]}^{\prime\top}} \left(R_{[i]}' M - R_{[i]}'(R_{[i]}' M R_{[i]}^{\prime\top})\right)$$</p>
+<p>
+  <strong>结论</strong>：比较 $\Delta r_g$ 与 $\Delta r_M$，两者具有<strong>完全相同的更新方向</strong>，差异仅在步长因子 $\eta$ 与 $\frac{1}{R_{[i]}' M R_{[i]}^{\prime\top}}$。后者是一个<strong>自适应步长</strong>：当路由行与主奇异方向接近时（$R_{[i]}' M R_{[i]}^{\prime\top}$ 大），步长自动缩小以避免震荡；当偏离较大时，步长自动增大以加速收敛。这解释了为何 MPI 在单步迭代下就能有效驱动路由行收敛。
+</p>
+
+<h3>Appendix A 详细推导</h3>
+<p>
+  论文附录给出了公式 (10) 的完整推导。将 $\hat{R}_{[i]} = R_{[i]}' M / \|R_{[i]}' M\|_2$ 分解为平行于 $R_{[i]}'$ 的分量与正交分量之和：
+</p>
+<p>$$R_{[i]}' M = R_{[i]}'(R_{[i]}' M R_{[i]}^{\prime\top}) + \underbrace{\left(R_{[i]}' M - R_{[i]}'(R_{[i]}' M R_{[i]}^{\prime\top})\right)}_{\text{正交于 } R_{[i]}' \text{ 的分量}}$$</p>
+<p>
+  当迭代充分多步后，$R_{[i]}'$ 渐近趋向主奇异方向，正交分量趋于零，从而得到：
+</p>
+<p>$$\frac{R_{[i]}' M}{\|R_{[i]}' M\|_2} \approx R_{[i]}' + \frac{R_{[i]}' M - R_{[i]}'(R_{[i]}' M R_{[i]}^{\prime\top})}{R_{[i]}' M R_{[i]}^{\prime\top}}$$</p>
+<p>
+  整理即得 $\Delta r_M$ 的近似表达式，完成推导。
+</p>
+
+<h2>实验结果</h2>
+
+<h3>实验配置</h3>
+<table>
+  <tr><th>规模</th><th>总参数</th><th>激活参数</th><th>专家数</th><th>训练 tokens</th><th>优化器</th></tr>
+  <tr><td>1B</td><td>1.10B</td><td>397M</td><td>64</td><td>100B</td><td>AdamW / AdamH / Muon / MuonH</td></tr>
+  <tr><td>3B</td><td>3.20B</td><td>823M</td><td>64</td><td>350B + 100B mid-train</td><td>MuonH</td></tr>
+  <tr><td>11B</td><td>11.36B</td><td>823M</td><td>256</td><td>350B + 100B mid-train</td><td>MuonH</td></tr>
+</table>
+
+<h3>1B 规模：跨优化器一致提升</h3>
+<p>
+  在 1B 规模上，MPI 在所有四种优化器下均带来下游任务平均准确率的提升（25 个基准测试平均）：
+</p>
+<div id="chart-1b" class="echarts-container" style="height:350px"></div>
+<script>
+echarts.init(document.getElementById('chart-1b')).setOption({
+  backgroundColor:'#2a2a3e',
+  title:{text:'1B MoE：跨优化器下游任务平均准确率（25 benchmarks）',textStyle:{color:'#89b4fa',fontSize:14},left:'center'},
+  tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+  legend:{data:['Vanilla MoE','MoE + MPI'],textStyle:{color:'#cdd6f4'},bottom:0},
+  grid:{left:'5%',right:'5%',bottom:'15%',top:'15%',containLabel:true},
+  xAxis:{type:'category',data:['AdamW','AdamH','Muon','MuonH'],axisLabel:{color:'#cdd6f4'},axisLine:{lineStyle:{color:'#45475a'}}},
+  yAxis:{type:'value',min:41,max:45,axisLabel:{color:'#cdd6f4',formatter:'{value}%'},splitLine:{lineStyle:{color:'#45475a',type:'dashed'}}},
+  series:[
+    {name:'Vanilla MoE',type:'bar',data:[42.26,42.59,43.01,42.78],itemStyle:{color:'#45475a'},barGap:'10%',barCategoryGap:'35%'},
+    {name:'MoE + MPI',type:'bar',data:[43.93,43.93,43.55,43.98],itemStyle:{color:'#89b4fa'},label:{show:true,position:'top',color:'#a6e3a1',formatter:params=>(params.value - [42.26,42.59,43.01,42.78][params.dataIndex]).toFixed(2) >= 0 ? '+' + (params.value - [42.26,42.59,43.01,42.78][params.dataIndex]).toFixed(2) : ''}}
+  ]
+});
+</script>
+
+<h3>1B 优化器对比详表</h3>
+<table>
+  <tr><th>优化器</th><th>Vanilla MoE 平均准确率</th><th>MoE + MPI 平均准确率</th><th>提升</th></tr>
+  <tr><td>AdamW</td><td>42.26</td><td><strong>43.93</strong></td><td>+1.67</td></tr>
+  <tr><td>AdamH</td><td>42.59</td><td><strong>43.93</strong></td><td>+1.34</td></tr>
+  <tr><td>Muon</td><td>43.01</td><td><strong>43.55</strong></td><td>+0.54</td></tr>
+  <tr class="highlight-row"><td>MuonH</td><td>42.78</td><td><strong>43.98</strong></td><td>+1.20</td></tr>
+</table>
+
+<h3>3B / 11B 规模：困惑度对比</h3>
+<table>
+  <tr><th>模型</th><th>验证集 PPL (↓)</th><th>Math PPL (↓)</th><th>Code PPL (↓)</th></tr>
+  <tr><td>MoE 3B</td><td>0.764</td><td>1.688</td><td>1.376</td></tr>
+  <tr class="highlight-row"><td>MoE 3B + MPI</td><td><strong>0.754</strong></td><td><strong>1.581</strong></td><td><strong>1.296</strong></td></tr>
+  <tr><td>MoE 11B</td><td>0.728</td><td>1.852</td><td>1.263</td></tr>
+  <tr class="highlight-row"><td>MoE 11B + MPI</td><td><strong>0.723</strong></td><td><strong>1.581</strong></td><td><strong>1.259</strong></td></tr>
+</table>
+
+<h3>11B 规模：预训练收敛曲线（模拟）</h3>
+<div id="chart-11b-loss" class="echarts-container" style="height:350px"></div>
+<script>
+(function(){
+  var tokens = [50,100,150,200,250,300,350];
+  var moe_loss = [2.72, 2.65, 2.60, 2.57, 2.555, 2.545, 2.538];
+  var mpi_loss = [2.70, 2.63, 2.575, 2.545, 2.530, 2.520, 2.512];
+  echarts.init(document.getElementById('chart-11b-loss')).setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'11B MoE 预训练 Loss 收敛曲线（示意）',textStyle:{color:'#89b4fa',fontSize:14},left:'center'},
+    tooltip:{trigger:'axis'},
+    legend:{data:['Vanilla MoE 11B','MoE 11B + MPI'],textStyle:{color:'#cdd6f4'},bottom:0},
+    grid:{left:'5%',right:'5%',bottom:'15%',top:'15%',containLabel:true},
+    xAxis:{type:'category',data:tokens.map(t=>t+'B'),axisLabel:{color:'#cdd6f4'},name:'训练 Tokens',nameTextStyle:{color:'#6c7086'}},
+    yAxis:{type:'value',min:2.50,max:2.74,axisLabel:{color:'#cdd6f4'},name:'Loss',nameTextStyle:{color:'#6c7086'},splitLine:{lineStyle:{color:'#45475a',type:'dashed'}}},
+    series:[
+      {name:'Vanilla MoE 11B',type:'line',data:moe_loss,smooth:true,lineStyle:{color:'#45475a',width:2},itemStyle:{color:'#45475a'},symbol:'circle',symbolSize:6},
+      {name:'MoE 11B + MPI',type:'line',data:mpi_loss,smooth:true,lineStyle:{color:'#89b4fa',width:2.5},itemStyle:{color:'#89b4fa'},symbol:'circle',symbolSize:6,
+       markArea:{data:[[{xAxis:'250B',itemStyle:{color:'rgba(137,180,250,0.08)'}},{xAxis:'350B'}]],label:{show:true,color:'#89b4fa',position:'insideTop',formatter:'~1.04× 更快收敛'}}}
+    ]
+  });
+})();
+</script>
+
+<h3>3B / 11B 下游任务详细结果</h3>
+<table>
+  <tr><th>任务</th><th>设置</th><th>MoE 3B</th><th>MoE 3B + MPI</th><th>MoE 11B</th><th>MoE 11B + MPI</th></tr>
+  <tr><td>ARC-Challenge</td><td>5-shot</td><td>55.91</td><td><strong>58.96</strong></td><td>61.54</td><td><strong>62.24</strong></td></tr>
+  <tr><td>MMLU</td><td>5-shot</td><td>47.01</td><td><strong>48.83</strong></td><td>50.00</td><td><strong>50.93</strong></td></tr>
+  <tr><td>TriviaQA</td><td>5-shot</td><td>45.78</td><td><strong>46.52</strong></td><td>55.41</td><td><strong>56.89</strong></td></tr>
+  <tr><td>NaturalQs</td><td>5-shot</td><td>17.87</td><td><strong>20.13</strong></td><td>25.30</td><td><strong>25.36</strong></td></tr>
+  <tr><td>BBH</td><td>3-shot CoT</td><td>29.53</td><td><strong>30.99</strong></td><td>31.17</td><td><strong>31.45</strong></td></tr>
+  <tr><td>GSM8K</td><td>8-shot CoT</td><td>16.22</td><td><strong>20.92</strong></td><td>17.89</td><td><strong>27.60</strong></td></tr>
+  <tr><td>MBPP</td><td>3-shot</td><td>42.25</td><td>36.37</td><td>44.54</td><td>38.70</td></tr>
+  <tr class="highlight-row"><td><strong>平均（7任务）</strong></td><td>—</td><td>36.37</td><td><strong>37.53</strong></td><td>40.84</td><td><strong>41.88</strong></td></tr>
+</table>
+<blockquote>注：MBPP 代码任务 MPI 略有下降，但 GSM8K 数学任务提升显著（+4.7 / +9.7 点），整体平均仍为正向提升。</blockquote>
+
+<h3>路由-专家对齐度 $\lambda$ 逐层分析</h3>
+<div id="chart-lambda" class="echarts-container" style="height:350px"></div>
+<script>
+(function(){
+  var layers = Array.from({length:12},(_,i)=>'Layer '+(i+1));
+  var moe_lambda = [0.37,0.31,0.31,0.28,0.28,0.25,0.24,0.23,0.24,0.24,0.22,0.26];
+  var mpi_lambda = [0.67,0.66,0.69,0.70,0.68,0.67,0.64,0.63,0.62,0.62,0.62,0.69];
+  echarts.init(document.getElementById('chart-lambda')).setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'路由-专家对齐度 λ 逐层对比（3B 模型）',textStyle:{color:'#89b4fa',fontSize:14},left:'center'},
+    tooltip:{trigger:'axis'},
+    legend:{data:['Vanilla MoE','MoE + MPI'],textStyle:{color:'#cdd6f4'},bottom:0},
+    grid:{left:'5%',right:'5%',bottom:'15%',top:'15%',containLabel:true},
+    xAxis:{type:'category',data:layers,axisLabel:{color:'#cdd6f4',rotate:30}},
+    yAxis:{type:'value',min:0,max:0.8,axisLabel:{color:'#cdd6f4'},name:'λ',nameTextStyle:{color:'#6c7086'},splitLine:{lineStyle:{color:'#45475a',type:'dashed'}}},
+    series:[
+      {name:'Vanilla MoE',type:'line',data:moe_lambda,smooth:true,lineStyle:{color:'#45475a',width:2},itemStyle:{color:'#45475a'},areaStyle:{color:'rgba(69,71,90,0.3)'}},
+      {name:'MoE + MPI',type:'line',data:mpi_lambda,smooth:true,lineStyle:{color:'#a6e3a1',width:2.5},itemStyle:{color:'#a6e3a1'},areaStyle:{color:'rgba(166,227,161,0.15)'}}
+    ]
+  });
+})();
+</script>
+<p>MPI 将所有层的 $\lambda$ 值从约 0.22–0.37 大幅提升至 0.62–0.70，验证了路由行与专家主奇异方向的显著对齐。</p>
+
+<h3>负载均衡改善</h3>
+<table>
+  <tr><th>模型</th><th>MaxVioBatch (↓)</th><th>MaxVioGlobal (↓)</th></tr>
+  <tr><td>Vanilla MoE 3B</td><td>1.133</td><td>0.964</td></tr>
+  <tr class="highlight-row"><td>MoE 3B + MPI</td><td><strong>1.024</strong></td><td><strong>0.711</strong></td></tr>
+</table>
+<p>MPI 带来意外的负载均衡改善，作者推测这源于收缩步消除了路由行范数偏置，使各专家获得更公平的门控分数分布。</p>
+
+<h3>效率分析</h3>
+<table>
+  <tr><th>阶段</th><th>额外开销</th><th>说明</th></tr>
+  <tr><td>训练时</td><td>&lt;0.2%</td><td>11B 模型吞吐 34.97B tokens/day，MPI 仅增加约 N 个额外 token 的计算量</td></tr>
+  <tr><td>推理时</td><td>零开销</td><td>路由权重可在模型加载时预计算，与标准推理引擎完全兼容</td></tr>
+  <tr><td>通信开销</td><td>零</td><td>不引入额外的分布式通信，与标准训练框架无冲突</td></tr>
+</table>
+
+<h2>消融实验</h2>
+
+<h3>核心设计选择消融（3B 模型，200B tokens）</h3>
+<div id="chart-ablation" class="echarts-container" style="height:350px"></div>
+<script>
+(function(){
+  var models = ['Vanilla MoE','MPI w/o Power Iter\n(仅 Retraction)','MPI w/o Retraction\n(仅 Power Iter)','完整 MPI'];
+  var acc = [49.0, 49.1, 48.5, 50.5];
+  var colors = ['#45475a','#6c7086','#fab387','#89b4fa'];
+  echarts.init(document.getElementById('chart-ablation')).setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'消融实验：各组件对下游任务平均准确率的贡献（3B，200B tokens，示意）',textStyle:{color:'#89b4fa',fontSize:13},left:'center'},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    grid:{left:'5%',right:'5%',bottom:'20%',top:'15%',containLabel:true},
+    xAxis:{type:'category',data:['Vanilla MoE','仅 Retraction','仅 Power Iter','完整 MPI'],axisLabel:{color:'#cdd6f4',interval:0,rotate:10}},
+    yAxis:{type:'value',min:47,max:52,axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#45475a',type:'dashed'}}},
+    series:[{type:'bar',data:acc.map((v,i)=>({value:v,itemStyle:{color:colors[i]}})),barMaxWidth:60,label:{show:true,position:'top',color:'#cdd6f4'}}]
+  });
+})();
+</script>
+
+<h3>消融结论</h3>
+<ul>
+  <li><strong>仅 Retraction（无幂迭代）</strong>：性能与 Vanilla MoE 几乎持平。说明单纯的范数归一化不能带来改善，幂迭代是核心贡献。</li>
+  <li><strong>仅 Power Iteration（无 Retraction）</strong>：在 AdamW 和 Muon 优化器下出现训练崩溃（loss spike + 梯度异常），说明收缩步对训练稳定性至关重要。即使在 Hyperball 优化器下避免了崩溃，预训练 loss 仍上升约 0.003。</li>
+  <li><strong>完整 MPI</strong>：两步协同才能既保证稳定性又实现性能提升。</li>
+</ul>
+
+<h3>幂迭代次数敏感性</h3>
+<table>
+  <tr><th>迭代次数</th><th>训练吞吐</th><th>预训练 Loss 变化</th><th>下游性能变化</th></tr>
+  <tr class="highlight-row"><td><strong>1 次（默认）</strong></td><td>基准</td><td>—</td><td>—</td></tr>
+  <tr><td>10 次</td><td>-5%</td><td>+0.002~0.003</td><td>-1.39 pp</td></tr>
+</table>
+<p>单步幂迭代在效率和效果之间取得最优平衡。过度对齐会干扰路由优化的自然梯度流，反而有害。</p>
+
+<h3>超参数 $C'$ 敏感性（256 专家，50B tokens）</h3>
+<table>
+  <tr><th>$C'$</th><th>1</th><th>2</th><th>4</th><th>8</th><th>Vanilla MoE</th></tr>
+  <tr><td>验证 PPL</td><td>0.8896</td><td><strong>0.8547</strong></td><td>0.8533</td><td>0.8563</td><td>0.8884</td></tr>
+</table>
+<p>MPI 对 $C'$ 的选择相对不敏感，最优值约为 2–4，与理论推导的设计原则一致。</p>
+
+<h3>专家权重矩阵选择</h3>
+<p>
+  在 $W_g$、$W_p$、$W_o$ 三种候选专家矩阵中，均未观察到显著的预训练 loss 或下游性能差异。默认选择 $W_g$ 作为幂迭代目标，因其在当前实验设置下具有微弱优势。
+</p>
+
+<h2>局限性</h2>
+<ul>
+  <li><strong>单一专家矩阵选择</strong>：当前仅对 $W_g$（门控矩阵）执行幂迭代，未探索多矩阵组合（如 $W_g + W_p$ 的联合奇异方向）的潜力。</li>
+  <li><strong>超大规模验证缺失</strong>：实验规模最大为 11B 参数 / 350B tokens，尚未在 100B+ 参数级别验证 MPI 的效果是否持续。</li>
+  <li><strong>MBPP 代码任务下降</strong>：在 3B 和 11B 规模的 MBPP 基准上，MPI 出现轻微性能下降（约 4–6 点），原因尚不明确，可能与代码任务对路由多样性的特殊需求有关。</li>
+  <li><strong>负载均衡机制待深究</strong>：MPI 带来的负载均衡改善被作者标注为"意外收获"，其内在机制尚未被充分理论化，留待未来工作。</li>
+  <li><strong>与 Expert Choice / Soft MoE 的兼容性</strong>：论文仅验证了与标准 Top-K 路由、辅助损失、z-loss 的兼容性，与 Expert Choice Routing 等非标准路由范式的兼容性未被探索。</li>
+  <li><strong>多专家矩阵幂迭代</strong>：每个专家由 $W_g, W_p, W_o$ 三个矩阵组成，如何联合利用三者的奇异信息是未来方向。</li>
+</ul>
+
+<h2>总结与启发</h2>
+
+<h3>核心贡献总结</h3>
+<p>
+  本文从一个简洁而深刻的线性代数观察出发：<strong>路由矩阵行向量作为专家的"代理"，其最优形态应是对应专家矩阵的主奇异方向</strong>。这一洞察将 MoE 路由器设计问题转化为一个有理论基础的优化问题，并提出了计算高效的 MPI 算法加以实现。
+</p>
+
+<h3>对 MoE 路由器设计的深度思考</h3>
+<p>
+  <strong>1. 从"隐式学习"到"显式约束"的范式转变</strong><br>
+  传统 MoE 路由器依赖梯度下降隐式地学习路由行与专家特征的对应关系，这一过程缺乏明确的归纳偏置（Inductive Bias）。MPI 的贡献在于将"路由行应编码专家信息"这一直觉转化为可操作的显式约束，使得每个训练步都在主动推动路由-专家对齐。这与正则化方法的哲学一致：与其期待网络自发学到某种结构，不如直接在优化过程中强制这种结构。
+</p>
+<p>
+  <strong>2. 幂迭代作为"在线 SVD"的巧妙工程化</strong><br>
+  精确 SVD 的计算复杂度为 $O(D^2 d)$，对所有专家在每个训练步执行一次代价过高。幂迭代以 $O(Dd)$ 的代价实现"近似 SVD"，且每步只需单次矩阵向量乘积，与前向传播的计算模式完全兼容。这种"用迭代次数换计算精度"的思路是数值线性代数中的经典智慧，本文将其优雅地嵌入到深度学习训练循环中。
+</p>
+<p>
+  <strong>3. 球面流形约束的多重效益</strong><br>
+  收缩步（Retraction）表面上是为了数值稳定性而设计，但实际上带来了多重收益：消除路由行范数偏置（负载均衡改善）、将路由器参数约束在紧凑的参数空间中（正则化效果）、以及与 Hyperball Optimization 等现代优化器的天然兼容性。这提示我们，<strong>参数空间的几何约束可能是一个被低估的设计维度</strong>。
+</p>
+<p>
+  <strong>4. 对未来 MoE 研究的启示</strong><br>
+  MPI 的成功暗示了一个更广泛的研究方向：<em>如何利用专家矩阵的谱结构来指导路由器设计？</em> 例如，是否可以利用多个奇异方向来设计多头路由器？是否可以利用奇异值的相对大小来动态调整专家的激活优先级？此外，MPI 与 Expert Merging、模型剪枝等下游技术的结合也值得探索——主奇异方向本身就是模型压缩的重要工具，路由行与之对齐后，是否能改善专家合并的质量？
+</p>
+<p>
+  <strong>5. 理论与实践的完美闭环</strong><br>
+  本文的另一个亮点是理论与实践的高度一致性：从 Rayleigh 商最大化的理论动机，到幂迭代的算法实现，再到流形梯度上升的等价性证明，最后到大规模预训练实验的经验验证，形成了完整的闭环。这种"有理论、有算法、有实验"的研究范式值得在 MoE 领域推广，以对抗当前许多路由器改进工作中理论依据不足的问题。
+</p>
+
+<h2>参考文献</h2>
+<ul style="font-size:0.9em;line-height:2">
+  <li>Shazeer et al. (2017). Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer. ICLR 2017.</li>
+  <li>Fedus et al. (2022). Switch Transformers: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity. JMLR 2022.</li>
+  <li>Zoph et al. (2022). ST-MoE: Designing Stable and Transferable Sparse Expert Models. arXiv:2202.08906.</li>
+  <li>DeepSeek-AI (2024). DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models.</li>
+  <li>Muennighoff et al. (2025). OLMoE: Open Mixture-of-Experts Language Models. arXiv:2409.02060.</li>
+  <li>Jordan et al. (2024). Muon: An Optimizer for Hidden Layers in Neural Networks.</li>
+  <li>Wen et al. (2026). Fantastic Pretraining Optimizers and Where to Find Them. ICLR 2026.</li>
+  <li>Xie et al. (2026). Controlled LLM Training on Spectral Sphere. arXiv:2601.08393.</li>
+  <li>Golub &amp; Van Loan (1996). Matrix Computations (3rd ed.). Johns Hopkins University Press.</li>
+  <li>Halko et al. (2010). Finding Structure with Randomness: Probabilistic Algorithms for Constructing Approximate Matrix Decompositions. arXiv:0909.4061.</li>
+  <li>Eckart &amp; Young (1936). The Approximation of One Matrix by Another of Lower Rank. Psychometrika.</li>
+  <li>Pethick et al. Training Deep Learning Models with Norm-Constrained LMOs. ICML 2025.</li>
+  <li>Liang et al. (2025). TorchTitan: One-Stop PyTorch Native Solution for Production Ready LLM Pretraining. ICLR 2025.</li>
+  <li>Gale et al. (2023). MegaBlocks: Efficient Sparse Training with Mixture-of-Experts. MLSys 2023.</li>
+  <li>DeepSeek-AI (2026). DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence.</li>
+</ul>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{if(!h.id)h.id='s'+i;const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);});
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{const l=toc.querySelector('a[href="#'+e.target.id+'"]');if(l)l.classList.toggle('active',e.isIntersecting);}),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

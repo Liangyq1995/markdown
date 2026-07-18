@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transformer 位置编码 — 技术解析</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+
+    .math-block { background: #2a2a3e; border-radius: 6px; padding: 12px 20px; margin: 1em 0; overflow-x: auto; }
+    .math-block p { margin: 0; }
+    .math-block mjx-container[display="true"] { display: block !important; text-align: center !important; margin: 0.3em auto !important; line-height: 1.5 !important; }
+    .math-block mjx-container[display="true"] mjx-mtr { line-height: 1 !important; }
+    .math-block mjx-container[display="true"] mjx-mtable { margin: 0.1em 0 !important; }
+
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 1100px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.95em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.82em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+    .tl-tag.red    { background: #f38ba8; }
+
+    .subtitle { color: #6c7086; font-size: 1em; margin-bottom: 20px; }
+    .info-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .result-highlight { background: #1a3a2a; border: 1px solid #a6e3a1; border-radius: 6px; padding: 12px 16px; margin: 0.8em 0; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 1em 0; }
+    .box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+    .box h4 { color: var(--heading); margin-bottom: 8px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>Transformer 位置编码 — 技术解析</h1>
+    <p class="subtitle">从正弦编码到 RoPE、ALiBi、NoPE 与上下文外推（PI / NTK / YaRN）的完整技术脉络与数学推导</p>
+
+    <table>
+      <tr><th>主题</th><td>Transformer 中的位置编码（Positional Encoding, PE）</td></tr>
+      <tr><th>核心问题</th><td>Self-Attention 对输入序列置换不变，必须显式或隐式注入顺序信息，并支持长序列外推</td></tr>
+      <tr><th>技术谱系</th><td>绝对编码（正弦 / 可学习）→ 相对编码（Shaw / T5）→ 旋转编码 RoPE → 线性偏置 ALiBi → 无编码 NoPE → 外推方法（PI / NTK-aware / NTK-by-parts / YaRN）</td></tr>
+      <tr><th>关键论文</th><td>Attention is All You Need (2017)、Shaw et al. (2018)、T5 (2019)、RoFormer/RoPE (2021)、ALiBi (2021)、NoPE (2022)、Position Interpolation (2023)、YaRN (2023)、Kazemnejad et al. NeurIPS 2023</td></tr>
+      <tr><th>当前主流</th><td>RoPE + YaRN 类缩放（LLaMA / Qwen / Mistral 系）；混合 NoPE+RoPE（SmolLM3 等）</td></tr>
+    </table>
+
+    <h2 id="sec1">1. 核心问题与动机</h2>
+    <p>Transformer 完全抛弃了 RNN 的递归与 CNN 的卷积，只用 <strong>Self-Attention</strong> 来建模序列内依赖。但 self-attention 本身是<strong>对输入顺序置换等变的（permutation-equivariant）</strong>——把输入 token 打乱重排，输出只是相应地重排，而不会"知道"谁在前谁在后。一句话：没有位置信息，Transformer 把 "猫追狗" 和 "狗追猫" 视作同一袋无序词。</p>
+
+    <h3>1.1 置换不变性的形式化</h3>
+    <p>设输入序列矩阵 $X \in \mathbb{R}^{n \times d}$，对任意置换矩阵 $P$，self-attention 的核心运算为：</p>
+    <div class="math-block">
+    <p>$$ \mathrm{Attn}(X) = \mathrm{softmax}\!\left(\frac{(X W_Q)(X W_K)^{\top}}{\sqrt{d}}\right) X W_V $$</p>
+    </div>
+    <p>代入 $PX$，由于 $(PX) W = P(XW)$（线性投影与置换可交换），且 softmax 对每一行独立作用：</p>
+    <div class="math-block">
+    <p>$$ \mathrm{Attn}(PX) = P \cdot \mathrm{Attn}(X) $$</p>
+    </div>
+    <p>即输出只是被同样地置换重排，<strong>token 之间的相对顺序信息完全丢失</strong>。要让模型感知"第几个 token"，必须额外引入位置信号。</p>
+
+    <h3>1.2 三条设计目标</h3>
+    <p>一个"好"的位置编码方案通常被期望同时满足：</p>
+    <ol>
+      <li><strong>注入绝对位置</strong>：能区分 token $i$ 与 token $j$ 的绝对序号。</li>
+      <li><strong>体现相对距离</strong>：注意力应主要依赖 $|i-j|$（相对位置），而非绝对序号本身——语言中"距离"比"绝对位置"更重要，且利于平移等价。</li>
+      <li><strong>支持长度外推</strong>：训练时见过的最大长度为 $L$，推理时序列长度 $L' \gt L$ 仍能正常工作（这是后文所有外推方法的直接动机）。</li>
+    </ol>
+
+    <h3>1.3 两条注入路径</h3>
+    <p>位置信息可以注入到两个不同位置，导致两大家族：</p>
+    <div class="two-col">
+      <div class="box">
+        <h4>A. 绝对位置编码 APE</h4>
+        <p>在<strong>网络最底层</strong>把位置向量加到 token embedding 上：$x_i \leftarrow x_i + p_i$。代表：原始正弦 PE、BERT/GPT 的可学习 PE。</p>
+        <p>特点：简单、可与任意 attention 兼容；但位置-语义<strong>耦合</strong>，外推差。</p>
+      </div>
+      <div class="box">
+        <h4>B. 注意力偏置 / 相对编码</h4>
+        <p>在<strong>注意力分数</strong>里直接注入相对位置：$\mathrm{logits}_{ij} \mathrel{+}= f(i-j)$。代表：Shaw 相对 PE、T5 bias、RoPE、ALiBi。</p>
+        <p>特点：天然相对、利于外推；但需改动 attention 内部。</p>
+      </div>
+    </div>
+
+    <h2 id="sec2">2. 方法谱系与时间线</h2>
+    <p>位置编码经历了"绝对 → 相对 → 旋转 → 线性偏置 → 无编码 → 外推缩放"的演进。下图为关键节点时间线：</p>
+
+    <div class="timeline-wrap">
+      <div class="timeline">
+        <div class="tl-col">
+          <div class="tl-period">2017</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag">绝对·正弦</span><br>Attention is All You Need 提出 $\sin/\cos$ 正弦位置编码</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2018</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag">绝对·可学习</span><br>GPT / BERT 改用可学习位置嵌入表</div>
+            <div class="tl-item"><span class="tl-tag orange">相对</span><br>Shaw et al. 把相对位置嵌入注入 attention</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2019–20</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag orange">相对偏置</span><br>Transformer-XL 相对 PE；T5 用对数分桶相对偏置</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2021</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag green">旋转·相对</span><br>RoPE（RoFormer）：旋转编码绝对位置、实现相对注意力</div>
+            <div class="tl-item"><span class="tl-tag purple">线性偏置</span><br>ALiBi：注意力分数加线性距离偏置，强外推</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2022</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag red">无编码</span><br>NoPE：causal mask 本身隐含位置信息</div>
+            <div class="tl-item"><span class="tl-tag green">xPos</span><br>引入指数衰减，缓解 RoPE 共振</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2023</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag orange">外推缩放</span><br>PI（位置插值）、NTK-aware、NTK-by-parts</div>
+            <div class="tl-item"><span class="tl-tag green">YaRN</span><br>NTK-by-parts + 温度缩放，SOTA 外推</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2024+</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag red">混合</span><br>SmolLM3 等在部分层用 NoPE、其余层保留 RoPE</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3>2.1 方法分类树</h3>
+    <pre class="mermaid">
+flowchart TD
+  PE["位置编码 PE"] --> APE["A. 绝对位置编码 APE<br>注入到输入 embedding"]
+  PE --> RPE["B. 相对 / 注意力内编码<br>注入到 attention 分数"]
+  APE --> SIN["正弦/余弦<br>Vaswani 2017"]
+  APE --> LER["可学习嵌入表<br>GPT / BERT"]
+  RPE --> SHAW["Shaw 相对 PE<br>可学习 a^K,a^V"]
+  RPE --> T5["T5 相对偏置<br>对数分桶 bias"]
+  RPE --> ROPE["RoPE 旋转编码<br>Su 2021（乘性·相对）"]
+  RPE --> ALIBI["ALiBi 线性偏置<br>Press 2021（加性·相对）"]
+  RPE --> NOPE["NoPE<br>因果掩码隐含位置"]
+  ROPE --> EXT["外推缩放<br>PI / NTK / YaRN"]
+  classDef abs fill:#1a3a2a,stroke:#a6e3a1,color:#cdd6f4;
+  classDef rel fill:#3a2a1a,stroke:#fab387,color:#cdd6f4;
+  class APE,SIN,LER abs;
+  class RPE,SHAW,T5,ROPE,ALIBI,NOPE,EXT rel;
+    </pre>
+    <p>贯穿全文的一条主线：<strong>"旋转"</strong>。正弦 PE 本质是对位置施加旋转（角位移）；RoPE 把这一思想从"加到 embedding"升级为"乘到 attention 的 Q/K"；NTK/YaRN 则通过调整旋转的频率/温度来实现外推。后文逐一展开。</p>
+
+    <h2 id="sec3">3. 数学预备：注意力分数的分解</h2>
+    <p>在讨论具体方法前，先做一个关键观察。若采用 APE（把位置 $P$ 加到输入 $X$ 上），注意力分数 $A = QK^{\top}$ 可分解为四项：</p>
+    <div class="math-block">
+    <p>$$ \begin{aligned} A_{\text{pre}} &= (X+P)W_Q W_K^{\top}(X+P)^{\top} \\ &= \underbrace{X W_Q W_K^{\top} X^{\top}}_{\text{词×词（内容）}} + \underbrace{P W_Q W_K^{\top} X^{\top}}_{\text{位置×词}} + \underbrace{X W_Q W_K^{\top} P^{\top}}_{\text{词×位置}} + \underbrace{P W_Q W_K^{\top} P^{\top}}_{\text{位置×位置}} \end{aligned} $$</p>
+    </div>
+    <p>四个交叉项中，只有第一项是纯内容相似度，其余三项都把<strong>绝对位置</strong>直接耦合进注意力。这解释了 APE 为何外推差：一旦 $P$ 超出训练见过的位置，后三项立即失配。相对编码（Shaw/T5/RoPE/ALiBi）的设计目的，正是<strong>消去绝对位置交叉项、只保留与 $i-j$ 有关的项</strong>。</p>
+
+    <h2 id="sec4">4. 关键技术详解</h2>
+
+    <h3 id="sec4-1">4.1 绝对正弦/余弦位置编码（Sinusoidal）</h3>
+    <p>原始 Transformer（Vaswani et al., 2017）对位置 $pos$、维度索引 $i$，定义：</p>
+    <div class="math-block">
+    <p>$$ \mathrm{PE}_{(pos,\,2i)} = \sin\!\left(\frac{pos}{10000^{2i/d}}\right), \quad \mathrm{PE}_{(pos,\,2i+1)} = \cos\!\left(\frac{pos}{10000^{2i/d}}\right) $$</p>
+    </div>
+    <p>其中 $d$ 为模型维度，$i \in [0,\, d/2)$。每个 $(2i, 2i+1)$ 维对共用一个角频率：</p>
+    <div class="math-block">
+    <p>$$ \omega_i = \frac{1}{10000^{2i/d}}, \quad \text{波长 } \lambda_i = \frac{2\pi}{\omega_i} = 2\pi \cdot 10000^{2i/d} $$</p>
+    </div>
+    <p>$\omega_i$ 构成<strong>几何序列</strong>：从 $\omega_0=1$（最短波长 $\approx 6.28$，捕捉相邻 token）按因子 $10000^{-2/d}$ 递减到 $\omega_{d/2-1}=1/10000$（最长波长 $\approx 62800$，覆盖整段上下文）。这让不同维度对负责不同尺度，<strong>多尺度</strong>是其精髓。</p>
+
+    <h4>关键性质：偏移 $k$ 是一次旋转</h4>
+    <p>把每个 $(\sin,\cos)$ 对视作一个二维向量 $u_i(pos) = \big[\sin(pos\,\omega_i),\; \cos(pos\,\omega_i)\big]^{\top}$。由和角公式：</p>
+    <div class="math-block">
+    <p>$$ \sin\big((pos+k)\omega_i\big) = \sin(pos\,\omega_i)\cos(k\omega_i) + \cos(pos\,\omega_i)\sin(k\omega_i) $$</p>
+    <p>$$ \cos\big((pos+k)\omega_i\big) = \cos(pos\,\omega_i)\cos(k\omega_i) - \sin(pos\,\omega_i)\sin(k\omega_i) $$</p>
+    </div>
+    <p>即：</p>
+    <div class="math-block">
+    <p>$$ u_i(pos+k) = \underbrace{\begin{bmatrix} \cos(k\omega_i) & \sin(k\omega_i) \\ -\sin(k\omega_i) & \cos(k\omega_i) \end{bmatrix}}_{R(k\omega_i)} \, u_i(pos) $$</p>
+    </div>
+    <p>于是 $\mathrm{PE}(pos+k)$ 是对 $\mathrm{PE}(pos)$ 施加的<strong>块对角旋转矩阵</strong> $R_k = \mathrm{diag}(R(k\omega_0),\ldots,R(k\omega_{d/2-1}))$。这意味着：<strong>相对偏移 $k$ 在正弦 PE 中天然对应一次旋转</strong>，模型理论上可通过线性投影 $\mathrm{PE}(pos+k) = M_k\,\mathrm{PE}(pos)$ 还原相对位置。这一"旋转"直觉正是 RoPE 的直接灵感来源。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: 正弦位置编码生成</div>
+      <p><span class="kw">Input:</span> 序列长度 <span class="var">L</span>, 模型维度 <span class="var">d</span></p>
+      <p style="padding-left:1.5em"><span class="var">pos</span> = <span class="fn">arange</span>(<span class="num">0</span>, <span class="var">L</span>).reshape(<span class="num">-1</span>,<span class="num">1</span>)   <span class="cm"># (L,1)</span></p>
+      <p style="padding-left:1.5em"><span class="var">i</span> = <span class="fn">arange</span>(<span class="num">0</span>, <span class="var">d</span>/<span class="num">2</span>).reshape(<span class="num">1</span>,<span class="num">-1</span>)    <span class="cm"># (1,d/2)</span></p>
+      <p style="padding-left:1.5em"><span class="var">omega</span> = <span class="num">1</span> / (<span class="num">10000</span> ** (<span class="num">2</span>*<span class="var">i</span>/<span class="var">d</span>))     <span class="cm"># 角频率 ω_i</span></p>
+      <p style="padding-left:1.5em"><span class="var">PE</span> = <span class="fn">zeros</span>(<span class="var">L</span>, <span class="var">d</span>)</p>
+      <p style="padding-left:1.5em"><span class="var">PE</span>[:, <span class="num">0</span>::<span class="num">2</span>] = <span class="fn">sin</span>(<span class="var">pos</span> * <span class="var">omega</span>)  <span class="cm"># 偶维 = sin</span></p>
+      <p style="padding-left:1.5em"><span class="var">PE</span>[:, <span class="num">1</span>::<span class="num">2</span>] = <span class="fn">cos</span>(<span class="var">pos</span> * <span class="var">omega</span>)  <span class="cm"># 奇维 = cos</span></p>
+      <p><span class="kw">return</span> <span class="var">PE</span>   <span class="cm"># 加到 token embedding: X + PE</span></p>
+    </div>
+
+    <p><strong>优点：</strong>无参数、可推广到任意长度（理论上）、具备相对旋转性质。<strong>缺点：</strong>绝对位置仍被耦合进注意力（见 §3 分解），实测外推时一旦 $pos$ 超出训练范围，性能显著下降——这正是 ALiBi 论文的核心动机。</p>
+
+    <h3 id="sec4-2">4.2 可学习绝对位置编码（Learned APE）</h3>
+    <p>GPT 与 BERT 直接把位置编码换成一个可学习嵌入表 $E_{\text{pos}} \in \mathbb{R}^{L_{\max} \times d}$，在底层加到 token embedding：</p>
+    <div class="math-block">
+    <p>$$ x_i \leftarrow E_{\text{tok}}[w_i] + E_{\text{pos}}[i] $$</p>
+    </div>
+    <p>GPT 还对 $E_{\text{pos}}$ 用正弦值初始化后继续学习。相比正弦编码，可学习方案更灵活，但在两点上更弱：</p>
+    <ul>
+      <li><strong>固定长度</strong>：序列长度 $L_{\max}$ 在建表时固定，$i \gt L_{\max}$ 的位置根本没有对应 embedding。</li>
+      <li><strong>零外推</strong>：训练时未见过的位置嵌入向量在推理时是"未初始化噪声"，Press 在 ALiBi 回复中明确指出 learned PE 与 sinusoidal 都无法外推到训练长度之外。</li>
+    </ul>
+    <p>这一局限性促使研究者转向"相对编码"——把注意力从"token 在第几位"转到"token 之间隔多远"。</p>
+
+    <h3 id="sec4-3">4.3 相对位置编码（Shaw et al., 2018）</h3>
+    <p>Shaw 等人提出：与其用绝对位置，不如直接在 attention 中注入<strong>相对距离</strong> $j-i$。对位置 $i$ attend 到位置 $j$，把可学习的相对嵌入 $a^K_{j-i}$、$a^V_{j-i}$ 加到 key 和 value 上：</p>
+    <div class="math-block">
+    <p>$$ e_{ij} = \frac{(x_i W_Q)\,(x_j W_K + a^{K}_{j-i})^{\top}}{\sqrt{d}}, \quad z_i = \sum_{j} \alpha_{ij}\,(x_j W_V + a^{V}_{j-i}) $$</p>
+    </div>
+    <p>展开 attention 分数：</p>
+    <div class="math-block">
+    <p>$$ e_{ij} = \underbrace{\frac{(x_i W_Q)(x_j W_K)^{\top}}{\sqrt{d}}}_{\text{内容项}} + \underbrace{\frac{(x_i W_Q)(a^{K}_{j-i})^{\top}}{\sqrt{d}}}_{\text{相对项}} $$</p>
+    </div>
+    <p>相对项只依赖 query 内容与<strong>相对偏移</strong> $j-i$，绝对位置被消去——这正是 §3 想要的。为控制参数量，Shaw 把 $j-i$ 截断到 $[-k, k]$：$a^K, a^V \in \mathbb{R}^{(2k+1)\times d}$，超出范围归到边界桶。</p>
+    <p><strong>优点：</strong>真正的相对编码、平移等价、能泛化到更长序列（相对距离集合不变）。<strong>缺点：</strong>每层都需额外参数 $(2k+1)\cdot d$（且 K、V 各一套）；截断 $k$ 限制了最大可建模相对距离；每个 head/layer 独立，参数与计算开销可观。后续 T5 把它简化为纯偏置。</p>
+
+    <h3 id="sec4-4">4.4 T5 相对位置偏置</h3>
+    <p>T5（Raffel et al., 2019）把 Shaw 的相对嵌入进一步简化：<strong>偏置与 query/key 内容无关</strong>，只是一个按相对位置取值的标量 $b_{r(j-i)}$，直接加到 attention 分数：</p>
+    <div class="math-block">
+    <p>$$ \mathrm{logits}_{ij} = \frac{(x_i W_Q)(x_j W_K)^{\top}}{\sqrt{d}} + b_{r(j-i)} $$</p>
+    </div>
+    <p>其中 $r(\cdot)$ 是<strong>对数分桶</strong>函数：相对距离 $\le 8$ 时一格一桶（精细），之后按对数间距合并远距离（粗放），从而用很小的偏置表 $b \in \mathbb{R}^{B}$（$B$ 为桶数，约 32）覆盖任意长距离。偏置每层独立学习，但参数极少。</p>
+    <p><strong>优点：</strong>参数极少、实现简单、是 T5/Flan-T5/mT5 等_encoder-decoder_模型的事实标准。<strong>缺点：</strong>偏置与内容解耦，表达能力弱于 Shaw/RoPE；非自回归 encoder-decoder 设计上对纯 decoder LLM 的长序列外推不如 RoPE 顺滑，故现代 decoder LLM 多转向 RoPE。</p>
+
+    <h3 id="sec4-5">4.5 旋转位置编码 RoPE（核心推导）</h3>
+    <p>RoPE（Su et al., 2021, RoFormer）的出发点是一个优雅的设计目标：</p>
+    <blockquote>寻找作用于 query/key 的变换 $f(\cdot, m)$、$f(\cdot, n)$，使得内积<strong>只依赖相对位置 $m-n$</strong>：</blockquote>
+    <div class="math-block">
+    <p>$$ \langle f(\mathbf{q}, m),\, f(\mathbf{k}, n) \rangle = g(\mathbf{q}, \mathbf{k},\, m-n) $$</p>
+    </div>
+    <p>即"绝对位置用旋转编码、相对注意力自然实现"。下面从 2D 情形推导。</p>
+
+    <h4>4.5.1 2D 情形：复数解</h4>
+    <p>设 $\mathbf{q}, \mathbf{k} \in \mathbb{R}^2$，把它们视作复数，用极坐标记 $f(\mathbf{q},m) = R_f(\mathbf{q},m)\,e^{i\Theta_f(\mathbf{q},m)}$。代入内积（复数内积取实部）：</p>
+    <div class="math-block">
+    <p>$$ \langle f(\mathbf{q},m), f(\mathbf{k},n) \rangle = R_f(\mathbf{q},m)R_f(\mathbf{k},n)\cos\!\big(\Theta_f(\mathbf{q},m) - \Theta_f(\mathbf{k},n)\big) $$</p>
+    </div>
+    <p>要使其只依赖 $m-n$，须满足：<strong>模长与位置无关</strong>（$R_f(\mathbf{q},m)=R_f(\mathbf{q},0)=\lVert\mathbf{q}\rVert$，只旋转不缩放），且<strong>辐角差只依赖 $m-n$</strong>。令 $\varphi(m) \triangleq \Theta_f(\cdot,m)-\Theta_f(\cdot,0)$ 为位置带来的辐角增量，可证 $\varphi(m)-\varphi(m-1)$ 与 $m$ 无关，故 $\varphi$ 是等差数列；取 $\varphi(0)=0,\,\varphi(1)=\theta$ 得 $\varphi(m)=m\theta$。于是：</p>
+    <div class="math-block">
+    <p>$$ \boxed{\,f(\mathbf{q}, m) = \mathbf{q}\,e^{im\theta}, \quad f(\mathbf{k}, n) = \mathbf{k}\,e^{in\theta}\,} $$</p>
+    </div>
+    <p><strong>验证：</strong>设 $\mathbf{q},\mathbf{k}$ 为复数，则</p>
+    <div class="math-block">
+    <p>$$ \langle f(\mathbf{q},m), f(\mathbf{k},n) \rangle = \mathrm{Re}\!\left[\mathbf{q}\,e^{im\theta}\,\overline{\mathbf{k}\,e^{in\theta}}\right] = \mathrm{Re}\!\left[\mathbf{q}\,\overline{\mathbf{k}}\,e^{i(m-n)\theta}\right] = g(\mathbf{q},\mathbf{k},\, m-n) \;\;\checkmark $$</p>
+    </div>
+    <p>结果确实只含 $m-n$。物理上：对 Q、K 都按各自位置旋转，<strong>同向旋转不改变二者夹角，故平移（绝对位置变化）不影响内积</strong>——相对性得证。</p>
+
+    <h4>4.5.2 推广到 $d$ 维：多频率旋转</h4>
+    <p>把 $d$ 维拆成 $d/2$ 个二维对，每对 $i$ 配独立频率 $\theta_i$（与正弦 PE 同款几何序列）：</p>
+    <div class="math-block">
+    <p>$$ \theta_i = \mathrm{base}^{-2i/d}, \quad i \in [0,\, d/2), \quad \mathrm{base}=10000 $$</p>
+    </div>
+    <p>对位置 $m$，定义块对角旋转矩阵 $R_{\Theta,m} = \mathrm{diag}\big(R(m\theta_0),\,R(m\theta_1),\,\ldots,\,R(m\theta_{d/2-1})\big)$，其中</p>
+    <div class="math-block">
+    <p>$$ R(\phi) = \begin{bmatrix} \cos\phi & -\sin\phi \\ \sin\phi & \cos\phi \end{bmatrix} $$</p>
+    </div>
+    <p>RoPE 对 Q、K 做旋转：$\mathbf{q}_m = R_{\Theta,m}\,(W_Q\mathbf{x}_m)$，$\mathbf{k}_n = R_{\Theta,n}\,(W_K\mathbf{x}_n)$。内积为：</p>
+    <div class="math-block">
+    <p>$$ \langle \mathbf{q}_m, \mathbf{k}_n \rangle = \mathrm{Re}\!\left[\sum_{i=0}^{d/2-1} \big(W_Q\mathbf{x}_m\big)_{[2i:2i+1]}\,\overline{\big(W_K\mathbf{x}_n\big)_{[2i:2i+1]}}\; e^{i(m-n)\theta_i}\right] = g(\mathbf{x}_m, \mathbf{x}_n,\, m-n) $$</p>
+    </div>
+    <p>每一对都贡献一个只含 $m-n$ 的旋转因子，整体内积仍<strong>只依赖相对位置</strong>。注意 $R_{\Theta,m}$ 是<strong>正交矩阵</strong>（旋转保范），故不改变 hidden state 的模长，可与线性注意力等兼容。</p>
+
+    <h4>4.5.3 长程衰减：多分辨率归纳偏置</h4>
+    <p>频率 $\theta_i$ 从 $\theta_0=1$（高频，快速旋转，编码近程）到 $\theta_{d/2-1}=1/\mathrm{base}$（低频，缓变，编码远程）。当相对距离 $|m-n|$ 增大时：高频对的 $e^{i(m-n)\theta_i}$ 急速振荡，在求和中<strong>近似相消</strong>（贡献趋于零均值）；只有低频对缓慢变化仍提供稳定信号。净效果是内积随距离<strong>衰减</strong>——RoPE 因此天然具备"近处关注、远处衰减"的归纳偏置，且不同频率对覆盖不同距离尺度（多分辨率），这是其性能稳健的关键。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 2: RoPE 应用（实数形式，LLaMA 半分块约定）</div>
+      <p><span class="kw">Input:</span> <span class="var">x</span> ∈ ℝ<sup>…×d</sup>（Q 或 K），位置 <span class="var">m</span>，base = <span class="num">10000</span></p>
+      <p style="padding-left:1.5em"><span class="var">freqs</span> = <span class="num">1</span> / (<span class="num">10000</span> ** (<span class="fn">arange</span>(<span class="num">0</span>, <span class="var">d</span>, <span class="num">2</span>) / <span class="var">d</span>))   <span class="cm"># θ_i, shape (d/2,)</span></p>
+      <p style="padding-left:1.5em"><span class="var">angles</span> = <span class="var">m</span> * <span class="var">freqs</span>                                  <span class="cm"># (L, d/2)</span></p>
+      <p style="padding-left:1.5em"><span class="var">emb</span> = <span class="fn">concat</span>(<span class="var">angles</span>, <span class="var">angles</span>)                      <span class="cm"># (L, d) 重复以匹配半分块</span></p>
+      <p style="padding-left:1.5em"><span class="var">cos</span>, <span class="var">sin</span> = <span class="fn">cos</span>(<span class="var">emb</span>), <span class="fn">sin</span>(<span class="var">emb</span>)</p>
+      <p style="padding-left:1.5em"><span class="kw">def</span> <span class="fn">rotate_half</span>(<span class="var">x</span>):</p>
+      <p style="padding-left:3em"><span class="var">x1</span>, <span class="var">x2</span> = <span class="var">x</span>[..., :<span class="var">d</span>//<span class="num">2</span>], <span class="var">x</span>[..., <span class="var">d</span>//<span class="num">2</span>:]            <span class="cm"># 拆前后两半</span></p>
+      <p style="padding-left:3em"><span class="kw">return</span> <span class="fn">concat</span>(-<span class="var">x2</span>, <span class="var">x1</span>)                       <span class="cm"># 交换并取负，等价于每对旋转</span></p>
+      <p style="padding-left:1.5em"><span class="var">x_rot</span> = <span class="var">x</span> * <span class="var">cos</span> + <span class="fn">rotate_half</span>(<span class="var">x</span>) * <span class="var">sin</span>           <span class="cm"># 即 R_Θ,m · x</span></p>
+      <p><span class="kw">return</span> <span class="var">x_rot</span></p>
+    </div>
+
+    <h4>4.5.4 实现细节与约定</h4>
+    <ul>
+      <li><strong>复数 vs 实数形式</strong>：复数形式 $\mathbf{x} \mapsto \mathbf{x}e^{im\theta}$ 在代码里可用 <code>torch.polar</code> 直接实现（HuggingFace LLaMA 即如此）；实数形式（上式 <code>rotate_half</code>）等价但更易在主流张量库部署，二者数学一致。</li>
+      <li><strong>两种配对约定</strong>：<em>交错</em>（相邻两维 $(2i,2i+1)$ 为一对，GPT-NeoX 系）与 <em>半分块</em>（前半实部、后半虚部，LLaMA 系）。频率 $\theta_i$ 相同，仅维度排列不同，<strong>不可混用</strong>否则位置编码错乱。</li>
+      <li><strong>只作用于 Q、K，不动 V</strong>：相对性体现在 $\mathbf{q}^\top\mathbf{k}$，V 无需旋转，节省计算且与等价推导一致。</li>
+      <li><strong>无参数</strong>：$R_{\Theta,m}$ 完全由 $\theta_i$ 与位置 $m$ 决定，不引入任何可学习参数——这是相对 Shaw/T5 的优势。</li>
+    </ul>
+    <p><strong>为何 RoPE 成为现代 decoder LLM 的事实标准：</strong>无参数、天然相对、保范、多分辨率衰减、且（关键）<strong>可外推</strong>——通过缩放 $\theta_i$ 即可把训练时的短上下文 checkpoint 拉伸到超长上下文，催生了后文的 PI/NTK/YaRN 整条外推技术线。LLaMA / Qwen / Mistral / GLM 系均默认采用 RoPE。</p>
+
+    <h3 id="sec4-6">4.6 ALiBi：注意力线性偏置</h3>
+    <p>ALiBi（Press, Smith, Lewis, 2021, "Train Short, Test Long"）走了一条更激进的路：<strong>彻底不学位置嵌入</strong>，而是在每个注意力头上加一个与距离成正比的线性惩罚。对位置 $i$ attend 到 $j$（因果，$j \le i$）：</p>
+    <div class="math-block">
+    <p>$$ s^{(h)}_{ij} = \frac{\mathbf{q}^{(h)}_i \cdot \mathbf{k}^{(h)}_j}{\sqrt{d}} \;-\; m_h\,(i - j) $$</p>
+    </div>
+    <p>即"离得越远，分数被扣得越多"，且是<strong>在 softmax 之前</strong>加到 logit 上（故等效于按 $e^{-m_h(i-j)}$ 指数衰减的注意力权重）。关键超参 $m_h$ 是<strong>每个头独立、不可学习</strong>的斜率。</p>
+
+    <h4>4.6.1 斜率的几何序列</h4>
+    <p>对 $n$ 个注意力头，斜率构成几何序列（推导自官方实现：<code>start = 2^{-8/n}</code>，<code>ratio = start</code>，<code>slope_i = start·ratio^i = start^{i+1}</code>）：</p>
+    <div class="math-block">
+    <p>$$ m_i = 2^{-\frac{8(i+1)}{n}}, \quad i = 0, 1, \ldots, n-1 $$</p>
+    </div>
+    <p>不同头因此有<strong>指数级不同的有效感受范围</strong>（约 $1/m_i$），形成一个从局部到全局的"注意力范围谱系"——等价于一个内置的多尺度局部性归纳偏置：</p>
+    <table>
+      <tr><th>头索引 $i$ (n=16)</th><th>斜率 $m_i$</th><th>有效范围 $\approx 1/m_i$ (token)</th><th>角色</th></tr>
+      <tr><td>0</td><td>0.7071 (=1/√2)</td><td>~1.4</td><td>最局部（语法级）</td></tr>
+      <tr><td>1</td><td>0.5</td><td>~2</td><td>局部</td></tr>
+      <tr><td>3</td><td>0.25</td><td>~4</td><td>中近</td></tr>
+      <tr><td>5</td><td>0.125</td><td>~8</td><td>中等</td></tr>
+      <tr><td>7</td><td>0.0625 (=1/16)</td><td>~16</td><td>中远</td></tr>
+      <tr><td>11</td><td>0.0156</td><td>~64</td><td>较全局</td></tr>
+      <tr><td>15</td><td>0.0039 (=1/256)</td><td>~256</td><td>最全局（语义级）</td></tr>
+    </table>
+    <p>对 $n=8$，斜率恰好是 $1/2, 1/4, 1/8, \ldots, 1/256$。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 3: ALiBi 因果注意力前向</div>
+      <p><span class="kw">Input:</span> <span class="var">Q,K,V</span> ∈ ℝ<sup>…×n×L×d</sup>，斜率向量 <span class="var">slopes</span> ∈ ℝ<sup>n</sup></p>
+      <p style="padding-left:1.5em"><span class="var">scores</span> = <span class="fn">bmm</span>(<span class="var">Q</span>, <span class="var">K</span>.transpose(-1,-2)) / √d   <span class="cm"># (n, L, L)</span></p>
+      <p style="padding-left:1.5em"><span class="cm"># 构造距离矩阵 (i-j)，因果下 j≤i</span></p>
+      <p style="padding-left:1.5em"><span class="var">i</span> = <span class="fn">arange</span>(<span class="var">L</span>).reshape(-1,<span class="num">1</span>); <span class="var">j</span> = <span class="fn">arange</span>(<span class="var">L</span>).reshape(<span class="num">1</span>,-<span class="num">1</span>)</p>
+      <p style="padding-left:1.5em"><span class="var">dist</span> = <span class="var">i</span> - <span class="var">j</span>                       <span class="cm"># 上三角为正(未来),下三角... </span></p>
+      <p style="padding-left:1.5em"><span class="var">bias</span> = -<span class="var">slopes</span>.reshape(n,<span class="num">1</span>,<span class="num">1</span>) * <span class="var">dist</span>   <span class="cm"># (n,L,L) 线性偏置</span></p>
+      <p style="padding-left:1.5em"><span class="var">scores</span> = <span class="var">scores</span> + <span class="var">bias</span></p>
+      <p style="padding-left:1.5em"><span class="var">mask</span> = <span class="var">dist</span> &gt; <span class="num">0</span>                  <span class="cm"># 未来位置置 -inf</span></p>
+      <p style="padding-left:1.5em"><span class="var">scores</span> = <span class="var">scores</span>.<span class="fn">masked_fill</span>(<span class="var">mask</span>, -∞)</p>
+      <p style="padding-left:1.5em"><span class="var">A</span> = <span class="fn">softmax</span>(<span class="var">scores</span>, dim=-<span class="num">1</span>)</p>
+      <p><span class="kw">return</span> <span class="fn">bmm</span>(<span class="var">A</span>, <span class="var">V</span>)</p>
+    </div>
+
+    <h4>4.6.2 外推能力与局限</h4>
+    <p>ALiBi 的杀手锏是<strong>长度外推</strong>：因为偏置只依赖相对距离 $i-j$（一个与序列长度无关的量），把推理序列拉到训练长度的 $2\sim 10$ 倍时，perplexity 仍保持平稳（这是论文标题 "Train Short, Test Long" 的由来）。在 WikiText-103 上，ALiBi 以训练长度 1024 即超越用 2048 训练的正弦基线。零参数、天然局部性、强外推，使其一度被视为最有希望的方案。</p>
+    <p><strong>局限：</strong>论文主要面向<strong>自回归 decoder</strong>，且只以 perplexity 衡量；迁移到 encoder/MLM（双向注意力）时距离对称化处理棘手，大规模下性能会下降。更重要的是后续研究表明 ALiBi 的外推优势在<strong>下游推理/数学任务</strong>上并不稳健（见 §4.7、§5），故现代主流 decoder LLM 最终选择了 RoPE+YaRN 而非 ALiBi。</p>
+
+    <h3 id="sec4-7">4.7 NoPE：无显式位置编码</h3>
+    <p>一个反直觉的发现：完全<strong>不加任何位置编码</strong>，decoder-only Transformer 仍能学到位置信息。其根基在于<strong>因果掩码（causal mask）本身破坏了置换等变性</strong>。</p>
+    <p>无因果掩码时，输出对输入置换等变（§1.1）。但因果掩码使位置 $k$ 只能 attend 到 $\{1,\ldots,k\}$——<strong>可 attending 的 token 集合随 $k$ 改变</strong>，因此输出随绝对位置变化。Tsai et al. (2019) 证明带因果掩码的 Transformer 不再置换等变；近期工作（COLING 2025）进一步刻画了其中的"邻接模式（adjacency pattern）"。</p>
+    <div class="math-block">
+    <p>$$ \text{输出}_k = \sum_{j=1}^{k} \alpha_{kj}\,\mathbf{v}_j \;\Longrightarrow\; \text{可 attend 集合 } \{1{:}k\} \text{ 随 } k \text{ 变化} \Rightarrow \text{隐含绝对位置} $$</p>
+    </div>
+    <p>Haviv et al. (2022) 经探针实验发现：无 PE 的模型在各层都获得了<strong>对绝对位置的隐式感知</strong>，且性能与带 PE 的标准模型相当、跨数据集与模型规模稳健。推测机制是：模型能从"每个 token 能 attend 到多少前驱"近似推断自身绝对位置。</p>
+    <p><strong>更重磅的证据来自 Kazemnejad et al.（NeurIPS 2023）</strong>：在一系列推理/数学任务的<strong>长度泛化</strong>基准上系统比较 APE、T5 相对 PE、ALiBi、RoPE 与 NoPE，发现：</p>
+    <div class="result-highlight">NoPE 在长度外推（训练短上下文 → 测试长上下文的下游任务）上<strong>优于所有显式位置编码方法</strong>，且不增加任何计算。理论上 NoPE 既能表示绝对也能表示相对 PE，但经 SGD 训练后其注意力模式<strong>最接近 T5 的相对 PE</strong>。</div>
+    <p><strong>实践启示：</strong>NoPE 并非"删掉所有 PE"，而是<strong>选择性</strong>地在部分层省略。例如 SmolLM3 每 4 层用一次 NoPE、其余层保留 RoPE；Tiny Aya、Arcee Trinity 亦采用 NoPE+RoPE 混合。这是一种"在显式位置用处不大的层让它隐式学习、其余层仍靠 RoPE 保证外推"的折中。</p>
+
+    <h3 id="sec4-8">4.8 上下文长度外推：PI / NTK-aware / NTK-by-parts / YaRN</h3>
+    <p>RoPE 虽理论上可处理任意位置，但训练时只在 $[0, L]$ 上见过，推理到 $L' \gt L$ 时性能仍会退化（部分维度进入"训练时未观测的旋转相位"）。于是衍生出一整条"事后缩放 RoPE 频率"的外推技术线。设缩放因子 $s = L'/L$，统一目标是把每个频率 $\theta_i$ 替换为 $\theta_i'$，使新相位落在训练分布内。</p>
+
+    <h4>4.8.1 位置插值 Position Interpolation (PI)</h4>
+    <p>Chen et al. (2023) 提出：把位置坐标本身压缩，$m \mapsto m/s$，等价于把<strong>所有频率统一除以 $s$</strong>：</p>
+    <div class="math-block">
+    <p>$$ \theta_i^{\text{PI}} = \frac{\theta_i}{s} \quad (\text{对所有 } i \text{ 一视同仁}) $$</p>
+    </div>
+    <p>代价：高频维度也被等比压缩，<strong>丢失局部分辨率</strong>（YaRN 论文称"移除了 RoPE 的高频分量"）。随 $s$ 增大退化加剧，即便微调也只能到 $s \approx 8$。</p>
+
+    <h4>4.8.2 NTK-aware 缩放</h4>
+    <p>bloc97 (2023) 的洞察：不该均匀缩放所有维度，而应"<strong>高频少缩、低频多缩</strong>"——通过改 base 实现。令新 base $= \mathrm{base}\cdot s^{d/(d-2)}$，则：</p>
+    <div class="math-block">
+    <p>$$ \theta_i^{\text{NTK}} = \theta_i \cdot s^{-\,2i/(d-2)} $$</p>
+    </div>
+    <p>验证两端：$i=0$（最高频）$\Rightarrow \theta_0^{\text{NTK}}=\theta_0\cdot s^{0}=\theta_0$（不变）；$i=d/2{-}1$（最低频）$\Rightarrow$ 指数为 $-\tfrac{2(d/2-1)}{d-2}=-1$，得 $\theta^{\text{NTK}}=\theta/s$（完全插值）。中间维度渐变。<strong>无需微调</strong>即可显著降低长上下文 perplexity，优于 PI。但微调后反不如 PI——因为它对高频"不动"的假设在长数据下偏保守。</p>
+
+    <h4>4.8.3 NTK-by-parts（YaRN 的核心）</h4>
+    <p>YaRN 把"按维度区别对待"做到极致：依据<strong>波长 $\lambda_i = 2\pi/\theta_i$</strong>（旋转一周所需的 token 数）与预训练上下文 $L$ 的关系分级处理。定义 $r = L/\lambda_i$（"$L$ 内能塞下几个波长"）：</p>
+    <div class="math-block">
+    <p>$$ \gamma(r) = \begin{cases} 0 & r \lt \alpha \quad (\lambda \gg L:\text{低频,波长超上下文})\\ 1 & r \gt \beta \quad (\lambda \ll L:\text{高频,上下文内已充分旋转})\\ \dfrac{r-\alpha}{\beta-\alpha} & \text{otherwise（渐变）} \end{cases} $$</p>
+    <p>$$ h(\theta_i) = (1-\gamma)\,\frac{\theta_i}{s} + \gamma\,\theta_i $$</p>
+    </div>
+    <p>即：波长超过上下文的低频维度（会落到训练未见的相位）<strong>全量插值</strong>压回范围；波长远小于上下文的高频维度<strong>原样保留</strong>；中间用 ramp 平滑过渡。对 LLaMA 系实测最佳 $\alpha=1,\,\beta=32$。下图直观对比四种方法对频率谱的改造：</p>
+
+    <div id="chart-freq" class="echarts-container" style="height:380px"></div>
+    <p style="text-align:center;color:#6c7086;font-size:0.85em">图：d=128、base=10000、s=8、L=2048 时，各方法对 $\theta_i$ 的缩放（对数纵轴）。原始 RoPE（蓝）从 1 衰减到 ~1.1e-4；PI（橙）整体下移 8 倍；NTK-aware（绿）高频端不动、低频端落到 1/8；NTK-by-parts（紫）用 ramp 在两区间平滑过渡。</p>
+
+    <h4>4.8.4 YaRN：再加一个温度</h4>
+    <p>NTK-by-parts 已在频率层面解决了"相位越界"，但长上下文里注意力仍会变得过于弥散。YaRN 额外引入一个<strong>温度因子</strong>对 attention logits（等价于对 Q）缩放：</p>
+    <div class="math-block">
+    <p>$$ \sqrt{\frac{1}{t}} = 0.1\,\ln(s) + 1 \;\;\Rightarrow\; \mathbf{Q} \leftarrow \mathbf{Q}\cdot\big(0.1\ln(s)+1\big) $$</p>
+    </div>
+    <p>$s\gt 1$ 时该因子 $>1$，<strong>锐化</strong>注意力以抵消长上下文的弥散，进一步降低 perplexity。该温度公式由 LLaMA 经验拟合。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 4: RoPE 频率缩放（外推方法统一形式）</div>
+      <p><span class="kw">Input:</span> base <span class="var">b</span>=10000, head dim <span class="var">d</span>, scale <span class="var">s</span>=L'/L, 预训练长 <span class="var">L</span>, method</p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> each dim pair <span class="var">i</span> = <span class="num">0</span>..<span class="var">d</span>/<span class="num">2</span>-<span class="num">1</span>:</p>
+      <p style="padding-left:3em"><span class="var">theta_i</span> = <span class="var">b</span> ** (-<span class="num">2</span>*<span class="var">i</span>/<span class="var">d</span>)                 <span class="cm"># 原始频率</span></p>
+      <p style="padding-left:3em"><span class="kw">if</span> method == RoPE:        <span class="var">theta_i'</span> = <span class="var">theta_i</span></p>
+      <p style="padding-left:3em"><span class="kw">elif</span> method == PI:        <span class="var">theta_i'</span> = <span class="var">theta_i</span> / <span class="var">s</span></p>
+      <p style="padding-left:3em"><span class="kw">elif</span> method == NTK-aware: <span class="var">theta_i'</span> = <span class="var">theta_i</span> * <span class="var">s</span> ** (-<span class="num">2</span>*<span class="var">i</span>/(<span class="var">d</span>-<span class="num">2</span>))</p>
+      <p style="padding-left:3em"><span class="kw">elif</span> method == NTK-by-parts:</p>
+      <p style="padding-left:4.5em"><span class="var">lam</span> = <span class="num">2</span>*π / <span class="var">theta_i</span>;  <span class="var">r</span> = <span class="var">L</span> / <span class="var">lam</span></p>
+      <p style="padding-left:4.5em"><span class="var">gamma</span> = <span class="num">0</span> <span class="kw">if</span> <span class="var">r</span> &lt; <span class="num">1</span> <span class="kw">else</span> (<span class="num">1</span> <span class="kw">if</span> <span class="var">r</span> &gt; <span class="num">32</span> <span class="kw">else</span> (<span class="var">r</span>-<span class="num">1</span>)/<span class="num">31</span>)</p>
+      <p style="padding-left:4.5em"><span class="var">theta_i'</span> = (<span class="num">1</span>-<span class="var">gamma</span>)*<span class="var">theta_i</span>/<span class="var">s</span> + <span class="var">gamma</span>*<span class="var">theta_i</span></p>
+      <p style="padding-left:1.5em"><span class="kw">if</span> YaRN:  <span class="var">Q</span> ← <span class="var">Q</span> * (<span class="num">0.1</span>*<span class="fn">ln</span>(<span class="var">s</span>) + <span class="num">1</span>)    <span class="cm"># 温度锐化</span></p>
+      <p style="padding-left:1.5em"><span class="cm"># 用 theta_i' 重新计算 cos/sin 表，应用于 Q、K</span></p>
+      <p><span class="kw">return</span> rotated <span class="var">Q</span>, <span class="var">K</span></p>
+    </div>
+
+    <div class="result-highlight">YaRN 在所有 RoPE 插值方法上取得最优，可作为 PI 的无副作用 drop-in 替换；只需 <strong>~0.1% 预训练数据量</strong>微调即可把 LLaMA 系上下文扩到 64k–128k。Dynamic-YaRN（推理时按当前序列长度动态调 $s$）甚至无需微调即可获得 2× 外推。</div>
+
+    <h3 id="sec4-9">4.9 视觉与多维位置编码</h3>
+    <p>图像/视频等非序列数据需多维位置信息，常见做法是<strong>因子化</strong>：把 2D 坐标 $(h, w)$ 拆成两组独立的 1D 嵌入再相加。</p>
+    <ul>
+      <li><strong>DETR</strong>：对 CNN 提取的图像特征图，分别学习行嵌入 $E_{\text{row}}\in\mathbb{R}^{H\times d}$ 与列嵌入 $E_{\text{col}}\in\mathbb{R}^{W\times d}$，位置编码 $p_{(h,w)} = E_{\text{row}}[h] + E_{\text{col}}[w]$。这样参数量 $O((H+W)d)$ 而非 $O(HWd)$，且天然支持不同分辨率（H、W 可变）。</li>
+      <li><strong>视频 / 3D</strong>：再引入时间维 $t$，$p_{(t,h,w)} = E_t[t] + E_{\text{row}}[h] + E_{\text{col}}[w]$，三组因子相加即可覆盖时空。</li>
+      <li><strong>连续位置编码</strong>：FLOATER（NeurIPS 2019）用微分方程把位置嵌入参数化为连续函数 $g_\theta(n)$，可插值到任意非整数位置、外推更平滑；Transformer-XL 则用段级相对编码处理超长文档的递归式建模。</li>
+    </ul>
+
+    <h2 id="sec5">5. 实验结果与对比</h2>
+
+    <h3>5.1 方法总览对照</h3>
+    <table>
+      <tr><th>方法</th><th>类型</th><th>参数量</th><th>相对性</th><th>长度外推</th><th>代表模型</th></tr>
+      <tr><td>正弦/余弦 PE</td><td>APE（加到输入）</td><td>0</td><td>弱（旋转性质）</td><td>差</td><td>原始 Transformer</td></tr>
+      <tr><td>可学习 APE</td><td>APE</td><td>$L_{\max}\cdot d$</td><td>无</td><td>零（无超长 embedding）</td><td>BERT, GPT</td></tr>
+      <tr><td>Shaw 相对 PE</td><td>注意力内（加性）</td><td>$2(2k{+}1)d$/层</td><td>强</td><td>中</td><td>早期相对 PE 实验</td></tr>
+      <tr><td>T5 相对偏置</td><td>注意力内（加性）</td><td>极小（分桶）</td><td>强</td><td>中</td><td>T5, Flan-T5, mT5</td></tr>
+      <tr><td><strong>RoPE</strong></td><td>注意力内（乘性·旋转）</td><td>0</td><td>强</td><td>中（需配合缩放）</td><td>LLaMA, Qwen, Mistral, GLM</td></tr>
+      <tr><td>ALiBi</td><td>注意力内（加性·线性）</td><td>0</td><td>强</td><td>强（perplexity 维度）</td><td>早期长序列实验模型</td></tr>
+      <tr><td>NoPE</td><td>隐式（因果掩码）</td><td>0</td><td>强（隐式）</td><td>强（下游推理任务）</td><td>SmolLM3（混合）</td></tr>
+      <tr><td><strong>RoPE + YaRN</strong></td><td>注意力内 + 频率/温度缩放</td><td>0</td><td>强</td><td>强（SOTA）</td><td>长上下文 LLM 主流</td></tr>
+    </table>
+
+    <h3>5.2 上下文外推的训练成本对比</h3>
+    <p>下图汇总 YaRN 论文 Table 4 的真实数据：横轴为扩展到的有效上下文长度，纵轴为所需 A100·小时（对数轴）。YaRN 以极低算力达成数十倍扩展，PI 在 $s=8$ 即需 640 A100·h，NTK-aware 的 Code Llama 虽靠大 $s$ 做到 100k 但耗 6400 A100·h。</p>
+    <div id="chart-cost" class="echarts-container" style="height:380px"></div>
+    <p style="text-align:center;color:#6c7086;font-size:0.85em">图：不同外推方法的"有效上下文长度 vs 训练成本"（散点），数据来自 YaRN 论文 Table 4。</p>
+
+    <table>
+      <tr><th>模型</th><th>方法</th><th>缩放 s</th><th>有效上下文</th><th>A100·小时</th></tr>
+      <tr><td>LLaMA 7B</td><td>YaRN</td><td>2k×16</td><td>32k</td><td>128</td></tr>
+      <tr><td>Llama 2 7B</td><td>YaRN</td><td>4k×16</td><td>64k</td><td>256</td></tr>
+      <tr><td>Llama 2 7B</td><td>YaRN</td><td>4k×32</td><td>128k</td><td>256 + 128</td></tr>
+      <tr><td>Chen et al.</td><td>PI</td><td>2k×8</td><td>16k</td><td>640</td></tr>
+      <tr><td>Xiong et al.</td><td>NTK-aware</td><td>4k×44.2</td><td>≈50k</td><td>64000</td></tr>
+      <tr><td>Code Llama</td><td>NTK-aware (ABF)</td><td>4k×88.6</td><td>≈100k</td><td>6400</td></tr>
+    </table>
+
+    <h3>5.3 长度泛化：显式 vs 隐式位置编码</h3>
+    <p>Kazemnejad et al.（NeurIPS 2023）在推理/数学任务的长度泛化基准上系统对比五种方案，结论是 NoPE 最优：</p>
+    <table>
+      <tr><th>位置编码</th><th>长度泛化表现</th><th>机制说明</th></tr>
+      <tr><td>APE（绝对）</td><td>差</td><td>绝对位置耦合，超出训练长度即失配</td></tr>
+      <tr><td>T5 相对偏置</td><td>中</td><td>相对但偏置与内容解耦，表达受限</td></tr>
+      <tr><td>ALiBi</td><td>中下</td><td>perplexity 外推好，但下游推理任务不稳健</td></tr>
+      <tr><td>RoPE</td><td>中</td><td>需配合 YaRN 类缩放才在长上下文稳健</td></tr>
+      <tr><td><strong>NoPE</strong></td><td><strong>最优</strong></td><td>无额外计算；理论上可表绝对/相对，SGD 训练后近似 T5 相对模式</td></tr>
+    </table>
+
+    <h3>5.4 Passkey 检索：长上下文"真本事"测试</h3>
+    <p>Passkey 任务要求模型在 10 万 token 无意义文本中找出隐藏的 5 位数，直接检验对远距离位置的注意力能力。值得注意的是：Code Llama 13B 在 100k 以上 perplexity 已上升，但 Passkey 准确率仍高——<strong>perplexity 并非长上下文能力的完整指标</strong>。</p>
+    <table>
+      <tr><th>模型</th><th>外推方法</th><th>128k 上下文 Passkey 准确率</th></tr>
+      <tr><td>YaRN 7B (s=32)</td><td>YaRN</td><td><strong>99.4%</strong></td></tr>
+      <tr><td>YaRN 13B (s=32)</td><td>YaRN</td><td>99.4%</td></tr>
+      <tr><td>Code Llama 100K</td><td>NTK-aware</td><td>94.3%</td></tr>
+    </table>
+
+    <h2 id="sec6">6. 消融与关键发现</h2>
+    <ul>
+      <li><strong>"旋转"是贯穿始终的主线。</strong>正弦 PE 的 $\mathrm{PE}(pos+k)=R_k\,\mathrm{PE}(pos)$ 已揭示"偏移即旋转"；RoPE 把这一思想从"加到 embedding"升级为"乘到 attention 的 Q/K"，从而把相对性内建进注意力内积；NTK/YaRN 则通过调整旋转的频率与温度来实现外推。理解了旋转，就抓住了位置编码演化的脊柱。</li>
+      <li><strong>相对编码普遍优于绝对编码。</strong>无论是 Shaw/T5 的加性相对项，还是 RoPE 的乘性旋转，消去 §3 中的"绝对位置交叉项"后，模型对平移更鲁棒、外推更友好。</li>
+      <li><strong>RoPE = 正弦 PE 旋转思想的"乘性 + 注意力内"推广。</strong>二者都用同一组几何频率 $\theta_i=\mathrm{base}^{-2i/d}$，区别只在注入位置：正弦是底层加法、RoPE 是 Q/K 乘法（保范、可与线性注意力兼容）。这解释了为何 RoPE 能无缝继承正弦的多尺度直觉并超越之。</li>
+      <li><strong>NoPE 揭示：因果掩码本身携带位置。</strong>显式 PE 对 decoder 并非必需——这是对"PE 是 Transformer 不可分割部分"这一早期共识的重要修正，也催生了 SmolLM3 等混合架构。</li>
+      <li><strong>长上下文里"温度"很关键。</strong>YaRN 的温度因子表明，仅修频率不够，还需锐化注意力以对抗长上下文的弥散——这是纯频率插值（PI/NTK）与 YaRN 的本质差距所在。</li>
+      <li><strong>perplexity 与真实长上下文能力可背离。</strong>Code Llama 在 100k+ perplexity 上升时 Passkey 仍达 94%+，提示评估长上下文模型应直接用检索/needle 类任务而非仅看困惑度。</li>
+    </ul>
+
+    <h2 id="sec7">7. 局限性</h2>
+    <ul>
+      <li><strong>绝对编码（正弦/可学习）</strong>：无外推能力；可学习版还受固定 $L_{\max}$ 硬约束。</li>
+      <li><strong>RoPE</strong>：原生不支持长上下文外推，必须依赖 PI/NTK/YaRN 之类的事后缩放；而缩放方法间有"微调 vs 免微调"性能反转（NTK-aware 免微调好、微调后反不如 PI）。</li>
+      <li><strong>ALiBi</strong>：主要验证于自回归 decoder 与 perplexity 指标；迁移到双向 encoder/MLM 时距离对称化处理棘手，大规模下游任务表现不佳，故未成主流。</li>
+      <li><strong>NoPE</strong>：纯 NoPE 在短上下文标准任务上可能轻微下降，实践中需与 RoPE 混合；其对位置的表达是"隐式学习"，可解释性与可控性弱于显式方案。</li>
+      <li><strong>共性盲区</strong>：所有位置编码方案都不触及注意力 $O(N^2)$ 复杂度本身——长上下文的根本算力瓶颈仍需 FlashAttention、稀疏/线性注意力等架构手段解决；YaRN 把上下文推到 128k+ 后，$O(N^2)$ 成为新的墙。</li>
+    </ul>
+
+    <h2 id="sec8">8. 核心洞见与读后评注</h2>
+    <p><strong>① 绝对 vs 相对不是二分，而是一条谱。</strong>正弦 PE 名义上是绝对编码，却暗中具备旋转相对性（§4.1）；RoPE 则是"以绝对位置编码（每个 token 旋转自己的角度）实现相对注意力（内积只看夹角差）"的统一体。RoPE 的成功证明：好的位置编码应让绝对与相对在数学上自洽，而非二选一。</p>
+    <p><strong>② 外推是真正的硬骨头，且问题已被重新定义。</strong>早期工作聚焦"设计更好的 PE 让它天然外推"（ALiBi、NoPE 都属此列）；而 LLaMA 时代后，社区事实上把问题拆成两半——<em>训练时用相对/旋转 PE，推理时用频率缩放（PI/NTK/YaRN）事后外推</em>。后一条路以极低微调成本（YaRN ~0.1% 数据）把上下文扩到 128k，是目前工程上最务实的答案。</p>
+    <p><strong>③ 评估指标要匹配真实需求。</strong>perplexity 平稳不等于长上下文"能用"。Passkey/needle-in-haystack 这类直接检索任务才是检验"能否 attend 到远处"的试金石——这本身就是对位置编码设计目标的一种回归检验。</p>
+    <p><strong>④ 给实践者的建议：</strong></p>
+    <ul>
+      <li><em>通用 decoder LLM</em>：默认 RoPE，长上下文需求配 YaRN 类缩放（已是 LLaMA/Qwen/Mistral 的事实标准）。</li>
+      <li><em>重长度泛化的下游推理/数学任务</em>：考虑 NoPE 或 NoPE+RoPE 混合（SmolLM3 式），Kazemnejad 实验显示其外推优于所有显式方案。</li>
+      <li><em>避免</em>：可学习 APE 用于可能变长的场景；纯 ALiBi 用于下游推理任务（外推不稳）。</li>
+    </ul>
+    <p><strong>⑤ 一句话总结</strong>：位置编码的演化，是从"给 token 贴序号"到"给注意力配旋转/偏置"，再到"事后给旋转重新标度"的三段式跃迁；其不变内核是<em>相对距离</em>，其当代主角是<em>RoPE + YaRN</em>，而 NoPE 的崛起提醒我们——位置信息或许本就可由结构隐式获得。</p>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    // 频率谱对比图：原始 RoPE / PI / NTK-aware / NTK-by-parts
+    (function(){
+      var el = document.getElementById('chart-freq');
+      if (!el) return;
+      var chart = echarts.init(el);
+      var d = 128, half = d/2, s = 8, base = 10000, L = 2048;
+      var xs = [], orig = [], pi = [], ntk = [], ntkbp = [];
+      for (var i = 0; i < half; i++) {
+        xs.push(i);
+        var th = Math.pow(base, -2*i/d);            // 原始频率 θ_i
+        orig.push(th);
+        pi.push(th / s);                             // PI: θ/s
+        ntk.push(th * Math.pow(s, -2*i/(d-2)));      // NTK-aware
+        var lam = 2*Math.PI / th;                    // 波长 λ_i
+        var r = L / lam;                             // L 内能塞几个波长
+        var gamma;
+        if (r < 1) gamma = 0;                        // 低频(波长>上下文): 全量插值
+        else if (r > 32) gamma = 1;                  // 高频(波长远<上下文): 不动
+        else gamma = (r - 1)/31;                     // 渐变
+        ntkbp.push((1-gamma)*th/s + gamma*th);
+      }
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        tooltip: { trigger: 'axis', backgroundColor:'#313244', textStyle:{color:'#cdd6f4'} },
+        legend: { data: ['原始 RoPE','PI (θ/s)','NTK-aware','NTK-by-parts'], textStyle:{color:'#cdd6f4'}, top: 0 },
+        grid: { left: 80, right: 24, top: 40, bottom: 56 },
+        xAxis: { type: 'category', name: '维度对索引 i', nameTextStyle:{color:'#94e2d5'}, nameLocation:'middle', nameGap:30, data: xs, axisLabel:{color:'#9399b2', interval:7} },
+        yAxis: { type: 'log', name: '频率 θ_i (log)', nameTextStyle:{color:'#94e2d5'}, axisLabel:{color:'#9399b2'} },
+        series: [
+          { name:'原始 RoPE', type:'line', data: orig, symbol:'none', lineStyle:{color:'#89b4fa', width:2} },
+          { name:'PI (θ/s)', type:'line', data: pi, symbol:'none', lineStyle:{color:'#fab387', width:2} },
+          { name:'NTK-aware', type:'line', data: ntk, symbol:'none', lineStyle:{color:'#a6e3a1', width:2} },
+          { name:'NTK-by-parts', type:'line', data: ntkbp, symbol:'none', smooth:true, lineStyle:{color:'#cba6f7', width:2} }
+        ]
+      });
+    })();
+
+    // 上下文外推训练成本散点（YaRN 论文 Table 4）
+    (function(){
+      var el = document.getElementById('chart-cost');
+      if (!el) return;
+      var chart = echarts.init(el);
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        tooltip: { trigger:'item', backgroundColor:'#313244', textStyle:{color:'#cdd6f4'},
+          formatter: function(p){ return p.seriesName + '<br/>有效上下文: ' + p.value[0] + 'k<br/>训练成本: ' + p.value[1] + ' A100·h'; } },
+        legend: { data: ['PI','NTK-aware','YaRN'], textStyle:{color:'#cdd6f4'}, top: 0 },
+        grid: { left: 90, right: 24, top: 40, bottom: 56 },
+        xAxis: { type: 'value', name: '有效上下文长度 (k token)', nameTextStyle:{color:'#94e2d5'}, nameLocation:'middle', nameGap:34, axisLabel:{color:'#9399b2'}, min: 0, max: 140 },
+        yAxis: { type: 'log', name: '训练成本 (A100·h, log)', nameTextStyle:{color:'#94e2d5'}, axisLabel:{color:'#9399b2'} },
+        series: [
+          { name:'PI', type:'scatter', symbolSize:18, data:[[16,640]], itemStyle:{color:'#fab387'}, label:{show:true, formatter:'s=8', color:'#fab387', position:'top'} },
+          { name:'NTK-aware', type:'scatter', symbolSize:18, data:[[50,64000],[100,6400]], itemStyle:{color:'#cba6f7'}, label:{show:true, formatter:'NTK', color:'#cba6f7', position:'top'} },
+          { name:'YaRN', type:'scatter', symbolSize:20, data:[[32,128],[64,256],[128,384]], itemStyle:{color:'#a6e3a1'}, label:{show:true, formatter:'YaRN', color:'#a6e3a1', position:'top'} }
+        ]
+      });
+    })();
+
+    // 自动生成目录 + 滚动高亮
+    var toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach(function(h, i){
+      if (!h.id) h.id = 'section-' + i;
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    var observer = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        var link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(function(h){ observer.observe(h); });
+  </script>
+</body>
+</html>

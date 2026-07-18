@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Latent Thoughts Axioms 阅读报告 — LLM潜在思维的公理化评测</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; } a { color: var(--link); } strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; } li { margin: 0.3em 0; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+    .axiom-card { background: #2a2a3e; border: 1px solid var(--border); border-left: 4px solid var(--heading); border-radius: 6px; padding: 14px 18px; margin: 10px 0; }
+    .axiom-card .axiom-name { color: var(--heading); font-weight: 700; font-size: 1.05em; margin-bottom: 6px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>形式化潜在思维：LLM 中思维表征的四条公理</h1>
+    <p><span class="tag">可解释性</span><span class="tag orange">表征分析</span><span class="tag green">公理化</span><span class="tag purple">UBC Okanagan</span></p>
+    <p style="color:#6c7086;font-size:0.9em;">arXiv: 2606.27378 · 2026 · University of British Columbia · HuggingFace本周 #9 (68 upvotes)</p>
+
+    <table>
+      <tr><th>标题</th><td>Formalizing Latent Thoughts: Four Axioms of Thought Representation in LLMs</td></tr>
+      <tr><th>核心问题</th><td>通过四条功能性公理形式化评估 LLM 潜在表征的质量，独立于下游任务准确率</td></tr>
+      <tr><th>评测规模</th><td>23个推理任务，多个开源 LLM 家族</td></tr>
+    </table>
+
+    <h2 id="overview">1. 核心问题与动机</h2>
+    <p>LLM 的"思维"（Thoughts）存在于其中间层的潜在表征中——当模型"想"某件事时，这个"想"体现在 transformer 层的激活值里。然而，我们对这些<strong>潜在思维表征（Latent Thought Representations）</strong>的质量缺乏系统的评估框架。</p>
+    <p>现有评测方法的核心缺陷：它们用<strong>下游任务准确率</strong>来间接评估表征质量，这将表征质量和模型能力混为一谈——是模型解码能力差，还是表征本身就缺乏足够信息？无法区分。</p>
+    <blockquote>
+      本文提出：好的思维表征应满足四条<strong>功能性公理</strong>，每条公理对应一个可以直接在表征上计算的定量指标，与下游准确率无关。
+    </blockquote>
+
+    <h2 id="background">2. 背景与相关工作</h2>
+    <table>
+      <tr><th>研究方向</th><th>代表工作</th><th>局限性</th></tr>
+      <tr><td>表征探针（Probing）</td><td>Belinkov 2022, Hewitt 2019</td><td>依赖下游任务标签</td></tr>
+      <tr><td>机制可解释性</td><td>Anthropic Superposition, Circuits</td><td>个例分析，难以系统化</td></tr>
+      <tr><td>Chain-of-Thought 分析</td><td>Wei 2022, Wang 2023</td><td>仅分析文本输出，非表征</td></tr>
+      <tr><td><strong>本文：公理化评估</strong></td><td>—</td><td>—</td></tr>
+    </table>
+
+    <h2 id="axioms">3. 四条思维表征公理</h2>
+
+    <div class="axiom-card">
+      <div class="axiom-name">公理 1：因果性（Causality）</div>
+      <p>潜在表征应当<strong>因果地影响</strong>模型的最终输出。如果一个表征对输出没有因果贡献，那它就不是真正的"思维"。</p>
+      <p><strong>度量方式</strong>：通过因果干预（Causal Intervention）测试——扰动表征后观察输出变化的强度。</p>
+      <p>$$\text{Causality}(z) = \mathbb{E}_{\delta}[\|f(z+\delta) - f(z)\|]$$</p>
+    </div>
+
+    <div class="axiom-card">
+      <div class="axiom-name">公理 2：最小性（Minimality）</div>
+      <p>好的思维表征应当<strong>只编码任务相关信息</strong>，不引入冗余。表征不应是输入的简单压缩复制。</p>
+      <p><strong>度量方式</strong>：测量表征相对于输入嵌入的<strong>条件互信息增益</strong>：</p>
+      <p>$$\text{Minimality}(z) = I(z; y) - I(x_{\text{emb}}; y)$$</p>
+      <p>应为正值——表征应提供超越输入嵌入的额外信息。</p>
+    </div>
+
+    <div class="axiom-card">
+      <div class="axiom-name">公理 3：可分离性（Separability）</div>
+      <p>不同问题（即使同类型）应对应<strong>可区分的潜在表征</strong>。若两个不同问题的表征在空间中高度重叠，则表征无法区分它们。</p>
+      <p><strong>度量方式</strong>：跨问题的表征聚类分离度（如 Silhouette Score）</p>
+    </div>
+
+    <div class="axiom-card">
+      <div class="axiom-name">公理 4：稳定性（Stability）</div>
+      <p>同一问题的不同表述（paraphrase）应产生<strong>相似的潜在表征</strong>。好的思维应编码语义，而非表面形式。</p>
+      <p><strong>度量方式</strong>：语义等价问题的表征余弦相似度方差</p>
+    </div>
+
+    <h2 id="experiment">5. 实验结果</h2>
+    <pre class="mermaid">
+graph TD
+    A["23个推理任务<br>Spatial · Factual · Math · Logic"] --> B["多个开源 LLM<br>Dense · Reasoning-distilled · RL-trained"]
+    B --> C1["因果性：PASS<br>表征确实影响输出"]
+    B --> C2["最小性：FAIL<br>主要复制输入嵌入信息"]
+    B --> C3["可分离性：FAIL<br>区分任务类型但无法区分具体问题"]
+    B --> C4["稳定性：PARTIAL<br>同义改写后表征相似度低"]
+    C1 & C2 & C3 & C4 --> D["结论：无模型同时满足全部四条公理<br>且失败模式与模型规模无关"]
+
+    style D fill:#2a2a3e,stroke:#f38ba8,stroke-width:2px
+    </pre>
+
+    <h3>核心实验发现</h3>
+    <table>
+      <tr><th>公理</th><th>通过情况</th><th>关键发现</th></tr>
+      <tr><td>因果性</td><td>✅ 通过</td><td>所有模型的表征确实影响输出</td></tr>
+      <tr><td>最小性</td><td>❌ 失败</td><td>表征编码的信息大部分已在输入嵌入中存在</td></tr>
+      <tr><td>可分离性</td><td>⚠️ 部分</td><td>能区分任务类型，但无法区分同类任务中的具体问题</td></tr>
+      <tr><td>稳定性</td><td>❌ 失败</td><td>语义等价的不同表述产生截然不同的表征</td></tr>
+    </table>
+
+    <h2 id="ablation">6. 关键发现与深层含义</h2>
+    <ul>
+      <li><strong>规模无关的结构性缺陷</strong>：失败模式在7B、13B、70B模型中高度一致，说明是<strong>架构层面</strong>的问题，而非规模不足</li>
+      <li><strong>RL训练的有限改善</strong>：经过强化学习训练的推理模型（如 o1 类）在稳定性上略有改善，但最小性问题依然严重</li>
+      <li><strong>任务类型 vs. 具体问题</strong>：表征善于编码"这是什么类型的任务"，但无法精细区分"这个具体问题的特定条件"——这可能解释了为什么 LLM 在细节推理上容易出错</li>
+    </ul>
+
+    <h2 id="limitation">7. 局限性</h2>
+    <ul>
+      <li>公理的度量方式（如因果干预实现）可能存在多种选择，影响结果的可比性</li>
+      <li>44页长文包含大量实验细节，结论的稳健性依赖对23个任务的代表性</li>
+      <li>闭源模型（GPT-4, Claude）无法评估</li>
+    </ul>
+
+    <h2 id="insight">8. 核心洞见与读后评注</h2>
+    <blockquote>
+      <strong>关键洞见</strong>：LLM 的潜在表征在根本上并不满足"真正思维"的基本要求——它们主要是输入的变换，而非独立的推理结构。这是一个深刻的结构性发现，与规模无关。
+    </blockquote>
+    <p>这篇论文最重要的贡献是<strong>方法论层面</strong>的：提供了一套与任务准确率解耦的表征质量评估框架。这与机器学习中"评估内部表征质量"的长期努力一脉相承，但公理化的视角是新颖的。</p>
+    <p>"表征编码的信息大部分已在输入嵌入中"这一发现令人警觉——它意味着 LLM 的中间层计算可能远没有我们期待的那样在"独立地思考"，而更多是在转换输入的形式。这对理解 CoT、scratchpad 等推理增强方法的作用机制有深远影响。</p>
+    <p>未来方向：如何设计训练目标使 LLM 的潜在表征满足这四条公理？这可能是提升 LLM 真实推理能力的关键路径之一。</p>
+
+    <h2 id="ref">参考文献</h2>
+    <ul>
+      <li>[1] Fahd Seddik, Fatemeh Fard. <em>Formalizing Latent Thoughts: Four Axioms of Thought Representation in LLMs</em>. arXiv:2606.27378, 2026.</li>
+      <li>[2] Belinkov, Y. <em>Probing Classifiers: Promises, Shortcomings, and Advances</em>. Computational Linguistics, 2022.</li>
+      <li>[3] Anthropic. <em>Toy Models of Superposition</em>. 2022.</li>
+      <li>[4] Wei et al. <em>Chain-of-Thought Prompting Elicits Reasoning in LLMs</em>. NeurIPS 2022.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id; a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

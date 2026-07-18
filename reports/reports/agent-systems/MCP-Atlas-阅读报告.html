@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP-Atlas · 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+      --red: #f38ba8; --yellow: #f9e2af; --purple: #cba6f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.85; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px 80px; }
+    h1 { color: var(--heading); font-size: 1.85em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.38em; margin: 2.2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.08em; margin: 1.5em 0 0.4em; }
+    h4 { color: var(--yellow); font-size: 0.98em; margin: 1.1em 0 0.3em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.9em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.87em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.86em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.4em 0; }
+    ul, ol { margin: 0.5em 0 0.5em 1.6em; }
+    li { margin: 0.3em 0; }
+    .card { background: #23233a; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 1.2em 0; }
+    .card.blue { border-left: 4px solid var(--heading); }
+    .card.green { border-left: 4px solid var(--strong); }
+    .card.yellow { border-left: 4px solid var(--yellow); }
+    .card.red { border-left: 4px solid var(--red); }
+    .card.purple { border-left: 4px solid var(--purple); }
+    .card-title { font-weight: 700; color: var(--heading); margin-bottom: 8px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.2em 0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>MCP-Atlas：基于真实 MCP 服务器的大规模工具调用能力基准</h1>
+<blockquote>
+  <strong>原文</strong>：MCP-Atlas: A Large-Scale Benchmark for Tool-Use Competency with Real MCP Servers &nbsp;|&nbsp;
+  <strong>机构</strong>：Scale AI &nbsp;|&nbsp;
+  <strong>发布</strong>：2025 &nbsp;|&nbsp;
+  <strong>规模</strong>：36 个真实 MCP 服务器 · 220 工具 · 1000 任务
+</blockquote>
+
+<h2 id="overview">概述</h2>
+<p>MCP（Model Context Protocol）正迅速成为 LLM Agent 调用外部工具的事实标准接口，但针对 MCP Agent 的可靠评测仍是空白。现有 MCP 基准要么规模太小（&lt;250 任务），要么评测不够客观（整体 LLM-as-judge），要么环境不够真实（合成/模拟服务器）。MCP-Atlas 同时解决三个问题：<strong>1000 个任务 + 36 个真实生产级 MCP 服务器 + Claims-Based 客观打分（78% 人工对齐率）</strong>，是目前规模最大、最接近真实部署场景的 MCP 评测基准。</p>
+
+<h2 id="motivation">1. 研究动机与相关工作对比</h2>
+<p>Scale AI 分析了已有的 MCP Benchmark 的核心矛盾：规模化会牺牲客观性（如 MCPEval 用自动生成任务），客观性会限制规模（如 MCP-Universe 用程序化验证脚本，只支持 231 个任务）。MCP-Atlas 通过 Claims-Based 评分实现了在不依赖程序化验证的前提下达到规模化和客观性的平衡。</p>
+
+<table>
+  <tr><th>Benchmark</th><th>服务器</th><th>工具</th><th>任务</th><th>干扰项</th><th>真实服务器</th><th>评分方式</th></tr>
+  <tr><td>MCP-Universe</td><td>11</td><td>133</td><td>231</td><td>无</td><td>✓</td><td>程序化验证</td></tr>
+  <tr><td>MCPEval</td><td>5</td><td>19</td><td>676</td><td>无</td><td>✓</td><td>自动生成任务</td></tr>
+  <tr><td>LiveMCPBench</td><td>70</td><td>527</td><td>95</td><td>✓</td><td>✓</td><td>整体 LLM-as-Judge</td></tr>
+  <tr><td>MCPVerse</td><td>65</td><td>552</td><td>—</td><td>有</td><td>部分合成</td><td>混合</td></tr>
+  <tr><td><strong>MCP-Atlas</strong></td><td><strong>36</strong></td><td><strong>220</strong></td><td><strong>1000</strong></td><td><strong>✓ 系统性</strong></td><td><strong>✓ 全真实</strong></td><td><strong>Claims-Based</strong></td></tr>
+</table>
+
+<h2 id="design">2. 基准设计</h2>
+
+<h3>2.1 任务四元组结构</h3>
+<p>MCP-Atlas 每个任务由四个强制组件定义，确保一致性、可解性和客观评分：</p>
+
+<div class="grid2">
+  <div class="card blue">
+    <div class="card-title">① 工具集配置（Tool Set Config）</div>
+    <p>每任务暴露 <strong>10–25 个工具</strong>，其中 <strong>3–7 个目标工具</strong>（解题必需）+ <strong>5–10 个干扰项（Distractors）</strong>。干扰项来自同类服务器（如 <code>google-maps_distance_matrix</code> vs <code>google-maps_geocode</code>），测试 Agent 的工具发现精度，防止暴力枚举。目标工具必须来自 2 个以上不同服务器。</p>
+  </div>
+  <div class="card green">
+    <div class="card-title">② 自然语言提示（Prompt）</div>
+    <p>单轮自然语言请求，<strong>刻意不提及具体工具或服务器名称</strong>，避免直接提示。提示具备以下特性：仅靠 LLM 知识无法解答（必须调用工具）、时间无关、无歧义、多跳推理（前一个工具输出引导后续调用）。</p>
+  </div>
+  <div class="card yellow">
+    <div class="card-title">③ 参考轨迹（Reference Trajectory）</div>
+    <p>完成任务的最小工具调用序列（含工具名、方法、依赖关系、参数、预期输出，含条件分支点）。<strong>仅用于诊断分析，不参与通过/失败评分</strong>——成功由最终答案质量决定，与执行路径无关。</p>
+  </div>
+  <div class="card purple">
+    <div class="card-title">④ Claims 列表（Claims List）</div>
+    <p>一组<strong>原子可独立验证的事实陈述</strong>，正确答案必须包含所有 Claim，且这些 Claim 必须来源于工具输出（不能凭 LLM 知识猜测）。这是评分的唯一依据，支持部分得分和细粒度错误归因。</p>
+  </div>
+</div>
+
+<h3>2.2 Claims-Based 评分机制</h3>
+<p>这是 MCP-Atlas 最核心的方法论创新：将整体打分拆解为原子 Claim 的独立验证，从根本上消除风格偏见。</p>
+
+<pre class="mermaid">
+flowchart LR
+  ANS["Agent 最终答案"] --> JUDGE["Judge 模型\nGemini 2.5 Pro"]
+  CL["Claims 列表\n（原子可验证事实）"] --> JUDGE
+  JUDGE --> F["fulfilled = 1\n（完全满足）"]
+  JUDGE --> P["partially_fulfilled = 0.5\n（部分满足）"]
+  JUDGE --> N["not_fulfilled = 0\n（未满足）"]
+  F --> COV["Coverage = Σ得分 / 总Claim数"]
+  P --> COV
+  N --> COV
+  COV --> THRESH{"Coverage ≥ 0.75?"}
+  THRESH -->|"是"| PASS["通过 Pass"]
+  THRESH -->|"否"| FAIL["失败 Fail"]
+</pre>
+
+<div class="card green">
+  <div class="card-title">为什么 Claims-Based 评分优于整体 LLM-as-Judge？</div>
+  <ul>
+    <li><strong>去风格化</strong>：只看"正确事实是否存在"，与答案冗长/简洁、格式美观与否无关</li>
+    <li><strong>轨迹无关</strong>：Agent 走了弯路但最终答案正确，同样通过——关注结果而非过程</li>
+    <li><strong>部分得分</strong>：满足大部分但遗漏少量细节时获得合理分数，比 pass/fail 更有信息量</li>
+    <li><strong>可扩展</strong>：避免程序化验证的逐任务手工编写，同时比整体 LLM 打分更客观</li>
+    <li><strong>人工对齐验证</strong>：随机 100 个任务，三名标注员独立评分，Judge 与人工多数票一致率 <strong>78%</strong></li>
+  </ul>
+</div>
+
+<div class="card yellow">
+  <div class="card-title">阈值鲁棒性验证</div>
+  <p>在 0.65、0.75、0.85 三个阈值下测试，模型排名完全稳定，说明评测结论不依赖具体阈值选择。默认阈值 0.75 表示"答案需包含大多数核心信息，但允许少量遗漏"。</p>
+</div>
+
+<h3>2.3 五大领域分区与典型挑战</h3>
+<table>
+  <tr><th>领域桶</th><th>代表服务器</th><th>任务占比</th><th>典型挑战</th></tr>
+  <tr><td><strong>BASIC</strong></td><td>brave_search, ddg_search, calculator, weather, google-maps</td><td>30–35%</td><td>查询表述、日期/地理格式、分页、近义词消歧（本地 vs 网页搜索）</td></tr>
+  <tr><td><strong>ANALYTICS</strong></td><td>airtable, mongodb, f1-mcp-server</td><td>10–15%</td><td>Schema 对齐、过滤/聚合参数、类型正确性、JOIN 操作</td></tr>
+  <tr><td><strong>PRODUCTIVITY</strong></td><td>filesystem, notion, slack, arxiv, pubmed, google-workspace</td><td>20–25%</td><td>路径范围和沙盒限制、ID vs 关键词检索、文档获取速率限制</td></tr>
+  <tr><td><strong>FINANCIAL</strong></td><td>twelvedata, alchemy</td><td>10–15%</td><td>时间窗口对齐（市场时区）、股票代码范围、历史数据序列处理</td></tr>
+  <tr><td><strong>CODING</strong></td><td>git, github, mcp-code-executor, cli-mcp-server</td><td>15–20%</td><td>有状态仓库操作（branch/checkout）、Diff 范围、命令参数校验</td></tr>
+</table>
+
+<h3>2.4 任务规模与复杂度特征</h3>
+<div class="card blue">
+  <div class="card-title">任务设计参数</div>
+  <ul>
+    <li>每个任务需要 <strong>3–6 次工具调用</strong>（设计上限制，防止任务退化为简单查询）</li>
+    <li><strong>绝大多数任务跨 2+ 个不同服务器</strong>，要求跨服务器编排能力</li>
+    <li>约 <strong>1/3 的任务含条件分支</strong>：后续调用依赖前一个工具的输出结果（如"若主搜索引擎无结果，转用备用搜索"）</li>
+    <li>所有服务器为<strong>真实生产级 MCP 实现</strong>，非合成模拟，评测结果直接反映真实部署行为（含真实 API 响应、速率限制、错误条件）</li>
+  </ul>
+</div>
+
+<h2 id="results">3. 实验结果</h2>
+
+<div id="mcp-pass-chart" style="height:400px;background:#2a2a3e;border-radius:8px;margin:1.2em 0"></div>
+
+<div class="card blue">
+  <div class="card-title">整体通过率（Coverage ≥ 75% 判为通过，1000 任务）</div>
+  <table>
+    <tr><th>模型</th><th>通过率 (%)</th><th>平均覆盖率 (%)</th></tr>
+    <tr><td><strong>Claude Opus 4.5</strong></td><td><strong>62.3</strong></td><td>78.5</td></tr>
+    <tr><td>Gemini 3 Pro</td><td>54.1</td><td>73.2</td></tr>
+    <tr><td>GPT-5</td><td>44.5</td><td>61.7</td></tr>
+    <tr><td>Claude Sonnet 4.5</td><td>43.8</td><td>62.1</td></tr>
+    <tr><td>o3 Pro (high)</td><td>43.6</td><td>66.9</td></tr>
+    <tr><td>Claude Opus 4.1</td><td>40.9</td><td>64.9</td></tr>
+    <tr><td>Claude Sonnet 4</td><td>35.6</td><td>57.3</td></tr>
+    <tr><td>GLM-4.5 Air</td><td>34.0</td><td>60.5</td></tr>
+    <tr><td>Kimi K2 Instruct</td><td>23.9</td><td>50.4</td></tr>
+    <tr><td>Qwen3-235B-A22B</td><td>12.0</td><td>29.0</td></tr>
+    <tr><td>Gemini 2.5 Pro</td><td>8.8</td><td>30.7</td></tr>
+    <tr><td>GPT-4o</td><td>7.2</td><td>28.5</td></tr>
+    <tr><td>Gemini 2.5 Flash</td><td>3.4</td><td>17.8</td></tr>
+  </table>
+</div>
+
+<h3>失败原因分析</h3>
+<p>对每个失败任务指定唯一的主导失败类别，揭示不同模型的失败模式分布：</p>
+
+<div id="failure-chart" style="height:340px;background:#2a2a3e;border-radius:8px;margin:1.2em 0"></div>
+
+<table>
+  <tr><th>失败类别</th><th>平均占比</th><th>含义</th><th>最常见子原因</th></tr>
+  <tr><td><strong>工具使用错误</strong></td><td>56.7%</td><td>工具选错、参数错误、调用序列错误</td><td>"未调用任何工具" 36.0%；参数错误 14.2%</td></tr>
+  <tr><td><strong>任务理解不足</strong></td><td>30.3%</td><td>过早停止、遗漏子目标、误解任务</td><td>"部分完成任务" 25.8%</td></tr>
+  <tr><td><strong>回复质量差</strong></td><td>8.5%</td><td>工具调用正确但答案合成错误或幻觉</td><td>— （整体）</td></tr>
+  <tr><td><strong>逻辑错误</strong></td><td>4.5%</td><td>工具输出推理错误、条件分支逻辑错</td><td>— （整体）</td></tr>
+</table>
+
+<div class="card red">
+  <div class="card-title">关键发现：工具感知差距（Tool Awareness Gap）</div>
+  <p>"未调用任何工具"是所有模型中最常见的单一失败原因（平均 36%）。这揭示了一个反直觉的结论：<strong>当前模型的首要瓶颈不是"如何用工具"，而是"知不知道该用工具"</strong>。当模型真正调用了正确工具并到达合成阶段时，成功率相对较高。这意味着现有微调和提示策略可能过度强调了工具执行机制，而忽视了工具调用触发信号的优化。</p>
+</div>
+
+<h3>跨领域通过率</h3>
+<table>
+  <tr><th>模型</th><th>BASIC</th><th>ANALYTICS</th><th>PRODUCTIVITY</th><th>FINANCIAL</th><th>CODING</th></tr>
+  <tr><td>Claude Opus 4.5</td><td>68.4</td><td>71.5</td><td>64.2</td><td>58.2</td><td>55.8</td></tr>
+  <tr><td>Gemini 3 Pro</td><td>59.8</td><td>62.1</td><td>55.4</td><td>50.6</td><td>47.2</td></tr>
+  <tr><td>GPT-5</td><td>49.2</td><td>51.8</td><td>45.6</td><td>41.2</td><td>38.5</td></tr>
+  <tr><td>GPT-4o</td><td>8.2</td><td>8.8</td><td>7.4</td><td>5.8</td><td>4.2</td></tr>
+</table>
+
+<div class="card green">
+  <div class="card-title">领域性能规律</div>
+  <ul>
+    <li><strong>ANALYTICS 通过率最高</strong>（Claude 71.5%）：结构化 API Schema 统一，查询歧义低，工具选择更清晰</li>
+    <li><strong>FINANCIAL / CODING 最难</strong>（Claude 58%/56%）：需精确参数（时区、股票代码、Git 命令语法）和工具间精确消歧</li>
+    <li><strong>工具使用错误随领域难度单调上升</strong>：BASIC 48%、ANALYTICS 45.5% → FINANCIAL 64%、CODING 71%（相差 23+ 个百分点）</li>
+    <li><strong>任务理解错误与领域难度负相关</strong>：BASIC 35.5% → CODING 21%，说明简单领域模型更容易过早停止，复杂领域失败更多发生在工具选择阶段</li>
+    <li><strong>ANALYTICS 数值推理挑战突出</strong>：Response Quality（14%）和 Logical Errors（7%）明显高于其他领域，即使工具调用成功，数值合成仍易出错</li>
+  </ul>
+</div>
+
+<h3>失败案例分析</h3>
+<div class="card yellow">
+  <div class="card-title">典型失败案例：错误工具选择</div>
+  <p><strong>任务提示：</strong>"我在研究广告效果相关论文，有一篇 Jane Castleman 2024 年的 paper 关于广告控制效果（涉及 ad locality），能获取摘要吗？另外请告诉我我们内部数据库中 2015–2023 年间最高参与率广告活动的日期和所在地。"</p>
+  <p><strong>Agent 行为：</strong>成功用 arxiv 工具找到论文摘要，但对第二个子任务在 memory 服务器搜索无果后，直接回答"数据不可用"——<strong>实际上 notion 服务器也暴露给了 Agent，其中包含广告活动数据，但 Agent 没有尝试</strong>。</p>
+  <p><strong>失败类别：</strong>工具使用错误（错误工具选择）——这是最常见的 Tool Usage 失败模式：有可用替代工具但 Agent 不主动探索。</p>
+</div>
+
+<h2 id="env">4. 执行环境与质量保障</h2>
+<p>为确保评测的可复现性和真实性，MCP-Atlas 构建了严格的容器化执行环境：</p>
+
+<div class="grid2">
+  <div class="card blue">
+    <div class="card-title">环境设计</div>
+    <ul>
+      <li>真实 MCP 服务器运行于<strong>容器化隔离环境</strong>，沙盒文件系统 + 白名单出口网络</li>
+      <li>每次任务运行前<strong>重启容器</strong>，确保初始状态一致</li>
+      <li>每任务暴露 10–25 个工具（含 5–10 干扰项），防止 Agent 暴力枚举</li>
+      <li>所有工具调用必须符合服务器声明的 JSON Schema（类型、必填/可选参数校验）</li>
+    </ul>
+  </div>
+  <div class="card green">
+    <div class="card-title">质量保障流程</div>
+    <ul>
+      <li><strong>领域专家多轮审查</strong>：初稿正确性、可解性、指南合规性审查</li>
+      <li><strong>第二轮审查</strong>：验证提示不泄露工具名称</li>
+      <li><strong>LLM 自动验证</strong>：检查 Claims 列表完整性，验证参考轨迹产出与预期 Claims 一致</li>
+      <li><strong>随机抽样复查</strong>：发现系统性问题，确保质量一致</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="limits">5. 局限性与未来方向</h2>
+<div class="card red">
+  <div class="card-title">当前局限</div>
+  <ul>
+    <li><strong>单轮交互</strong>：不评估多轮澄清、动态重规划等真实部署场景中常见的交互能力</li>
+    <li><strong>仅只读操作</strong>：写操作（创建记录、发送消息、修改文件）不在评测范围，是更真实场景的未覆盖部分</li>
+    <li><strong>效率未约束</strong>：记录调用次数和重试但不计入评分，Agent 可能通过冗余调用"暴力"完成任务</li>
+    <li><strong>真实 API 稳定性</strong>：依赖版本锁定的 MCP 服务器，但底层 API 变更可能影响长期可复现性</li>
+    <li><strong>文本形式偏差</strong>：Claims 的措辞和文本规范化仍可能引入边缘案例（尽管比整体 LLM-Judge 好得多）</li>
+  </ul>
+</div>
+
+<div class="card blue">
+  <div class="card-title">未来改进方向</div>
+  <ul>
+    <li>加入 Call Budget 约束（延迟限制、调用次数上限），更贴近生产环境要求</li>
+    <li>扩展写操作任务，通过 state diff 验证而非 LLM 判断</li>
+    <li>引入多轮交互设计，评估 Agent 的错误恢复和动态重规划能力</li>
+    <li>对 FINANCIAL/CODING 领域加入程序化验证脚本（更高精度），减少对 LLM Judge 的依赖</li>
+  </ul>
+</div>
+
+<h2 id="takeaway">6. 总结与启发</h2>
+<p>MCP-Atlas 是目前最接近真实 MCP 部署场景的 Agent 工具调用评测基准。其核心结论是：<strong>顶级模型（Claude Opus 4.5 62.3%）在复杂多步骤工具调用上仍有显著提升空间，且主要瓶颈是工具感知（知不知道该调工具），而非工具执行（会不会用工具）</strong>。</p>
+
+<p>对 Agent 系统开发的直接启示：提示工程和微调应更多关注<em>工具调用触发信号的优化</em>，帮助模型在合适时机主动探索可用工具集；其次是改善多步任务规划中的子目标跟踪，减少过早停止的问题；对于 FINANCIAL/CODING 等高精度领域，精确的参数规范化能力是关键差异因素。</p>
+
+<hr>
+<p style="color:#6c7086;font-size:0.82em;text-align:center">
+  基于 MCP-Atlas 论文（Scale AI，2025）生成。报告日期：2026-05-20
+</p>
+
+</main>
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+const toc = document.getElementById('toc');
+document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+  if (!h.id) h.id = 'sec-' + i;
+  const a = document.createElement('a');
+  a.href = '#' + h.id;
+  a.textContent = h.textContent;
+  if (h.tagName === 'H3') a.classList.add('toc-h3');
+  toc.appendChild(a);
+});
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    const lk = toc.querySelector(`a[href="#${e.target.id}"]`);
+    if (lk) lk.classList.toggle('active', e.isIntersecting);
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+
+(function() {
+  const dom = document.getElementById('mcp-pass-chart');
+  const chart = echarts.init(dom);
+  const models = ['Gemini 2.5 Flash','GPT-4o','Gemini 2.5 Pro','Qwen3-235B','Kimi K2','GLM-4.5 Air','Claude Sonnet 4','Claude Opus 4.1','o3 Pro','Claude Sonnet 4.5','GPT-5','Gemini 3 Pro','Claude Opus 4.5'];
+  const pass = [3.4,7.2,8.8,12.0,23.9,34.0,35.6,40.9,43.6,43.8,44.5,54.1,62.3];
+  const cov  = [17.8,28.5,30.7,29.0,50.4,60.5,57.3,64.9,66.9,62.1,61.7,73.2,78.5];
+  chart.setOption({
+    backgroundColor: 'transparent',
+    title: { text: 'MCP-Atlas 模型通过率与覆盖率（1000 任务）', left: 'center', top: 10, textStyle: { color: '#cdd6f4', fontSize: 14 } },
+    tooltip: { trigger: 'axis', backgroundColor: '#24243e', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+    legend: { bottom: 4, textStyle: { color: '#a6adc8' }, data: ['通过率 (%)', '平均覆盖率 (%)'] },
+    grid: { top: 50, bottom: 44, left: 145, right: 30 },
+    xAxis: { type: 'value', max: 90, axisLabel: { color: '#7f849c' }, splitLine: { lineStyle: { color: '#2a2a42' } } },
+    yAxis: { type: 'category', data: models, axisLabel: { color: '#cdd6f4', fontSize: 11 } },
+    series: [
+      { name: '通过率 (%)', type: 'bar', data: pass, itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'right', color: '#cdd6f4', fontSize: 11 } },
+      { name: '平均覆盖率 (%)', type: 'bar', data: cov,  itemStyle: { color: '#89dceb' }, label: { show: true, position: 'right', color: '#cdd6f4', fontSize: 11 } }
+    ]
+  });
+  window.addEventListener('resize', () => chart.resize());
+})();
+
+(function() {
+  const dom = document.getElementById('failure-chart');
+  const chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor: 'transparent',
+    title: { text: 'MCP-Atlas 失败原因分布（全模型平均）', left: 'center', top: 10, textStyle: { color: '#cdd6f4', fontSize: 14 } },
+    tooltip: { trigger: 'item', formatter: '{b}: {c}%', backgroundColor: '#24243e', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+    legend: { bottom: 4, textStyle: { color: '#a6adc8' } },
+    series: [{
+      type: 'pie', radius: ['38%', '65%'], center: ['50%', '48%'],
+      data: [
+        { value: 56.7, name: '工具使用错误', itemStyle: { color: '#f38ba8' } },
+        { value: 30.3, name: '任务理解不足', itemStyle: { color: '#fab387' } },
+        { value: 8.5,  name: '回复质量差',   itemStyle: { color: '#f9e2af' } },
+        { value: 4.5,  name: '逻辑错误',     itemStyle: { color: '#89b4fa' } }
+      ],
+      label: { color: '#cdd6f4', fontSize: 12 },
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } }
+    }]
+  });
+  window.addEventListener('resize', () => chart.resize());
+})();
+</script>
+</body>
+</html>

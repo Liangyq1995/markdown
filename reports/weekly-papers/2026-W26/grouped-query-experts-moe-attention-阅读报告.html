@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grouped Query Experts: MoE on GQA Self-Attention 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    pre.mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box {
+      background: #1a1a2e;
+      border: 1px solid var(--heading);
+      border-radius: 8px;
+      padding: 20px 28px;
+      margin: 1.2em 0;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.88em;
+      line-height: 2;
+    }
+    .algo-box .algo-title {
+      color: var(--heading);
+      font-weight: bold;
+      font-size: 1em;
+      margin-bottom: 10px;
+      letter-spacing: 0.04em;
+      border-bottom: 1px dashed var(--border);
+      padding-bottom: 6px;
+    }
+    .algo-box .algo-line { display: block; }
+    .algo-box .kw { color: #cba6f7; }
+    .algo-box .fn { color: #89b4fa; }
+    .algo-box .cm { color: #6c7086; font-style: italic; }
+    .algo-box .val { color: #fab387; }
+    .algo-box .indent1 { padding-left: 2em; }
+    .algo-box .indent2 { padding-left: 4em; }
+    .algo-box .indent3 { padding-left: 6em; }
+    .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 20px; }
+    .tag { background: #2a2a3e; border: 1px solid var(--border); border-radius: 12px; padding: 3px 12px; font-size: 0.82em; color: var(--link); }
+    .meta-card { background: #2a2a3e; border-radius: 8px; padding: 16px 20px; margin: 1em 0; border-left: 3px solid var(--heading); }
+    .meta-card table { margin: 0; }
+    .meta-card td { border: none; padding: 4px 12px 4px 0; }
+    .highlight-box {
+      background: #1e3a2e;
+      border: 1px solid var(--strong);
+      border-radius: 8px;
+      padding: 14px 20px;
+      margin: 1.2em 0;
+    }
+    .highlight-box p { margin: 0.3em 0; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$']],
+        displayMath: [['$$', '$$']],
+        tags: 'ams'
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>Grouped Query Experts: Mixture-of-Experts on GQA Self-Attention</h1>
+
+    <div class="tag-row">
+      <span class="tag">cs.LG</span>
+      <span class="tag">arXiv:2606.20945</span>
+      <span class="tag">250M 参数</span>
+      <span class="tag">30B tokens</span>
+      <span class="tag">MoE + GQA</span>
+    </div>
+
+    <div class="meta-card">
+      <table>
+        <tr><td><strong>作者</strong></td><td>Vishesh Tripathi, Abhay Kumar（FrontiersMind）</td></tr>
+        <tr><td><strong>arXiv</strong></td><td><a href="https://arxiv.org/abs/2606.20945" target="_blank">2606.20945</a></td></tr>
+        <tr><td><strong>领域</strong></td><td>Machine Learning (cs.LG)</td></tr>
+        <tr><td><strong>社区热度</strong></td><td>64 upvotes（HuggingFace Papers）</td></tr>
+      </table>
+    </div>
+
+    <!-- ===== 概述 ===== -->
+    <h2 id="overview">概述</h2>
+    <p>
+      本文提出 <strong>Grouped Query Experts（GQE）</strong>，一种将稀疏混合专家（MoE）思想引入 Grouped-Query Attention（GQA）查询头维度的新型注意力机制。其核心洞察是：在 GQA 的每个 KV 组内，不同 token 实际上并不需要激活所有查询头——通过一个轻量路由器，每个 token 只选择 $k$ 个查询头专家，而 KV 头始终保持稠密不变。这样既保留了 GQA 的 KV 缓存优势，又将活跃查询头计算量减半。
+    </p>
+    <p>
+      实验在 250M 参数、30B token（FineWeb-Edu）规模下进行，GQE 在 HellaSwag、ARC-E、PIQA 三个基准上的平均得分达到 <strong>56.04</strong>，超过全激活 GQA 基线的 55.86，同时每 token 仅激活一半路由查询头（加上共享头后共 9/16 个注意力计算）。
+    </p>
+
+    <div class="highlight-box">
+      <p><strong>核心贡献：</strong>首次将条件计算（MoE 路由）应用于注意力机制的查询头维度，提出带有重归一化加权求和槽（renormalized weighted-sum slot）与常开共享头（always-on shared head）的完整路由方案，解决了朴素路由导致的性能下降问题。</p>
+    </div>
+
+    <!-- ===== 架构总览 Mermaid ===== -->
+    <h2 id="arch-overview">架构总览</h2>
+    <p>下图展示 GQE 在单个注意力层中的数据流：KV 头始终全量计算，路由器对每个 token 在各 GQA 组内选出 $k$ 个查询头专家，最终拼接专家输出、重归一化加权输出与共享头输出后送入输出投影。</p>
+
+    <pre class="mermaid">
+flowchart TD
+    X["输入 token x_i\n(序列中第 i 个位置)"]
+
+    subgraph KV_PATH["KV 路径（始终稠密）"]
+        K["K 头投影\n(N_kv 个 KV 头)"]
+        V["V 头投影\n(N_kv 个 KV 头)"]
+    end
+
+    subgraph ROUTER["路由器"]
+        R["线性路由器\nf(x_i) → logits"]
+        TOPK["Top-k 选择\n每组选 k 个查询专家"]
+    end
+
+    subgraph QUERY_EXPERTS["查询头专家池（每 GQA 组 G 个专家）"]
+        QE1["查询专家 1\nQ_1 投影 + Attn"]
+        QE2["查询专家 2\nQ_2 投影 + Attn"]
+        QEdot["..."]
+        QEk["查询专家 k（被选中）\nQ_k 投影 + Attn"]
+    end
+
+    subgraph SHARED["共享头（常开）"]
+        SH["共享查询头\n所有 token 均激活"]
+    end
+
+    subgraph COMBINE["输出合并"]
+        HARD["硬拼接专家输出\nConcat(O_selected)"]
+        RENORM["重归一化加权求和\nō_i（提供路由器梯度）"]
+        CONCAT_ALL["最终拼接\n[O_experts | ō_i | O_shared]"]
+        WO["输出投影 W_O\n(10 d_h × d)"]
+    end
+
+    X --> ROUTER
+    X --> KV_PATH
+    X --> SHARED
+    TOPK --> QUERY_EXPERTS
+    K --> QUERY_EXPERTS
+    V --> QUERY_EXPERTS
+    K --> SHARED
+    V --> SHARED
+    QUERY_EXPERTS --> HARD
+    QUERY_EXPERTS --> RENORM
+    HARD --> CONCAT_ALL
+    RENORM --> CONCAT_ALL
+    SHARED --> CONCAT_ALL
+    CONCAT_ALL --> WO
+
+    style KV_PATH fill:#1a2a1a,stroke:#a6e3a1,stroke-width:1.5px
+    style ROUTER fill:#1a1a2e,stroke:#89b4fa,stroke-width:1.5px
+    style QUERY_EXPERTS fill:#2a1a2e,stroke:#cba6f7,stroke-width:1.5px
+    style SHARED fill:#2a2a1a,stroke:#fab387,stroke-width:1.5px
+    style COMBINE fill:#1e2a3e,stroke:#89dceb,stroke-width:1.5px
+    </pre>
+
+    <!-- ===== 研究背景 ===== -->
+    <h2 id="background">研究背景</h2>
+    <p>
+      GQE 的设计动机来自两个相互独立却相互补充的研究方向：以 GQA 为代表的 KV 缓存优化，以及以稀疏 MoE 为代表的条件计算。本节分别回顾这两个背景，并说明它们如何共同催生了 GQE 的设计思路。
+    </p>
+
+    <h3 id="bg-gqa">Grouped-Query Attention（GQA）背景</h3>
+    <p>
+      标准多头注意力（MHA）为每个注意力头维护独立的 Q、K、V 投影，推理时 KV 缓存大小与头数成正比，在长序列场景下内存开销极大。<strong>GQA</strong> 将查询头分成 $G$ 组，组内所有查询头共享同一对 KV 头，从而将 KV 缓存从 $N_h \cdot d_h$ 压缩至 $N_{kv} \cdot d_h$，内存节省比例为 $N_h / N_{kv}$。
+    </p>
+    <p>
+      GQA 已被 LLaMA-2/3、Mistral、Gemma 等主流大模型广泛采用，成为工业界推理优化的标配。然而 GQA 仍保留了一个问题：<strong>无论 token 的复杂度或信息量如何，所有查询头对每个 token 都会被激活</strong>，存在计算冗余。
+    </p>
+
+    <h3 id="bg-moe">稀疏混合专家（MoE）方法</h3>
+    <p>
+      MoE 通过路由器为每个 token 动态选择激活的专家子网络，在不增加推理计算量的前提下扩大模型容量。Mixtral、DeepSeek-MoE 等模型已将 MoE 应用于 FFN 层，取得显著效果。
+    </p>
+    <p>
+      然而，<strong>MoE 在注意力层的应用仍相对空白</strong>。将路由机制引入注意力头存在非平凡挑战：注意力输出的聚合方式与 FFN 不同，且路由器需要获得有效的学习信号（梯度）。GQE 正是填补这一空白的尝试。
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>方法</th><th>KV 缓存</th><th>查询头激活</th><th>路由机制</th><th>代表模型</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>MHA</td><td>全量（大）</td><td>全部激活</td><td>无</td><td>GPT-2、BERT</td></tr>
+        <tr><td>GQA</td><td>压缩（小）</td><td>全部激活</td><td>无</td><td>LLaMA-2/3、Mistral</td></tr>
+        <tr><td>MoE-FFN</td><td>全量（大）</td><td>全部激活</td><td>FFN 层路由</td><td>Mixtral、DeepSeek-MoE</td></tr>
+        <tr><td><strong>GQE（本文）</strong></td><td><strong>压缩（小）</strong></td><td><strong>稀疏激活（k/G）</strong></td><td><strong>查询头路由</strong></td><td>—</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 核心方法 ===== -->
+    <h2 id="method">核心方法：GQE 设计</h2>
+    <p>
+      GQE 在 GQA 的基础上，为每个 GQA 组内的查询头引入稀疏路由机制。整体设计包含三个关键组件：<strong>查询头专家池</strong>、<strong>组内路由器</strong>，以及解决路由器梯度问题的<strong>重归一化加权求和槽</strong>与<strong>常开共享头</strong>。
+    </p>
+
+    <h3 id="method-routing">组内路由机制</h3>
+    <p>
+      给定 $G$ 个 GQA 组，每组有 $M$ 个查询头专家。对于序列中第 $i$ 个 token $x_i$，路由器计算每个专家的得分，并在每组内选出得分最高的 $k$ 个专家：
+    </p>
+    <p>$$\mathcal{K}_g(x_i) = \text{Top-}k\!\left(\{p_{i,g,m}\}_{m=1}^{M}\right), \quad p_{i,g,m} = \text{softmax}\!\left(\mathbf{r}_g \cdot x_i\right)_m$$</p>
+    <p>
+      其中 $\mathbf{r}_g$ 是第 $g$ 组路由器的线性权重。KV 头在所有 token 上始终保持稠密计算，不受路由影响。
+    </p>
+
+    <h3 id="method-renorm">重归一化加权求和槽</h3>
+    <p>
+      朴素的硬拼接（hard concat）方式会截断路由器得分到输出的梯度路径，导致路由器无法获得有效学习信号。为此，GQE 额外引入一个<strong>重归一化加权求和输出</strong>：
+    </p>
+    <p>$$\bar{o}_i = \sum_{g=1}^{G}\sum_{m \in \mathcal{K}_g(x_i)} w_{i,g,m}\, o_{i,g,m}, \quad w_{i,g,m} = \frac{p_{i,g,m}}{\sum_{g'=1}^{G}\sum_{m' \in \mathcal{K}_{g'}(x_i)} p_{i,g',m'}}$$</p>
+    <p>
+      这个槽通过可微的加权求和将路由器概率传递到输出，为路由器提供梯度。它作为额外的第 $k+1$ 个槽与硬拼接专家输出一起送入输出投影。
+    </p>
+
+    <h3 id="method-shared">常开共享头</h3>
+    <p>
+      为进一步稳定训练并提供全局注意力锚点，GQE 在每层额外保留一个<strong>常开共享头</strong>（always-on shared head），该头对所有 token 无条件激活，其输出 $o_{i,s}$ 作为第三类槽参与最终拼接。
+    </p>
+
+    <h3 id="method-output">最终输出拼接</h3>
+    <p>最终输出由三部分拼接后送入输出投影 $W_O$：</p>
+    <p>$$y_i = \text{Concat}\!\left(O_i,\, \bar{o}_i,\, o_{i,s}(x_i)\right) W_O$$</p>
+    <p>
+      在论文的实验配置（16 查询头 / 8 KV 头，$k=1$）中：路由器选出 8 个查询专家（每组 1 个），产生 8 个硬拼接槽；加上 1 个重归一化加权求和槽和 1 个共享头槽，共 10 个槽。因此 $W_O$ 从 $16 d_h \times d$ 缩减为 $10 d_h \times d$。
+    </p>
+
+    <!-- ===== 路由算法 ===== -->
+    <h2 id="algorithm">路由算法</h2>
+    <p>以下为 GQE 单层前向传播的路由算法伪代码，清晰展示从 token 表示到最终输出的完整流程：</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: GQE 单层前向传播（每 token）</div>
+      <span class="algo-line"><span class="kw">输入：</span> token 表示 $x_i \in \mathbb{R}^d$，GQA 组数 $G$，每组专家数 $M$，Top-k 参数 $k$</span>
+      <span class="algo-line"><span class="kw">输出：</span> 注意力层输出 $y_i \in \mathbb{R}^d$</span>
+      <br>
+      <span class="algo-line"><span class="cm">// Step 1: KV 路径（稠密，所有 token 共享）</span></span>
+      <span class="algo-line indent1"><span class="kw">for</span> $g = 1$ <span class="kw">to</span> $G$ <span class="kw">do</span></span>
+      <span class="algo-line indent2">$K_g, V_g \leftarrow$ <span class="fn">KVProject</span>$(x_i, g)$ <span class="cm">// 始终计算，不受路由影响</span></span>
+      <br>
+      <span class="algo-line"><span class="cm">// Step 2: 路由器打分（每组独立）</span></span>
+      <span class="algo-line indent1"><span class="kw">for</span> $g = 1$ <span class="kw">to</span> $G$ <span class="kw">do</span></span>
+      <span class="algo-line indent2">$\mathbf{p}_{i,g} \leftarrow$ <span class="fn">softmax</span>$(\mathbf{r}_g \cdot x_i)$ <span class="cm">// 路由器得分，维度 M</span></span>
+      <span class="algo-line indent2">$\mathcal{K}_g \leftarrow$ <span class="fn">TopK</span>$(\mathbf{p}_{i,g},\, k)$ <span class="cm">// 选出得分最高的 k 个专家下标</span></span>
+      <br>
+      <span class="algo-line"><span class="cm">// Step 3: 激活选中的查询头专家</span></span>
+      <span class="algo-line indent1"><span class="kw">for</span> $g = 1$ <span class="kw">to</span> $G$, $m \in \mathcal{K}_g$ <span class="kw">do</span></span>
+      <span class="algo-line indent2">$Q_{i,g,m} \leftarrow$ <span class="fn">QueryProject</span>$(x_i, g, m)$</span>
+      <span class="algo-line indent2">$o_{i,g,m} \leftarrow$ <span class="fn">Attention</span>$(Q_{i,g,m}, K_g, V_g)$ <span class="cm">// 标准缩放点积注意力</span></span>
+      <br>
+      <span class="algo-line"><span class="cm">// Step 4: 重归一化加权求和槽（提供路由器梯度）</span></span>
+      <span class="algo-line indent1">$w_{i,g,m} \leftarrow p_{i,g,m} \,/\, \sum_{g',m'} p_{i,g',m'}$ <span class="cm">// 跨组归一化</span></span>
+      <span class="algo-line indent1">$\bar{o}_i \leftarrow \sum_{g,m \in \mathcal{K}_g} w_{i,g,m} \cdot o_{i,g,m}$ <span class="cm">// 可微加权求和</span></span>
+      <br>
+      <span class="algo-line"><span class="cm">// Step 5: 常开共享头</span></span>
+      <span class="algo-line indent1">$o_{i,s} \leftarrow$ <span class="fn">SharedHead</span>$(x_i)$ <span class="cm">// 无条件激活，所有 token 均计算</span></span>
+      <br>
+      <span class="algo-line"><span class="cm">// Step 6: 拼接并输出投影</span></span>
+      <span class="algo-line indent1">$y_i \leftarrow$ <span class="fn">Concat</span>$\!\left(\{o_{i,g,m}\}_{g,m\in\mathcal{K}_g},\; \bar{o}_i,\; o_{i,s}\right) \cdot W_O$</span>
+      <span class="algo-line"><span class="kw">return</span> $y_i$</span>
+    </div>
+
+    <!-- ===== 数学推导 ===== -->
+    <h2 id="math">数学推导</h2>
+    <p>本节系统梳理从标准注意力到 GQA 再到 GQE 的数学演化脉络，重点说明每一步变化的动机与形式。</p>
+
+    <h3 id="math-std-attn">标准缩放点积注意力</h3>
+    <p>标准注意力（单头）定义为：</p>
+    <p>$$\text{Attn}(Q, K, V) = \text{softmax}\!\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$</p>
+    <p>
+      其中 $Q \in \mathbb{R}^{n \times d_k}$，$K, V \in \mathbb{R}^{n \times d_k}$，$n$ 为序列长度。计算复杂度为 $O(n^2 d_k)$，随序列长度平方增长。多头注意力（MHA）将 $d$ 维输入投影到 $N_h$ 个独立的 $(Q_j, K_j, V_j)$ 三元组，并行计算后拼接：
+    </p>
+    <p>$$\text{MHA}(X) = \text{Concat}(\text{head}_1, \ldots, \text{head}_{N_h})\, W_O, \quad \text{head}_j = \text{Attn}(XW_j^Q, XW_j^K, XW_j^V)$$</p>
+
+    <h3 id="math-gqa">GQA 公式</h3>
+    <p>
+      GQA 将 $N_h$ 个查询头分成 $G$ 组，每组包含 $M = N_h / G$ 个查询头，组内所有查询头共享同一对 KV 头。设第 $g$ 组的 KV 头为 $K_g, V_g$，则第 $g$ 组第 $m$ 个查询头的输出为：
+    </p>
+    <p>$$\text{head}_{g,m} = \text{Attn}(X W_{g,m}^Q,\; X W_g^K,\; X W_g^V)$$</p>
+    <p>GQA 总输出：$\text{GQA}(X) = \text{Concat}(\text{head}_{1,1}, \ldots, \text{head}_{G,M})\, W_O$</p>
+    <p>KV 缓存从 $2 N_h d_h n$ 压缩至 $2 G d_h n$，节省比例 $N_h / G = M$。</p>
+
+    <h3 id="math-gqe">GQE 路由公式</h3>
+    <p>
+      GQE 在 GQA 基础上，对每个 token $x_i$ 在第 $g$ 组内只激活 $k$ 个查询头。路由器得分：
+    </p>
+    <p>$$p_{i,g,m} = \text{softmax}(\mathbf{r}_g \cdot x_i)_m, \quad m = 1, \ldots, M$$</p>
+    <p>选出的专家集合：$\mathcal{K}_g(x_i) = \text{Top-}k(\{p_{i,g,m}\}_{m=1}^{M})$</p>
+    <p>各被选专家的注意力输出：</p>
+    <p>$$o_{i,g,m} = \text{Attn}(x_i W_{g,m}^Q,\; K_g,\; V_g), \quad m \in \mathcal{K}_g(x_i)$$</p>
+    <p>重归一化加权求和（提供路由器梯度信号）：</p>
+    <p>$$\bar{o}_i = \sum_{g=1}^{G}\sum_{m \in \mathcal{K}_g(x_i)} w_{i,g,m}\, o_{i,g,m}, \quad w_{i,g,m} = \frac{p_{i,g,m}}{\displaystyle\sum_{g'=1}^{G}\sum_{m' \in \mathcal{K}_{g'}(x_i)} p_{i,g',m'}}$$</p>
+    <p>最终输出（含常开共享头 $o_{i,s}$）：</p>
+    <p>$$y_i = \text{Concat}\!\left(\{o_{i,g,m}\}_{g \in [G], m \in \mathcal{K}_g},\; \bar{o}_i,\; o_{i,s}\right) W_O$$</p>
+
+    <h3 id="math-compute">计算量分析</h3>
+    <p>
+      在 16 查询头 / 8 KV 头（$G=8$，$M=2$，$k=1$）配置下：
+    </p>
+    <table>
+      <thead>
+        <tr><th>计算项</th><th>GQA（全激活）</th><th>GQE（$k=1$）</th><th>节省比例</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>路由查询头激活数</td><td>16</td><td>8（每组1个）</td><td>50%</td></tr>
+        <tr><td>总注意力计算数</td><td>16</td><td>9（8路由+1共享）</td><td>43.75%</td></tr>
+        <tr><td>KV 头激活数</td><td>8（稠密）</td><td>8（稠密，不变）</td><td>0%</td></tr>
+        <tr><td>$W_O$ 输入维度</td><td>$16 d_h$</td><td>$10 d_h$（8+1+1）</td><td>37.5%</td></tr>
+        <tr><td>KV 缓存大小</td><td>$2 \times 8 d_h n$</td><td>$2 \times 8 d_h n$（不变）</td><td>0%</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 实验结果 ===== -->
+    <h2 id="experiments">实验结果</h2>
+    <p>
+      所有实验均在 250M 参数规模、30B tokens（FineWeb-Edu 数据集）的固定预算下进行，以排除训练数据差异的干扰。评测基准包括 HellaSwag（常识推理）、ARC-E（初等科学）和 PIQA（物理常识）。
+    </p>
+
+    <h3 id="exp-ablation">消融实验：路由方案对比</h3>
+    <p>
+      论文通过消融阶梯（ablation ladder）揭示了路由设计各组件的必要性。下表为 16 查询头 / 8 KV 头配置，$k=1$，30B tokens 训练结果：
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>变体</th><th>HellaSwag</th><th>ARC-E</th><th>PIQA</th><th>平均</th><th>vs 基线</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GQA 基线（全 16 头激活）</td><td>41.31</td><td>61.36</td><td>64.90</td><td>55.86</td><td>—</td></tr>
+        <tr><td>加权拼接，无重归一化槽</td><td>40.16</td><td>60.52</td><td>64.85</td><td>55.18</td><td>-0.68</td></tr>
+        <tr><td>仅硬拼接</td><td>40.66</td><td>60.56</td><td>65.07</td><td>55.43</td><td>-0.43</td></tr>
+        <tr style="background:#1e3a2e;"><td><strong>GQE（重归一化 + 共享头）</strong></td><td><strong>41.01</strong></td><td><strong>62.41</strong></td><td><strong>64.69</strong></td><td><strong>56.04</strong></td><td><strong>+0.18</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>
+      消融结果揭示了一个反直觉的发现：<strong>朴素路由（仅硬拼接）反而比全激活基线差</strong>，因为路由器缺乏有效的梯度信号。只有同时引入重归一化加权求和槽（恢复梯度）和常开共享头（提供稳定锚点），GQE 才能恢复并超越基线。
+    </p>
+
+    <h3 id="exp-chart">性能对比图（ECharts）</h3>
+    <div id="chart-ablation" class="echarts-container" style="height:360px"></div>
+    <script>
+    (function() {
+      var dom = document.getElementById('chart-ablation');
+      var myChart = echarts.init(dom, null, { renderer: 'canvas' });
+      var option = {
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: 'GQE 消融实验各基准得分对比（250M / 30B tokens）',
+          textStyle: { color: '#89b4fa', fontSize: 14 },
+          left: 'center',
+          top: 12
+        },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: {
+          data: ['GQA 基线', '仅硬拼接', '加权拼接无重归一化', 'GQE（完整）'],
+          textStyle: { color: '#cdd6f4' },
+          top: 44
+        },
+        grid: { top: 90, left: 60, right: 30, bottom: 50 },
+        xAxis: {
+          type: 'category',
+          data: ['HellaSwag', 'ARC-E', 'PIQA', '平均'],
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          min: 38,
+          max: 68,
+          axisLabel: { color: '#cdd6f4', formatter: '{value}' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: 'GQA 基线',
+            type: 'bar',
+            data: [41.31, 61.36, 64.90, 55.86],
+            itemStyle: { color: '#45475a' },
+            barGap: '5%'
+          },
+          {
+            name: '仅硬拼接',
+            type: 'bar',
+            data: [40.66, 60.56, 65.07, 55.43],
+            itemStyle: { color: '#f38ba8' }
+          },
+          {
+            name: '加权拼接无重归一化',
+            type: 'bar',
+            data: [40.16, 60.52, 64.85, 55.18],
+            itemStyle: { color: '#fab387' }
+          },
+          {
+            name: 'GQE（完整）',
+            type: 'bar',
+            data: [41.01, 62.41, 64.69, 56.04],
+            itemStyle: { color: '#a6e3a1' }
+          }
+        ]
+      };
+      myChart.setOption(option);
+      window.addEventListener('resize', function() { myChart.resize(); });
+    })();
+    </script>
+
+    <h3 id="exp-radar">三种注意力机制综合对比</h3>
+    <div id="chart-compare" class="echarts-container" style="height:380px"></div>
+    <script>
+    (function() {
+      var dom = document.getElementById('chart-compare');
+      var myChart = echarts.init(dom, null, { renderer: 'canvas' });
+      var option = {
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: 'MHA / GQA / GQE 多维对比（定性 + 定量，250M 规模）',
+          textStyle: { color: '#89b4fa', fontSize: 14 },
+          left: 'center',
+          top: 12
+        },
+        tooltip: { trigger: 'axis' },
+        legend: {
+          data: ['MHA', 'GQA', 'GQE'],
+          textStyle: { color: '#cdd6f4' },
+          top: 44
+        },
+        radar: {
+          indicator: [
+            { name: '下游平均精度', max: 60 },
+            { name: 'KV 缓存效率', max: 10 },
+            { name: '查询头计算节省', max: 10 },
+            { name: '训练稳定性', max: 10 },
+            { name: '实现复杂度（低=好）', max: 10 }
+          ],
+          center: ['50%', '58%'],
+          radius: '60%',
+          axisName: { color: '#cdd6f4', fontSize: 12 },
+          splitLine: { lineStyle: { color: '#45475a' } },
+          splitArea: { areaStyle: { color: ['#1e1e2e', '#2a2a3e'] } }
+        },
+        series: [{
+          type: 'radar',
+          data: [
+            {
+              value: [55.5, 2, 1, 9, 9],
+              name: 'MHA',
+              itemStyle: { color: '#45475a' },
+              lineStyle: { color: '#45475a' },
+              areaStyle: { color: 'rgba(69,71,90,0.2)' }
+            },
+            {
+              value: [55.86, 9, 1, 9, 8],
+              name: 'GQA',
+              itemStyle: { color: '#89b4fa' },
+              lineStyle: { color: '#89b4fa' },
+              areaStyle: { color: 'rgba(137,180,250,0.2)' }
+            },
+            {
+              value: [56.04, 9, 8, 8, 5],
+              name: 'GQE',
+              itemStyle: { color: '#a6e3a1' },
+              lineStyle: { color: '#a6e3a1' },
+              areaStyle: { color: 'rgba(166,227,161,0.25)' }
+            }
+          ]
+        }]
+      };
+      myChart.setOption(option);
+      window.addEventListener('resize', function() { myChart.resize(); });
+    })();
+    </script>
+
+    <h3 id="exp-key-finding">关键发现</h3>
+    <blockquote>
+      <strong>核心结论：</strong>在 30B token 预算下，GQE（重归一化 + 共享头）以 56.04 的平均分<strong>超过</strong>全激活 GQA 基线（55.86），同时每 token 仅激活 8/16 个路由查询头（加共享头后为 9/16 个注意力计算）。朴素路由（仅硬拼接）比基线低 0.43，说明路由器梯度信号的设计至关重要。
+    </blockquote>
+
+    <!-- ===== GQE 组件分析 Mermaid ===== -->
+    <h2 id="component-analysis">组件分析：为何三个组件缺一不可</h2>
+    <p>消融实验清晰地揭示了 GQE 三个核心组件的相互依赖关系：</p>
+
+    <pre class="mermaid">
+graph LR
+    subgraph PROBLEM["问题根源"]
+        P1["问题1：路由器梯度断裂\n硬拼接截断梯度路径"]
+        P2["问题2：路由器缺乏锚点\n纯稀疏路由不稳定"]
+    end
+
+    subgraph SOLUTION["GQE 解决方案"]
+        S1["重归一化加权求和槽 ō_i\n可微路径 → 路由器获得梯度\n恢复 +0.43 分"]
+        S2["常开共享头 o_s\n无条件激活 → 稳定锚点\n进一步提升至超越基线"]
+        S3["硬拼接专家输出\n保留多样注意力模式\n基础结构"]
+    end
+
+    P1 -->|解决| S1
+    P2 -->|解决| S2
+    S3 --> FINAL["最终输出\nConcat(O_experts, ō_i, o_s) W_O"]
+    S1 --> FINAL
+    S2 --> FINAL
+
+    style PROBLEM fill:#2a1a1a,stroke:#f38ba8
+    style SOLUTION fill:#1a2a1a,stroke:#a6e3a1
+    style FINAL fill:#1a1a2e,stroke:#89b4fa
+    </pre>
+
+    <!-- ===== 总结与启发 ===== -->
+    <h2 id="insights">总结与启发</h2>
+    <p>
+      GQE 是一项设计精巧的工作，它在几乎不改变 GQA 整体框架的前提下，将 MoE 的条件计算思想成功引入注意力机制的查询头维度。以下是几点关键启发：
+    </p>
+
+    <h3 id="insight-1">1. 路由器梯度设计是稀疏注意力的核心挑战</h3>
+    <p>
+      论文最重要的实验发现是：<strong>朴素路由不仅无法带来收益，反而会损害性能</strong>。这与 FFN-MoE 的经验不同——在 FFN-MoE 中，硬路由通常能工作，因为专家输出通过加权求和聚合，路由器得分直接参与梯度计算。而注意力头的输出是拼接而非加权求和，这使得路由器梯度的设计成为非平凡问题。重归一化加权求和槽是解决这一问题的关键工程创新。
+    </p>
+
+    <h3 id="insight-2">2. 常开共享头的设计哲学</h3>
+    <p>
+      共享头的设计类似于 MoE 中的"共享专家"（如 DeepSeek-MoE 的 shared expert 设计），为模型提供不依赖路由决策的稳定信息流。这种设计在稀疏路由系统中具有普遍意义：路由器的随机性需要一个确定性的锚点来平衡。
+    </p>
+
+    <h3 id="insight-3">3. KV 缓存与查询计算的解耦</h3>
+    <p>
+      GQE 的一个优雅之处在于它<strong>只对查询头做路由，完全不触动 KV 路径</strong>。这使得 GQA 的 KV 缓存优势得以完整保留，同时在查询头维度上实现了计算节省。这种"正交优化"思路值得借鉴：在已有优化方案的基础上，寻找正交的优化维度。
+    </p>
+
+    <h3 id="insight-4">4. 局限性与未来方向</h3>
+    <p>
+      当前工作的局限主要体现在以下几点：（1）实验规模仅为 250M 参数，更大规模（1B+）的验证有待进行；（2）输出投影 $W_O$ 的维度因槽数变化而与基线不完全参数匹配，影响公平对比；（3）路由器的专家利用率（load balancing）分析未见于论文；（4）长序列场景下的实际推理加速尚未实测。
+    </p>
+    <p>
+      未来方向包括：将 GQE 扩展至更大规模模型、与 FlashAttention 等硬件优化结合实现实际加速、探索动态 $k$ 值（根据 token 复杂度自适应调整激活头数）等。
+    </p>
+
+    <div class="highlight-box">
+      <p><strong>一句话评价：</strong>GQE 是一篇执行严谨、洞察清晰的方法论论文。它的贡献不仅在于提出了一个有效的稀疏注意力方案，更在于通过精心设计的消融实验，揭示了"为什么朴素路由会失败"这一反直觉现象，为后续在注意力层引入条件计算的工作提供了重要的设计指南。</p>
+    </div>
+
+    <!-- ===== 参考文献 ===== -->
+    <h2 id="references">参考文献</h2>
+    <table>
+      <thead>
+        <tr><th>#</th><th>文献</th><th>相关性</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td>Ainslie et al., <em>GQA: Training Generalized Multi-Query Transformer Models from Multi-Head Checkpoints</em>, EMNLP 2023</td>
+          <td>GQA 原始论文，GQE 的直接基础</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>Shazeer et al., <em>Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer</em>, ICLR 2017</td>
+          <td>稀疏 MoE 奠基工作</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Jiang et al., <em>Mixtral of Experts</em>, arXiv 2024</td>
+          <td>MoE 在大规模 LLM 中的成功应用</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Dai et al., <em>DeepSeekMoE: Towards Ultimate Expert Specialization in Mixture-of-Experts Language Models</em>, arXiv 2024</td>
+          <td>共享专家设计的参考</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Vaswani et al., <em>Attention Is All You Need</em>, NeurIPS 2017</td>
+          <td>Transformer 与多头注意力原始论文</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td>Penedo et al., <em>FineWeb-Edu: Towards Large-Scale, High-Quality Web Data for LLMs</em>, 2024</td>
+          <td>实验所用训练数据集</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td>Touvron et al., <em>Llama 2: Open Foundation and Fine-Tuned Chat Models</em>, arXiv 2023</td>
+          <td>GQA 的重要应用案例</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center;">
+      报告生成日期：2026-06-26 | 论文来源：<a href="https://arxiv.org/abs/2606.20945">arXiv:2606.20945</a> | 作者：Vishesh Tripathi, Abhay Kumar (FrontiersMind)
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+
+    // 自动生成目录
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // 高亮当前节
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

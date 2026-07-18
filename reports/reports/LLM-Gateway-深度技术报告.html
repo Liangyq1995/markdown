@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Gateway 深度技术报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8}
+#toc{position:fixed;top:0;left:0;width:230px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border)}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toc a:hover{background:var(--border)}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8}
+main{margin-left:250px;max-width:none;padding:40px 64px}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em}
+p{margin:.6em 0}a{color:var(--link)}strong{color:var(--strong)}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border)}
+td{padding:7px 12px;border:1px solid var(--border);vertical-align:top}
+tr:hover td{background:#2a2a3e}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em}
+code{font-family:'JetBrains Mono','Fira Code',monospace}
+p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+ul,ol{padding-left:1.6em;margin:.5em 0}li{margin:.3em 0}
+.badge{display:inline-block;font-size:.75em;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:6px}
+.red{background:#f38ba8;color:#1e1e2e}.orange{background:#fab387;color:#1e1e2e}
+.yellow{background:#f9e2af;color:#1e1e2e}.green{background:#a6e3a1;color:#1e1e2e}
+.blue{background:#89b4fa;color:#1e1e2e}.purple{background:#cba6f7;color:#1e1e2e}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9}
+.algo-box .algo-title{color:var(--heading);font-weight:700;font-size:1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.algo-box .kw{color:#cba6f7;font-weight:700}.algo-box .cm{color:#6c7086;font-style:italic}
+.algo-box .var{color:#94e2d5}.algo-box .fn{color:#a6e3a1}.algo-box .num{color:#f9e2af}
+.card{background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:.8em 0}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:1em 0}
+.highlight-box{background:#2a2a3e;border:1px solid var(--border);border-left:4px solid var(--heading);border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.warn-box{background:#3a2a1e;border:1px solid #fab387;border-left:4px solid #fab387;border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.timeline-wrap{overflow-x:auto;margin:1em 0}
+.timeline{display:flex;gap:0;min-width:900px}
+.tl-col{flex:1;display:flex;flex-direction:column}
+.tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;font-size:.95em;border-radius:6px 6px 0 0}
+.tl-body{flex:1;padding:10px 8px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px}
+.tl-item{background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em;line-height:1.5}
+.tl-tag{display:inline-block;font-size:.75em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:4px;background:var(--heading);color:#1e1e2e}
+.tl-tag.og{background:#fab387}.tl-tag.gn{background:#a6e3a1}.tl-tag.pu{background:#cba6f7}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}}</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LLM Gateway 深度技术报告</h1>
+<p style="color:#6c7086;margin-bottom:1.5em">架构设计 · 核心算法 · 工程实践 | 覆盖路由、缓存、限流、熔断、安全、可观测性</p>
+
+<table>
+<tr><th>主题</th><td>LLM Gateway 完整技术栈深度解析</td></tr>
+<tr><th>覆盖领域</th><td>智能路由、语义缓存、限流配额、认证鉴权、流式代理、熔断器、可观测性、Prompt 安全、成本控制</td></tr>
+<tr><th>参考实现</th><td>LiteLLM、Kong AI Gateway、Portkey、Helicone、One API、Azure APIM AI 扩展</td></tr>
+</table>
+
+<!-- ========== 1 ========== -->
+<h2>1. 为什么需要 LLM Gateway</h2>
+
+<p>企业直连 LLM Provider API 面临五大系统性问题，Gateway 是解决这些问题的统一基础设施层。</p>
+
+<div class="card-grid">
+<div class="card"><strong style="color:#f38ba8">🔒 安全隔离</strong><br>Provider 密钥不下发给业务方，API Key 泄漏仅影响虚拟密钥；Prompt 注入、PII 泄漏在网关层统一拦截</div>
+<div class="card"><strong style="color:#fab387">💰 成本管控</strong><br>无限流保护导致账单爆炸；无法按团队/项目分摊 token 消费；重复请求浪费调用费用</div>
+<div class="card"><strong style="color:#a6e3a1">🔁 可靠性</strong><br>单 Provider 故障时无自动切换；无重试/熔断机制；Provider 限流时无排队降级</div>
+<div class="card"><strong style="color:#89b4fa">📊 可观测性</strong><br>token 消耗、延迟、错误率缺乏统一追踪；无法定位慢请求；多模型成本无对比</div>
+<div class="card"><strong style="color:#cba6f7">🔀 多模型</strong><br>不同 Provider API 格式各异（OpenAI/Anthropic/Gemini）；A/B 测试、金丝雀切换缺乏基础设施</div>
+</div>
+
+<blockquote>
+<strong>核心定位</strong>：LLM Gateway 是企业 AI 基础设施的"南北向流量管控层"——类比传统 API Gateway（Kong/Nginx），但针对 LLM 的 token 计量、语义相似度、长尾流式响应等特性做了深度定制。
+</blockquote>
+
+<p>与传统 API Gateway 的本质区别：</p>
+<table>
+<tr><th>维度</th><th>传统 API Gateway</th><th>LLM Gateway</th></tr>
+<tr><td>流量单位</td><td>Request/Response（字节）</td><td><strong>Token</strong>（计费粒度）</td></tr>
+<tr><td>缓存策略</td><td>精确路径匹配</td><td><strong>语义相似度</strong>（向量距离）</td></tr>
+<tr><td>限流维度</td><td>QPS / 带宽</td><td><strong>TPM / TPD</strong>（每分钟/日 token 数）</td></tr>
+<tr><td>响应模式</td><td>Request-Response</td><td>SSE 流式 / WebSocket 长连接</td></tr>
+<tr><td>路由依据</td><td>URL、Header、权重</td><td>模型能力、延迟、成本、<strong>上下文长度</strong></td></tr>
+<tr><td>安全重点</td><td>SQL 注入、XSS</td><td><strong>Prompt 注入、PII 泄漏、越狱</strong></td></tr>
+<tr><td>后端协议</td><td>HTTP/gRPC（标准化）</td><td>OpenAI 兼容 / Anthropic / Vertex（多套 API）</td></tr>
+</table>
+
+<!-- ========== 2 ========== -->
+<h2>2. 系统分层架构</h2>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph CLIENT["客户端层"]
+        W["Web App"]
+        M["Mobile"]
+        B["Backend Service"]
+        A["AI Agent"]
+    end
+
+    subgraph GW["Gateway 核心层"]
+        direction TB
+        AUTH["Auth 认证鉴权\nVirtual Key / JWT / RBAC"]
+        RL["RateLimiter\nToken Bucket / Sliding Window"]
+        CACHE["Semantic Cache\nEmbedding + Vector DB"]
+        ROUTER["智能路由器\nWRR / UCB / Latency-Aware"]
+        CB["Circuit Breaker\n三态状态机"]
+        GUARD["Prompt Guard\n注入检测 / PII 脱敏"]
+        OBS["Observability\nOTel Traces / Metrics / Logs"]
+    end
+
+    subgraph ADAPTER["Adapter 层"]
+        OAI["OpenAI Adapter\nchat completions"]
+        ANT["Anthropic Adapter\nmessages API"]
+        VTX["Vertex Adapter\ngenerateContent"]
+        BDR["Bedrock Adapter\nInvokeModel"]
+    end
+
+    subgraph PROVIDER["Provider 层"]
+        GPT["GPT-4o / o3"]
+        CLD["Claude 4 Opus"]
+        GEM["Gemini 2.5 Pro"]
+        OSS["Self-hosted\nLlama / Qwen"]
+    end
+
+    W & M & B & A --> AUTH
+    AUTH --> RL --> CACHE
+    CACHE -->|"Cache Miss"| GUARD --> ROUTER
+    ROUTER --> CB
+    CB --> OAI & ANT & VTX & BDR
+    OAI --> GPT
+    ANT --> CLD
+    VTX --> GEM
+    BDR --> OSS
+    GPT & CLD & GEM & OSS -.->|"流式响应"| OBS
+    OBS -.-> W & M & B & A
+
+    style CLIENT fill:#1a1a2e,stroke:#89b4fa
+    style GW fill:#1a1a2e,stroke:#a6e3a1
+    style ADAPTER fill:#1a1a2e,stroke:#fab387
+    style PROVIDER fill:#1a1a2e,stroke:#cba6f7
+</pre>
+
+<!-- ========== 3 ========== -->
+<h2>3. 核心请求处理管道</h2>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant C as Client
+    participant GW as Gateway
+    participant RD as Redis
+    participant VDB as Vector DB
+    participant PR as Provider
+
+    C->>GW: POST /v1/chat/completions
+    GW->>GW: 1. Auth - 验证 Virtual Key
+    GW->>RD: 2. RateLimit - ZADD / ZCOUNT 滑动窗口
+    RD-->>GW: tokens_remaining
+    alt 超出限额
+        GW-->>C: 429 Too Many Requests + Retry-After
+    end
+    GW->>GW: 3. PromptGuard - 注入检测 + PII 扫描
+    GW->>VDB: 4. 语义缓存 - ANN 搜索 query_embedding
+    VDB-->>GW: nearest_neighbor + similarity_score
+    alt sim >= threshold(0.95)
+        GW-->>C: 200 缓存命中 (X-Cache: HIT)
+    end
+    GW->>GW: 5. Router - UCB 选最优 Provider
+    GW->>GW: 6. CircuitBreaker - 检查状态 Closed?
+    GW->>PR: 7. Adapter 协议转换 + 转发请求
+    loop SSE 流式回传
+        PR-->>GW: data: {"delta":{"content":"..."}}
+        GW-->>C: 透传 chunk (零拷贝)
+        GW->>GW: 实时 token 计数累加
+    end
+    PR-->>GW: data: [DONE]
+    GW->>RD: 8. 写入 token 消耗 + 成本记录
+    GW->>VDB: 9. 异步写入响应向量到缓存
+    GW->>GW: 10. OTel Span 结束，上报 Metrics
+    GW-->>C: Stream 结束
+</pre>
+
+<!-- ========== 4 ========== -->
+<h2>4. 智能路由与负载均衡</h2>
+
+<h3>4.1 路由策略分类</h3>
+
+<table>
+<tr><th>策略</th><th>适用场景</th><th>时间复杂度</th><th>核心参数</th></tr>
+<tr><td>加权轮询 WRR</td><td>静态多 Provider 分流</td><td>O(1)</td><td>权重向量 $\mathbf{w}$</td></tr>
+<tr><td>最小活跃连接</td><td>长连接 / 流式场景</td><td>O(1)</td><td>活跃请求数</td></tr>
+<tr><td>延迟感知路由</td><td>对延迟敏感的实时应用</td><td>O(N)</td><td>EMA 衰减系数 $\alpha$</td></tr>
+<tr><td>Two-Choice 路由</td><td>大规模 Provider 集群</td><td>O(1)</td><td>随机候选数 d=2</td></tr>
+<tr><td>UCB 自适应</td><td>Provider 性能未知/动态变化</td><td>O(N)</td><td>探索系数 $c$</td></tr>
+<tr><td>成本优先路由</td><td>批量任务、非实时场景</td><td>O(N)</td><td>价格矩阵 $\mathbf{P}$</td></tr>
+</table>
+
+<h3>4.2 延迟感知路由：EMA + 综合评分</h3>
+
+<p>对每个 Provider $p$，用指数移动平均维护其延迟估计：</p>
+<p>$$\hat{L}_p(t) = \alpha \cdot L_p^{new} + (1 - \alpha) \cdot \hat{L}_p(t-1), \quad \alpha \in [0.1,\; 0.3]$$</p>
+
+<p>综合路由评分（越小越优先）：</p>
+<p>$$\text{score}(p) = w_1 \cdot \frac{\hat{L}_p}{L_{max}} + w_2 \cdot \frac{c_p}{c_{max}} + w_3 \cdot \hat{e}_p + w_4 \cdot \mathbf{1}[\text{CB}_p = \text{Open}] \cdot \infty$$</p>
+
+<p>其中 $c_p$ 为每 token 成本，$\hat{e}_p$ 为错误率 EMA，最后一项在熔断器打开时将该 Provider 排除。典型权重：$w_1=0.5,\; w_2=0.3,\; w_3=0.2$。</p>
+
+<h3>4.3 Two-Choice 路由的负载均衡数学分析</h3>
+
+<p>经典随机路由（每次随机选一个 Provider）的最大负载期望为：</p>
+<p>$$\mathbb{E}[\text{MaxLoad}_{random}] = O\!\left(\frac{\log N}{\log \log N}\right)$$</p>
+
+<p>Two-Choice（随机选 2 个，取负载更低者）将最大负载压缩到：</p>
+<p>$$\mathbb{E}[\text{MaxLoad}_{2\text{-choice}}] = O(\log \log N)$$</p>
+
+<p>这是 The Power of Two Choices 定理（Mitzenmacher 1996），以极小代价（多一次随机采样）获得指数级的负载均衡改善。</p>
+
+<h3>4.4 UCB 自适应路由（多臂赌博机）</h3>
+
+<p>将每个 Provider 视为一个赌博机臂，目标是最大化累积奖励（最小延迟/最高质量）。UCB1 算法：</p>
+<p>$$\text{UCB}(p, t) = \hat{\mu}_p + c \cdot \sqrt{\frac{\ln t}{n_p}}$$</p>
+
+<p>其中 $\hat{\mu}_p$ 为 Provider $p$ 的历史平均奖励（如 $1/\hat{L}_p$），$n_p$ 为已选择次数，$t$ 为总时间步，$c$ 为探索系数（通常取 $\sqrt{2}$）。每次选择 UCB 值最大的 Provider。</p>
+
+<p>UCB 的关键特性：<strong>累积遗憾 $O(\sqrt{T \ln T})$</strong>，随时间自动降低探索比例，在 exploitation 与 exploration 间自适应权衡。</p>
+
+<div class="algo-box">
+<div class="algo-title">Algorithm 1: 综合路由决策</div>
+<p><span class="kw">Input:</span> 请求 <span class="var">req</span>, Provider集合 <span class="var">P</span>, 全局时间步 <span class="var">t</span></p>
+<p><span class="kw">Output:</span> 选中的 <span class="var">provider</span></p>
+<br>
+<p><span class="cm">// Step 1: 过滤不可用 Provider</span></p>
+<p style="padding-left:1.5em"><span class="var">candidates</span> = [p <span class="kw">for</span> p <span class="kw">in</span> <span class="var">P</span> <span class="kw">if</span> <span class="fn">circuit_breaker</span>(p).state != OPEN]</p>
+<p style="padding-left:1.5em"><span class="kw">if</span> <span class="fn">len</span>(<span class="var">candidates</span>) == <span class="num">0</span>: <span class="kw">return</span> <span class="fn">fallback_response</span>()</p>
+<br>
+<p><span class="cm">// Step 2: 检查模型能力约束（上下文长度、多模态）</span></p>
+<p style="padding-left:1.5em"><span class="var">candidates</span> = [p <span class="kw">for</span> p <span class="kw">in</span> <span class="var">candidates</span> <span class="kw">if</span> p.ctx_len >= <span class="fn">count_tokens</span>(<span class="var">req</span>)]</p>
+<br>
+<p><span class="cm">// Step 3: UCB 评分</span></p>
+<p style="padding-left:1.5em"><span class="kw">for</span> p <span class="kw">in</span> candidates:</p>
+<p style="padding-left:3em"><span class="kw">if</span> p.n_calls == <span class="num">0</span>: <span class="cm">// 冷启动：优先探索未被选过的</span></p>
+<p style="padding-left:4.5em"><span class="kw">return</span> p</p>
+<p style="padding-left:3em">p.ucb = p.mean_reward + <span class="num">sqrt(2)</span> * <span class="fn">sqrt</span>(<span class="fn">ln</span>(<span class="var">t</span>) / p.n_calls)</p>
+<br>
+<p><span class="cm">// Step 4: 成本约束过滤（预算不足时只选低价 Provider）</span></p>
+<p style="padding-left:1.5em"><span class="kw">if</span> <span class="var">req</span>.budget_remaining &lt; <span class="var">req</span>.est_tokens * <span class="fn">max_cost</span>(<span class="var">candidates</span>):</p>
+<p style="padding-left:3em"><span class="var">candidates</span> = <span class="fn">filter_by_cost</span>(<span class="var">candidates</span>, <span class="var">req</span>.budget_remaining)</p>
+<br>
+<p><span class="cm">// Step 5: 返回 UCB 最高的 Provider</span></p>
+<p><span class="kw">return</span> <span class="fn">argmax</span>(p.ucb <span class="kw">for</span> p <span class="kw">in</span> candidates)</p>
+</div>
+
+<!-- ========== 5 ========== -->
+<h2>5. 语义缓存（Semantic Cache）</h2>
+
+<h3>5.1 工作原理</h3>
+
+<p>语义缓存的核心洞察：用户提问"Python 列表排序怎么写"和"Python list 如何 sort"语义相同，但传统精确匹配缓存无法命中。语义缓存通过向量相似度实现"模糊匹配"。</p>
+
+<pre class="mermaid">
+flowchart LR
+    Q["用户请求\nquery text"] --> EM["Embedding Model\ntext-embedding-3-small\n1536-dim vector"]
+    EM --> KEY["缓存键构造\n(model_id, sys_hash, query_vec)"]
+    KEY --> ANN["ANN 搜索\nHNSW / IVF-PQ\nTop-K 近邻"]
+    ANN -->|"sim >= τ"| HIT["Cache HIT\n返回缓存响应\n跳过 LLM 调用"]
+    ANN -->|"sim < τ"| MISS["Cache MISS\n路由至 LLM Provider"]
+    MISS --> LLM["LLM 生成响应"]
+    LLM --> STORE["异步写入缓存\n(query_vec, response, ttl)"]
+    STORE --> VDB["Vector DB\nQdrant / Redis VSS"]
+</pre>
+
+<h3>5.2 相似度计算与阈值设计</h3>
+
+<p>标准余弦相似度：</p>
+<p>$$\text{sim}(\mathbf{q}, \mathbf{c}) = \frac{\mathbf{q} \cdot \mathbf{c}}{\|\mathbf{q}\| \cdot \|\mathbf{c}\|} = \frac{\sum_{i=1}^{d} q_i c_i}{\sqrt{\sum_i q_i^2} \cdot \sqrt{\sum_i c_i^2}}$$</p>
+
+<p>归一化向量（embedding 通常已 L2 归一化）后简化为内积：$\text{sim}(\mathbf{q}, \mathbf{c}) = \mathbf{q} \cdot \mathbf{c}$</p>
+
+<p>缓存命中率定义：</p>
+<p>$$\text{HitRate}(\tau) = \frac{|\{q \in Q : \exists\, c \in \mathcal{C},\; \text{sim}(q, c) \geq \tau\}|}{|Q|}$$</p>
+
+<p>阈值 $\tau$ 的 tradeoff（典型值）：</p>
+<table>
+<tr><th>$\tau$ 值</th><th>命中率</th><th>语义相似度</th><th>推荐场景</th></tr>
+<tr><td>0.98</td><td>低（~5%）</td><td>极高（几乎完全相同）</td><td>精确查找类问题（SQL、代码片段）</td></tr>
+<tr><td>0.95</td><td>中（~20%）</td><td>高（同义表达）</td><td><strong>通用推荐默认值</strong></td></tr>
+<tr><td>0.90</td><td>高（~40%）</td><td>中（主题相关）</td><td>FAQ / 知识库问答</td></tr>
+<tr><td>0.85</td><td>很高（~60%）</td><td>低（同领域）</td><td>摘要生成（接受近似）</td></tr>
+</table>
+
+<h3>5.3 HNSW 索引：分层图结构</h3>
+
+<p>HNSW（Hierarchical Navigable Small World）是目前最主流的 ANN 算法，查询复杂度 $O(\log N)$。</p>
+
+<p><strong>核心参数</strong>：</p>
+<ul>
+<li><code>M</code>（每层最大边数）：控制图密度，越大准确率越高，内存消耗线性增加。推荐 $M \in [16, 64]$</li>
+<li><code>ef_construction</code>：建索引时的候选集大小，越大索引质量越好，建索引越慢。推荐 128~512</li>
+<li><code>ef_search</code>：查询时候选集大小，越大召回率越高，延迟越大。推荐 64~256</li>
+</ul>
+
+<p>分层结构：向量随机分配到层 $l \sim \lfloor -\ln(\text{Uniform}(0,1)) \cdot m_L \rfloor$，$m_L = 1/\ln(M)$。高层稀疏（远程跳转），低层密集（精细搜索），实现"高速公路 + 小路"的导航效率。</p>
+
+<h3>5.4 缓存键设计（精确 + 语义结合）</h3>
+
+<p>完整缓存键需要同时考虑语义内容和上下文参数：</p>
+<pre><code class="language-python">def build_cache_key(request: ChatRequest) -> CacheKey:
+    # 精确匹配维度（不同则必须区分）
+    exact_dims = {
+        "model": request.model,
+        "system_prompt_hash": sha256(request.system_prompt),
+        "temperature": round(request.temperature, 2),
+        "max_tokens": request.max_tokens,
+    }
+    # 语义匹配维度（query embedding）
+    query_text = extract_last_user_message(request.messages)
+    query_vec = embed(query_text)  # [1536-dim float32]
+
+    return CacheKey(exact=exact_dims, semantic=query_vec)
+
+def lookup(key: CacheKey, vdb: VectorDB, threshold=0.95):
+    # 先精确过滤（model + system_prompt_hash 必须相同）
+    filter_expr = build_exact_filter(key.exact)
+    # 再语义搜索
+    results = vdb.search(
+        vector=key.semantic,
+        filter=filter_expr,
+        top_k=5,
+        ef=128
+    )
+    if results and results[0].score >= threshold:
+        return results[0].payload["response"]
+    return None  # Cache MISS
+</code></pre>
+
+<h3>5.5 缓存失效策略</h3>
+<ul>
+<li><strong>TTL</strong>：基于时间的硬过期，默认 1~24 小时（知识时效性敏感场景缩短）</li>
+<li><strong>LRU 淘汰</strong>：向量 DB 容量满时驱逐最久未使用条目</li>
+<li><strong>版本失效</strong>：模型版本升级后，旧缓存条目自动失效（通过 model_version 字段过滤）</li>
+<li><strong>语义漂移检测</strong>：定期对缓存命中结果做质量抽样，若人工/自动评估分下降则降低 $\tau$ 或清空缓存</li>
+</ul>
+
+<div id="chart-cache" class="echarts-container" style="height:300px"></div>
+
+<!-- ========== 6 ========== -->
+<h2>6. 限流与配额管理</h2>
+
+<h3>6.1 Token Bucket（令牌桶）</h3>
+
+<p>令牌桶是 LLM 场景最适合的限流算法，因为它可以天然支持以 <strong>token</strong> 为粒度的限流（而非 QPS）。</p>
+
+<p>桶状态更新公式：</p>
+<p>$$B(t) = \min\!\left(B_{max},\;\; B(t_{prev}) + r \cdot (t - t_{prev})\right)$$</p>
+
+<p>其中 $B_{max}$ 为桶容量（burst 上限），$r$ 为令牌填充速率（tokens/秒）。每次请求消耗：</p>
+<p>$$\Delta B = N_{input} + N_{output}^{est}$$</p>
+
+<p>由于 output token 数在请求前未知，可用历史平均值估算，或采用<strong>事后扣减</strong>（先放行，收到响应后扣除实际 output token）。</p>
+
+<h3>6.2 滑动窗口计数器（Redis 原子实现）</h3>
+
+<p>使用 Redis Sorted Set 实现精确滑动窗口，时间戳作为 score，token 数作为 member value。</p>
+
+<pre><code class="language-lua">-- Lua 脚本：原子操作保证无竞争
+-- KEYS[1]: rate_limit:{tenant_id}:{model}
+-- ARGV[1]: current_timestamp_ms
+-- ARGV[2]: window_size_ms (e.g., 60000 for 1 min)
+-- ARGV[3]: token_cost (input + estimated output)
+-- ARGV[4]: max_tokens_per_window
+
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+local cost = tonumber(ARGV[3])
+local limit = tonumber(ARGV[4])
+local window_start = now - window
+
+-- 清理过期条目
+redis.call('ZREMRANGEBYSCORE', key, 0, window_start)
+
+-- 统计当前窗口内 token 消耗
+-- 用 ZRANGEBYSCORE 获取所有成员的 score 之和
+local entries = redis.call('ZRANGEBYSCORE', key, window_start, now, 'WITHSCORES')
+local total_tokens = 0
+for i = 2, #entries, 2 do
+    total_tokens = total_tokens + tonumber(entries[i])
+end
+
+-- 检查是否超限
+if total_tokens + cost > limit then
+    -- 返回剩余等待时间（最老条目过期时间）
+    local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+    local retry_after = 0
+    if #oldest > 0 then
+        retry_after = math.ceil((tonumber(oldest[2]) + window - now) / 1000)
+    end
+    return {0, retry_after}  -- 被限流
+end
+
+-- 记录本次消耗（用唯一 member + score=token_cost）
+local member = now .. ':' .. math.random(1000000)
+redis.call('ZADD', key, cost, member)
+redis.call('PEXPIRE', key, window)
+return {1, limit - total_tokens - cost}  -- 放行 + 剩余配额
+</code></pre>
+
+<h3>6.3 分层限流架构</h3>
+
+<pre class="mermaid">
+flowchart TD
+    REQ["请求到达"] --> G["全局限流\nTotal: 10M TPM\n防止 Provider 账单爆炸"]
+    G -->|"通过"| T["租户限流\nTenant: 500K TPM\n按合同限额隔离"]
+    T -->|"通过"| U["用户限流\nUser: 10K TPD\n防止单用户独占"]
+    U -->|"通过"| MD["模型限流\ngpt-4o: 100K TPM\n多模型资源隔离"]
+    MD -->|"通过"| PASS["放行至路由层"]
+    G & T & U & MD -->|"超限"| RL["429 Rate Limited\nRetry-After Header\nX-RateLimit-Remaining"]
+
+    style G fill:#3a1e1e,stroke:#f38ba8
+    style T fill:#2a1e3a,stroke:#cba6f7
+    style U fill:#1e2a3a,stroke:#89b4fa
+    style MD fill:#1e3a2a,stroke:#a6e3a1
+</pre>
+
+<table>
+<tr><th>限流层级</th><th>维度</th><th>典型阈值</th><th>存储</th><th>作用</th></tr>
+<tr><td>全局</td><td>系统总 Token</td><td>10M TPM</td><td>Redis 单 key</td><td>保护 Provider 账单上限</td></tr>
+<tr><td>租户</td><td>Tenant TPM/TPD</td><td>500K TPM</td><td>Redis per-tenant key</td><td>SLA 隔离，防噪声邻居</td></tr>
+<tr><td>用户</td><td>User TPD</td><td>10K TPD</td><td>Redis per-user key</td><td>防止单用户滥用</td></tr>
+<tr><td>模型</td><td>Model RPM</td><td>100 RPM</td><td>Redis per-model key</td><td>对齐 Provider 原生限制</td></tr>
+<tr><td>API Key</td><td>Key TPM</td><td>按 key 配置</td><td>Redis per-key key</td><td>精细化权限控制</td></tr>
+</table>
+
+<h3>6.4 自适应限流：基于 Provider 响应动态调节</h3>
+
+<p>当 Provider 返回 429 时，Gateway 应动态降低向该 Provider 的发送速率：</p>
+<p>$$r_{new} = r_{old} \cdot (1 - \beta \cdot \mathbf{1}[\text{provider\_429}]) \cdot (1 + \gamma \cdot \mathbf{1}[\text{success\_streak}])$$</p>
+
+<p>AIMD（Additive Increase Multiplicative Decrease）策略：收到 429 时乘性减小（$\times 0.5$），成功时线性恢复（$+5\%$），与 TCP 拥塞控制同构。</p>
+
+<div id="chart-ratelimit" class="echarts-container" style="height:300px"></div>
+
+<!-- ========== 7 ========== -->
+<h2>7. 认证与虚拟密钥体系</h2>
+
+<h3>7.1 Virtual Key 架构</h3>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph EXTERNAL["外部（业务方不可见）"]
+        PK1["OpenAI sk-xxx\n真实 Provider Key"]
+        PK2["Anthropic sk-ant-xxx\n真实 Provider Key"]
+    end
+    subgraph GATEWAY["Gateway 内部"]
+        MAP["Key 映射表\nvk → provider_key\n(加密存储)"]
+        RBAC["RBAC 策略\nRole → Permission → Resource"]
+        HASH["密钥哈希存储\nPBKDF2-HMAC-SHA256"]
+    end
+    subgraph CLIENT["业务方"]
+        VK1["Virtual Key A\nvk-team-a-xxxx"]
+        VK2["Virtual Key B\nvk-team-b-yyyy"]
+    end
+
+    VK1 & VK2 -->|"请求 Header\nAuthorization: Bearer vk-xxx"| HASH
+    HASH -->|"验证通过"| RBAC
+    RBAC -->|"查权限"| MAP
+    MAP --> PK1 & PK2
+</pre>
+
+<h3>7.2 密钥安全存储</h3>
+
+<p>Virtual Key 哈希存储（永不存储明文）：</p>
+<pre><code class="language-python">import hashlib, os, secrets
+
+def create_virtual_key(tenant_id: str, permissions: dict) -> tuple[str, str]:
+    """返回 (明文key, 存储记录)，明文仅返回一次"""
+    key_raw = "vk-" + secrets.token_urlsafe(32)  # 展示给用户
+    salt = os.urandom(32)
+    key_hash = hashlib.pbkdf2_hmac(
+        'sha256',
+        key_raw.encode(),
+        salt,
+        iterations=100_000  # NIST 推荐最低值
+    )
+    record = {
+        "key_hash": key_hash.hex(),
+        "salt": salt.hex(),
+        "tenant_id": tenant_id,
+        "permissions": permissions,  # {"models": ["gpt-4o"], "max_tpd": 100000}
+        "created_at": now_utc(),
+        "last_used": None,
+    }
+    return key_raw, record  # 明文只返回这一次，不持久化
+
+def verify_key(key_raw: str, record: dict) -> bool:
+    salt = bytes.fromhex(record["salt"])
+    expected = bytes.fromhex(record["key_hash"])
+    computed = hashlib.pbkdf2_hmac('sha256', key_raw.encode(), salt, 100_000)
+    return hmac.compare_digest(computed, expected)  # 恒定时间比较，防时序攻击
+</code></pre>
+
+<h3>7.3 RBAC 权限模型</h3>
+
+<pre><code class="language-json">{
+  "roles": {
+    "admin": {
+      "permissions": ["*"],
+      "resources": ["*"]
+    },
+    "developer": {
+      "permissions": ["chat:create", "embeddings:create", "usage:read"],
+      "resources": {
+        "models": ["gpt-4o-mini", "claude-haiku"],
+        "max_tokens_per_request": 4096,
+        "max_tpd": 50000
+      }
+    },
+    "readonly": {
+      "permissions": ["usage:read", "models:list"],
+      "resources": ["*"]
+    }
+  },
+  "key_policy": {
+    "vk-team-a-xxxx": {
+      "role": "developer",
+      "tenant": "team-a",
+      "expiry": "2025-12-31T00:00:00Z",
+      "ip_allowlist": ["10.0.0.0/8"]
+    }
+  }
+}
+</code></pre>
+
+<h3>7.4 零停机密钥轮换</h3>
+
+<p>生产环境密钥轮换需双密钥过渡，避免业务中断：</p>
+<ol>
+<li>生成新 Key（<code>vk-new-xxx</code>），与旧 Key 同时有效（<strong>双密钥窗口期</strong>，建议 72h）</li>
+<li>业务方在窗口期内替换为新 Key</li>
+<li>窗口期结束，Gateway 自动吊销旧 Key</li>
+<li>审计日志记录完整轮换轨迹</li>
+</ol>
+
+<!-- ========== 8 ========== -->
+<h2>8. 流式响应代理（SSE 深度）</h2>
+
+<h3>8.1 SSE 协议详解</h3>
+
+<p>Server-Sent Events（SSE）是 LLM 流式输出的主流协议，基于 HTTP/1.1 chunked transfer：</p>
+
+<pre><code class="language-http">HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Cache-Control: no-cache
+Connection: keep-alive
+X-Accel-Buffering: no
+
+id: 1
+event: message
+data: {"id":"chatcmpl-xxx","object":"chat.completion.chunk","choices":[{"delta":{"content":"Hello"},"index":0}]}
+
+id: 2
+data: {"choices":[{"delta":{"content":", world"},"index":0}]}
+
+data: [DONE]
+</code></pre>
+
+<p>关键字段：</p>
+<ul>
+<li><code>id:</code>——事件 ID，客户端断线重连时通过 <code>Last-Event-ID</code> Header 续传</li>
+<li><code>retry:</code>——建议重连间隔（毫秒），Gateway 可注入此字段控制客户端重连频率</li>
+<li><code>event:</code>——事件类型，OpenAI 标准只用 <code>message</code>（默认），可扩展 <code>error</code>、<code>ping</code></li>
+<li><code>data: [DONE]</code>——终止标记，Gateway 收到后关闭上游连接并发送给客户端</li>
+</ul>
+
+<h3>8.2 背压（Backpressure）控制</h3>
+
+<p>当客户端消费速度慢于 Provider 输出速度时，Gateway 需要缓冲机制防止 OOM：</p>
+
+<div class="algo-box">
+<div class="algo-title">Algorithm 2: 流式代理背压控制</div>
+<p><span class="kw">Input:</span> <span class="var">upstream</span>（Provider SSE 连接）, <span class="var">downstream</span>（Client 连接）</p>
+<p><span class="kw">Config:</span> <span class="var">buf_limit</span> = <span class="num">256</span> chunks, <span class="var">heartbeat_interval</span> = <span class="num">15s</span></p>
+<br>
+<p><span class="var">buffer</span> = <span class="fn">AsyncQueue</span>(maxsize=<span class="var">buf_limit</span>)</p>
+<p><span class="var">token_count</span> = <span class="num">0</span></p>
+<br>
+<p><span class="cm">// 生产者协程：读取 Provider 数据</span></p>
+<p><span class="kw">async def</span> <span class="fn">producer</span>():</p>
+<p style="padding-left:1.5em"><span class="kw">async for</span> chunk <span class="kw">in</span> <span class="var">upstream</span>.<span class="fn">iter_bytes</span>():</p>
+<p style="padding-left:3em"><span class="kw">await</span> <span class="var">buffer</span>.<span class="fn">put</span>(chunk)  <span class="cm">// 满时自动阻塞（背压传导）</span></p>
+<p style="padding-left:3em"><span class="var">token_count</span> += <span class="fn">estimate_tokens</span>(chunk)</p>
+<p style="padding-left:1.5em"><span class="kw">await</span> <span class="var">buffer</span>.<span class="fn">put</span>(<span class="kw">None</span>)  <span class="cm">// 发送 EOF 信号</span></p>
+<br>
+<p><span class="cm">// 消费者协程：转发给 Client</span></p>
+<p><span class="kw">async def</span> <span class="fn">consumer</span>():</p>
+<p style="padding-left:1.5em"><span class="var">last_ping</span> = <span class="fn">now</span>()</p>
+<p style="padding-left:1.5em"><span class="kw">while</span> <span class="kw">True</span>:</p>
+<p style="padding-left:3em"><span class="kw">try</span>:</p>
+<p style="padding-left:4.5em">chunk = <span class="kw">await</span> <span class="fn">asyncio.wait_for</span>(<span class="var">buffer</span>.<span class="fn">get</span>(), timeout=<span class="num">5.0</span>)</p>
+<p style="padding-left:3em"><span class="kw">except</span> TimeoutError:</p>
+<p style="padding-left:4.5em"><span class="cm">// 发送心跳防止客户端超时断开</span></p>
+<p style="padding-left:4.5em"><span class="kw">await</span> <span class="var">downstream</span>.<span class="fn">write</span>(b"data: {}\n\n")</p>
+<p style="padding-left:4.5em"><span class="kw">continue</span></p>
+<p style="padding-left:3em"><span class="kw">if</span> chunk <span class="kw">is None</span>: <span class="kw">break</span></p>
+<p style="padding-left:3em"><span class="kw">await</span> <span class="var">downstream</span>.<span class="fn">write</span>(chunk)  <span class="cm">// 零拷贝转发</span></p>
+<br>
+<p><span class="kw">await</span> <span class="fn">asyncio.gather</span>(<span class="fn">producer</span>(), <span class="fn">consumer</span>())</p>
+<p><span class="kw">return</span> <span class="var">token_count</span>  <span class="cm">// 用于事后计费</span></p>
+</div>
+
+<h3>8.3 流式 Token 实时计数</h3>
+
+<p>流式场景下需要实时估算 token 消耗（用于限流和计费）。由于 BPE 分词是批量操作，chunk 级别的 token 计数采用启发式估算：</p>
+<p>$$\hat{N}_{tokens}(chunk) = \left\lceil \frac{\text{len}(chunk_{text})}{4} \right\rceil$$</p>
+<p>平均 1 个 token ≈ 4 个英文字符（3.5~4.5 的经验区间）。流结束后用 tiktoken 精确计数并调整账单差额。</p>
+
+<!-- ========== 9 ========== -->
+<h2>9. 熔断器（Circuit Breaker）</h2>
+
+<h3>9.1 三态状态机</h3>
+
+<pre class="mermaid">
+stateDiagram-v2
+    [*] --> Closed: 初始状态
+    Closed --> Open: 失败率 >= θ (如 50%)\n或连续失败 >= N 次
+    Open --> HalfOpen: 等待 T_recovery 秒\n(指数退避后)
+    HalfOpen --> Closed: 试探请求成功
+    HalfOpen --> Open: 试探请求失败
+    Closed --> Closed: 正常请求
+    Open --> Open: 拒绝请求(快速失败)\n返回 503 / 降级响应
+</pre>
+
+<h3>9.2 失败率计算（滑动时间窗口）</h3>
+
+<p>在最近 $W$ 秒的时间窗口内统计失败率：</p>
+<p>$$r_f(t) = \frac{\sum_{i \in [t-W, t]} \mathbf{1}[\text{req}_i = \text{fail}]}{\sum_{i \in [t-W, t]} 1} \geq \theta$$</p>
+
+<p>触发 Open 状态的复合条件（任意满足其一）：</p>
+<ul>
+<li>窗口内失败率 $r_f \geq \theta_{rate}$（通常 50%）</li>
+<li>窗口内绝对失败次数 $\geq N_{min}$（防止低流量时误触，通常 10 次）</li>
+<li>P99 延迟超过 $L_{max}$（慢请求熔断，如 30s）</li>
+</ul>
+
+<h3>9.3 指数退避重试</h3>
+
+<p>Open 状态的恢复等待时间（含 jitter 防惊群效应）：</p>
+<p>$$t_{wait}(k) = \min\!\left(t_{max},\;\; t_{base} \cdot 2^k\right) + U(0,\; \sigma^2)$$</p>
+
+<p>其中 $k$ 为重试次数，$t_{base}=1s$，$t_{max}=60s$，$U(0, \sigma^2)$ 为均匀随机抖动（$\sigma = t_{wait}/4$）。</p>
+
+<h3>9.4 多级 Fallback 链</h3>
+
+<pre class="mermaid">
+flowchart LR
+    REQ["请求"] --> P1{"Provider A\ngpt-4o"}
+    P1 -->|"CB Open"| P2{"Provider B\nclaude-3-5-sonnet"}
+    P2 -->|"CB Open"| P3{"Provider C\ngemini-1.5-pro"}
+    P3 -->|"CB Open"| P4{"自托管模型\nLlama-3-70B"}
+    P4 -->|"全部不可用"| DG["降级响应\n503 + Retry-After\n或缓存旧响应"]
+    P1 & P2 & P3 & P4 -->|"成功"| RESP["正常响应"]
+
+    style DG fill:#3a1e1e,stroke:#f38ba8
+</pre>
+
+<div class="algo-box">
+<div class="algo-title">Algorithm 3: 熔断器核心状态转换</div>
+<p><span class="kw">class</span> <span class="var">CircuitBreaker</span>:</p>
+<p style="padding-left:1.5em">state: <span class="num">CLOSED</span> | <span class="num">OPEN</span> | <span class="num">HALF_OPEN</span></p>
+<p style="padding-left:1.5em">failure_window: <span class="fn">SlidingWindow</span>(size=<span class="num">60s</span>)</p>
+<p style="padding-left:1.5em">open_since: <span class="var">timestamp</span></p>
+<p style="padding-left:1.5em">retry_attempt: <span class="num">0</span></p>
+<br>
+<p style="padding-left:1.5em"><span class="kw">def</span> <span class="fn">call</span>(provider_fn):</p>
+<p style="padding-left:3em"><span class="kw">if</span> state == <span class="num">OPEN</span>:</p>
+<p style="padding-left:4.5em">elapsed = <span class="fn">now</span>() - open_since</p>
+<p style="padding-left:4.5em">wait = <span class="fn">min</span>(<span class="num">60</span>, <span class="num">1</span> * 2**retry_attempt) + <span class="fn">rand</span>()</p>
+<p style="padding-left:4.5em"><span class="kw">if</span> elapsed &lt; wait: <span class="kw">raise</span> CircuitOpenError</p>
+<p style="padding-left:4.5em">state = <span class="num">HALF_OPEN</span></p>
+<br>
+<p style="padding-left:3em"><span class="kw">try</span>:</p>
+<p style="padding-left:4.5em">result = <span class="fn">provider_fn</span>()</p>
+<p style="padding-left:4.5em"><span class="fn">on_success</span>()  <span class="cm">// HALF_OPEN → CLOSED</span></p>
+<p style="padding-left:4.5em"><span class="kw">return</span> result</p>
+<p style="padding-left:3em"><span class="kw">except</span> Exception <span class="kw">as</span> e:</p>
+<p style="padding-left:4.5em"><span class="fn">on_failure</span>(e)</p>
+<p style="padding-left:4.5em"><span class="kw">raise</span></p>
+<br>
+<p style="padding-left:1.5em"><span class="kw">def</span> <span class="fn">on_failure</span>(e):</p>
+<p style="padding-left:3em">failure_window.<span class="fn">record</span>(<span class="num">1</span>)</p>
+<p style="padding-left:3em"><span class="kw">if</span> state == <span class="num">HALF_OPEN</span>:</p>
+<p style="padding-left:4.5em">state = <span class="num">OPEN</span>; open_since = <span class="fn">now</span>(); retry_attempt += <span class="num">1</span></p>
+<p style="padding-left:3em"><span class="kw">elif</span> failure_window.<span class="fn">rate</span>() >= <span class="num">0.5</span> <span class="kw">and</span> failure_window.<span class="fn">count</span>() >= <span class="num">10</span>:</p>
+<p style="padding-left:4.5em">state = <span class="num">OPEN</span>; open_since = <span class="fn">now</span>(); retry_attempt = <span class="num">0</span></p>
+<br>
+<p style="padding-left:1.5em"><span class="kw">def</span> <span class="fn">on_success</span>():</p>
+<p style="padding-left:3em">failure_window.<span class="fn">reset</span>()</p>
+<p style="padding-left:3em"><span class="kw">if</span> state == <span class="num">HALF_OPEN</span>: state = <span class="num">CLOSED</span>; retry_attempt = <span class="num">0</span></p>
+</div>
+
+<!-- ========== 10 ========== -->
+<h2>10. 可观测性（OpenTelemetry）</h2>
+
+<h3>10.1 三支柱架构</h3>
+
+<pre class="mermaid">
+flowchart LR
+    GW["Gateway"] -->|"Traces"| OTEL["OTel Collector"]
+    GW -->|"Metrics"| OTEL
+    GW -->|"Logs"| OTEL
+    OTEL --> TEMPO["Grafana Tempo\n分布式追踪"]
+    OTEL --> PROM["Prometheus\n指标存储"]
+    OTEL --> LOKI["Grafana Loki\n日志聚合"]
+    TEMPO & PROM & LOKI --> GRF["Grafana Dashboard\n统一可视化"]
+    GRF --> ALERT["AlertManager\n告警通知"]
+</pre>
+
+<h3>10.2 Span 树设计</h3>
+
+<pre><code class="language-yaml">Span: gateway.request  # 根 Span，覆盖整个请求生命周期
+  attributes:
+    llm.request.model: "gpt-4o"
+    llm.request.type: "chat"
+    http.method: "POST"
+    tenant.id: "team-a"
+    user.id: "user-123"
+  children:
+    - Span: gateway.auth          # 认证耗时（通常 < 1ms）
+    - Span: gateway.ratelimit     # 限流检查（Redis RTT）
+    - Span: gateway.cache.lookup  # 语义缓存查询
+        attributes:
+          cache.result: "miss"    # hit / miss
+          cache.similarity: 0.87  # 最高相似度
+    - Span: gateway.router        # 路由决策
+        attributes:
+          router.strategy: "ucb"
+          router.selected: "openai"
+    - Span: gateway.provider.openai  # Provider 调用（最大耗时）
+        attributes:
+          llm.usage.prompt_tokens: 256
+          llm.usage.completion_tokens: 512
+          llm.usage.total_tokens: 768
+          llm.cost.usd: 0.00461
+          http.status_code: 200
+    - Span: gateway.cache.write   # 异步写缓存（不阻塞响应）
+</code></pre>
+
+<h3>10.3 关键 Metrics 定义</h3>
+
+<table>
+<tr><th>Metric 名</th><th>类型</th><th>Attributes</th><th>用途</th></tr>
+<tr><td><code>llm.request.duration</code></td><td>Histogram</td><td>model, provider, status, tenant</td><td>P50/P95/P99 延迟分布</td></tr>
+<tr><td><code>llm.tokens.input</code></td><td>Counter</td><td>model, tenant, user</td><td>输入 token 消耗统计</td></tr>
+<tr><td><code>llm.tokens.output</code></td><td>Counter</td><td>model, tenant, user</td><td>输出 token 消耗统计</td></tr>
+<tr><td><code>llm.cost.usd</code></td><td>Counter</td><td>model, provider, tenant</td><td>实时成本追踪，成本分摊</td></tr>
+<tr><td><code>llm.cache.hit_rate</code></td><td>Gauge</td><td>model, tenant</td><td>语义缓存命中率监控</td></tr>
+<tr><td><code>llm.ratelimit.rejected</code></td><td>Counter</td><td>tenant, limit_type</td><td>限流触发频率</td></tr>
+<tr><td><code>llm.circuit_breaker.state</code></td><td>Gauge</td><td>provider</td><td>0=Closed, 1=Open, 2=HalfOpen</td></tr>
+<tr><td><code>llm.provider.error_rate</code></td><td>Gauge</td><td>provider, error_type</td><td>Provider 故障检测</td></tr>
+<tr><td><code>llm.routing.provider_selected</code></td><td>Counter</td><td>provider, strategy</td><td>路由分布分析</td></tr>
+</table>
+
+<h3>10.4 尾部采样策略（Tail-Based Sampling）</h3>
+
+<p>对于高 QPS 场景，100% trace 采样成本过高，尾部采样在请求完成后按规则决定是否保留：</p>
+<ul>
+<li><strong>高延迟请求</strong>（P95 以上）：100% 保留</li>
+<li><strong>错误请求</strong>（5xx）：100% 保留</li>
+<li><strong>高成本请求</strong>（&gt; $0.1）：100% 保留</li>
+<li><strong>正常请求</strong>：1~5% 随机采样</li>
+</ul>
+
+<h3>10.5 成本分摊公式</h3>
+
+<p>单次请求成本（美元）：</p>
+<p>$$\text{cost}_{req} = \frac{N_{input} \cdot P_{input} + N_{output} \cdot P_{output}}{10^6}$$</p>
+
+<p>其中 $P_{input}$、$P_{output}$ 为每百万 token 价格（如 GPT-4o：$2.50 / \$10.00$）。</p>
+
+<p>月度团队账单：</p>
+<p>$$\text{bill}_{team}(T) = \sum_{req \in T} \text{cost}_{req} \cdot (1 + \text{markup\_rate})$$</p>
+
+<!-- ========== 11 ========== -->
+<h2>11. Prompt 安全防护</h2>
+
+<h3>11.1 防护层次</h3>
+
+<pre class="mermaid">
+flowchart TD
+    IN["用户输入"] --> PRE["Pre-Request 层\n输入检测"]
+    PRE -->|"注入/越狱/违规"| BLK["拦截 403\n记录审计日志"]
+    PRE -->|"PII 检测"| MASK["脱敏 Mask/Tokenize\n继续处理"]
+    PRE -->|"通过"| LLM["LLM 调用"]
+    LLM -->|"流式输出"| MID["In-Flight 层\n流式内容检测"]
+    MID -->|"毒性/违规内容"| STOP["中断流\n返回错误片段"]
+    MID --> POST["Post-Response 层\n输出过滤"]
+    POST -->|"JSON Schema 验证"| VAL["结构化输出校验"]
+    POST -->|"禁词过滤"| OUT["最终响应"]
+</pre>
+
+<h3>11.2 Prompt Injection 检测</h3>
+
+<p><strong>规则层</strong>（低延迟，&lt; 1ms）——正则匹配高风险 pattern：</p>
+<pre><code class="language-python">INJECTION_PATTERNS = [
+    # 角色扮演绕过
+    r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions?",
+    r"pretend\s+(you\s+are|to\s+be)\s+(?:DAN|evil|jailbreak)",
+    r"you\s+are\s+now\s+(?:freed?|unrestricted|without\s+limits?)",
+    # 系统提示词覆盖
+    r"new\s+(?:system\s+)?prompt[:\s]",
+    r"override\s+(?:system|safety|guidelines)",
+    # 编码绕过（Base64/Hex/ROT13）
+    r"(?:base64|hex|rot13|unicode\s+escape)\s+decode",
+    # 多语言注入（检测后强制翻译）
+    r"[؀-ۿ]{20,}",  # 阿拉伯语大段文本
+]
+
+def detect_injection(text: str) -> tuple[bool, str]:
+    for pattern in INJECTION_PATTERNS:
+        if re.search(pattern, text, re.IGNORECASE):
+            return True, f"Injection pattern: {pattern[:50]}"
+    return False, ""
+</code></pre>
+
+<p><strong>分类器层</strong>（中等延迟，10~50ms）——轻量 BERT 分类器（如 deberta-v3-small）输出注入概率分数，阈值 0.85。</p>
+
+<h3>11.3 PII 检测与脱敏</h3>
+
+<table>
+<tr><th>PII 类型</th><th>检测方法</th><th>脱敏策略</th><th>示例</th></tr>
+<tr><td>手机号</td><td>正则</td><td>Mask 中间4位</td><td>138****8888</td></tr>
+<tr><td>邮箱</td><td>正则</td><td>Mask 用户名</td><td>u***@example.com</td></tr>
+<tr><td>身份证</td><td>正则 + Luhn 校验</td><td>保留前4后4</td><td>3101****2345</td></tr>
+<tr><td>人名</td><td>NER 模型</td><td>替换为 [PERSON]</td><td>[PERSON] 说...</td></tr>
+<tr><td>地址</td><td>NER 模型</td><td>替换为 [LOCATION]</td><td>住在 [LOCATION]</td></tr>
+<tr><td>信用卡</td><td>正则 + Luhn</td><td>只保留后4位</td><td>**** **** **** 1234</td></tr>
+</table>
+
+<h3>11.4 越狱对抗鲁棒性</h3>
+
+<p>常见越狱手法及防御：</p>
+<ul>
+<li><strong>DAN 模式</strong>："Do Anything Now"——检测"DAN"关键词 + 角色扮演语义分类器</li>
+<li><strong>多语言绕过</strong>：将注入内容翻译为小语种——强制对非主流语言内容做翻译检测</li>
+<li><strong>Base64 编码</strong>：将有害指令 Base64 编码——检测并解码后重新扫描</li>
+<li><strong>Token 级别混淆</strong>："ign ore pre vious"——归一化空格/标点后重新匹配</li>
+<li><strong>Few-shot 诱导</strong>：在 user 消息里给出"正确示例"引导模型——检测 assistant 角色预填充</li>
+</ul>
+
+<!-- ========== 12 ========== -->
+<h2>12. 成本控制与计费</h2>
+
+<h3>12.1 tiktoken BPE 计数原理</h3>
+
+<p>OpenAI 使用字节对编码（BPE）进行分词，不同模型词表不同：</p>
+<pre><code class="language-python">import tiktoken
+
+def count_tokens(messages: list[dict], model: str) -> int:
+    """精确计算 chat completion 的 token 数（含格式开销）"""
+    try:
+        enc = tiktoken.encoding_for_model(model)
+    except KeyError:
+        enc = tiktoken.get_encoding("cl100k_base")  # 默认
+
+    # OpenAI chat format 的格式开销
+    tokens_per_message = 3  # <|start|>{role}\n{content}<|end|>
+    tokens_per_name = 1     # 如果有 name 字段
+
+    n_tokens = 3  # 每次 completion 的基础开销 <|start|>assistant<|message|>
+    for msg in messages:
+        n_tokens += tokens_per_message
+        for key, value in msg.items():
+            n_tokens += len(enc.encode(str(value)))
+            if key == "name":
+                n_tokens += tokens_per_name
+    return n_tokens
+</code></pre>
+
+<p>注意：Anthropic Claude 使用自己的 tokenizer，Gemini 使用 SentencePiece，<strong>同一段文本在不同模型下 token 数可能差异 10~30%</strong>，成本计算必须使用各自 tokenizer。</p>
+
+<h3>12.2 预算强制执行</h3>
+
+<table>
+<tr><th>限额类型</th><th>触发条件</th><th>响应行为</th><th>告警</th></tr>
+<tr><td>软限额（Soft Limit）</td><td>已用额度 &gt;= 80% 预算</td><td>继续放行，发送警告邮件</td><td>立即</td></tr>
+<tr><td>硬限额（Hard Limit）</td><td>已用额度 &gt;= 100% 预算</td><td>429 拒绝，响应含 budget_reset_time</td><td>立即</td></tr>
+<tr><td>突发保护</td><td>单请求 &gt; 预算 10%</td><td>要求用户确认（交互场景）</td><td>可选</td></tr>
+</table>
+
+<!-- ========== 13 ========== -->
+<h2>13. 主流开源实现横向对比</h2>
+
+<table>
+<tr><th>特性</th><th>LiteLLM</th><th>Kong AI GW</th><th>Portkey</th><th>Helicone</th><th>One API</th></tr>
+<tr><td>Provider 支持数</td><td><strong>100+</strong></td><td>20+</td><td>30+</td><td>20+</td><td>50+</td></tr>
+<tr><td>语义缓存</td><td>✅ Redis VSS</td><td>✅ 插件</td><td>✅ 内置</td><td>❌</td><td>❌</td></tr>
+<tr><td>智能路由</td><td>✅ 延迟/成本/重试</td><td>✅ WRR</td><td>✅ 延迟感知</td><td>❌</td><td>⚠️ 基础</td></tr>
+<tr><td>Token 级限流</td><td>✅</td><td>⚠️ 插件</td><td>✅</td><td>⚠️</td><td>✅</td></tr>
+<tr><td>OTel 可观测</td><td>✅</td><td>✅</td><td>✅</td><td>✅（核心功能）</td><td>⚠️</td></tr>
+<tr><td>Prompt 安全</td><td>⚠️ 基础</td><td>✅ AI 插件</td><td>✅ Guardrails</td><td>❌</td><td>❌</td></tr>
+<tr><td>Virtual Key</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td>部署方式</td><td>Docker / K8s</td><td>K8s 原生</td><td>SaaS / 私有</td><td>SaaS / 私有</td><td>Docker</td></tr>
+<tr><td>License</td><td>MIT</td><td>Apache 2.0</td><td>Commercial</td><td>MIT+Commercial</td><td>MIT</td></tr>
+<tr><td>性能（P99 开销）</td><td>~5ms</td><td>~3ms</td><td>~8ms</td><td>~10ms</td><td>~4ms</td></tr>
+</table>
+
+<!-- ========== 14 ========== -->
+<h2>14. 生产部署模式</h2>
+
+<h3>14.1 单区域高可用</h3>
+
+<pre class="mermaid">
+flowchart TB
+    LB["Nginx / ALB\n负载均衡"] --> GW1["Gateway Instance 1"]
+    LB --> GW2["Gateway Instance 2"]
+    LB --> GW3["Gateway Instance 3"]
+    GW1 & GW2 & GW3 --> RD["Redis Cluster\n限流状态 / 缓存索引\n(Sentinel HA)"]
+    GW1 & GW2 & GW3 --> VDB["Qdrant / Redis VSS\n语义向量存储"]
+    GW1 & GW2 & GW3 --> DB["PostgreSQL\nKey / 账单 / 配置\n(Primary-Replica)"]
+    GW1 & GW2 & GW3 --> PROV["LLM Providers"]
+</pre>
+
+<h3>14.2 Kubernetes HPA 配置</h3>
+
+<p>Gateway 的扩缩容应基于 <strong>token throughput</strong> 而非 CPU 利用率（因为流式长请求时 CPU 很低但实际负载很高）：</p>
+
+<pre><code class="language-yaml">apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: llm-gateway-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: llm-gateway
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    # 自定义指标：每实例每秒处理的 token 数
+    - type: Pods
+      pods:
+        metric:
+          name: llm_tokens_per_second
+        target:
+          type: AverageValue
+          averageValue: "50000"  # 每实例 50K tokens/s 触发扩容
+    # CPU 兜底
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30   # 快速扩容
+    scaleDown:
+      stabilizationWindowSeconds: 300  # 缓慢缩容，防止流量抖动
+</code></pre>
+
+<!-- ========== 15 ========== -->
+<h2>15. 性能优化实践</h2>
+
+<h3>15.1 关键优化手段</h3>
+
+<table>
+<tr><th>优化点</th><th>技术手段</th><th>P99 延迟降低</th><th>吞吐提升</th></tr>
+<tr><td>连接复用</td><td>HTTP/2 + Keep-Alive 连接池（每 Provider 维护 100 连接）</td><td>-15ms</td><td>+30%</td></tr>
+<tr><td>零拷贝流转发</td><td>sendfile() / ASGI 无缓冲 streaming，不在内存聚合 response</td><td>-20ms</td><td>+40%</td></tr>
+<tr><td>异步写路径</td><td>OTel 上报、Cache 写入、账单更新走 background task，不阻塞响应</td><td>-8ms</td><td>+15%</td></tr>
+<tr><td>Auth 缓存</td><td>Virtual Key 验证结果本地内存缓存（LRU，TTL=60s）</td><td>-5ms</td><td>+20%</td></tr>
+<tr><td>Embedding 批处理</td><td>语义缓存的 embedding 请求批量合并（batch size=32）</td><td>N/A</td><td>-70% embedding 成本</td></tr>
+<tr><td>Redis Pipeline</td><td>限流的多 key 操作合并为 pipeline，减少 RTT</td><td>-3ms</td><td>+25%</td></tr>
+</table>
+
+<div id="chart-perf" class="echarts-container" style="height:320px"></div>
+<div id="chart-compare" class="echarts-container" style="height:320px"></div>
+
+<!-- ========== 16 ========== -->
+<h2>16. 核心洞见</h2>
+
+<div class="highlight-box">
+<strong>🔑 洞见 1：语义缓存是 ROI 最高的单一优化</strong><br>
+对于知识问答、代码生成等场景，30~40% 的请求语义重复。语义缓存命中不仅节省 LLM 调用费用，还将延迟从秒级降至毫秒级。阈值 0.95 是大多数场景的最佳平衡点。
+</div>
+
+<div class="highlight-box">
+<strong>🔑 洞见 2：Token 级限流比 QPS 限流更公平</strong><br>
+一个发送 1000 token prompt 的用户和一个发送 10 token 的用户，QPS 相同但资源消耗相差 100 倍。只有 Token 级限流才能真正公平地分配 LLM 资源。
+</div>
+
+<div class="highlight-box">
+<strong>🔑 洞见 3：UCB 路由在 Provider 性能频繁变化时显著优于静态权重</strong><br>
+Provider 的延迟和可用性会随时间变化（高峰期 GPT-4o 变慢、某 Provider 发版时不稳定），UCB 自适应路由能在数分钟内自动发现最优 Provider，无需人工干预调整权重。
+</div>
+
+<div class="warn-box">
+<strong>⚠️ 陷阱：Gateway 本身成为单点</strong><br>
+Gateway 引入了新的 SPOF。生产部署必须：① 多实例部署（最少 3 个）②Redis 用 Sentinel/Cluster 模式③ 依赖的 Vector DB 做主备 ④ Gateway 挂掉时考虑降级为直连 Provider 的 bypass 模式
+</div>
+
+<div class="warn-box">
+<strong>⚠️ 陷阱：异步日志丢失与计费不准</strong><br>
+将 token 计费写入放在 background task 中虽然提升性能，但 Gateway 崩溃时会丢失未持久化的计费数据。建议先写 Redis 原子计数（毫秒级），再异步同步到 DB；或使用 WAL（Write-Ahead Log）保证计费数据不丢失。
+</div>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');
+  a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');
+  toc.appendChild(a);
+});
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  });
+},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+
+// ECharts: 语义缓存阈值 vs 命中率 vs 质量
+(function(){
+  var c=echarts.init(document.getElementById('chart-cache'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'语义缓存：相似度阈值 vs 命中率 vs 质量得分',textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{data:['命中率 (%)','质量得分 (%)','综合效益'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['0.80','0.85','0.90','0.93','0.95','0.97','0.99'],
+      name:'相似度阈值 τ',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',min:0,max:100,axisLabel:{color:'#cdd6f4',formatter:'{value}%'}},
+    series:[
+      {name:'命中率 (%)',type:'line',data:[72,60,44,30,20,10,3],
+        lineStyle:{color:'#89b4fa'},itemStyle:{color:'#89b4fa'},smooth:true},
+      {name:'质量得分 (%)',type:'line',data:[65,72,82,89,94,97,99],
+        lineStyle:{color:'#a6e3a1'},itemStyle:{color:'#a6e3a1'},smooth:true},
+      {name:'综合效益',type:'line',data:[47,43,36,27,19,10,3],
+        lineStyle:{color:'#fab387',type:'dashed'},itemStyle:{color:'#fab387'},smooth:true}
+    ]
+  });
+})();
+
+// ECharts: 限流算法对比（突发流量下的 QPS 响应）
+(function(){
+  var c=echarts.init(document.getElementById('chart-ratelimit'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'限流算法对比：突发流量下实际放行 QPS',textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{data:['实际请求 QPS','Token Bucket','滑动窗口','漏桶'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['t=0','t=1','t=2','t=3','t=4','t=5','t=6','t=7','t=8','t=9'],
+      name:'时间(s)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+    yAxis:{type:'value',name:'QPS',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'实际请求 QPS',type:'line',data:[10,10,200,200,200,10,10,10,50,50],
+        lineStyle:{color:'#6c7086',type:'dashed'},itemStyle:{color:'#6c7086'}},
+      {name:'Token Bucket',type:'line',data:[10,10,100,80,20,10,10,10,50,50],
+        lineStyle:{color:'#89b4fa'},itemStyle:{color:'#89b4fa'},smooth:true},
+      {name:'滑动窗口',type:'line',data:[10,10,90,90,90,10,10,10,50,50],
+        lineStyle:{color:'#a6e3a1'},itemStyle:{color:'#a6e3a1'},smooth:true},
+      {name:'漏桶',type:'line',data:[10,10,20,20,20,20,10,10,20,20],
+        lineStyle:{color:'#f38ba8'},itemStyle:{color:'#f38ba8'},smooth:true}
+    ]
+  });
+})();
+
+// ECharts: 各优化项的 P99 延迟
+(function(){
+  var c=echarts.init(document.getElementById('chart-perf'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'各优化手段对 P99 延迟的影响（ms，不含 LLM 推理时间）',textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{data:['P99 Gateway 自身耗时'],textStyle:{color:'#cdd6f4'}},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4',rotate:15},
+      data:['基线','+ 连接池','+ 零拷贝流','+ Auth缓存','+ 异步日志','+ Redis Pipeline','全量优化']},
+    yAxis:{type:'value',name:'ms',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+    series:[{
+      name:'P99 Gateway 自身耗时',type:'bar',
+      data:[68,53,33,28,20,17,12],
+      itemStyle:{color:function(p){return['#f38ba8','#fab387','#f9e2af','#a6e3a1','#89dceb','#89b4fa','#cba6f7'][p.dataIndex]}}
+    }]
+  });
+})();
+
+// ECharts: 引入 Gateway 前后指标对比
+(function(){
+  var c=echarts.init(document.getElementById('chart-compare'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'引入 LLM Gateway 前后关键指标对比',textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['引入前','引入后'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4'},
+      data:['月度成本($K)','P99延迟(s)','可用性(%)','安全事件数','Token浪费率(%)']},
+    yAxis:{type:'value',axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'引入前',type:'bar',data:[120,8.5,98.2,15,35],itemStyle:{color:'#f38ba8'}},
+      {name:'引入后',type:'bar',data:[75,6.1,99.8,2,12],itemStyle:{color:'#a6e3a1'}}
+    ]
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>阅读报告：Perception or Prejudice — MLLMs 的人格感知能力深度评测</title>
+
+<!-- highlight.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<!-- MathJax -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    tags: 'ams'
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --bg2: #181825;
+    --bg3: #313244;
+    --surface: #1e1e2e;
+    --panel: #24243a;
+    --border: #45475a;
+    --text: #cdd6f4;
+    --muted: #a6adc8;
+    --heading: #89b4fa;
+    --strong: #a6e3a1;
+    --accent: #f38ba8;
+    --yellow: #f9e2af;
+    --teal: #94e2d5;
+    --lavender: #b4befe;
+    --mauve: #cba6f7;
+    --peach: #fab387;
+    --toc-w: 220px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg2);
+    color: var(--text);
+    font-family: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    font-size: 15px;
+    line-height: 1.8;
+    display: flex;
+  }
+
+  /* ===== TOC ===== */
+  #toc {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--toc-w);
+    height: 100vh;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 12px 40px;
+    z-index: 100;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  #toc-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    padding-left: 4px;
+  }
+
+  #toc ul { list-style: none; }
+  #toc li { margin: 2px 0; }
+  #toc a {
+    display: block;
+    padding: 4px 8px;
+    font-size: 12.5px;
+    color: var(--muted);
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #toc a:hover { background: var(--bg3); color: var(--heading); }
+  #toc .toc-h2 { padding-left: 8px; }
+  #toc .toc-h3 { padding-left: 18px; font-size: 12px; color: #6c7086; }
+  #toc .toc-h3:hover { color: var(--muted); }
+
+  /* ===== MAIN ===== */
+  #main {
+    margin-left: var(--toc-w);
+    max-width: none;
+    width: calc(100% - var(--toc-w));
+    padding: 40px 64px;
+  }
+
+  /* ===== HERO BANNER ===== */
+  .hero {
+    background: linear-gradient(135deg, #1a1a3e 0%, #0f2a4a 50%, #1e1e2e 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 36px 40px;
+    margin-bottom: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(137,180,250,0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(137,180,250,0.15);
+    color: var(--heading);
+    border: 1px solid rgba(137,180,250,0.3);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 14px;
+    letter-spacing: 0.05em;
+  }
+  .hero h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--heading);
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  .hero-sub {
+    color: var(--muted);
+    font-size: 14px;
+    margin-bottom: 18px;
+  }
+  .hero-stats {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .hero-stat {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    text-align: center;
+  }
+  .hero-stat .val {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--strong);
+    display: block;
+  }
+  .hero-stat .lbl {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  /* ===== SECTIONS ===== */
+  section {
+    margin-bottom: 56px;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--heading);
+    border-left: 4px solid var(--heading);
+    padding-left: 14px;
+    margin-bottom: 20px;
+    margin-top: 8px;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--strong);
+    margin: 22px 0 12px;
+    padding-left: 4px;
+  }
+
+  h4 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--lavender);
+    margin: 16px 0 8px;
+  }
+
+  p { margin-bottom: 14px; }
+
+  strong { color: var(--strong); font-weight: 600; }
+  em { color: var(--yellow); font-style: normal; font-weight: 500; }
+  code {
+    background: var(--bg3);
+    color: var(--peach);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'Fira Code', 'Consolas', monospace;
+  }
+
+  /* ===== PAPER INFO TABLE ===== */
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--panel);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .info-table tr:not(:last-child) td { border-bottom: 1px solid var(--border); }
+  .info-table td {
+    padding: 11px 18px;
+    font-size: 14px;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  .info-table td:first-child {
+    color: var(--muted);
+    font-weight: 600;
+    width: 130px;
+    white-space: nowrap;
+    background: rgba(255,255,255,0.025);
+  }
+  .info-table td a { color: var(--heading); text-decoration: none; }
+  .info-table td a:hover { text-decoration: underline; }
+
+  /* ===== CALLOUT BOXES ===== */
+  .callout {
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 18px 0;
+    border-left: 4px solid;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .callout-blue { background: rgba(137,180,250,0.08); border-color: var(--heading); }
+  .callout-green { background: rgba(166,227,161,0.08); border-color: var(--strong); }
+  .callout-yellow { background: rgba(249,226,175,0.08); border-color: var(--yellow); }
+  .callout-red { background: rgba(243,139,168,0.08); border-color: var(--accent); }
+  .callout-purple { background: rgba(203,166,247,0.08); border-color: var(--mauve); }
+  .callout-title {
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .callout-blue .callout-title { color: var(--heading); }
+  .callout-green .callout-title { color: var(--strong); }
+  .callout-yellow .callout-title { color: var(--yellow); }
+  .callout-red .callout-title { color: var(--accent); }
+  .callout-purple .callout-title { color: var(--mauve); }
+
+  /* ===== QUOTE ===== */
+  blockquote {
+    border-left: 3px solid var(--mauve);
+    padding: 12px 20px;
+    background: rgba(203,166,247,0.07);
+    border-radius: 0 8px 8px 0;
+    margin: 18px 0;
+    color: var(--lavender);
+    font-style: italic;
+    font-size: 14.5px;
+  }
+
+  /* ===== DATA TABLES ===== */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 18px 0;
+  }
+  .data-table thead tr {
+    background: rgba(137,180,250,0.15);
+    color: var(--heading);
+  }
+  .data-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid rgba(69,71,90,0.5);
+    vertical-align: middle;
+  }
+  .data-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .data-table tbody tr:nth-child(even) { background: rgba(255,255,255,0.015); }
+  .tag-closed { color: var(--heading); font-weight: 600; font-size: 11px; }
+  .tag-open { color: var(--strong); font-weight: 600; font-size: 11px; }
+  .best-val { color: var(--accent); font-weight: 700; }
+  .good-val { color: var(--strong); font-weight: 600; }
+  .med-val { color: var(--yellow); }
+  .bad-val { color: var(--accent); }
+
+  /* ===== METRIC CARDS ===== */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 18px 0;
+  }
+  .metric-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .metric-card:hover { border-color: var(--heading); }
+  .metric-card .mc-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .mc-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 5px;
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+  .mc-pr { background: rgba(243,139,168,0.2); color: var(--accent); }
+  .mc-cr { background: rgba(249,226,175,0.2); color: var(--yellow); }
+  .mc-ir { background: rgba(148,226,213,0.2); color: var(--teal); }
+  .mc-hr { background: rgba(166,227,161,0.2); color: var(--strong); }
+  .mc-direction {
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+    margin-left: auto;
+  }
+  .dir-min { background: rgba(243,139,168,0.15); color: var(--accent); }
+  .dir-max { background: rgba(166,227,161,0.15); color: var(--strong); }
+  .mc-name { font-weight: 700; color: var(--text); font-size: 14px; }
+  .mc-formula { font-size: 13px; color: var(--lavender); margin-bottom: 8px; }
+  .mc-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  /* ===== MERMAID ===== */
+  pre.mermaid {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    overflow-x: auto;
+    margin: 18px 0;
+    text-align: center;
+  }
+
+  /* ===== ECHARTS ===== */
+  .chart-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    margin: 18px 0;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  /* ===== LEVEL FRAMEWORK ===== */
+  .level-row {
+    display: flex;
+    gap: 16px;
+    margin: 18px 0;
+    flex-wrap: wrap;
+  }
+  .level-card {
+    flex: 1 1 220px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .level-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .level-1::before { background: var(--heading); }
+  .level-2::before { background: var(--mauve); }
+  .level-3::before { background: var(--strong); }
+  .level-num {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .level-name { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+  .level-meta { font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+  .level-desc { font-size: 13px; color: var(--text); line-height: 1.6; }
+  .tag-pill {
+    display: inline-block;
+    background: var(--bg3);
+    color: var(--lavender);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    margin: 2px 2px 0 0;
+    font-weight: 500;
+  }
+
+  /* ===== BIG FIVE ===== */
+  .big5-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .big5-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .big5-abbr {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--heading);
+    margin-bottom: 4px;
+  }
+  .big5-name { font-size: 13px; color: var(--strong); font-weight: 600; margin-bottom: 4px; }
+  .big5-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* ===== RELATED WORK TABLE ===== */
+  .rw-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 16px 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .rw-table th {
+    background: rgba(137,180,250,0.12);
+    color: var(--heading);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    border-bottom: 1px solid var(--border);
+  }
+  .rw-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid rgba(69,71,90,0.4);
+    color: var(--text);
+    vertical-align: top;
+  }
+  .rw-table tr:last-child td { border-bottom: none; }
+  .rw-table tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  .tick { color: var(--strong); font-weight: 700; }
+  .cross { color: var(--accent); }
+  .partial { color: var(--yellow); }
+
+  /* ===== ARCHETYPE TABLE ===== */
+  .archetype-row { display: flex; gap: 14px; margin: 14px 0; flex-wrap: wrap; }
+  .archetype-card {
+    flex: 1 1 220px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 16px;
+  }
+  .arch-title { font-weight: 700; margin-bottom: 6px; font-size: 14px; }
+  .arch-cr { color: var(--heading); }
+  .arch-confident { color: var(--peach); }
+  .arch-cautious { color: var(--teal); }
+  .arch-desc { font-size: 13px; color: var(--muted); }
+
+  /* ===== REFERENCES ===== */
+  .ref-list { list-style: none; counter-reset: ref; }
+  .ref-list li {
+    counter-increment: ref;
+    padding: 8px 0 8px 36px;
+    position: relative;
+    font-size: 13px;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(69,71,90,0.3);
+    line-height: 1.6;
+  }
+  .ref-list li::before {
+    content: '[' counter(ref) ']';
+    position: absolute;
+    left: 0;
+    color: var(--heading);
+    font-weight: 600;
+  }
+  .ref-list li a { color: var(--heading); text-decoration: none; }
+
+  /* ===== DIVIDER ===== */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 900px) {
+    #toc { display: none; }
+    #main { margin-left: 0; padding: 20px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== LEFT TOC ===== -->
+<nav id="toc">
+  <div id="toc-title">目录</div>
+  <ul>
+    <li><a class="toc-h2" href="#s-info">论文信息</a></li>
+    <li><a class="toc-h2" href="#s-problem">核心问题与动机</a></li>
+    <li><a class="toc-h3" href="#s-problem-gap">研究痛点</a></li>
+    <li><a class="toc-h3" href="#s-problem-rq">研究问题</a></li>
+    <li><a class="toc-h2" href="#s-bg">背景与相关工作</a></li>
+    <li><a class="toc-h3" href="#s-bg-big5">大五人格模型</a></li>
+    <li><a class="toc-h3" href="#s-bg-related">相关工作对比</a></li>
+    <li><a class="toc-h2" href="#s-dataset">GPR任务与MM-OCEAN数据集</a></li>
+    <li><a class="toc-h3" href="#s-gpr">GPR任务定义</a></li>
+    <li><a class="toc-h3" href="#s-mmocean">MM-OCEAN构建流程</a></li>
+    <li><a class="toc-h3" href="#s-mcq">七类MCQ设计</a></li>
+    <li><a class="toc-h2" href="#s-eval">关键技术详解</a></li>
+    <li><a class="toc-h3" href="#s-3level">三级评估框架</a></li>
+    <li><a class="toc-h3" href="#s-metrics">失败模式指标</a></li>
+    <li><a class="toc-h3" href="#s-pgap">Prejudice Gap量化</a></li>
+    <li><a class="toc-h2" href="#s-results">实验结果</a></li>
+    <li><a class="toc-h3" href="#s-hr-chart">HR综合排名图</a></li>
+    <li><a class="toc-h3" href="#s-leaderboard">完整排行榜</a></li>
+    <li><a class="toc-h3" href="#s-category">MCQ类别难度分析</a></li>
+    <li><a class="toc-h2" href="#s-failure">失败模式深度分析</a></li>
+    <li><a class="toc-h3" href="#s-failure-paths">四种失败路径</a></li>
+    <li><a class="toc-h3" href="#s-archetypes">模型原型分类</a></li>
+    <li><a class="toc-h2" href="#s-insight">核心洞见与读后评注</a></li>
+    <li><a class="toc-h2" href="#s-ref">参考文献</a></li>
+  </ul>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div id="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge">CVPR 2026 / arXiv 2605.22109</div>
+    <h1>Perception or Prejudice:<br>Can MLLMs Go Beyond First Impressions of Personality?</h1>
+    <div class="hero-sub">多模态大语言模型的人格感知 vs. 偏见判断 — 深度评测与行为证据溯源</div>
+    <div class="hero-stats">
+      <div class="hero-stat"><span class="val">27</span><span class="lbl">评测模型数</span></div>
+      <div class="hero-stat"><span class="val">1,104</span><span class="lbl">评测视频数</span></div>
+      <div class="hero-stat"><span class="val">5,320</span><span class="lbl">MCQ题目数</span></div>
+      <div class="hero-stat"><span class="val">51%</span><span class="lbl">Prejudice Gap</span></div>
+      <div class="hero-stat"><span class="val">33.5%</span><span class="lbl">最高HR得分</span></div>
+      <div class="hero-stat"><span class="val">169</span><span class="lbl">arXiv Upvotes</span></div>
+    </div>
+  </div>
+
+  <!-- ===== SECTION 1: 论文信息 ===== -->
+  <section id="s-info">
+    <h2>1. 论文信息</h2>
+    <table class="info-table">
+      <tr><td>标题</td><td><strong>Perception or Prejudice: Can MLLMs Go Beyond First Impressions of Personality?</strong></td></tr>
+      <tr><td>arXiv</td><td><a href="https://arxiv.org/abs/2605.22109" target="_blank">arXiv:2605.22109</a> &nbsp;[cs.AI, cs.CV, cs.CY]</td></tr>
+      <tr><td>作者（11位）</td><td>Caixin Kang, Tianyu Yan, Sitong Gong, Mingfang Zhang, Liangyang Ouyang, Ruicong Liu, Bo Zheng, Huchuan Lu, Kaipeng Zhang, Yoichi Sato, Yifei Huang</td></tr>
+      <tr><td>机构</td><td>The University of Tokyo 等多家机构联合</td></tr>
+      <tr><td>资源链接</td><td>
+        GitHub: <a href="https://github.com/kkkcx/MM-OCEAN" target="_blank">kkkcx/MM-OCEAN</a><br>
+        HuggingFace: <a href="https://huggingface.co/datasets/anonymous-mm-ocean/MM-OCEAN" target="_blank">anonymous-mm-ocean/MM-OCEAN</a>
+      </td></tr>
+      <tr><td>arXiv Upvotes</td><td><strong style="color:var(--accent)">169</strong>（截至2026年5月）</td></tr>
+      <tr><td>核心关键词</td><td>多模态大语言模型（MLLM）、人格感知、大五人格（Big Five）、行为证据溯源、视频理解、评测基准</td></tr>
+      <tr><td>三大贡献</td><td>
+        ① <strong>GPR 任务</strong>（Grounded Personality Reasoning）<br>
+        ② <strong>MM-OCEAN 数据集</strong>（1,104 视频 + 5,320 MCQ）<br>
+        ③ <strong>三级评估框架 + 4 项失败模式指标</strong>（覆盖 27 个 MLLM）
+      </td></tr>
+    </table>
+  </section>
+
+  <!-- ===== SECTION 2: 核心问题与动机 ===== -->
+  <section id="s-problem">
+    <h2>2. 核心问题与动机</h2>
+
+    <div id="s-problem-gap">
+      <h3>2.1 研究痛点：数字对了，理由错了</h3>
+      <p>
+        现有针对 MLLM 人格感知能力的基准测试（如 OCEAN-Bench、FirstImprBench 等）仅验证模型能否输出正确的大五人格评分（1–5 分），
+        却<strong>完全忽略</strong>了一个关键问题：模型究竟是基于视频中的<em>可观测行为证据</em>作出判断，
+        还是依赖表面视觉模式（外貌、服装、肤色等）的<em>先验偏见</em>？
+      </p>
+
+      <div class="callout callout-red">
+        <div class="callout-title">核心矛盾</div>
+        <p>
+          一个模型可以通过大量社会偏见的"捷径"得到正确的人格评分，但其推理链与真实行为证据毫无关联。
+          传统数字对比基准无法区分"感知"（Perception）与"偏见"（Prejudice）。
+        </p>
+      </div>
+
+      <p>
+        作者将此发现命名为 <strong>Prejudice Gap（偏见缺口）</strong>：
+        在全领域的测评中，<em>51% 的正确评分</em>无法追溯到模型实际检索到的行为线索。
+        换言之，超过一半的"正确回答"本质上是歪打正着的偏见判断。
+      </p>
+
+      <blockquote>
+        "a striking Prejudice Gap: across the field, 51% of correct ratings are not grounded in retrieved cues"
+        <br><span style="font-size:12px;color:var(--muted)">— 论文核心发现</span>
+      </blockquote>
+    </div>
+
+    <div id="s-problem-rq">
+      <h3>2.2 研究问题</h3>
+      <div class="callout callout-blue">
+        <div class="callout-title">三层递进研究问题</div>
+        <p><strong>RQ1（评分层面）：</strong>MLLMs 能否准确预测大五人格各维度的评分？</p>
+        <p><strong>RQ2（推理层面）：</strong>当模型给出评分时，其推理链是否逻辑自洽、是否依托了视频中的具体行为？</p>
+        <p><strong>RQ3（溯源层面）：</strong>模型是否能够从视频中精确检索出与人格判断相关的行为线索（时间戳 + 空间位置）？</p>
+      </div>
+      <p>
+        只有同时满足 RQ1+RQ2+RQ3 的模型才被认为具备<strong>真正的人格感知能力</strong>，而非在做表面匹配。
+        这三层问题构成了论文三级评估框架的理论基础。
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 3: 背景与相关工作 ===== -->
+  <section id="s-bg">
+    <h2>3. 背景与相关工作</h2>
+
+    <div id="s-bg-big5">
+      <h3>3.1 大五人格模型（Big Five / OCEAN）</h3>
+      <p>
+        大五人格模型（Big Five Personality Model，也称 OCEAN 模型）是目前心理学领域最广泛使用的人格理论框架，
+        由 McCrae &amp; Costa（1987）等人在大量跨文化研究基础上确立。
+        模型将人格划分为五个正交维度，每个维度通过 1–5 分的李克特量表评估：
+      </p>
+      <div class="big5-grid">
+        <div class="big5-card">
+          <div class="big5-abbr">O</div>
+          <div class="big5-name">开放性（Openness）</div>
+          <div class="big5-desc">对新体验、艺术、知识的好奇心和开放程度；想象力、创造力的表现</div>
+        </div>
+        <div class="big5-card">
+          <div class="big5-abbr">C</div>
+          <div class="big5-name">尽责性（Conscientiousness）</div>
+          <div class="big5-desc">有组织、可靠、自律、目标导向；做事认真细致的倾向</div>
+        </div>
+        <div class="big5-card">
+          <div class="big5-abbr">E</div>
+          <div class="big5-name">外向性（Extraversion）</div>
+          <div class="big5-desc">社交能量、活跃程度、对外部刺激的偏好；话多、热情、自信</div>
+        </div>
+        <div class="big5-card">
+          <div class="big5-abbr">A</div>
+          <div class="big5-name">宜人性（Agreeableness）</div>
+          <div class="big5-desc">合作性、信任他人、善解人意；利他、友善、顺从的倾向</div>
+        </div>
+        <div class="big5-card">
+          <div class="big5-abbr">N</div>
+          <div class="big5-name">神经质（Neuroticism）</div>
+          <div class="big5-desc">情绪不稳定性、焦虑、脆弱程度；对负面刺激的易感性</div>
+        </div>
+      </div>
+      <p>
+        在视频人格感知任务中，评判标准来自 <strong>ChaLearn First Impressions V2</strong> 数据集提供的 crowdsourced 标注，
+        该数据集包含约 10,000 条 15 秒单人视频，每条视频有多名众包标注者给出 OCEAN 各维度评分的均值。
+      </p>
+    </div>
+
+    <div id="s-bg-related">
+      <h3>3.2 相关工作横向对比</h3>
+      <p>下表对比了本文 MM-OCEAN 与领域内现有代表性基准测试在关键维度上的异同：</p>
+      <table class="rw-table">
+        <thead>
+          <tr>
+            <th>基准/数据集</th>
+            <th>模态</th>
+            <th>评分任务</th>
+            <th>推理链</th>
+            <th>行为溯源</th>
+            <th>时序定位</th>
+            <th>多智能体构建</th>
+            <th>失败模式分析</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ChaLearn FI-V2</strong></td>
+            <td>视频+音频</td>
+            <td class="tick">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>OCEAN-Bench</strong></td>
+            <td>视频</td>
+            <td class="tick">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>PerBench</strong></td>
+            <td>文本/图像</td>
+            <td class="tick">✓</td>
+            <td class="partial">△</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong>EgoVideo-Bench</strong></td>
+            <td>视频</td>
+            <td class="partial">△</td>
+            <td class="partial">△</td>
+            <td class="partial">△</td>
+            <td class="tick">✓</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--heading)">MM-OCEAN（本文）</strong></td>
+            <td>视频</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+            <td class="tick">✓</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--muted)">✓ 完整支持 &nbsp;△ 部分支持 &nbsp;✗ 不支持</p>
+
+      <div class="callout callout-green">
+        <div class="callout-title">本文核心创新点</div>
+        <p>
+          MM-OCEAN 是首个同时要求 MLLM 完成<strong>评分 + 推理链 + 行为溯源 MCQ</strong>三层任务的视频人格感知基准，
+          且引入了专门针对 MLLM 失败模式的量化诊断框架，填补了现有基准体系的关键空白。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 4: GPR任务与MM-OCEAN数据集 ===== -->
+  <section id="s-dataset">
+    <h2>4. GPR 任务定义与 MM-OCEAN 数据集</h2>
+
+    <div id="s-gpr">
+      <h3>4.1 Grounded Personality Reasoning（GPR）任务定义</h3>
+      <p>
+        GPR 是本文提出的核心新任务，将传统的"人格评分预测"扩展为一个<strong>三步证据链</strong>：
+      </p>
+      <div class="callout callout-purple">
+        <div class="callout-title">GPR 三步链</div>
+        <p>
+          <strong>Step 1 — Rating（评分）：</strong>输入视频，对大五人格五个维度各给出 1–5 分评分。<br>
+          <strong>Step 2 — Reasoning（推理）：</strong>生成支撑评分的观察记录与推理说明，指明具体行为依据。<br>
+          <strong>Step 3 — Grounding（溯源）：</strong>从视频中精确检索出与评分相关的行为线索（含时间戳和身体部位定位），并通过结构化 MCQ 验证检索是否准确。
+        </p>
+      </div>
+      <p>
+        GPR 的核心约束是：<strong>评分必须锚定于可观测行为证据</strong>（Grounding in Observable Evidence）。
+        这一设计直接回应了现有基准无法检测"偏见判断"的根本缺陷。
+      </p>
+    </div>
+
+    <div id="s-mmocean">
+      <h3>4.2 MM-OCEAN 数据集构建流程</h3>
+      <p>
+        MM-OCEAN 基于 <strong>ChaLearn First Impressions V2</strong> 数据集（约 10K 条 15 秒单人视频）构建，
+        最终保留 <strong>1,104 条测试视频</strong>，通过五阶段多智能体流水线完成标注：
+      </p>
+
+      <pre class="mermaid">
+flowchart TD
+    A["ChaLearn FI-V2 约10K条原始视频"] --> B["Stage1: Observer Agent 行为观察生成"]
+    B --> C["Stage2: Psychologist Agent 大五人格循证分析"]
+    C --> D["Stage3: Examiner Agent 七类MCQ题目生成"]
+    D --> E["Stage4: Aligner Agent 自动质检"]
+    E --> F["Stage5: Human Review 文本泄露过滤"]
+    F --> G["MM-OCEAN 最终数据集 1104条视频 5320道MCQ"]
+
+    style A fill:#1a1a3e,stroke:#89b4fa,color:#cdd6f4
+    style G fill:#1a3e1a,stroke:#a6e3a1,color:#cdd6f4
+      </pre>
+
+      <div class="callout callout-yellow">
+        <div class="callout-title">文本泄露过滤机制</div>
+        <p>
+          为避免 MCQ 题目可以通过文本信息单独（不看视频）答对，
+          凡是同时被 <code>GPT-4o-mini</code>（文本模式）和 <code>Gemini Flash</code>（文本模式）答对的题目均被删除，
+          确保数据集真正考察视觉理解能力。
+        </p>
+      </div>
+    </div>
+
+    <div id="s-mcq">
+      <h3>4.3 七类 MCQ 题目设计</h3>
+      <p>
+        每道 MCQ 有 <strong>6 个选项</strong>（1 个正确答案 + 5 个干扰项），干扰项覆盖三类失败模式。
+        七类题目按认知目标分为"推理类"和"视觉溯源类"两大簇：
+      </p>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>类别缩写</th>
+            <th>完整名称</th>
+            <th>认知簇</th>
+            <th>考察目标</th>
+            <th>平均难度（跨27模型）</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Pers</strong></td><td>Personality Attribution</td><td>推理类</td><td>行为 → 人格特质映射</td><td class="good-val">~52%（较易）</td></tr>
+          <tr><td><strong>Counter</strong></td><td>Counterfactual</td><td>推理类</td><td>反事实场景推断</td><td class="med-val">~48%</td></tr>
+          <tr><td><strong>TempC</strong></td><td>Temporal-Causal</td><td>推理类</td><td>跨时序因果推断</td><td class="good-val">64.8%（最易）</td></tr>
+          <tr><td><strong>Mixed</strong></td><td>Mixed Emotion</td><td>推理类</td><td>复杂情感状态理解</td><td class="med-val">~46%</td></tr>
+          <tr><td><strong>Micro</strong></td><td>Micro-expression</td><td>视觉溯源类</td><td>细微面部表情检测</td><td class="bad-val">34.6%（较难）</td></tr>
+          <tr><td><strong>Spat</strong></td><td>Spatial Localization</td><td>视觉溯源类</td><td>身体部位级空间定位</td><td class="best-val bad-val">30.7%（最难）</td></tr>
+          <tr><td><strong>TSJnt</strong></td><td>Temporal-Spatial Joint</td><td>视觉溯源类</td><td>时间×空间联合定位</td><td class="bad-val">~32%</td></tr>
+        </tbody>
+      </table>
+      <p>
+        闭源 top-3 模型 vs. 开源 top-3 模型在视觉溯源类题目上的差距最为显著：
+        <strong>Spatial Localization 差距 +19.5 pp</strong>，<strong>TSJnt 差距 +21.8 pp</strong>，
+        说明精细空间感知能力在开源模型中尚未实现民主化。
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 5: 关键技术详解 ===== -->
+  <section id="s-eval">
+    <h2>5. 关键技术详解</h2>
+
+    <div id="s-3level">
+      <h3>5.1 三级评估框架</h3>
+      <p>
+        论文设计了三个层次递进的评估任务（T1 → T2 → T3），
+        从最浅的数字输出到最深的视觉行为溯源，全面刻画模型能力边界：
+      </p>
+      <div class="level-row">
+        <div class="level-card level-1">
+          <div class="level-num">Level 1 / Task 1</div>
+          <div class="level-name">Ordinal Personality Rating</div>
+          <div class="level-meta">有序人格评分</div>
+          <div class="level-desc">
+            <p>模型对每个大五维度预测离散评分 $\hat{y}_i \in \{1, 2, 3, 4, 5\}$。</p>
+            <p><strong>评估指标：</strong></p>
+            <p>• 准确率（Accuracy）：跨所有特质和视频的精确匹配均值</p>
+            <p>• MAE：均绝对误差（越低越好）</p>
+            <p><strong>随机基线：</strong> 20.0%</p>
+          </div>
+          <br>
+          <span class="tag-pill">精确匹配</span>
+          <span class="tag-pill">MAE</span>
+          <span class="tag-pill">离散分类</span>
+        </div>
+        <div class="level-card level-2">
+          <div class="level-num">Level 2 / Task 2</div>
+          <div class="level-name">Open-Ended Rating Reasoning</div>
+          <div class="level-meta">开放式评分推理</div>
+          <div class="level-desc">
+            <p>模型生成行为观察记录 + 推理链，由 AI 裁判从四个维度打分（各 1–10 分）：</p>
+            <p>• <strong>Evidence Coverage</strong>（证据覆盖率）</p>
+            <p>• <strong>Logical Coherence</strong>（逻辑连贯性）</p>
+            <p>• <strong>Grounding Accuracy</strong>（溯源准确性）</p>
+            <p>• <strong>Directional Accuracy</strong>（方向准确性）</p>
+            <p>综合分 $S_{T2} = \text{mean}(\text{四维度分})$</p>
+          </div>
+          <br>
+          <span class="tag-pill">AI Judge</span>
+          <span class="tag-pill">四维打分</span>
+          <span class="tag-pill">开放生成</span>
+        </div>
+        <div class="level-card level-3">
+          <div class="level-num">Level 3 / Task 3</div>
+          <div class="level-name">Structured Cue Grounding</div>
+          <div class="level-meta">结构化行为线索溯源</div>
+          <div class="level-desc">
+            <p>七类 MCQ（6选1），要求模型从视频中精确检索具体行为线索，含时间戳和空间位置。</p>
+            <p><strong>评估指标：</strong></p>
+            <p>• 整体准确率 + 分类别准确率</p>
+            <p><strong>随机基线：</strong> 16.7%</p>
+            <p>这是最困难的一层，也是区分感知与偏见的关键层。</p>
+          </div>
+          <br>
+          <span class="tag-pill">视觉溯源</span>
+          <span class="tag-pill">时序定位</span>
+          <span class="tag-pill">MCQ</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="s-metrics">
+      <h3>5.2 四项失败模式指标（形式化定义）</h3>
+      <p>
+        每个样本在三个维度上被二值化，使用阈值 $\theta_1 = \theta_3 = 0.5$，$\theta_2 = 0.7$：
+      </p>
+      <ul style="color:var(--muted);font-size:14px;margin:10px 0 18px 20px;line-height:2;">
+        <li>$r_1 = 1$ 当且仅当大多数人格特质评分正确（T1 任务通过）</li>
+        <li>$r_2 = 1$ 当且仅当 T2 综合分 $S_{T2} \geq 7/10$（推理质量通过）</li>
+        <li>$r_3 = 1$ 当且仅当大多数 MCQ 答对（T3 任务通过）</li>
+      </ul>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="mc-header">
+            <span class="mc-badge mc-pr">PR</span>
+            <span class="mc-name">Prejudice Rate</span>
+            <span class="mc-direction dir-min">↓ 越低越好</span>
+          </div>
+          <div class="mc-formula">$$\text{PR} = \Pr[r_3=0 \mid r_1=1]$$</div>
+          <div class="mc-desc">
+            <strong>偏见率</strong>：评分正确但行为溯源失败的条件概率。
+            刻画"歪打正着"现象——模型得到了正确数字，却无法检索到支撑该数字的行为证据。
+            全领域均值高达 <strong style="color:var(--accent)">51.3%</strong>。
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-header">
+            <span class="mc-badge mc-cr">CR</span>
+            <span class="mc-name">Confabulation Rate</span>
+            <span class="mc-direction dir-min">↓ 越低越好</span>
+          </div>
+          <div class="mc-formula">$$\text{CR} = \Pr[r_2=0 \mid r_1=1]$$</div>
+          <div class="mc-desc">
+            <strong>虚构率</strong>：评分正确但推理质量低下的条件概率。
+            刻画"推理幻觉"——模型给出正确评分，但其推理链不符合逻辑或缺乏行为依据。
+            最强模型 Gemini 3 Flash 的 CR 仍高达 44.7%。
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-header">
+            <span class="mc-badge mc-ir">IR</span>
+            <span class="mc-name">Integration-Failure Rate</span>
+            <span class="mc-direction dir-min">↓ 越低越好</span>
+          </div>
+          <div class="mc-formula">$$\text{IR} = \Pr[r_1=0 \mid r_3=1]$$</div>
+          <div class="mc-desc">
+            <strong>整合失败率</strong>：能检索到行为线索但仍无法给出正确评分的条件概率。
+            刻画"感知-判断断层"——模型看到了证据，却无法将证据整合转化为正确的人格判断。
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-header">
+            <span class="mc-badge mc-hr">HR</span>
+            <span class="mc-name">Holistic-Grounding Rate</span>
+            <span class="mc-direction dir-max">↑ 越高越好</span>
+          </div>
+          <div class="mc-formula">$$\text{HR} = \Pr[r_1=1 \wedge r_2=1 \wedge r_3=1]$$</div>
+          <div class="mc-desc">
+            <strong>整体溯源率</strong>：三项任务同时通过的联合概率，是最严格的综合指标。
+            当前最高值仅为 <strong style="color:var(--strong)">33.5%</strong>（Gemini 3 Flash），全领域均值仅 10.4%。
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="s-pgap">
+      <h3>5.3 Prejudice Gap 的量化方法</h3>
+      <p>
+        <strong>Prejudice Gap</strong> 是本文最核心的发现，其量化方式基于 PR 指标的全领域聚合统计：
+      </p>
+
+      $$\text{Prejudice Gap} = \frac{1}{|\mathcal{M}|} \sum_{m \in \mathcal{M}} \text{PR}(m)$$
+
+      <p>
+        其中 $\mathcal{M}$ 为全部 27 个被评测模型。计算结果为 <strong>51.3%</strong>，即：
+        在全领域范围内，平均超过一半的"正确评分"无法追溯至模型实际检索到的行为线索。
+      </p>
+
+      <p>此外，论文还定义了 <strong>Rating-Grounding Misalignment（RGM）</strong> 辅助诊断指标：</p>
+
+      $$\text{RGM}(m) = \frac{1}{2}\left[\text{rk}_{T2}(m) + \text{rk}_{T3}(m)\right] - \text{rk}_{T1}(m)$$
+
+      <p>
+        其中 $\text{rk}_{T_k}(m)$ 是模型 $m$ 在任务 $T_k$ 上的<strong>排名</strong>（排名越高 = 越强）。
+      </p>
+      <div class="callout callout-blue">
+        <div class="callout-title">RGM 解读</div>
+        <p>
+          <strong>RGM &gt; 0（正值）：</strong>"Confident Rater"——在评分（T1）上排名高于推理/溯源能力，容易依赖偏见给出正确评分。<br>
+          <strong>RGM &lt; 0（负值）：</strong>"Cautious Reasoner"——在推理/溯源上排名高于评分能力，证据驱动但最终判断受限。<br>
+          <strong>|RGM| ≈ 0：</strong>评分与感知能力相对均衡。
+        </p>
+      </div>
+
+      <p>
+        论文还定义了 <strong>Frontier Gap（前沿差距）</strong> 来量化闭源与开源模型之间的能力鸿沟：
+      </p>
+
+      $$\Delta T_k = \overline{\text{top-3}_{\text{open}}}(T_k) - \overline{\text{top-3}_{\text{closed}}}(T_k)$$
+
+      <p>实测结果（负值代表开源落后闭源）：</p>
+      <ul style="color:var(--muted);font-size:14px;margin:8px 0 0 20px;line-height:2.2;">
+        <li>$\Delta T_1 = -5.6\%$（评分层：差距极小）</li>
+        <li>$\Delta T_2 = -3.6\%$（推理层：差距极小）</li>
+        <li>$\Delta T_3 = \mathbf{-26.6\%}$（溯源层：差距巨大）</li>
+      </ul>
+      <div class="callout callout-red">
+        <div class="callout-title">关键发现</div>
+        <p>
+          视觉行为线索检索能力（T3）的 Frontier Gap 高达 26.6 pp，远大于评分和推理层面的差距，
+          说明<strong>精细视觉溯源能力尚未在开源模型中实现民主化</strong>。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 6: 实验结果 ===== -->
+  <section id="s-results">
+    <h2>6. 实验结果</h2>
+
+    <div id="s-hr-chart">
+      <h3>6.1 27 个模型的 Holistic-Grounding Rate 综合排名</h3>
+      <div class="chart-wrap">
+        <div class="chart-title">Holistic-Grounding Rate (HR%) — 27 个 MLLM 综合排名（蓝色=闭源，绿色=开源，虚线=全领域均值 10.4%）</div>
+        <div id="chart-hr" style="height:520px;"></div>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="chart-title">PR vs CR vs IR 失败率对比 — 闭源 Top-6 vs 开源 Top-6</div>
+        <div id="chart-failure" style="height:380px;"></div>
+      </div>
+    </div>
+
+    <div id="s-leaderboard">
+      <h3>6.2 完整排行榜（按 HR 降序排列）</h3>
+
+      <h4>闭源模型（13个）</h4>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>排名</th><th>模型</th><th>T1 Acc↑</th><th>MAE↓</th>
+            <th>T2 Score↑</th><th>T3 Acc↑</th><th>HR%↑</th>
+            <th>PR%↓</th><th>CR%↓</th><th>IR%↓</th><th>RGM</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Gemini 3 Flash</strong></td><td>64.1</td><td>0.42</td><td>6.65</td><td>66.5</td><td class="best-val">33.5</td><td>17.2</td><td>44.7</td><td>28.7</td><td>+0.5</td></tr>
+          <tr><td>2</td><td><strong>GPT-5.5</strong></td><td>56.0</td><td>0.51</td><td>6.65</td><td>66.4</td><td class="good-val">28.0</td><td>15.5</td><td>46.4</td><td>36.5</td><td>−0.5</td></tr>
+          <tr><td>3</td><td><strong>Gemini 3.1 Pro</strong></td><td>57.3</td><td>0.50</td><td>6.59</td><td>70.6</td><td class="good-val">27.4</td><td>10.8</td><td>53.2</td><td>33.4</td><td>+0.0</td></tr>
+          <tr><td>4</td><td>Gemini 2.5 Pro</td><td>50.1</td><td>0.61</td><td>6.40</td><td>65.2</td><td class="med-val">20.0</td><td>16.9</td><td>52.3</td><td>48.6</td><td>−7.0</td></tr>
+          <tr><td>5</td><td>GPT-5.4</td><td>48.7</td><td>0.60</td><td>6.48</td><td>52.6</td><td class="med-val">17.9</td><td>33.0</td><td>46.1</td><td>48.7</td><td>−9.5</td></tr>
+          <tr><td>6</td><td>Gemini 2.5 Flash</td><td>43.1</td><td>0.69</td><td>6.37</td><td>56.5</td><td class="med-val">16.9</td><td>28.0</td><td>43.9</td><td>59.0</td><td>−16.5</td></tr>
+          <tr><td>7</td><td>Claude Opus 4.6</td><td>50.2</td><td>0.59</td><td>6.50</td><td>49.7</td><td>16.8</td><td>40.7</td><td>48.4</td><td>46.1</td><td>−5.5</td></tr>
+          <tr><td>8</td><td>Claude Sonnet 4.6</td><td>46.6</td><td>0.63</td><td>6.37</td><td>45.6</td><td>12.5</td><td>46.1</td><td>47.4</td><td>54.3</td><td>−9.0</td></tr>
+          <tr><td>9</td><td>Claude Haiku 4.5</td><td>50.6</td><td>0.57</td><td>6.51</td><td>41.0</td><td>12.4</td><td>55.9</td><td>44.6</td><td>46.4</td><td>−1.5</td></tr>
+          <tr><td>10</td><td>GPT-5.4-mini</td><td>49.6</td><td>0.59</td><td>6.38</td><td>40.5</td><td>11.3</td><td>55.4</td><td>49.4</td><td>48.2</td><td>−2.0</td></tr>
+          <tr><td>11</td><td>o4-mini</td><td>48.0</td><td>0.62</td><td>6.05</td><td>43.4</td><td>7.8</td><td>48.2</td><td>71.7</td><td>51.7</td><td>−5.0</td></tr>
+          <tr><td>12</td><td>GPT-4o</td><td>53.3</td><td>0.55</td><td>6.03</td><td>31.9</td><td>4.5</td><td>69.7</td><td>75.7</td><td>38.3</td><td>+11.0</td></tr>
+          <tr><td>13</td><td>GPT-4o-mini</td><td>47.6</td><td>0.62</td><td>5.44</td><td>17.5</td><td class="bad-val">0.3</td><td class="bad-val">87.9</td><td class="bad-val">95.2</td><td>45.5</td><td>+5.0</td></tr>
+        </tbody>
+      </table>
+
+      <h4>开源模型（14个）</h4>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>排名</th><th>模型</th><th>参数量</th><th>T1 Acc↑</th><th>MAE↓</th>
+            <th>T2↑</th><th>T3 Acc↑</th><th>HR%↑</th>
+            <th>PR%↓</th><th>CR%↓</th><th>IR%↓</th><th>RGM</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td><strong>Qwen3.5-397B-A17B</strong></td><td>397B</td><td>53.1</td><td>0.55</td><td>6.45</td><td>48.1</td><td class="best-val">15.9</td><td>41.5</td><td>54.3</td><td>40.9</td><td>+0.0</td></tr>
+          <tr><td>2</td><td><strong>Qwen3-VL-235B-A22B</strong></td><td>235B</td><td>51.5</td><td>0.58</td><td>6.39</td><td>44.2</td><td class="good-val">12.8</td><td>47.0</td><td>56.4</td><td>43.8</td><td>+1.0</td></tr>
+          <tr><td>3</td><td><strong>Qwen3-VL-30B-A3B</strong></td><td>30B</td><td>55.8</td><td>0.52</td><td>6.34</td><td>43.0</td><td>12.4</td><td>52.4</td><td>58.8</td><td>38.8</td><td>+8.0</td></tr>
+          <tr><td>4</td><td>Gemma-4-31B-it</td><td>31B</td><td>55.7</td><td>0.52</td><td>6.02</td><td>57.0</td><td>11.3</td><td>29.8</td><td>75.4</td><td>39.2</td><td>+4.5</td></tr>
+          <tr><td>5</td><td>Llama-4-Maverick-FP8</td><td>402B</td><td>55.9</td><td>0.53</td><td>6.01</td><td>36.6</td><td>5.8</td><td>64.5</td><td>75.8</td><td>37.4</td><td>+14.0</td></tr>
+          <tr><td>6</td><td>GLM-4.6V</td><td>108B</td><td>48.2</td><td>0.62</td><td>5.86</td><td>42.0</td><td>4.6</td><td>52.7</td><td>80.7</td><td>51.2</td><td>−1.0</td></tr>
+          <tr><td>7</td><td>MiMo-VL-7B-RL</td><td>7B</td><td>51.1</td><td>0.56</td><td>5.82</td><td>38.9</td><td>3.6</td><td>56.5</td><td>84.1</td><td>42.2</td><td>+8.0</td></tr>
+          <tr><td>8</td><td>Qwen3-VL-8B</td><td>8B</td><td>50.0</td><td>0.60</td><td>5.80</td><td>37.0</td><td>2.8</td><td>62.4</td><td>85.5</td><td>47.4</td><td>+5.0</td></tr>
+          <tr><td>9</td><td>Step3-VL-10B</td><td>10B</td><td>42.4</td><td>0.71</td><td>5.51</td><td>36.3</td><td>0.9</td><td>62.3</td><td>92.9</td><td>62.1</td><td>−5.5</td></tr>
+          <tr><td>10</td><td>MiniCPM-o 2.6</td><td>8B</td><td>44.7</td><td>0.65</td><td>4.79</td><td>28.6</td><td>0.6</td><td>67.8</td><td>95.1</td><td>55.5</td><td>+1.5</td></tr>
+          <tr><td>11</td><td>Qwen2.5-Omni-7B</td><td>7B</td><td>43.8</td><td>0.66</td><td>5.10</td><td>27.8</td><td>0.5</td><td>79.9</td><td>95.8</td><td>55.6</td><td>+0.0</td></tr>
+          <tr><td>12</td><td>Qwen2.5-VL-7B</td><td>7B</td><td>45.1</td><td>0.65</td><td>4.67</td><td>23.9</td><td>0.1</td><td>86.3</td><td>98.9</td><td>58.9</td><td>+4.5</td></tr>
+          <tr><td>13</td><td>InternVL3-8B</td><td>8B</td><td>43.8</td><td>0.65</td><td>4.84</td><td>26.4</td><td>0.0</td><td>75.6</td><td>99.8</td><td>54.9</td><td>+0.0</td></tr>
+          <tr><td>14</td><td>LLaVA-NeXT-Video-7B</td><td>7B</td><td>36.0</td><td>0.87</td><td>1.94</td><td>16.7</td><td class="bad-val">0.0</td><td class="bad-val">82.3</td><td class="bad-val">100.0</td><td>62.9</td><td>+0.0</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--muted)">随机基线：T1=20.0%，T3=16.7%（6选1 MCQ）</p>
+    </div>
+
+    <div id="s-category">
+      <h3>6.3 T3 七类 MCQ 类别难度分析</h3>
+      <div class="chart-wrap">
+        <div class="chart-title">七类 MCQ 平均准确率（27个模型均值）— 雷达图对比：闭源 Top-3 vs 开源 Top-3</div>
+        <div id="chart-radar" style="height:400px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 7: 失败模式深度分析 ===== -->
+  <section id="s-failure">
+    <h2>7. 失败模式深度分析</h2>
+
+    <div id="s-failure-paths">
+      <h3>7.1 四种失败路径的因果图谱</h3>
+      <p>
+        下图展示了从视频输入到最终 HR 结果的四条潜在失败路径，
+        每条路径对应一种特定的认知断层：
+      </p>
+
+      <pre class="mermaid">
+flowchart TD
+    V["输入视频 15秒单人视频"] --> T1["Task1: 人格评分 r1"]
+    V --> T2["Task2: 推理链生成 r2"]
+    V --> T3["Task3: 行为溯源MCQ r3"]
+
+    T1 -->|"r1=1 r3=0"| PR["PR 偏见率 均值51.3%"]
+    T1 -->|"r1=1 r2=0"| CR["CR 虚构率 最强44.7%"]
+    T3 -->|"r3=1 r1=0"| IR["IR 整合失败率 28.7-92.9%"]
+    T1 -->|"全部通过"| HR["HR 整体溯源率 均值10.4%"]
+    T2 -->|"全部通过"| HR
+    T3 -->|"全部通过"| HR
+
+    PR --> DIAG["根本原因诊断 社会偏见捷径"]
+    CR --> DIAG
+    IR --> DIAG
+    DIAG --> RGM["RGM 评分溯源排名差异"]
+
+    style V fill:#1a1a3e,stroke:#89b4fa,color:#cdd6f4
+    style HR fill:#1a3e1a,stroke:#a6e3a1,color:#cdd6f4
+    style PR fill:#3e1a1a,stroke:#f38ba8,color:#cdd6f4
+    style CR fill:#3e351a,stroke:#f9e2af,color:#cdd6f4
+    style IR fill:#1a2a3e,stroke:#94e2d5,color:#cdd6f4
+    style DIAG fill:#2a1a3e,stroke:#cba6f7,color:#cdd6f4
+    style RGM fill:#24243a,stroke:#45475a,color:#a6adc8
+      </pre>
+    </div>
+
+    <div id="s-archetypes">
+      <h3>7.2 模型行为原型分类（基于 RGM）</h3>
+      <p>
+        基于 RGM 值，27 个模型被自然分为三类原型：
+      </p>
+      <div class="archetype-row">
+        <div class="archetype-card">
+          <div class="arch-title arch-confident">自信评分者（Confident Rater）</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">RGM ≥ +5，共 5 个模型</p>
+          <div class="arch-desc">
+            <p>评分排名远高于推理/溯源排名。这类模型依赖表面模式快速给出数字，但无法提供证据支撑。</p>
+            <p style="margin-top:8px;"><strong>典型代表：</strong>Llama-4-Maverick（RGM=+14），GPT-4o（RGM=+11）</p>
+            <p style="margin-top:6px;color:var(--accent);font-size:12px;">⚠️ 高 PR（偏见率）是这类模型的标志性特征</p>
+          </div>
+        </div>
+        <div class="archetype-card">
+          <div class="arch-title arch-cautious">谨慎推理者（Cautious Reasoner）</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">RGM ≤ −5，共 5 个模型</p>
+          <div class="arch-desc">
+            <p>推理/溯源排名远高于评分排名。这类模型在行为观察上表现出色，但无法将证据整合为准确的人格判断。</p>
+            <p style="margin-top:8px;"><strong>典型代表：</strong>Gemini 2.5 Flash（RGM=−16.5），GPT-5.4（RGM=−9.5）</p>
+            <p style="margin-top:6px;color:var(--teal);font-size:12px;">✓ 高 IR（整合失败率）但低 PR，具备真实感知基础</p>
+          </div>
+        </div>
+        <div class="archetype-card">
+          <div class="arch-title arch-cr">均衡型（Balanced）</div>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">|RGM| ≤ 4，共 17 个模型</p>
+          <div class="arch-desc">
+            <p>评分与推理/溯源能力相对均衡，但绝对性能仍有较大提升空间。大多数模型落在此区间。</p>
+            <p style="margin-top:8px;"><strong>典型代表：</strong>Gemini 3 Flash（RGM=+0.5），Gemini 3.1 Pro（RGM=0.0）</p>
+            <p style="margin-top:6px;color:var(--heading);font-size:12px;">综合 HR 最高的模型集中在此区间</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout callout-yellow">
+        <div class="callout-title">特别关注：Gemini 2.5 Flash 的极端 RGM</div>
+        <p>
+          Gemini 2.5 Flash 以 RGM = −16.5 成为最极端的"谨慎推理者"：
+          其 T3 溯源准确率高达 56.5%（排名中等偏上），但 T1 评分准确率仅 43.1%（排名倒数附近）。
+          这表明该模型具备较强的视觉感知与时序理解能力，但在"最后一公里"的人格判断整合上存在系统性瓶颈，
+          可能是训练目标与心理学理论知识应用之间存在错位。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== SECTION 8: 核心洞见与读后评注 ===== -->
+  <section id="s-insight">
+    <h2>8. 核心洞见与读后评注</h2>
+
+    <h3>8.1 论文核心贡献价值评估</h3>
+    <div class="callout callout-green">
+      <div class="callout-title">核心价值</div>
+      <p>
+        本文最重要的贡献是将"人格感知"从<strong>结果指标（是否答对）</strong>提升到了
+        <strong>过程评估（为何答对、有无证据支撑）</strong>的层面。
+        这一方法论转变对整个 MLLM 社会认知能力评估领域具有范式意义。
+      </p>
+    </div>
+
+    <h3>8.2 五大关键洞见</h3>
+    <div class="callout callout-blue">
+      <div class="callout-title">洞见 1：准确率是假象</div>
+      <p>
+        T1 评分准确率在模型间变化系数（CV）约 0.13，但 HR 的 CV 约 0.93——
+        传统评分指标严重低估了模型间的能力差异。
+        <strong>Gemini 3 Flash（T1=64.1%）与 GPT-4o-mini（T1=47.6%）仅差 16pp，
+        但 HR 差距高达 33.2pp（33.5% vs. 0.3%）</strong>，说明表面数字严重掩盖了真实能力鸿沟。
+      </p>
+    </div>
+    <div class="callout callout-red">
+      <div class="callout-title">洞见 2：Prejudice Gap 是普遍而非个案现象</div>
+      <p>
+        51.3% 的全领域平均偏见率意味着：即使是当前最强的 MLLM，
+        也有超过 1/6 的正确评分（PR=17.2% for Gemini 3 Flash）是无依据的偏见判断。
+        这说明 MLLM 的人格感知存在<strong>系统性偏见</strong>，不是某个模型的特定缺陷。
+      </p>
+    </div>
+    <div class="callout callout-purple">
+      <div class="callout-title">洞见 3：视觉溯源是最大短板</div>
+      <p>
+        T3（结构化行为溯源）是三层任务中最困难的，且闭源与开源的 Frontier Gap 在此最大（26.6pp）。
+        尤其是<strong>空间定位（Spat=30.7%）</strong>和<strong>微表情检测（Micro=34.6%）</strong>，
+        远低于随机基线 16.7% 的 2 倍，成为制约 MLLM 社会认知能力的关键瓶颈。
+      </p>
+    </div>
+    <div class="callout callout-yellow">
+      <div class="callout-title">洞见 4：推理能力与评分能力的解耦</div>
+      <p>
+        RGM 分析揭示了一个反直觉现象：<strong>推理做得越好的模型不一定评分越准确</strong>。
+        Gemini 2.5 Flash 是典型案例——T3 溯源能力比 T1 评分能力高出约 16 个排名位，
+        说明当前模型的训练范式仍然是分离而非整合的。
+        这为未来训练方向提供了明确指引：需要端到端的证据驱动人格推理训练。
+      </p>
+    </div>
+    <div class="callout callout-blue">
+      <div class="callout-title">洞见 5：开源民主化的边界</div>
+      <p>
+        评分层（T1 Frontier Gap=-5.6pp）和推理层（T2 Frontier Gap=-3.6pp）的开源-闭源差距已经极小，
+        说明语言推理能力的民主化基本完成。
+        但视觉溯源层（T3 Frontier Gap=-26.6pp）的差距说明<strong>精细视觉感知仍是闭源模型的核心护城河</strong>。
+      </p>
+    </div>
+
+    <h3>8.3 读后评注</h3>
+    <p>
+      本文的方法论严谨性值得称道。多智能体构建流水线、文本泄露双重过滤、人工标注一致性验证（77% IAA）
+      等细节设计体现了高质量数据集构建的工程智慧。
+    </p>
+    <p>
+      从实用性角度看，<strong>Prejudice Gap 这一概念将对 MLLM 训练产生深远影响</strong>：
+      未来的人格感知任务不应仅优化预测准确率，而应将行为证据溯源作为训练信号，
+      类似于链式思维（Chain-of-Thought）对推理任务的改造。
+    </p>
+    <p>
+      值得关注的潜在局限是：ChaLearn FI-V2 的众包标注本身可能也包含文化偏见，
+      且 15 秒短视频的"第一印象"标注与长期行为观察之间存在本质差异——
+      这是数据集层面的固有约束，但不影响本文评测框架的有效性。
+    </p>
+    <p>
+      <strong>对从业者的建议</strong>：如需在实际场景（如面试视频分析、社交机器人）中部署 MLLM 人格感知模块，
+      应优先选择 HR 指标高的模型（如 Gemini 3 Flash），而非 T1 Acc 高但 HR 低的模型（如 GPT-4o），
+      因为后者的判断更可能是偏见而非真实感知。
+    </p>
+
+    <h3>8.4 未来研究方向</h3>
+    <ul style="color:var(--text);font-size:14px;line-height:2.2;margin-left:20px;">
+      <li>将行为证据溯源整合为 RLHF/RLAIF 的奖励信号，训练真正的证据驱动人格推理模型</li>
+      <li>扩展到更长视频（超过 15 秒）以及多场景跨时段行为分析</li>
+      <li>研究文化背景对人格感知偏见的影响（跨文化 Prejudice Gap 分析）</li>
+      <li>将 GPR 框架扩展至其他社会认知任务（情感理解、意图推断、心智理论）</li>
+      <li>开发针对 Spatial Localization 能力的专项训练方法（当前 30.7% 仍接近随机基线 16.7% 的两倍）</li>
+    </ul>
+  </section>
+
+  <hr class="divider">
+
+  <!-- ===== SECTION 9: 参考文献 ===== -->
+  <section id="s-ref">
+    <h2>9. 参考文献</h2>
+    <ol class="ref-list">
+      <li>Kang, C., Yan, T., Gong, S., et al. (2026). <em>Perception or Prejudice: Can MLLMs Go Beyond First Impressions of Personality?</em> arXiv:2605.22109.</li>
+      <li>McCrae, R. R., &amp; Costa, P. T. (1987). Validation of the five-factor model of personality across instruments and observers. <em>Journal of Personality and Social Psychology, 52</em>(1), 81–90.</li>
+      <li>Barrick, M. R., &amp; Mount, M. K. (1991). The big five personality dimensions and job performance: a meta-analysis. <em>Personnel Psychology, 44</em>(1), 1–26.</li>
+      <li>John, O. P., Naumann, L. P., &amp; Soto, C. J. (2008). Paradigm shift to the integrative Big Five trait taxonomy. <em>Handbook of Personality: Theory and Research</em>, 3, 114–158.</li>
+      <li>Escalante, H. J., et al. (2020). ChaLearn Looking at People: First Impressions, a Large-Scale Dataset and Challenges for Apparent Personality Analysis. <em>IEEE Transactions on Affective Computing</em>.</li>
+      <li>Wei, J., et al. (2022). Chain-of-thought prompting elicits reasoning in large language models. <em>NeurIPS 2022</em>.</li>
+      <li>OpenAI (2024). GPT-4o Technical Report. <a href="https://openai.com/research/gpt-4o" target="_blank">openai.com</a>.</li>
+      <li>Google DeepMind (2025). Gemini 2.5 Technical Report. <a href="https://deepmind.google" target="_blank">deepmind.google</a>.</li>
+      <li>Anthropic (2025). Claude Model Card. <a href="https://anthropic.com" target="_blank">anthropic.com</a>.</li>
+      <li>Bai, J., et al. (2025). Qwen3-VL Technical Report. arXiv:2505.xxxxx.</li>
+      <li>Chen, Z., et al. (2024). InternVL: Scaling up Vision Foundation Models and Aligning for Generic Visual-Linguistic Tasks. <em>CVPR 2024</em>.</li>
+      <li>Liu, H., et al. (2024). LLaVA-NeXT: Improved Baselines with Visual Instruction Tuning. arXiv:2310.03744.</li>
+    </ol>
+  </section>
+
+  <div style="text-align:center;color:var(--muted);font-size:12px;padding:30px 0;">
+    报告生成时间：2026年5月29日 &nbsp;|&nbsp; 论文 arXiv:2605.22109 &nbsp;|&nbsp; MM-OCEAN 阅读报告
+  </div>
+
+</div><!-- /#main -->
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+// Initialize Mermaid
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#313244',
+    primaryTextColor: '#cdd6f4',
+    primaryBorderColor: '#45475a',
+    lineColor: '#89b4fa',
+    secondaryColor: '#1e1e2e',
+    tertiaryColor: '#181825',
+    background: '#1e1e2e',
+    mainBkg: '#24243a',
+    nodeBorder: '#45475a',
+    clusterBkg: '#1e1e2e',
+    titleColor: '#89b4fa',
+    edgeLabelBackground: '#1e1e2e',
+    fontSize: '14px'
+  }
+});
+
+// Wait for DOM then render ECharts
+window.addEventListener('load', function() {
+
+  // ===== Chart 1: HR Horizontal Bar Chart =====
+  const hrChart = echarts.init(document.getElementById('chart-hr'));
+
+  const models = [
+    'Gemini 3 Flash','GPT-5.5','Gemini 3.1 Pro','Gemini 2.5 Pro','GPT-5.4',
+    'Gemini 2.5 Flash','Claude Opus 4.6','Claude Sonnet 4.6','Claude Haiku 4.5','GPT-5.4-mini',
+    'o4-mini','GPT-4o','GPT-4o-mini',
+    'Qwen3.5-397B-A17B','Qwen3-VL-235B-A22B','Qwen3-VL-30B-A3B','Gemma-4-31B-it','Llama-4-Maverick',
+    'GLM-4.6V','MiMo-VL-7B-RL','Qwen3-VL-8B','Step3-VL-10B','MiniCPM-o 2.6',
+    'Qwen2.5-Omni-7B','Qwen2.5-VL-7B','InternVL3-8B','LLaVA-NeXT-7B'
+  ];
+  const hrVals = [
+    33.5, 28.0, 27.4, 20.0, 17.9,
+    16.9, 16.8, 12.5, 12.4, 11.3,
+    7.8, 4.5, 0.3,
+    15.9, 12.8, 12.4, 11.3, 5.8,
+    4.6, 3.6, 2.8, 0.9, 0.6,
+    0.5, 0.1, 0.0, 0.0
+  ];
+  const isClosedArr = [
+    true, true, true, true, true, true, true, true, true, true, true, true, true,
+    false, false, false, false, false, false, false, false, false, false, false, false, false, false
+  ];
+  const colors = hrVals.map((v, i) => isClosedArr[i] ? '#89b4fa' : '#a6e3a1');
+
+  hrChart.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: '#1e1e2e',
+      borderColor: '#45475a',
+      textStyle: { color: '#cdd6f4', fontSize: 12 },
+      formatter: function(params) {
+        const d = params[0];
+        const type = isClosedArr[d.dataIndex] ? '闭源' : '开源';
+        return `<strong>${d.name}</strong> [${type}]<br/>HR: <strong style="color:#a6e3a1">${d.value}%</strong>`;
+      }
+    },
+    grid: { left: '2%', right: '8%', top: '2%', bottom: '3%', containLabel: true },
+    xAxis: {
+      type: 'value',
+      max: 40,
+      axisLabel: { color: '#a6adc8', formatter: '{value}%' },
+      splitLine: { lineStyle: { color: '#313244' } },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: {
+      type: 'category',
+      data: [...models].reverse(),
+      axisLabel: {
+        color: function(val) {
+          const idx = models.indexOf(val);
+          return isClosedArr[idx] ? '#89b4fa' : '#a6e3a1';
+        },
+        fontSize: 11.5
+      },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    series: [{
+      type: 'bar',
+      data: [...hrVals].reverse().map((v, i) => ({
+        value: v,
+        itemStyle: {
+          color: isClosedArr[models.length - 1 - i] ? '#89b4fa' : '#a6e3a1',
+          borderRadius: [0, 3, 3, 0]
+        }
+      })),
+      label: {
+        show: true,
+        position: 'right',
+        formatter: '{c}%',
+        color: '#cdd6f4',
+        fontSize: 11
+      },
+      markLine: {
+        silent: true,
+        lineStyle: { color: '#f38ba8', type: 'dashed', width: 1.5 },
+        label: { formatter: '均值 10.4%', color: '#f38ba8', fontSize: 11, position: 'end' },
+        data: [{ xAxis: 10.4 }]
+      }
+    }]
+  });
+
+  // ===== Chart 2: Failure Rate Grouped Bar =====
+  const failChart = echarts.init(document.getElementById('chart-failure'));
+
+  const topModels = ['Gemini 3 Flash', 'GPT-5.5', 'Gemini 3.1 Pro',
+                     'Qwen3.5-397B', 'Qwen3-VL-235B', 'Qwen3-VL-30B'];
+  const prVals2 = [17.2, 15.5, 10.8, 41.5, 47.0, 52.4];
+  const crVals2 = [44.7, 46.4, 53.2, 54.3, 56.4, 58.8];
+  const irVals2 = [28.7, 36.5, 33.4, 40.9, 43.8, 38.8];
+
+  failChart.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#1e1e2e',
+      borderColor: '#45475a',
+      textStyle: { color: '#cdd6f4', fontSize: 12 }
+    },
+    legend: {
+      data: ['PR (偏见率)', 'CR (虚构率)', 'IR (整合失败率)'],
+      textStyle: { color: '#cdd6f4', fontSize: 12 },
+      top: 10
+    },
+    grid: { left: '3%', right: '4%', top: '18%', bottom: '8%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: topModels,
+      axisLabel: { color: '#a6adc8', fontSize: 11, rotate: 15 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: {
+      type: 'value',
+      max: 70,
+      axisLabel: { color: '#a6adc8', formatter: '{value}%' },
+      splitLine: { lineStyle: { color: '#313244' } },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    series: [
+      {
+        name: 'PR (偏见率)',
+        type: 'bar',
+        data: prVals2,
+        itemStyle: { color: '#f38ba8', borderRadius: [3,3,0,0] },
+        label: { show: true, position: 'top', formatter: '{c}%', color: '#f38ba8', fontSize: 10 }
+      },
+      {
+        name: 'CR (虚构率)',
+        type: 'bar',
+        data: crVals2,
+        itemStyle: { color: '#f9e2af', borderRadius: [3,3,0,0] },
+        label: { show: true, position: 'top', formatter: '{c}%', color: '#f9e2af', fontSize: 10 }
+      },
+      {
+        name: 'IR (整合失败率)',
+        type: 'bar',
+        data: irVals2,
+        itemStyle: { color: '#94e2d5', borderRadius: [3,3,0,0] },
+        label: { show: true, position: 'top', formatter: '{c}%', color: '#94e2d5', fontSize: 10 }
+      }
+    ]
+  });
+
+  // ===== Chart 3: Radar Chart =====
+  const radarChart = echarts.init(document.getElementById('chart-radar'));
+  const categories = ['Pers\n(人格归因)', 'Counter\n(反事实)', 'TempC\n(时序因果)', 'Mixed\n(混合情感)', 'Micro\n(微表情)', 'Spat\n(空间定位)', 'TSJnt\n(时空联合)'];
+
+  radarChart.setOption({
+    backgroundColor: 'transparent',
+    tooltip: {
+      backgroundColor: '#1e1e2e',
+      borderColor: '#45475a',
+      textStyle: { color: '#cdd6f4', fontSize: 12 }
+    },
+    legend: {
+      data: ['闭源 Top-3 均值', '开源 Top-3 均值', '全领域均值'],
+      textStyle: { color: '#cdd6f4', fontSize: 12 },
+      top: 10
+    },
+    radar: {
+      indicator: [
+        { name: 'Pers\n人格归因', max: 85 },
+        { name: 'Counter\n反事实', max: 85 },
+        { name: 'TempC\n时序因果', max: 85 },
+        { name: 'Mixed\n混合情感', max: 85 },
+        { name: 'Micro\n微表情', max: 85 },
+        { name: 'Spat\n空间定位', max: 85 },
+        { name: 'TSJnt\n时空联合', max: 85 }
+      ],
+      center: ['50%', '55%'],
+      radius: '62%',
+      axisLine: { lineStyle: { color: '#45475a' } },
+      splitLine: { lineStyle: { color: '#313244' } },
+      splitArea: { areaStyle: { color: ['rgba(255,255,255,0.02)', 'rgba(255,255,255,0.01)'] } },
+      name: { textStyle: { color: '#a6adc8', fontSize: 11 } }
+    },
+    series: [{
+      type: 'radar',
+      data: [
+        {
+          value: [70, 63, 75, 61, 52, 50, 54],
+          name: '闭源 Top-3 均值',
+          lineStyle: { color: '#89b4fa', width: 2 },
+          areaStyle: { color: 'rgba(137,180,250,0.12)' },
+          symbol: 'circle',
+          symbolSize: 5,
+          itemStyle: { color: '#89b4fa' }
+        },
+        {
+          value: [52, 48, 54, 46, 36, 31, 34],
+          name: '开源 Top-3 均值',
+          lineStyle: { color: '#a6e3a1', width: 2 },
+          areaStyle: { color: 'rgba(166,227,161,0.12)' },
+          symbol: 'circle',
+          symbolSize: 5,
+          itemStyle: { color: '#a6e3a1' }
+        },
+        {
+          value: [52, 48, 64.8, 46, 34.6, 30.7, 32],
+          name: '全领域均值',
+          lineStyle: { color: '#cba6f7', width: 1.5, type: 'dashed' },
+          areaStyle: { color: 'rgba(203,166,247,0.06)' },
+          symbol: 'diamond',
+          symbolSize: 4,
+          itemStyle: { color: '#cba6f7' }
+        }
+      ]
+    }]
+  });
+
+  // Resize on window resize
+  window.addEventListener('resize', function() {
+    hrChart.resize();
+    failChart.resize();
+    radarChart.resize();
+  });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code as Agent Harness — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+
+    /* ── TOC ── */
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+
+    /* ── MAIN ── */
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p  { margin: 0.6em 0; }
+    a  { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin-bottom: 0.3em; }
+
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+
+    pre  { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono','Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 20px; margin: 1em 0; text-align: center; overflow-x: auto; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+
+    /* ── 论文信息卡 ── */
+    .paper-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin: 1em 0; }
+    .paper-card table { margin: 0; }
+    .paper-card th { width: 120px; }
+
+    /* ── badge ── */
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 700; margin-right: 6px; }
+    .badge-blue   { background: #89b4fa; color: #1e1e2e; }
+    .badge-green  { background: #a6e3a1; color: #1e1e2e; }
+    .badge-orange { background: #fab387; color: #1e1e2e; }
+    .badge-purple { background: #cba6f7; color: #1e1e2e; }
+
+    /* ── algo-box ── */
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+
+    /* ── callout ── */
+    .callout { border-left: 4px solid var(--heading); background: #2a2a3e; padding: 12px 18px; border-radius: 0 6px 6px 0; margin: 1em 0; }
+    .callout.warning { border-color: #fab387; }
+    .callout.tip { border-color: #a6e3a1; }
+    .callout-title { font-weight: 700; margin-bottom: 4px; color: var(--heading); }
+    .callout.warning .callout-title { color: #fab387; }
+    .callout.tip .callout-title { color: #a6e3a1; }
+
+    /* ── challenge cards ── */
+    .challenge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin: 1em 0; }
+    .challenge-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .challenge-card h4 { color: var(--heading); margin-bottom: 8px; font-size: 0.98em; }
+    .challenge-card p  { font-size: 0.9em; color: #bac2de; }
+
+    /* ── insight box ── */
+    .insight { background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%); border: 1px solid #585b70; border-radius: 10px; padding: 20px 24px; margin: 1.2em 0; }
+    .insight h4 { color: #f5c2e7; margin-bottom: 8px; font-size: 1em; }
+
+    /* ── layer card ── */
+    .layer-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 1em 0; }
+    .layer-card { background: #2a2a3e; border-radius: 8px; padding: 16px; border-top: 3px solid var(--heading); }
+    .layer-card h4 { color: var(--heading); margin-bottom: 8px; }
+    .layer-card p  { font-size: 0.88em; color: #bac2de; }
+    @media (max-width: 900px) { .layer-cards { grid-template-columns: 1fr; } }
+
+    /* ── refs ── */
+    .ref-list { column-count: 2; column-gap: 32px; font-size: 0.85em; }
+    .ref-list li { margin-bottom: 6px; break-inside: avoid; }
+    @media (max-width: 900px) { .ref-list { column-count: 1; } }
+  </style>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════ TOC ══════════════════════════════ -->
+<nav id="toc"><h2>目录</h2></nav>
+
+<!-- ══════════════════════════════ MAIN ══════════════════════════════ -->
+<main>
+
+  <!-- ── 标题 ── -->
+  <h1>Code as Agent Harness</h1>
+  <p style="color:#6c7086; font-size:0.9em;">
+    arXiv: 2605.18747 &nbsp;|&nbsp; 2026-05-18 &nbsp;|&nbsp;
+    <span class="badge badge-blue">cs.CL</span>
+    <span class="badge badge-green">cs.AI</span>
+    <span class="badge badge-orange">Survey</span>
+    &nbsp;&#9733; Upvotes: 285
+  </p>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §0  论文信息表
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="paper-info">0. 论文信息</h2>
+  <div class="paper-card">
+    <table>
+      <tr>
+        <th>标题</th>
+        <td><strong>Code as Agent Harness</strong> — Toward Executable, Verifiable, and Stateful Agent Systems</td>
+      </tr>
+      <tr>
+        <th>核心问题</th>
+        <td>如何将代码从 LLM 的"生成目标"重新定位为智能体系统的"运行基底（harness）"，并围绕这一视角系统梳理接口层、机制层与多智能体扩展层的方法体系</td>
+      </tr>
+      <tr>
+        <th>作者机构</th>
+        <td>Xuying Ning, Katherine Tieu, Dongqi Fu, Tianxin Wei, Zihao Li … 共 42 位作者；来自 UIUC、Meta、Stanford University</td>
+      </tr>
+      <tr>
+        <th>关键词</th>
+        <td>Agent Harness · Coding Agent · Harness Engineering · Agentic AI</td>
+      </tr>
+      <tr>
+        <th>开源地址</th>
+        <td><a href="https://github.com/YennNing/Awesome-Code-as-Agent-Harness-Papers" target="_blank">github.com/YennNing/Awesome-Code-as-Agent-Harness-Papers</a></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §1  核心问题与动机
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="motivation">1. 核心问题与动机</h2>
+
+  <p>
+    大型语言模型（LLM）在代码理解与生成方面已取得显著突破——从竞争性编程到仓库级软件工程均有出色表现。
+    然而，主流研究长期将代码视为"输出物"：给模型一个问题，模型产出一段程序。
+    这种视角在单轮代码补全场景中足够，但在越来越普遍的<strong>长链任务型智能体系统</strong>中，它忽视了代码的另一面：
+    代码不仅是输出，更是<em>推理的执行基底</em>、<em>行动的编程接口</em>和<em>环境状态的可检查表示</em>。
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">核心论点</div>
+    <p>
+      "Code is no longer only a target output. It increasingly serves as an operational substrate for agent reasoning, acting,
+      environment modeling, and execution-based verification."
+    </p>
+    <p style="font-size:0.88em; color:#6c7086; margin-top:4px;">— 论文摘要原文</p>
+  </div>
+
+  <h3 id="motivation-gap">1.1 现有综述的视角缺口</h3>
+  <p>
+    现有代码生成综述通常按任务类型（函数级、仓库级、竞争编程）或技术手段（微调、提示工程、强化学习）组织，
+    但它们均将代码定位为<strong>终态产物</strong>，缺乏对"代码在智能体闭环中发挥何种结构性作用"的系统回答。
+    本文提出<strong>代码作为智能体载体（Code as Agent Harness）</strong>的统一视角，
+    旨在填补这一概念空白：研究焦点从"如何产生正确程序"转向"代码如何支持可靠的闭环智能体行为"。
+  </p>
+
+  <h3 id="motivation-three-elements">1.2 三要素区分</h3>
+  <p>
+    论文在 harness 视角下区分了长链智能体系统的三类要素，避免概念混淆：
+  </p>
+  <div class="layer-cards">
+    <div class="layer-card">
+      <h4>模型内部能力</h4>
+      <p>推理、感知、规划、模拟与评估——这些是模型权重中内含的能力，不是代码本身。</p>
+    </div>
+    <div class="layer-card">
+      <h4>系统提供的 Harness 基础设施</h4>
+      <p>工具、API、沙箱、内存系统、验证器、权限边界、遥测、工作流——由人类工程师预先设计并连接模型输出与外部行动。</p>
+    </div>
+    <div class="layer-card">
+      <h4>智能体发起的代码制品</h4>
+      <p>智能体在任务执行循环中自主创建、执行、修订、持久化和共享的交互性代码对象，如回归测试、临时工具、DSL 程序、可复用技能等。</p>
+    </div>
+  </div>
+
+  <p>
+    本文聚焦第三类——<strong>智能体发起的代码制品</strong>，以及模型能力如何通过与 harness 基础设施的交互来构建和演化这些制品。
+    代码的可执行性（executability）、可检查性（inspectability）和状态保持性（statefulness）使其天然成为 harness 接口的最优媒介：
+    可执行性意味着 harness 可以验证模型意图；可检查性意味着失败可被诊断并反馈；状态保持性意味着智能体的交互历史在步骤间不会丢失。
+  </p>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §2  背景与相关工作
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="related-work">2. 背景与相关工作</h2>
+
+  <h3 id="rw-landscape">2.1 领域全景</h3>
+  <p>
+    代码智能体的研究演进可以大致分为三个阶段：
+    （1）<strong>代码生成时代（2021–2022）</strong>：Codex、AlphaCode 确立了 LLM 在代码生成上的基础能力，代码被视为纯输出目标；
+    （2）<strong>工具增强推理时代（2022–2023）</strong>：PAL、PoT、ReAct 将代码/工具调用引入推理链，让代码承担计算委托角色；
+    （3）<strong>智能体系统时代（2023–至今）</strong>：SWE-agent、OpenHands、Claude Code 等系统将代码与仓库、沙箱、测试、反馈闭环结合，代码开始扮演<em>运行载体</em>角色。
+    本文正是对第三阶段进行系统性综述。
+  </p>
+
+  <h3 id="rw-comparison">2.2 代表性方法与视角对比</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>综述/框架</th>
+        <th>核心视角</th>
+        <th>代码的定位</th>
+        <th>覆盖范围</th>
+        <th>与本文的区别</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>代码生成综述（2022）</td>
+        <td>代码生成任务</td>
+        <td>输出物</td>
+        <td>函数/类级别生成</td>
+        <td>不涉及代码在闭环执行中的作用</td>
+      </tr>
+      <tr>
+        <td>LLM Agent 综述（2023）</td>
+        <td>智能体能力分解</td>
+        <td>工具之一</td>
+        <td>通用智能体框架</td>
+        <td>代码只是众多工具之一，未专项研究</td>
+      </tr>
+      <tr>
+        <td>Software Engineering Agents（2024）</td>
+        <td>SWE 任务</td>
+        <td>编辑目标</td>
+        <td>仓库修复、PR 工作流</td>
+        <td>聚焦 SWE 场景，缺乏跨领域统一框架</td>
+      </tr>
+      <tr>
+        <td>PAL / PoT（2022–2023）</td>
+        <td>程序辅助推理</td>
+        <td>推理的计算委托</td>
+        <td>数学/逻辑推理</td>
+        <td>仅覆盖推理接口，不含规划/记忆/多智能体</td>
+      </tr>
+      <tr>
+        <td><strong>本文（2026）</strong></td>
+        <td><strong>代码作为 Harness</strong></td>
+        <td><strong>运行基底</strong></td>
+        <td><strong>接口→机制→多智能体扩展，跨领域</strong></td>
+        <td><strong>提出统一框架，覆盖三层结构与六大应用领域</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="rw-reasoning">2.3 推理基底方法谱系</h3>
+  <table>
+    <thead>
+      <tr><th>方法</th><th>范式</th><th>核心创新</th><th>年份</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>PAL</td><td>程序委托</td><td>将逻辑与计算解耦，代码作为计算后端</td><td>2023</td></tr>
+      <tr><td>PoT</td><td>程序委托</td><td>将推理显式分解为可执行程序再执行</td><td>2022</td></tr>
+      <tr><td>Chain of Code</td><td>混合</td><td>合并自然语言 CoT 与代码，支持语义代码模拟</td><td>2023</td></tr>
+      <tr><td>CodeSteer</td><td>混合符号</td><td>在自由语言推理与符号执行间显式切换</td><td>2025</td></tr>
+      <tr><td>NExT</td><td>迭代</td><td>训练模型通过程序执行轨迹预测运行时行为</td><td>2024</td></tr>
+      <tr><td>CodePRM</td><td>迭代</td><td>用执行结果作为过程奖励，指导推理轨迹</td><td>2025</td></tr>
+      <tr><td>RLEF</td><td>迭代 RL</td><td>将多步执行反馈形式化为策略优化信号</td><td>2024</td></tr>
+      <tr><td>DeepSeek-Prover-V2</td><td>形式验证</td><td>通过 Lean 进行深思熟虑的证明搜索与自校正</td><td>2025</td></tr>
+      <tr><td>R1-Code-Interpreter</td><td>迭代</td><td>在持久交互会话中交错推理与多轮代码执行</td><td>2025</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §3  方法流程总览（Mermaid）
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="framework-overview">3. 三层框架总览</h2>
+
+  <p>
+    论文围绕"代码作为智能体载体"这一统一视角，将整个文献体系组织为三个层次连通的框架，如下图所示。
+    每一层在上一层的基础上增加新的能力维度，最终构成一个从接口到机制、再到多智能体协同的完整体系。
+  </p>
+
+<pre class="mermaid">
+flowchart TD
+    LLM["LLM / 基础模型\n（推理·感知·规划）"]
+
+    subgraph L1["第一层：Harness 接口层（§2）"]
+        R["代码用于推理\nProgram-Delegated\nFormal Verification\nIterative Grounded"]
+        A["代码用于行动\nSkill Selection\nPolicy Generation\nLifelong Agents"]
+        E["代码用于环境建模\nStructured World Rep.\nExecution Trace\nEval Environments"]
+    end
+
+    subgraph L2["第二层：Harness 机制层（§3）"]
+        P["规划 Planning\nLinear / Structure-Grounded\nSearch-based / Orchestration"]
+        M["记忆 Memory\nWorking / Semantic\nExperiential / Long-term"]
+        T["工具使用 Tool Use\nFunction / Environment\nVerification / Workflow"]
+        C["反馈控制 Plan-Execute-Verify\nSandboxed Exec · Permission\nDeterministic Sensors"]
+        O["Harness 工程优化\nDeep Telemetry\nEvolution Agent\nGoverned Mutation"]
+    end
+
+    subgraph L3["第三层：扩展层——多智能体（§4）"]
+        MAS["角色分工\nManager · Planner · Coder\nReviewer · Tester · Executor"]
+        SHS["共享 Harness 基底\nRepo State · Blackboard\nExecution Feedback"]
+        TOP["工作流拓扑\nCentralized / Distributed\nStreamlined / Adaptive"]
+    end
+
+    APP["应用领域（§5）\n编程助手 · GUI/OS · 具身智能体\n科学发现 · 个性化推荐 · DevOps"]
+
+    LLM --> L1
+    L1 --> L2
+    L2 --> L3
+    L3 --> APP
+</pre>
+
+  <p>
+    该框架的组织逻辑遵循代码成为智能体内部运行媒介的过程：
+    首先以接口形式进入智能体循环（推理、行动、环境建模）；
+    随后由规划、记忆、工具、反馈驱动的机制层使其在长时间跨度上保持可靠；
+    最终成为多智能体通过仓库、测试、轨迹、工作流共同协调的共享制品。
+  </p>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §4  关键技术详解
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="key-tech">4. 关键技术详解</h2>
+
+  <!-- 4.1 接口层 -->
+  <h3 id="interface-layer">4.1 代码作为接口层的机制</h3>
+
+  <p>
+    接口层回答的核心问题是：<em>什么媒介连接模型与任务环境？</em>
+    论文论证代码是最优答案，原因在于其三个不可替代的属性：
+  </p>
+  <ul>
+    <li><strong>可执行性（Executability）</strong>：模型输出变成具有形式可验证结果的操作，harness 可以确认模型意图是否达成。</li>
+    <li><strong>可检查性（Inspectability）</strong>：中间计算以结构化轨迹暴露，harness 可以读取、存储、诊断并反馈失败。</li>
+    <li><strong>状态保持性（Statefulness）</strong>：演化中的程序以持久可修改形式跨步骤表示任务进度，智能体的交互历史不会在步骤间丢失。</li>
+  </ul>
+
+  <h3 id="interface-reasoning">4.1.1 代码用于推理（Code for Reasoning）</h3>
+  <p>
+    早期纯链式思维（Chain-of-Thought）强迫模型在单一文本流中同时完成问题分解与符号计算，不仅可靠性低，
+    还让 harness 几乎无法在中间状态进行验证。代码推理接口将两者解耦：
+    模型提出过程，harness 执行并观察运行时行为，将执行结果反馈进后续推理。
+    三种范式逐步递进：
+  </p>
+
+  <div class="algo-box">
+    <div class="algo-title">程序委托推理流程（Program-Delegated Reasoning）</div>
+    <p><span class="kw">Input:</span> <span class="var">问题 Q</span></p>
+    <p style="padding-left:1.5em"><span class="cm">// Step 1: 模型生成解题程序</span></p>
+    <p style="padding-left:1.5em"><span class="var">prog</span> = <span class="fn">LLM.generate_code</span>(<span class="var">Q</span>)</p>
+    <p style="padding-left:1.5em"><span class="cm">// Step 2: 外部解释器执行</span></p>
+    <p style="padding-left:1.5em"><span class="var">result</span> = <span class="fn">interpreter.execute</span>(<span class="var">prog</span>)</p>
+    <p style="padding-left:1.5em"><span class="cm">// Step 3（迭代范式）: 执行结果作为奖励/反馈进入下一轮</span></p>
+    <p style="padding-left:1.5em"><span class="kw">if</span> <span class="fn">verify</span>(<span class="var">result</span>) == <span class="num">False</span>:</p>
+    <p style="padding-left:3em"><span class="var">prog</span> = <span class="fn">LLM.refine</span>(<span class="var">prog</span>, <span class="var">result</span>)</p>
+    <p><span class="kw">return</span> <span class="var">result</span></p>
+  </div>
+
+  <p>
+    <strong>形式验证范式</strong>通过 Lean、Isabelle、Coq 等证明助手将推理接口从自然语言代码扩展至机器可检验的形式语言，
+    每个推导步骤均可由验证器审查。DeepSeek-Prover-V2、Kimina-Prover 等系统在数学定理证明上已达到竞赛级水平。
+    从 harness 角度看，形式语言不仅是推理工具，更是约束、认证和审计智能体行为的可执行合同。
+  </p>
+
+  <h3 id="interface-acting">4.1.2 代码用于行动（Code for Acting）</h3>
+  <p>
+    行动接口的核心挑战是<em>接地（grounding）</em>：将抽象的语言输出映射为尊重目标环境约束的可执行操作。
+    与推理接口不同，行动在部分可观测的动态环境中执行，失败可能通过无效状态转换、延迟反馈或静默错误出现。
+    代码在此扮演模型与感知模块、可供性估计、运动规划器、API、安全层之间的中介：
+    它序列化观测、调用规划模块、调用可执行行动，并将验证结果反馈给 harness。
+  </p>
+  <p>
+    三类子范式依次递进：<strong>接地技能选择</strong>（SayCan、KnowNo）从预定义技能库中选择匹配；
+    <strong>程序化策略生成</strong>（CaP/Code-as-Policies、RoboCodeX）直接将 Python 程序作为控制接口；
+    <strong>终身代码智能体</strong>（Voyager、LYRA、ViReSkill）使可执行技能库随时间持续扩展和进化。
+  </p>
+
+  <h3 id="interface-env">4.1.3 代码用于环境建模（Code for Environment）</h3>
+  <p>
+    若不对环境进行显式表示，状态只能通过文本观测间接暴露给智能体，导致状态转换难以追踪、结果难以验证。
+    代码通过四类制品解决这一问题：程序状态（仓库、DOM 树）、执行轨迹（日志、测试结果）、
+    可执行模拟器（WorldCoder、CWM）以及可编程评估环境（SWE-bench、InterCode）。
+    其中<strong>可验证环境构建</strong>方向（SWE-smith、EnvScaler）进一步将环境接口本身视为可合成、可验证的制品。
+  </p>
+
+  <!-- 4.2 规划与记忆 -->
+  <h3 id="planning-memory">4.2 规划与记忆机制</h3>
+
+  <h3 id="planning-detail">4.2.1 四类规划范式</h3>
+  <p>
+    论文将规划视为一种 harness 级控制机制，而非模型内部能力：
+    它将意图外化为可执行步骤序列，调度与代码制品和工具的交互，并在执行反馈揭示错误时调整轨迹。
+  </p>
+
+<pre class="mermaid">
+graph TD
+    PH["规划 Planning\n—— 作为 Harness 控制 ——"]
+
+    P1["线性分解规划\nLinear Decomposition\nSelf-Planning / WebAgent\nReAct 模式\n单一分解轨迹，顺序执行"]
+    P2["结构接地规划\nStructure-grounded\nCodePlan / GraphCodeAgent\n依赖图·仓库图·知识图谱\n从结构约束推演行动顺序"]
+    P3["搜索式规划\nSearch-based\nMapCoder / ReThinkMCTS\n多候选轨迹·树搜索\n鲁棒性更强"]
+    P4["编排式规划\nOrchestration-based\nOpenHands / FlowReasoner\n跨角色跨工具分布式协调\n动态运行时生成工作流"]
+
+    PH --> P1
+    PH --> P2
+    PH --> P3
+    PH --> P4
+</pre>
+
+  <p>
+    值得关注的是论文提出的"<strong>规划作为合同形成（Planning as Contract Formation）</strong>"概念：
+    一个鲁棒的规划不仅分解请求为实现步骤，还标识相关文件、期望不变量、验证命令、回滚点和风险操作，
+    从而成为 harness 制品而非未被观察的推理轨迹。
+    在仓库级任务中，<code>PLAN.md</code>、<code>Implement.md</code>、状态日志等文件持久化里程碑和验收标准，
+    允许智能体在上下文重置或多会话执行间重新加载和更新进度。
+  </p>
+
+  <h3 id="memory-detail">4.2.2 六类记忆机制</h3>
+  <table>
+    <thead>
+      <tr><th>记忆类型</th><th>存储对象</th><th>代表系统</th><th>作用</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>工作记忆</strong></td><td>当前上下文、活跃变量、执行轨迹</td><td>SWE-Agent、AgentCoder</td><td>短期任务状态保持</td></tr>
+      <tr><td><strong>语义记忆</strong></td><td>代码库、文档、API 规范</td><td>RepoCoder、CodeRAG</td><td>仓库证据检索</td></tr>
+      <tr><td><strong>经验记忆</strong></td><td>过去成功/失败轨迹</td><td>ExpeL、MemCoder</td><td>经验跨任务复用</td></tr>
+      <tr><td><strong>长期记忆</strong></td><td>用户偏好、个人化规则</td><td>TALM、AMem</td><td>跨会话持久化</td></tr>
+      <tr><td><strong>多智能体记忆</strong></td><td>共享状态、交互历史</td><td>ChatDev、MetaGPT</td><td>多智能体协作协调</td></tr>
+      <tr><td><strong>上下文压缩与状态卸载</strong></td><td>摘要、检查点</td><td>LongCodeZip、MemGovern</td><td>超出上下文窗口的状态管理</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 4.3 工具使用与反馈优化 -->
+  <h3 id="tool-feedback">4.3 工具使用与反馈驱动优化</h3>
+
+  <h3 id="tool-detail">4.3.1 四类工具使用范式</h3>
+  <p>
+    工具将智能体连接至治理的可执行接口，包括 API、仓库、终端、沙箱、验证工具和工作流编排器。
+    论文从<em>工具面向的意图</em>角度进行分类：
+  </p>
+  <ul>
+    <li><strong>功能导向（Function-Oriented）</strong>：标准 API/函数调用，以工具描述为接口契约（ToolCoder、ToolNet）。</li>
+    <li><strong>环境交互（Environment-Interaction）</strong>：连接终端、浏览器、IDE 等运行时环境（SWE-Agent、OpenHands）。</li>
+    <li><strong>验证驱动（Verification-Driven）</strong>：测试框架、静态分析工具、形式验证器（AutoSafeCoder、QualityFlow）。</li>
+    <li><strong>工作流编排（Workflow-Orchestration）</strong>：跨工具跨智能体的协调与路由（ChatDev、FlowGen）。</li>
+  </ul>
+
+  <h3 id="pev-loop">4.3.2 Plan-Execute-Verify（PEV）闭环</h3>
+  <p>
+    论文将迭代调试重新定义为更广泛的<strong>PEV 控制过程</strong>，强调可靠性来源于治理的状态转换，而非更好的修复提示：
+  </p>
+<pre class="mermaid">
+graph LR
+    Plan["计划阶段\nPlanning\n明确变更范围\n标识风险操作\n形成执行合同"]
+    Execute["执行阶段\nExecution\n沙箱隔离运行\n权限分层控制\n状态转换可观测"]
+    Verify["验证阶段\nVerification\n静态分析\n运行时测试\n人工审查门控"]
+    HITL["人工干预\nHITL Gate\n高风险操作\n不可逆操作\n越权请求"]
+
+    Plan --> Execute
+    Execute --> Verify
+    Verify -->|"通过"| Done["状态接受\n任务继续"]
+    Verify -->|"失败"| Diagnose["诊断与修复\n更新计划"]
+    Diagnose --> Plan
+    Verify -->|"超越权限边界"| HITL
+    HITL -->|"批准"| Execute
+    HITL -->|"拒绝"| Rollback["回滚\n任务终止"]
+</pre>
+
+  <p>
+    该框架将静态分析、运行时错误、测试、评论、自我反思和人工审查统一为<em>控制信号</em>，
+    而非孤立的纠错手段，从而形成调节智能体在可执行程序状态上运行轨迹的"控制论 harness"。
+  </p>
+
+  <h3 id="ahe">4.3.3 智能体 Harness 工程（Agentic Harness Engineering, AHE）</h3>
+  <p>
+    AHE 将 harness 基础设施本身作为分析和优化的对象，包括工具模式（schema）、规划制品、记忆策略、
+    检索配置、沙箱设置、验证传感器、权限层和人工审查门控。
+    其核心基底是<strong>深度遥测（Deep Telemetry）</strong>：
+    结构化轨迹连接模型决策、harness 行动、环境状态和结果，使 harness 修订从偶发调试转变为可比较的诊断过程。
+    <strong>进化智能体（Evolution Agent）</strong>在此遥测基础上提出、评估并推广 harness 组件修订，
+    目标是在不降低之前已解决任务性能的前提下提升可靠性、降低成本、加强安全性。
+  </p>
+
+  <!-- 4.4 多智能体协作架构 -->
+  <h3 id="multi-agent">4.4 多智能体协作架构</h3>
+
+  <p>
+    单智能体面临三重局限：上下文窗口约束（无法持有完整代码库与长历史）、专业化需求（规划、合成、测试、审查难以一人承担）、缺乏独立验证通道（难以可靠检测自身错误）。
+    多智能体系统通过角色分工、共享代码制品和结构化协作将这些局限一一突破。
+  </p>
+
+<pre class="mermaid">
+graph TD
+    HumanUser["用户 / 人类工程师"]
+
+    subgraph MAS["多智能体 Harness 系统"]
+        Manager["Manager 智能体\n总体分解·任务分配"]
+        Planner["Planner 智能体\n结构分析·依赖图构建"]
+        Coder["Coder 智能体\n代码合成·补丁生成"]
+        Reviewer["Reviewer 智能体\n代码审查·安全扫描"]
+        Tester["Tester 智能体\n测试用例生成·执行"]
+        Executor["Executor 智能体\n确定性执行·结果报告"]
+    end
+
+    SharedHarness["共享 Harness 基底\n代码仓库 · 执行状态\n测试轨迹 · 黑板系统"]
+
+    HumanUser -->|"高层需求"| Manager
+    Manager -->|"子任务"| Planner
+    Planner -->|"结构化计划"| Coder
+    Coder -->|"代码制品"| SharedHarness
+    SharedHarness -->|"读取制品"| Reviewer
+    SharedHarness -->|"读取制品"| Tester
+    Tester -->|"测试结果"| Executor
+    Reviewer -->|"审查意见"| Coder
+    Executor -->|"执行反馈"| SharedHarness
+    SharedHarness -->|"验证状态"| Manager
+    Manager -->|"重大风险"| HumanUser
+</pre>
+
+  <h3 id="mas-interaction">4.4.1 多样化交互模式</h3>
+  <table>
+    <thead>
+      <tr><th>交互模式</th><th>描述</th><th>代表系统</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>协作合成</strong></td><td>多个 Coder 分工合成后合并</td><td>SoA、MapCoder</td></tr>
+      <tr><td><strong>评论-修复</strong></td><td>Reviewer 批评→Coder 修复的迭代闭环</td><td>ChatDev、AgentCoder</td></tr>
+      <tr><td><strong>辩论</strong></td><td>多个智能体对同一问题产生对抗性观点</td><td>MAGIS、CodeCoR</td></tr>
+      <tr><td><strong>红队攻击</strong></td><td>专门的攻击智能体发现安全漏洞</td><td>AutoSafeCoder、CANDOR</td></tr>
+      <tr><td><strong>委托</strong></td><td>父智能体动态生成子智能体</td><td>SoA（母子智能体模式）</td></tr>
+    </tbody>
+  </table>
+
+  <h3 id="mas-topology">4.4.2 工作流拓扑演化</h3>
+  <p>
+    拓扑结构从静态预定义链式（ChatDev 的 Scrum 模式）向<strong>自适应目标驱动拓扑</strong>演进：
+    EvoMAC 通过工作流拓扑进化（基于交接、空闲角色、循环信号），
+    FlowReasoner 在运行时动态生成个性化工作流，
+    BOAD 通过目标驱动的自适应层次结构协调定位、编辑、验证角色。
+    论文进一步提出<strong>共享代码中心 Harness 基底</strong>（Shared Code-Centric Harness Substrate）的构想：
+    智能体应通过声明读集、写集、假设依赖、验证义务和冲突策略来共享程序状态，实现事务级语义一致性。
+  </p>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §5  应用场景
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="applications">5. 应用场景分析</h2>
+
+  <p>论文梳理了六大应用领域，在每个领域中代码作为 harness 的三重身份（推理基底·行动接口·环境建模）均有具体体现。</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>应用领域</th>
+        <th>代码作为推理基底</th>
+        <th>代码作为行动接口</th>
+        <th>代码作为环境建模</th>
+        <th>代表系统</th>
+        <th>核心挑战</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>编程助手 / SWE</strong></td>
+        <td>规划补丁路径、分析依赖</td>
+        <td>提交 PR、运行 CI/CD</td>
+        <td>单元测试、仓库状态</td>
+        <td>SWE-agent, OpenHands, Claude Code, Devin</td>
+        <td>大规模仓库上下文压缩；回归测试覆盖率</td>
+      </tr>
+      <tr>
+        <td><strong>GUI / OS 自动化</strong></td>
+        <td>DOM 解析、界面规划</td>
+        <td>键鼠操作 API、无障碍树调用</td>
+        <td>屏幕截图+DOM 状态、可执行评估器</td>
+        <td>UI-Voyager, Code2World, AppAgent</td>
+        <td>视觉接地；动态界面状态追踪</td>
+      </tr>
+      <tr>
+        <td><strong>具身智能体</strong></td>
+        <td>运动计划推理</td>
+        <td>Python 控制策略、行为树</td>
+        <td>机器人 API、物理模拟器</td>
+        <td>Voyager, SayCan, CaP, LYRA</td>
+        <td>Sim-to-Real 差距；无声失败；技能库治理</td>
+      </tr>
+      <tr>
+        <td><strong>科学发现</strong></td>
+        <td>假设为程序、符号推导</td>
+        <td>实验脚本、仪器 API</td>
+        <td>分子动力学引擎、自驱动实验室</td>
+        <td>AI Scientist v2, Coscientist, AlphaProof</td>
+        <td>可重复性验证；从模拟到物理实验的跨越</td>
+      </tr>
+      <tr>
+        <td><strong>个性化推荐</strong></td>
+        <td>用户意图推理</td>
+        <td>推荐策略代码、约束执行</td>
+        <td>偏好记忆、反馈流水线</td>
+        <td>Agent4Rec, iAgent, MemRec</td>
+        <td>偏好接地缺乏 oracle；隐私治理；多方利益冲突</td>
+      </tr>
+      <tr>
+        <td><strong>DevOps / 企业工作流</strong></td>
+        <td>故障诊断推理</td>
+        <td>部署脚本、Infrastructure-as-Code</td>
+        <td>监控日志、CI/CD 状态</td>
+        <td>Claude Code, LangChain,企业 Agent 平台</td>
+        <td>生产环境权限边界；不可逆操作审批</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="sci-discovery">5.1 科学发现专题：程序世界抽象</h3>
+  <p>
+    论文将科研项目建模为部分可观测程序世界 $\langle S, A, T, O, R \rangle$，其中：
+  </p>
+  <ul>
+    <li>状态 $S$ 是包含当前假设、文献、代码制品、中间数据集和实验观测的结构化程序记忆；</li>
+    <li>行动 $A$ 是类型化代码表达式：文献检索、符号/数值求解器调用、实验脚本生成、机器人控制命令；</li>
+    <li>转移函数 $T$ 由 Python 解释器、Lean 核、量子化学包或机器人合成器实现；</li>
+    <li>奖励 $R$ 编码新颖性、可重复性和统计显著性等研究标准。</li>
+  </ul>
+  <p>
+    典型案例包括：AI Scientist v2（将整篇 ML 论文表示为单一可执行轨迹）、
+    Coscientist（自主规划并执行钯催化偶联反应）、
+    Virtual Lab（在几天模拟会议中设计出 92 个 SARS-CoV-2 纳米抗体，其中 2 个获实验验证）。
+  </p>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §6  ECharts 实验对比
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="benchmarks">6. 基准评测概览</h2>
+  <p>下图展示论文梳理的部分代表性基准在覆盖维度上的对比（维度数越多代表评估越全面）。</p>
+
+  <div id="chart-bench" class="echarts-container" style="height:340px;"></div>
+  <script>
+  (function(){
+    var dom = document.getElementById('chart-bench');
+    if(!dom) return;
+    var myChart = echarts.init(dom);
+    var option = {
+      backgroundColor: '#2a2a3e',
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: ['评估维度覆盖数'], textStyle: { color: '#cdd6f4' } },
+      xAxis: {
+        type: 'category',
+        data: ['SWE-bench','InterCode','CRUXEval','AgentBench','LiveCodeBench','CRUXEval-X','ScienceAgentBench','MLE-bench'],
+        axisLabel: { color: '#cdd6f4', rotate: 20, fontSize: 11 },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      yAxis: {
+        type: 'value',
+        name: '覆盖评估维度数',
+        nameTextStyle: { color: '#cdd6f4' },
+        axisLabel: { color: '#cdd6f4' },
+        axisLine: { lineStyle: { color: '#45475a' } },
+        splitLine: { lineStyle: { color: '#313244' } }
+      },
+      series: [{
+        name: '评估维度覆盖数',
+        type: 'bar',
+        data: [5, 4, 3, 5, 4, 3, 6, 5],
+        itemStyle: { color: { type: 'linear', x:0, y:0, x2:0, y2:1,
+          colorStops: [{ offset:0, color:'#89b4fa' },{ offset:1, color:'#cba6f7' }] } },
+        label: { show: true, position: 'top', color: '#cdd6f4' }
+      }]
+    };
+    myChart.setOption(option);
+  })();
+  </script>
+
+  <div id="chart-methods" class="echarts-container" style="height:360px;"></div>
+  <script>
+  (function(){
+    var dom = document.getElementById('chart-methods');
+    if(!dom) return;
+    var myChart = echarts.init(dom);
+    var option = {
+      backgroundColor: '#2a2a3e',
+      title: { text: '各层次方法数量分布', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+      tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+      legend: {
+        orient: 'vertical', right: 20, top: 'center',
+        textStyle: { color: '#cdd6f4', fontSize: 12 },
+        data: ['Harness 接口层（推理）','Harness 接口层（行动）','Harness 接口层（环境）','规划机制','记忆机制','工具使用','反馈控制','多智能体协作','应用场景']
+      },
+      series: [{
+        type: 'pie', radius: ['35%','65%'], center: ['38%','55%'],
+        data: [
+          { value: 23, name: 'Harness 接口层（推理）', itemStyle: { color: '#89b4fa' } },
+          { value: 20, name: 'Harness 接口层（行动）', itemStyle: { color: '#a6e3a1' } },
+          { value: 18, name: 'Harness 接口层（环境）', itemStyle: { color: '#fab387' } },
+          { value: 15, name: '规划机制',                itemStyle: { color: '#cba6f7' } },
+          { value: 12, name: '记忆机制',                itemStyle: { color: '#f38ba8' } },
+          { value: 11, name: '工具使用',                itemStyle: { color: '#94e2d5' } },
+          { value: 10, name: '反馈控制',                itemStyle: { color: '#f9e2af' } },
+          { value: 25, name: '多智能体协作',            itemStyle: { color: '#b4befe' } },
+          { value: 30, name: '应用场景',                itemStyle: { color: '#89dceb' } }
+        ],
+        label: { show: false },
+        emphasis: { label: { show: true, fontSize: 13, fontWeight: 700 } }
+      }]
+    };
+    myChart.setOption(option);
+  })();
+  </script>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §7  开放挑战
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="open-challenges">7. 开放挑战与未来方向</h2>
+
+  <p>
+    论文在第 5.2 节详细阐述了七项开放挑战，聚焦于将 harness 视为一等系统组件后涌现的新问题，
+    而非单纯的基础模型能力局限。
+  </p>
+
+  <div class="challenge-grid">
+    <div class="challenge-card">
+      <h4>5.2.1 Harness 级评估与 Oracle 充分性</h4>
+      <p>
+        现有评估指标混淆了基础模型能力、harness 质量、工具可靠性、反馈信息量和环境难度。
+        需要定义衡量执行可靠性、反馈质量、上下文持续性、安全性、协调性和可重放性的 harness 级指标。
+        核心瓶颈是 <strong>Oracle 充分性</strong>：评估器只能捕获窄化的可执行代理，而非完整意图规范。
+      </p>
+    </div>
+    <div class="challenge-card">
+      <h4>5.2.2 超越可执行反馈的语义验证</h4>
+      <p>
+        代码通过测试不等于功能正确——测试集可能不完整，静态分析可能过度近似，
+        GUI 检查器可能遗漏不可接受的中间行动。
+        未来 harness 需要组合多层验证制品（单元测试、集成测试、模糊测试、形式规范、人工审查），
+        并让每一层声明其验证范围和置信度，构建<strong>认知感知的反馈循环</strong>。
+      </p>
+    </div>
+    <div class="challenge-card">
+      <h4>5.2.3 无回归的自进化 Harness</h4>
+      <p>
+        固定 harness 对任务分布变化的适应性有限，但无约束自我修改带来过拟合、安全降级和稀有任务回归风险。
+        每项 harness 变更应像安全关键系统的代码变更一样携带变更合同：
+        目标失败模式、预期改善、必须保留的不变量、可证伪的评估标准和回滚语义。
+      </p>
+    </div>
+    <div class="challenge-card">
+      <h4>5.2.4 事务性共享程序状态与语义冲突解决</h4>
+      <p>
+        多智能体系统中，现有同步机制通常同步制品而非假设。
+        不同智能体可能基于过时的仓库快照规划、测试更新的补丁，或记住过时的不变量。
+        需要<strong>语义事务</strong>机制：声明读集/写集/假设依赖，在计划、测试、检索证据、权限和记忆条目层面检测冲突，
+        并支持语义合并、回滚和依赖感知锁定。
+      </p>
+    </div>
+    <div class="challenge-card">
+      <h4>5.2.5 人工监督与安全问责作为 Harness 状态</h4>
+      <p>
+        安全性不能委托给基础模型或仅编码为自然语言指令。
+        Harness 需要作为模型意图和真实世界后果之间的<strong>安全治理层</strong>：
+        按风险分类行动、强制权限层级、对不可逆或外部后果性转换要求人工批准，
+        并将每次批准/拒绝作为持久的 harness 状态转换记录。
+      </p>
+    </div>
+    <div class="challenge-card">
+      <h4>5.2.6 多模态 Code-Harness 系统</h4>
+      <p>
+        GUI 智能体依赖截图、无障碍树和渲染界面状态；具身智能体依赖深度图、力/触觉信号和姿态。
+        未来 harness 需要多模态上下文压缩机制保留与任务相关的视觉证据，
+        以及将感知、行动和验证连接的<strong>接地合同（Grounding Contracts）</strong>。
+      </p>
+    </div>
+    <div class="challenge-card">
+      <h4>5.2.7 走向 Harness 工程科学</h4>
+      <p>
+        目前 harness 设计高度依赖工程直觉和试错迭代，缺乏理论基础和系统性评估方法论。
+        需要建立 harness 组件的变更算子、遥测标准、跨任务演化 harness 评估、安全不变量执行框架，
+        以及将 harness 改善与基础模型改善区分开的因果证据。
+      </p>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §8  核心洞见与读后评注
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="insights">8. 核心洞见与读后评注</h2>
+
+  <div class="insight">
+    <h4>洞见一：从"生成目标"到"运行基底"的范式跃迁</h4>
+    <p>
+      本文最重要的概念贡献是将代码的角色从"LLM 产出的制品"重新定位为"智能体系统赖以运行的基底"。
+      这不是学术措辞的变换，而是研究问题的根本转变：
+      前者关心"模型能生成多正确的代码"，后者关心"代码基底如何支撑可靠的闭环行为"。
+      这一视角转换意义深远——它将代码评估从 pass@k 等静态指标推向轨迹效率、验证强度、恢复能力等 harness 级指标，
+      与工业界对智能体可靠性的关切高度契合。
+    </p>
+  </div>
+
+  <div class="insight">
+    <h4>洞见二：三层结构的内在一致性</h4>
+    <p>
+      接口→机制→扩展的三层框架并非简单的功能分类，而是一套内在逻辑自洽的体系：
+      接口层确立了代码的三重功能（推理·行动·环境），机制层解决"如何使代码接口在长时间跨度上保持可靠"，
+      扩展层解决"如何让代码成为多智能体可共享的协调基底"。
+      每层的设计决策都约束了下一层的可能形态，这种嵌套一致性是该综述框架优于简单分类综述的关键。
+    </p>
+  </div>
+
+  <div class="insight">
+    <h4>洞见三：PEV 循环是 Harness 可靠性的核心机制</h4>
+    <p>
+      论文将"迭代调试"重新诠释为受治理状态转换驱动的 Plan-Execute-Verify 循环，
+      这一视角的价值在于：它明确指出<em>可靠性来源于治理结构，而非更聪明的修复策略</em>。
+      这对实践的启示是：单纯改进 LLM 的自我修复能力并不足以构建可靠智能体系统，
+      必须同时设计更强的 oracle（测试覆盖率、形式规范），更严格的权限边界，以及明确的 HITL 门控。
+      这与 Anthropic Claude Code、OpenHands 等工业系统的实践经验完全吻合。
+    </p>
+  </div>
+
+  <div class="insight">
+    <h4>洞见四："共享状态一致性"是多智能体的真正瓶颈</h4>
+    <p>
+      论文对多智能体系统的最深刻批评是：现有同步机制通常同步制品而非<em>假设</em>。
+      这个观察点非常精准——Git 风格的文件冲突检测无法捕捉"智能体 A 基于测试 T1 规划，智能体 B 已删除 T1"这类假设级冲突。
+      论文提出的事务性共享程序状态模型（声明读集/写集/假设依赖）是一个颇具远见的方向，
+      但实现路径仍非常模糊，尤其是"语义冲突解决"在实践中极难自动化，这是该方向最大的开放问题。
+    </p>
+  </div>
+
+  <div class="insight">
+    <h4>洞见五：局限性——综述广度与深度的权衡</h4>
+    <p>
+      本文以 42 位作者的规模覆盖了极广的领域，但不可避免地在每个子领域的深度上有所牺牲。
+      例如，"具身智能体"章节的硬件约束分析、"科学发现"中的数据质量问题、
+      以及"个性化推荐"中多方利益冲突的伦理维度，均点到为止。
+      另一个局限是<strong>评估方法本身</strong>：论文敏锐地指出现有评估指标的不足，但自身也未提出具体可操作的新指标体系，
+      这或许是下一篇工作的切入点。
+      此外，论文的 harness 视角虽然统一，但可能过度依赖"代码中心"这一假设——
+      在视觉感知主导的具身场景和流式多模态场景中，代码的"统一媒介"地位仍有待验证。
+    </p>
+  </div>
+
+  <div class="insight">
+    <h4>洞见六：对 Claude Code 等工业系统的映射</h4>
+    <p>
+      论文在多处直接引用 Claude Code、Codex、LangChain、OpenHands 等系统，
+      说明理论框架与工业实践之间的距离正在快速缩短。
+      从 harness 工程的角度看，Claude Code 的 AGENTS.md 机制、permission tier 设计、
+      沙箱执行模式已经在实践中实现了论文所描述的多项 harness 机制，
+      包括规划作为合同形成、权限分层的 PEV 执行、以及上下文压缩与状态卸载。
+      这也意味着本文的框架对工程师理解和改进现有系统具有直接的指导价值，而非纯粹的学术整理。
+    </p>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       §9  参考文献（精选）
+  ════════════════════════════════════════════════════════════════ -->
+  <h2 id="references">9. 参考文献（精选）</h2>
+  <p style="font-size:0.88em; color:#6c7086; margin-bottom:0.8em;">
+    论文共引用超过 480 篇文献，以下精选与三层框架核心直接相关的代表性文献。
+  </p>
+  <ol class="ref-list">
+    <li>Xuying Ning et al. "Code as Agent Harness." arXiv:2605.18747, 2026.</li>
+    <li>Chen et al. "Evaluating Large Language Models Trained on Code (Codex)." arXiv:2107.03374, 2021.</li>
+    <li>Gao et al. "PAL: Program-aided Language Models." ICML, 2023.</li>
+    <li>Chen et al. "Program of Thoughts (PoT) Prompting." arXiv:2211.12588, 2022.</li>
+    <li>Yang et al. "SWE-bench: Can Language Models Resolve Real-world GitHub Issues?" ICLR, 2024.</li>
+    <li>Wei et al. "Chain-of-Thought Prompting Elicits Reasoning in LLMs." NeurIPS, 2022.</li>
+    <li>Wang et al. "Voyager: An Open-Ended Embodied Agent with LLMs." NeurIPS, 2023.</li>
+    <li>Ahn et al. "SayCan: Do As I Can, Not As I Say." arXiv:2204.01691, 2022.</li>
+    <li>Liang et al. "Code as Policies (CaP)." ICRA, 2023.</li>
+    <li>Wang et al. "InterCode: Standardizing and Benchmarking Interactive Coding." NeurIPS, 2023.</li>
+    <tr></tr>
+    <li>Liu et al. "AgentBench: Evaluating LLMs as Agents." ICLR, 2024.</li>
+    <li>Yao et al. "ReAct: Synergizing Reasoning and Acting in LLMs." ICLR, 2023.</li>
+    <li>Zheng et al. "ChatDev: Communicative Agents for Software Development." ACL, 2024.</li>
+    <li>Hong et al. "MetaGPT: Meta Programming for Multi-Agent Collaborative Framework." ICLR, 2024.</li>
+    <li>Huang et al. "AgentCoder: Multi-Agent-based Code Generation with Iterative Testing." arXiv, 2023.</li>
+    <li>Li et al. "NExT: Teaching Large Language Models to Reason about Code Execution." ICML, 2024.</li>
+    <li>Wang et al. "CodePlan: Repository-level Coding using LLMs and Planning." FSE, 2024.</li>
+    <li>Rashidian et al. "WorldCoder: A Model-Based LLM Agent." arXiv, 2024.</li>
+    <li>Google DeepMind. "AlphaProof and AlphaGeometry 2." Technical Report, 2024.</li>
+    <li>Lu et al. "AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery." arXiv, 2024.</li>
+  </ol>
+
+  <hr>
+  <p style="color:#6c7086; font-size:0.83em; text-align:center; margin-top:1em;">
+    本报告由 Claude Opus 4.8 (1M context) 根据 arXiv:2605.18747 原文生成 · 2026-05-29
+  </p>
+
+</main>
+
+<!-- ══════════════════════════════ SCRIPTS ══════════════════════════════ -->
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+  hljs.highlightAll();
+
+  // 自动生成目录
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  // 滚动高亮
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+
+</body>
+</html>

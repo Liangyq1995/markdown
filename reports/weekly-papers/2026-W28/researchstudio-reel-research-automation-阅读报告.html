@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResearchStudio-Reel 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .gap-card { background: #2a2a3e; border-left: 3px solid var(--quote-bar); border-radius: 0 6px 6px 0; padding: 12px 16px; margin: 1em 0; }
+    .gap-card .gid { color: var(--strong); font-weight: 700; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>ResearchStudio-Reel：自动化研究传播的"最后一公里"</h1>
+    <p style="color:#6c7086;">从论文到 Poster、Video、Blog 的端到端技能组合系统 · Microsoft Research · 2026 年 7 月</p>
+
+    <h2 id="info">论文信息</h2>
+    <table>
+      <tr><th>标题</th><td>ResearchStudio-Reel: Automate the Last Mile of Research from Paper to Poster, Video, and Blog</td></tr>
+      <tr><th>核心问题</th><td>把一篇已录用论文自动化地、可编辑地、事实一致地转化为 poster、talk video 与 bilingual blog 三种传播产物</td></tr>
+      <tr><th>作者机构</th><td>Microsoft Research 主导，联合 NUS、NTU、清华、北大、上交、西湖大学、A*STAR</td></tr>
+      <tr><th>开源地址</th><td><a href="https://aka.ms/ResearchStudio">https://aka.ms/ResearchStudio</a>（MIT 许可）</td></tr>
+      <tr><th>构建基座</th><td>Claude Code / Codex 技能运行时；ppt-master；LibreOffice+ffmpeg；python-docx；Edge TTS；headless Chromium</td></tr>
+      <tr><th>评测基准</th><td>Paper2Poster 100 篇基准，双 held-out VLM 评委（claude-opus-4.8 / gpt-5.5）+ PaperQuiz 阅读理解探针</td></tr>
+    </table>
+
+    <h2 id="overview">1. 概述</h2>
+    <p>研究的"传播层"——把一篇 camera-ready 论文转成会议 poster、talk video、博客推文——长期都是手工的"最后一公里"。它发生在作者最没空的时候（录用之后、开会之前），却要同时跑通图片裁剪、排版、配音、面向不同受众改写三套截然不同的制作流程。先前自动化工作把每个产物当作孤立系统来解：各自重新抽取论文、各自出图，输出一个作者无法在 PowerPoint/Word 里二次编辑的"单向渲染"（one-way render），并以"软"的 VLM 偏好分作为质量门槛——分数很快平台化，可关键章节却仍然空着。</p>
+    <p>本文把"最后一公里"当作一个<strong>架构问题</strong>而非"更好的单一产物"问题来解。其论点是：这一层最好被建成一个<strong>技能组合（composition of skills）</strong>——薄薄的、agent 可读的契约（contracts）共享一个上游抽取器，把确定性原语包在一个"计量填充循环"（measured-fill loop）里，其出口是硬性的通过/失败渲染门（hard pass/fail render gate），而非软分平台。该模式被实例化为 <strong>ResearchStudio-Reel</strong>：五个 Claude Code / Codex 技能——</p>
+    <ul>
+      <li><strong>Paper2Assets</strong>：唯一上游抽取器，把论文抽取一次，产出共享 bundle；</li>
+      <li><strong>Paper2Poster / Paper2Video / Paper2Blog</strong>：三个可编辑生成器；</li>
+      <li><strong>Paper2Reel</strong>：交互式收敛层，把三者绑成一个可按 section 跳转的 HTML 查看器。</li>
+    </ul>
+    <p>核心结果：在 Paper2Poster 100 篇基准上，其 poster 在<strong>每一个</strong>美学与信息子准则上领先所有先验自动化系统与单次前沿 LLM，在两个 held-out VLM 评委下美学均值 3.52 vs 作者真值 2.94（领先约 0.6/5），并在 84%–93% 的论文上赢得总分；能力审计显示它是<strong>唯一</strong>同时交付三种可编辑产物的流水线。</p>
+
+    <h2 id="background">2. 研究背景与动机</h2>
+
+    <h3 id="bg-gaps">2.1 三大反复出现的缺口（G1–G3）+ 第四收益</h3>
+    <div class="gap-card"><span class="gid">G1 孤立抽取（Isolated extraction）</span>：每个产物由一个独立的单体系统从头抽取图表、算 caption、拉元数据，跨产物的"事实一致性"（如 poster 上的 Figure 3 与 blog 引用的是否同一张）被丢给用户。</div>
+    <div class="gap-card"><span class="gid">G2 单向渲染（One-way renders）</span>：先验产物大多是 PDF poster / MP4 video / HTML 博客，作者无法在 PowerPoint/Word 里重开微调；任何事后修改都得重跑生成器而非就地编辑。</div>
+    <div class="gap-card"><span class="gid">G3 软质量门（Soft quality gates）</span>：每个产物用连续 VLM-as-judge / 美学分判分，7.8/10 的排版也被接受，即使承重章节空着；agent 与确定性原语的边界各系统画法不一，成本与可复现性不可比。</div>
+    <div class="gap-card"><span class="gid">第四收益</span>：统一交互式呈现面——把 poster ↔ video ↔ blog 绑成一个可按 section 导航的交付物，<strong>此前没有任何系统提供</strong>。</div>
+
+    <h3 id="bg-related">2.2 相关工作谱系与定位</h3>
+    <p>先验工作按"每条线只做一个产物"分四股：</p>
+    <table>
+      <tr><th>谱系</th><th>代表系统</th><th>典型缺口</th></tr>
+      <tr><td>Paper→Poster</td><td>Paper2Poster [1]、PosterForest [2]、P2P [3]、PosterGen [4]、EfficientPosterGen [20]、APEX [21]、SciPostGen [22]、PosterVerse [23]；数据集 SciPostLayout [24]</td><td>G2（只出 PDF/PNG）+ G3（连续 VLM 美学分）</td></tr>
+      <tr><td>Paper→Video / Slides</td><td>PPSGen→D2S→DOC2PPT→SlideSpawn；PPTAgent [29]、VideoAgent [6]、Paper2Video [5]、Preacher [7]</td><td>G2（渲染后 deck/字幕/高亮/锚点不可寻址）</td></tr>
+      <tr><td>Paper→Blog / 长文摘要</td><td>HERA [8]、PTSPI [9]、GoSum [10]、LongDPO [31]；Project-Mundo [32]、SciLay [33]</td><td>G2（无可编辑写作工具产物）+ 无双语跨语域</td></tr>
+      <tr><td>Agent 框架 / 技能</td><td>ReAct [34]、AutoGen [35]、MetaGPT [36]、Function-Calling [37]、Anthropic tool-use [14]；Voyager [38]、ACT [39]、Claude Code [11]/Codex [13] skills</td><td>聚焦推理循环/契约本身，未应用到多产物传播</td></tr>
+    </table>
+    <p>ResearchStudio-Reel 的定位不是"更好的单个产物"，而是<strong>沿四轴的组合</strong>：唯一一个跨产物共享上游抽取器（解 G1）、唯一一个在作者原生工具里出货（解 G2）、唯一一个用硬分类渲染门替换软偏好门（解 G3）、唯一一个引入统一可交互呈现面（第四收益）。</p>
+
+    <h3 id="bg-converge">2.3 三大"现在才可行"的收敛</h3>
+    <p>作者点出三点让该组合在当下变得可工程化：(i) Claude Code / Codex 提供了稳定的技能运行时；(ii) 确定性原语足够成熟可安全委托——headless Chromium 做 HTML→PDF、LibreOffice+ffmpeg 做 slides→video、python-docx 做编辑级 .docx；(iii) Edge TTS 在配音上已补齐差距，声音质量不再是瓶颈。</p>
+
+    <h2 id="method">3. 核心方法：五技能组合管线</h2>
+
+    <h3 id="method-pipeline">3.1 总体管线</h3>
+    <p>一份 PDF 进，三种编辑就绪产物出，中间是唯一一次共享抽取。Paper2Assets 产出的 bundle 被 Poster/Video/Blog 三个生成器逐字消费，Paper2Reel 再把三者绑成可导航界面。共享同一套 section id、figure handle、claim anchor，使三种产物自动互相交叉引用而非各自孤立。</p>
+    <pre class="mermaid">
+flowchart LR
+    PDF["论文 PDF / arXiv link"] --> P2A["Paper2Assets<br/>共享抽取器"]
+    P2A --> BUNDLE["共享 bundle<br/>paper.txt / figures / logos / qr<br/>paper_spec.md / narration.json"]
+    BUNDLE --> P2P["Paper2Poster"]
+    BUNDLE --> P2V["Paper2Video"]
+    BUNDLE --> P2B["Paper2Blog"]
+    P2P --> POSTER["poster.html / PDF / PNG / 可编辑 .pptx"]
+    P2V --> VIDEO["video.pptx / video.mp4 / video_no_subtitles.mp4 + timeline.json"]
+    P2B --> BLOG["中文 .docx (微信体) + 英文 .docx (研究博客体)"]
+    POSTER --> REEL["Paper2Reel<br/>交互式收敛层"]
+    VIDEO --> REEL
+    BLOG --> REEL
+    REEL --> VIEWER["reel.html 可导航查看器 + alignment 对齐记录"]
+    </pre>
+
+    <h3 id="method-agent">3.2 Agent 架构：技能契约 + 确定性原语 + 计量填充循环</h3>
+    <p>每个生成器的核心范式一致：把确定性原语（渲染、TTS、DOCX 组装）包在一个<strong>计量填充循环</strong>里。该循环每次迭代对每个 section 得到一个<strong>分类质量判定</strong>（categorical verdict），只有当所有 section 落入目标带、且渲染门硬性通过时才退出——绝不靠学习偏好分的平台化退出。下图刻画这一"测量→判定→定向修复→硬门"的闭环。</p>
+    <pre class="mermaid">
+flowchart TD
+    A["compose 草稿<br/>每 section 仅 essential 文本 + 选中图"] --> B["headless 浏览器渲染"]
+    B --> C["逐 section 测量 fullRatio"]
+    C --> D{"五档分类判定"}
+    D -->|"EMPTY &lt; 0.70"| E1["追加备用段 / 提升可选 section"]
+    D -->|"SPARSE 0.70-0.90"| E2["polish up: 扩写/放大 widget"]
+    D -->|"FULL 0.90-1.00"| E3["不动"]
+    D -->|"SPILLAGE 1.00-1.10"| E4["polish down: 收紧 prose"]
+    D -->|"OVERFLOW &gt; 1.10"| E5["删备用段/可选 section"]
+    E1 --> F["每轮只改一个 section"]
+    E2 --> F
+    E4 --> F
+    E5 --> F
+    F --> G{"所有 section FULL 且<br/>图 ≥70% 单轴?"}
+    G -->|"否"| B
+    G -->|"是"| H["渲染期 expand 到 ~98%<br/>仅增长行间空白"]
+    H --> I["硬渲染门<br/>canvas / 图地板 / RRP"]
+    I -->|"通过"| J["一次性释放<br/>HTML+PDF+PNG+PPTX"]
+    I -->|"失败"| F
+    </pre>
+
+    <h3 id="method-p2a">3.3 Paper2Assets：唯一所有权的抽取</h3>
+    <p>读一次 PDF，产出下游逐字消费的单一 bundle：保留分页的正文、检测到的图注、per-figure manifest、清洗后的图、元数据、九段结构化摘要（Problem / Motivation / Contribution / Method / Dataset-Benchmark / Key Result / Ablation / Headline Numbers / Takeaway，每段含 essential 条目 + 备用条目 + 口播脚本）、best-effort 机构 logo 与二维码。第二遍追加 inventory manifest（源 PDF 校验和、按 section 拆分带稳定 id 的记录、阅读序口播剪辑表），使非 poster 生成器永不再解析。</p>
+    <p>最耗时也最承重的是<strong>图片清洗链</strong>（只跑一次而非每个生成器重做）：确定性前缀剥离 chrome 残留、baked-in 图注条、均匀白边；随后视觉 AI 判定紧包围盒，<strong>新上下文子代理校验器</strong>独立重读原图对照提议裁剪，仅干净通过才提交，并在一张栅格图里塞了两张独立图时拆分。所有模式幂等、裁剪前原始备份一次。bundle 是 Paper2Assets 与系统其余部分的<strong>唯一接口</strong>——下游只读它、永不重开 PDF，靠稳定 figure 命名不变式让三产物事实一致而无需跨技能协调。</p>
+
+    <h3 id="method-p2p">3.4 Paper2Poster：组合优于模板 + 分级填充循环</h3>
+    <p>针对五个反复出现的需求（A1–A5），逐一给出工程化解：</p>
+    <table>
+      <tr><th>需求</th><th>解法</th></tr>
+      <tr><td>A1 无模板爆炸的组合</td><td>构建期沿四正交轴组装：列布局（full/half/三列）、视觉风格（一族可互换 CSS 主题）、标题栏头部（5 种 logo/QR 排布）、底部 Scan-to-Read 块；仅布局由硬规则定（Method 图形状决定宽/全列 vs 半宽默认），其余可复现采样</td></tr>
+      <tr><td>A2 收敛的填充循环</td><td>分级测量填充循环：每 pass 渲染并对每 section 算 fullRatio，量化成五档判定，判定独选修复动作</td></tr>
+      <tr><td>A3 大到无法重读的页面</td><td>循环从不把整张 poster 拉进上下文；每次测量只回传偏离目标 section 的逐字源码，agent 就地改片段；文件间接生成、从不经输出通道打印，避免触发 compaction / 撑爆 per-turn token</td></tr>
+      <tr><td>A4 让图填满卡片</td><td>图列高度不随文字响应，故通过高度上限而非周围 prose 调图；硬地板门保证文字编辑永不让图沦为一枚小邮票</td></tr>
+      <tr><td>A5 可编辑导出</td><td>不栅格化后逆推形状，而是直接从实时 DOM 逐节点重建 PowerPoint：读 getBoundingClientRect 几何 + getComputedStyle 外观，CSS 像素按固定 canvas 比例转 EMU；文本容器→可编辑文本框、列表→原生悬挂缩进、img→可替换图、MathJax→原生 OMML 公式、装饰 div→圆角矩形</td></tr>
+    </table>
+
+    <h4 id="fill-ratio">填充率量化与判定带</h4>
+    <p>每个 section 被赋予标量填充率：</p>
+    <p>$$\mathrm{fullRatio} = \frac{h_{\mathrm{content}}}{h_{\mathrm{card}}} = \frac{\text{该 section 最低渲染元素底边（getBoundingClientRect）}}{\text{其卡片内高度}}$$</p>
+    <p>该比率被量化为五档分类判定，<strong>判定本身独选修复动作</strong>：</p>
+    <table>
+      <tr><th>档位</th><th>区间</th><th>含义</th><th>修复动作</th></tr>
+      <tr><td>EMPTY</td><td>fullRatio &lt; 0.70</td><td>承重性欠填</td><td>追加备用补充段 / 把可选 section 提升进列</td></tr>
+      <tr><td>SPARSE</td><td>0.70 – 0.90</td><td>可见欠填</td><td>polish up：扩写 prose 或放大 widget 至触底</td></tr>
+      <tr><td><strong>FULL</strong></td><td>0.90 – 1.00</td><td>目标带</td><td>不动</td></tr>
+      <tr><td>SPILLAGE</td><td>1.00 – 1.10</td><td>刚越卡片边</td><td>polish down：收紧 prose 回到带内</td></tr>
+      <tr><td>OVERFLOW</td><td>&gt; 1.10</td><td>明显越边</td><td>删备用段或整个可选 section</td></tr>
+    </table>
+    <p>Method 图同 pass 下走单独的<strong>图填充门</strong>，要求其至少在一个轴上涂满卡片 70%。循环终止条件是<strong>分类不动点</strong>（所有 section FULL 且无图触门）而非学习分平台。三类机制抑制 FULL 窄带内的振荡：每个动作按测量报告的<strong>有符号像素差</strong>定步长而非瞎猜；循环拒绝重施一个已在某 section 上越带的动作；盘上轮次计数器触发<strong>断路器</strong>，交付最佳测量态而非无限磨。</p>
+    <p>松门 + 渲染期 expand：填充门故意松到 90%（而非 98%），因为最后几个百分点正是离散编辑循环振荡处——把门收到 98% 会显著增加轮次，过 0.94 尤甚而视觉收益甚微。为无成本找回那几个百分点，单一渲染期 pass 把每个欠填卡片向 98% 拉伸（仅增长行间空白）。该 expand 构造上安全：图绝不缩放、任何会顶高固定 canvas 的卡片增长被回退，故无列底移动；且只烤进 poster 一次，使网页/PDF/PNG/PPTX 显示同一填充布局。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Paper2Poster 分级填充循环（measured-fill loop）</div>
+      <p><span class="kw">Input:</span> <span class="var">bundle</span>（Paper2Assets 产物）；目标带 <span class="num">[0.90, 1.00]</span>；图地板 <span class="num">0.70</span>；轮次上限 <span class="num">~12</span></p>
+      <p><span class="kw">Output:</span> 收敛的 poster.html + PDF + PNG + 可编辑 .pptx</p>
+      <p style="padding-left:1.5em"><span class="cm">// 1. 组合草稿</span></p>
+      <p style="padding-left:1.5em"><span class="var">draft</span> ← <span class="fn">compose</span>(bundle, layout_axis, style_axis, header_axis, scan_axis) <span class="cm">// 仅 Method + ≥1 关键结果图</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> round <span class="kw">in</span> 1..<span class="num">12</span>:</p>
+      <p style="padding-left:3em"><span class="var">page</span> ← <span class="fn">render_headless</span>(draft)</p>
+      <p style="padding-left:3em"><span class="kw">for</span> section <span class="kw">in</span> sections:</p>
+      <p style="padding-left:4.5em"><span class="var">fullRatio</span> ← <span class="fn">getBoundingClientRect</span>(section).bottom / <span class="fn">card_inner_height</span>(section)</p>
+      <p style="padding-left:4.5em"><span class="var">verdict</span> ← <span class="fn">quantize</span>(fullRatio) <span class="cm">// EMPTY/SPARSE/FULL/SPILLAGE/OVERFLOW</span></p>
+      <p style="padding-left:3em"><span class="var">offenders</span> ← sections <span class="kw">where</span> verdict ≠ FULL</p>
+      <p style="padding-left:3em"><span class="kw">if</span> offenders = ∅ <span class="kw">and</span> all figs ≥ <span class="num">0.70</span> on one axis: <span class="kw">break</span></p>
+      <p style="padding-left:3em"><span class="cm">// 2. 每轮只改一个偏离 section，步长按有符号像素差</span></p>
+      <p style="padding-left:3em"><span class="fn">apply_move</span>(pick_one(offenders), verdict, signed_pixel_delta)</p>
+      <p style="padding-left:1.5em"><span class="kw">if</span> not converged: <span class="fn">circuit_breaker</span>(ship_best_measured_state)</p>
+      <p style="padding-left:1.5em"><span class="cm">// 3. 渲染期 expand（仅行间空白，不动图，回退顶高）</span></p>
+      <p style="padding-left:1.5em"><span class="fn">render_time_expand</span>(page, target=<span class="num">0.98</span>)</p>
+      <p style="padding-left:1.5em"><span class="kw">assert</span> <span class="fn">deliverables_gate</span>(canvas, fig_floor, RRP, PDF_match) <span class="cm">// 硬门</span></p>
+      <p><span class="kw">return</span> <span class="fn">release_bundle</span>(html, pdf, png, pptx)</p>
+    </div>
+
+    <h3 id="method-p2v">3.5 Paper2Video：对齐保持的媒体契约</h3>
+    <p>复用完整 ppt-master 工作流做 deck 创作（视为依赖而非独立声明）。技能角色是把 deck + 共享资产转成可审计媒体 bundle。五个媒体级需求（B1–B5）与解法：</p>
+    <table>
+      <tr><th>需求</th><th>解法</th></tr>
+      <tr><td>B1 渲染前先规划时长</td><td>TTS 前估计脚本，过长/过短请求语义改写；渲染后 duration report 对比；小残差由有界语速计划修，大错回到改写——目标时长靠内容规划而非裁 MP4</td></tr>
+      <tr><td>B2 注意力引导</td><td>把脚本转 visual-cue 需求；deck 工作流给 narration 命名对象附语义锚（图面板/公式块/表格行/method 卡）；cue resolver 合并脚本、word_timings、slide 几何、锚点产 visual_cues.json；默认 spotlight_laser 风格</td></tr>
+      <tr><td>B3 双字幕语境</td><td>每 section 合成一段旁白 + 同 timing 模型写字幕 sidecar；先渲 video_no_subtitles.mp4，再烧字幕成 video.mp4；两者共享 slide 帧/音频对齐/高亮 timing，唯一差别是是否烧字幕</td></tr>
+      <tr><td>B4 导出后仍可寻址</td><td>写 timeline.json 作为下游导航的规范 sidecar：每条映射一个 section/旁白块到其音频窗、字幕 cue、slide 帧、已接受 visual cue；Paper2Reel 直读它而非扒 MP4</td></tr>
+      <tr><td>B5 确定性媒体检查</td><td>check_video_package.py 硬门：三文件存在/可放/有音轨/时长在容差；字幕 sidecar 非空、最终 MP4 非字节同于原始；cue 覆盖/归一化几何/语义 id/timing/拒词级高亮框；解析 PPTX+帧抓空帧/溢出/重叠/缩过头/裁切；时长控制须有 TTS rate plan 且拒不安全变速</td></tr>
+    </table>
+
+    <h3 id="method-p2b">3.6 Paper2Blog：单一证据底 + 双语编辑包</h3>
+    <p>产出两份 root 交付：中文（微信公众号体）+ 英文（研究博客体），共享同一事实/图/数字/claim/源链，但读法不同。五个需求（C1–C5）：</p>
+    <table>
+      <tr><th>需求</th><th>解法</th></tr>
+      <tr><td>C1 一证据底供两语</td><td>先从 bundle 建一份 evidence map（hook/problem/method 组件/main claims/定量结果/局限/源链/图角色）；两份草稿都读它；硬事实缺失则省略而非瞎猜</td></tr>
+      <tr><td>C2 写作时控语域</td><td>两文分别写而非逐句翻译；draft 前读语言特定编辑风格指南；中文→克制公众号体（保留并解释必要英文术语），英文→中性研究博客体</td></tr>
+      <tr><td>C3 文章级图选择与置位</td><td>只选有助解释的图，同一选中集用于两语，每图置于为其铺垫的 section 旁；非二次抽取，而是 selected-figure review：检查 DOCX 缩放后可读、caption 不打架、置位无明显失衡</td></tr>
+      <tr><td>C4 交付是 Word 而非纯文本</td><td>固定文件名、嵌入媒体、对应语 caption、源链、编辑友好字体；固定 root 名是契约一部分，下游 upload/zip/CMS/Paper2Reel 无需解析论文标题或非 ASCII 文件名</td></tr>
+      <tr><td>C5 Word 排版编辑就绪</td><td>把 DOCX 当渲染视觉产物检查：图 fit/分页/orphan tail 从内部结构读，严格模式渲染成页图检查近空页/稀疏页/非末页大底白</td></tr>
+    </table>
+    <p>双语门聚焦可确定性检验的事实：比对嵌入图数量/身份顺序、outline 记录的图、抽取的数字 claim、技术术语——旨在抓"两篇母语文章分叉"的具体失败（如某图只出现在一语版本）。</p>
+
+    <h3 id="method-reel">3.7 Paper2Reel：交互式收敛层</h3>
+    <p>不替代三个生成器，而是读其完成的 v2 交付，在其外构建自包含交互查看器。核心是 <strong>alignment sidecar</strong>：每个规范 section id 映射到对应 poster 块、≥1 slide 目标、视频起止时间、字幕轨、slide 缩略图、blog 块——查看器读它而非猜文件名/扒 poster/推断时间。设计上 poster-first（首屏是 poster，最紧凑的论文地图）；section 模态是主阅读单元，左侧视频（用无字幕源播放 + sidecar 字幕切换）右侧 blog（可中英切换），可拖拽分割条；slide 缩略图点击 seek。若在 PDF/arXiv link/部分 v2 bundle 上调用，会先检测缺哪些上游交付并跑完整工作流补齐，保持全包同 section id 与资产路径。</p>
+    <pre class="mermaid">
+sequenceDiagram
+    participant U as 用户
+    participant R as Paper2Reel
+    participant A as alignment sidecar
+    participant P as poster 块
+    participant V as video (no_sub)
+    participant C as caption sidecar
+    participant B as blog 块
+    U->>R: 双击某 poster section
+    R->>A: 查 section id
+    A-->>R: 返回 slide 目标/视频起止/字幕/blog 块
+    R->>V: seek 到 start_time (无字幕源)
+    R->>C: 加载该段字幕 (可切换)
+    R->>P: 高亮当前块, 邻块淡出
+    R->>B: 显示匹配 blog 段 (中/英)
+    R-->>U: 渲染同步模态
+    </pre>
+
+    <h2 id="experiments">4. 实验结果与分析</h2>
+
+    <h3 id="exp-setup">4.1 实验设置</h3>
+    <p>在 Paper2Poster 100 篇基准上，每篇从 PDF 端到端生成 poster，用两个 held-out VLM 评委（claude-opus-4.8、gpt-5.5）打分，复用 Paper2Poster 自带六准则美学/信息 rubric 与 PaperQuiz 阅读理解探针；每张 poster 缩到 ≤2560 px。对比三类系统：(1) 单次前沿 LLM（Claude-4.8 Opus、GPT-5.5、Gemini-3.1 Pro，固定 prompt 一次出整张 A0 poster）；(2) Poster Pipeline（先验 Paper2Poster Tool、P2P、PosterGen，及本文在 Claude Code / Codex 两种 harness 下跑同一技能）；(3) 作者真值 poster 作为人类参考。Aesthetic 与 Information 是其三个子准则在 1–5 尺度上的均值；PaperQuiz 是固定题集 exact-match 准确率。</p>
+
+    <h3 id="exp-table1">4.2 主结果表（Table 1，双评委均值）</h3>
+    <p>下表为论文 Table 1 的六子准则 + PaperQuiz + 管线产物覆盖。每格为两 held-out VLM 评委均值（1–5，越高越好）；Quiz 为准确率 %。每列系统中最优值加粗。</p>
+    <table>
+      <tr><th>系统</th><th>Elem.</th><th>Engag.</th><th>Layout</th><th>Low</th><th>Logic</th><th>Cont.</th><th>Detail§</th><th>Underst.§</th><th>HTML</th><th>PPTX</th><th>Video</th><th>Blog</th></tr>
+      <tr><td>Claude-4.8 Opus（单次）</td><td>2.97</td><td>2.48</td><td>2.83</td><td>3.95</td><td>3.98</td><td>2.92</td><td>66.67</td><td>93.37</td><td>✓</td><td>×</td><td>×</td><td>×</td></tr>
+      <tr><td>GPT-5.5（单次）</td><td>2.98</td><td>2.88</td><td>3.22</td><td>3.98</td><td>3.95</td><td>3.78</td><td>65.63</td><td>93.20</td><td>✓</td><td>×</td><td>×</td><td>×</td></tr>
+      <tr><td>Gemini-3.1 Pro（单次）</td><td>2.98</td><td>2.92</td><td>3.17</td><td>3.95</td><td>4.00</td><td>3.76</td><td>61.43</td><td>92.43</td><td>✓</td><td>×</td><td>×</td><td>×</td></tr>
+      <tr><td>Paper2Poster Tool∗</td><td>1.82</td><td>1.20</td><td>1.52</td><td>2.62</td><td>3.92</td><td>3.15</td><td>63.00</td><td><strong>95.65</strong></td><td>×</td><td>×</td><td>×</td><td>×</td></tr>
+      <tr><td>P2P∗</td><td>2.68</td><td>2.34</td><td>3.15</td><td>3.80</td><td>3.92</td><td>3.78</td><td><strong>75.40</strong></td><td>95.60</td><td>✓</td><td>×</td><td>×</td><td>×</td></tr>
+      <tr><td>PosterGen∗</td><td>2.93</td><td>2.23</td><td>2.98</td><td>3.95</td><td>4.00</td><td>3.76</td><td>57.45</td><td>91.85</td><td>✓</td><td>×</td><td>×</td><td>×</td></tr>
+      <tr><td>ResearchStudio-Reel (Codex)</td><td><strong>3.14</strong></td><td><strong>3.11</strong></td><td><strong>3.82</strong></td><td>3.95</td><td><strong>4.00</strong></td><td>4.00</td><td>53.43</td><td>91.32</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td><strong>ResearchStudio-Reel (Claude Code)</strong></td><td>3.33</td><td>3.26</td><td><strong>3.97</strong></td><td><strong>4.00</strong></td><td><strong>4.00</strong></td><td><strong>4.00</strong></td><td>55.43</td><td>90.88</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>作者真值（人类参考）</td><td>3.02</td><td>2.49</td><td>3.31</td><td>3.80</td><td>3.98</td><td>3.41</td><td>50.11</td><td>88.92</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+    </table>
+    <p>注：原表把 Elem./Engag./Layout/Low/Logic/Cont. 归为 Aesthetic 与 Information 两组均值。Claude Code 设置的美学均值为 <strong>3.52</strong>（真值 2.94，领先约 0.6/5），信息均值 <strong>3.90</strong>（真值 3.63）。在逐篇上赢得总分 84%–93%， outright 输的至多 4 篇。论文注明每列"最优加粗、次优下划线"；本表对 Claude Code 与 Codex 两行中并列最优的子准则加粗呈现。</p>
+
+    <h3 id="exp-echarts">4.3 美学/信息子准则对比可视化</h3>
+    <p>下图把五个可比系统（去掉人类真值与单次 LLM 中的 Gemini 以减少噪声）在六个 1–5 子准则上的得分并排比较，凸显 ResearchStudio-Reel（Claude Code）在美学三准则上的领先与在信息准则上的持平。</p>
+    <div id="chart-subcriteria" class="echarts-container" style="height:380px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-subcriteria')).setOption({
+        backgroundColor: '#2a2a3e',
+        legend: { top: 0, textStyle: { color: '#cdd6f4' } },
+        tooltip: { trigger: 'axis' },
+        grid: { left: 50, right: 30, bottom: 40, top: 50 },
+        xAxis: { type: 'category', data: ['Elem.','Engag.','Layout','Low','Logic','Cont.'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', min: 1, max: 5, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        series: [
+          { name: 'Reel (Claude Code)', type: 'bar', data: [3.33,3.26,3.97,4.00,4.00,4.00], itemStyle: { color: '#a6e3a1' } },
+          { name: 'Reel (Codex)', type: 'bar', data: [3.14,3.11,3.82,3.95,4.00,4.00], itemStyle: { color: '#89b4fa' } },
+          { name: 'GPT-5.5 单次', type: 'bar', data: [2.98,2.88,3.22,3.98,3.95,3.78], itemStyle: { color: '#fab387' } },
+          { name: 'P2P', type: 'bar', data: [2.68,2.34,3.15,3.80,3.92,3.78], itemStyle: { color: '#f9e2af' } },
+          { name: '作者真值', type: 'bar', data: [3.02,2.49,3.31,3.80,3.98,3.41], itemStyle: { color: '#cba6f7' } }
+        ]
+      });
+    </script>
+
+    <h3 id="exp-quiz-tension">4.4 PaperQuiz 与美学的张力</h3>
+    <p>PaperQuiz 排序几乎与美学排序相反：PaperQuiz 奖励 poster 复现论文文本（密度越高越易答题），美学准则奖励选择性、可读性布局。P2P 凭全高纵向 canvas 塞近逐字论文，Quiz Detail 夺冠（75.40%）但美学垫底；Paper2Poster Tool 直接用基准自身的问答抽取组装内容，Quiz Understanding 拔得 95.65%；作者真值恰好相反——人手剪到几条头条结果，美学好但牺牲了理解探针奖励的细节，故真值在两个 Quiz 分项上均垫底。ResearchStudio-Reel <strong>刻意居于两极之间</strong>：填充循环把每列填到目标密度而非穷尽，故 Quiz 仍有竞争力，同时结构化布局与图置位赢得每个美学子准则。</p>
+    <div id="chart-quiz" class="echarts-container" style="height:340px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-quiz')).setOption({
+        backgroundColor: '#2a2a3e',
+        legend: { top: 0, textStyle: { color: '#cdd6f4' } },
+        tooltip: { trigger: 'axis' },
+        grid: { left: 60, right: 30, bottom: 40, top: 50 },
+        xAxis: { type: 'category', data: ['Reel(Claude)','Reel(Codex)','P2P','Paper2Poster Tool','作者真值','Claude单次'], axisLabel: { color: '#cdd6f4', rotate: 15 }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: [ { type: 'value', name: 'Quiz %', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } } ],
+        series: [
+          { name: 'Detail %', type: 'bar', data: [55.43,53.43,75.40,63.00,50.11,66.67], itemStyle: { color: '#fab387' } },
+          { name: 'Understanding %', type: 'bar', data: [90.88,91.32,95.60,95.65,88.92,93.37], itemStyle: { color: '#89dceb' } }
+        ]
+      });
+    </script>
+
+    <h3 id="exp-capability">4.5 能力覆盖审计（Table 2 / Table 3）</h3>
+    <p>对 video 与 blog，因无对应分级基准，改做能力审计（✓ = 显式产出/文档化能力，× = 契约中缺）。下表合并两表。</p>
+    <table>
+      <tr><th>Video 类系统</th><th>Highlight</th><th>Duration 控制</th><th>可编辑 PPTX</th><th>Subtitles</th><th>Audio</th></tr>
+      <tr><td>Deck Tools（Gamma/Canva）</td><td>×</td><td>×</td><td>✓</td><td>×</td><td>×</td></tr>
+      <tr><td>Video Tools（Synthesia/HeyGen）</td><td>×</td><td>×</td><td>×</td><td>×</td><td>✓</td></tr>
+      <tr><td>NotebookLM Video</td><td>×</td><td>×</td><td>×</td><td>×</td><td>✓</td></tr>
+      <tr><td>Paper-to-video Agents [5–7]</td><td>✓</td><td>×</td><td>×</td><td>×</td><td>✓</td></tr>
+      <tr><td><strong>ResearchStudio-Reel</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td></tr>
+    </table>
+    <table>
+      <tr><th>Blog/摘要类系统</th><th>Layout 检查</th><th>Figures</th><th>可编辑 DOCX</th><th>双语</th><th>Summary</th></tr>
+      <tr><td>Semantic Scholar TLDR</td><td>×</td><td>×</td><td>×</td><td>×</td><td>✓</td></tr>
+      <tr><td>Research Assistants（Elicit 等）</td><td>×</td><td>×</td><td>×</td><td>×</td><td>✓</td></tr>
+      <tr><td>Scholarcy</td><td>×</td><td>×</td><td>✓</td><td>×</td><td>✓</td></tr>
+      <tr><td>NotebookLM</td><td>×</td><td>×</td><td>×</td><td>×</td><td>✓</td></tr>
+      <tr><td><strong>ResearchStudio-Reel</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td></tr>
+    </table>
+    <p>能力覆盖结论：先验 poster/video/长文系统各产单一产物且多为单向渲染；ResearchStudio-Reel 是<strong>唯一</strong>同时产出三种传播产物、暴露共享中间 bundle、保持每交付物在原生工具可编辑、并把三者缝进一个可导航界面的系统。</p>
+
+    <h3 id="exp-cost">4.6 运营成本（Table 4，5 篇均值，claude-opus-4.8）</h3>
+    <p>一次性 Paper2Assets 抽取被所有下游共享。完整四产物 bundle 约 <strong>89 分钟</strong>、<strong>~2.6M 输入 / ~276K 输出 token/篇</strong>。下表为分阶段 wall-clock 与 token（加粗为该技能最重阶段）。</p>
+    <table>
+      <tr><th>技能 / 阶段</th><th>时间(min)</th><th>Turns</th><th>Input(K)</th><th>Cache(K)</th><th>Output(K)</th></tr>
+      <tr><td><strong>Paper2Assets</strong> extract &amp; figures</td><td>8.6</td><td>112</td><td>461</td><td>12,068</td><td>2,568</td></tr>
+      <tr><td>P2P compose</td><td>5.1</td><td>43</td><td>191</td><td>7,989</td><td>33</td></tr>
+      <tr><td><strong>Paper2Poster</strong> fill loop（最重）</td><td><strong>14.8</strong></td><td>100</td><td>310</td><td>25,185</td><td>48</td></tr>
+      <tr><td>P2P render</td><td>1.9</td><td>19</td><td>18</td><td>5,527</td><td>12</td></tr>
+      <tr><td>P2P subtotal</td><td>23.3</td><td>166</td><td>523</td><td>39,616</td><td>67</td></tr>
+      <tr><td><strong>Paper2Video</strong> deck (ppt-master)（最重）</td><td><strong>5.7</strong></td><td>38</td><td>90</td><td>6,665</td><td>16</td></tr>
+      <tr><td>P2V render &amp; mux</td><td>9.2</td><td>38</td><td>43</td><td>7,149</td><td>17</td></tr>
+      <tr><td>P2V subtotal</td><td>28.5</td><td>193</td><td>512</td><td>31,297</td><td>80</td></tr>
+      <tr><td><strong>Paper2Blog</strong> QA gate &amp; revision（最重）</td><td><strong>10.0</strong></td><td>63</td><td>243</td><td>11,062</td><td>47</td></tr>
+      <tr><td>P2B subtotal</td><td>16.7</td><td>112</td><td>771</td><td>16,247</td><td>64</td></tr>
+      <tr><td>Paper2Reel subtotal</td><td>12.1</td><td>92</td><td>301</td><td>9,318</td><td>32</td></tr>
+      <tr><td><strong>Full pipeline</strong></td><td><strong>89.2</strong></td><td>675</td><td>2,568</td><td>108,546</td><td>276</td></tr>
+    </table>
+    <p>两个性质把有效成本压到低于原始 token 总量：(1) 大部分流量是 cached-context 重读（Cache 列），按约 1/10 的 fresh input 计费，故美元成本跟更小的 Input/Output 列而非总量；(2) 当能拿到论文 LaTeX 源（如 arXiv source 包）时，最重的图抽取阶段基本被绕过——直接读原始图文件与 caption，Paper2Assets 大幅提速且其共享一次性成本随之下降。三个生成器可并行跑，整体处理时间在实践中显著缩短。</p>
+
+    <div id="chart-cost" class="echarts-container" style="height:340px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-cost')).setOption({
+        backgroundColor: '#2a2a3e',
+        legend: { top: 0, textStyle: { color: '#cdd6f4' } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: 60, right: 30, bottom: 40, top: 50 },
+        xAxis: { type: 'category', data: ['Paper2Assets','Paper2Poster','Paper2Video','Paper2Blog','Paper2Reel'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: [ { type: 'value', name: '时间 (min)', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } } ],
+        series: [
+          { name: 'wall-clock 分钟', type: 'bar', data: [8.6,23.3,28.5,16.7,12.1], itemStyle: { color: '#89b4fa' }, label: { show: true, color: '#cdd6f4', position: 'top' } }
+        ]
+      });
+    </script>
+
+    <h2 id="ablation">5. 消融实验与关键发现</h2>
+    <h3 id="abl-skill">5.1 技能机制 vs 模型（模型固定）</h3>
+    <p>Table 1 自带两处消融：(i) <strong>技能机制、模型固定</strong>。claude-opus-4.8 单次 prompt 出整张 poster 得美学均值 2.76、Layout 2.83；同一模型包进组合步骤 + 计量填充循环（Claude Code 设置）得美学 3.52、Layout 3.97——美学 +0.76、Layout 涨逾 1 分，可归因于循环与组合而非更强生成器。同一替换在 gpt-5.5 下把美学从 3.03 提到 3.36、Layout 从 3.22 提到 3.82，说明机制对任意基座模型都有效。</p>
+    <h3 id="abl-harness">5.2 Harness 与模型（技能固定）</h3>
+    <p>(ii) <strong>harness 与模型、技能固定</strong>。把 Claude Code+claude-opus-4.8 换成 Codex+gpt-5.5，质量保留大半（美学 3.36 vs 3.52），且两种设置仍领先所有先验 poster 流水线与所有单次基线——说明结果是<strong>技能的属性而非某个专有模型或 agent 运行时的属性</strong>。Codex 单元格当前在基准子集上评分，将刷新到全集；排序已稳定。Figure 10 定性印证：同一技能在 6 种生成器设置（真值 + 五种模型/reasoning 设置）下都收敛到满版可读单页，差别仅在图选、措辞密度与配色而非结构稳健性。</p>
+
+    <h3 id="abl-keyfindings">5.3 关键发现汇总</h3>
+    <ul>
+      <li><strong>架构 &gt; 单产物</strong>：把"最后一公里"当组合问题，质量来自技能契约 + 填充循环 + 硬门，而非更强单次 LLM。</li>
+      <li><strong>硬分类门 &gt; 软偏好分</strong>：终止条件是 fullRatio 分类不动点，可诊断（每轮记哪个动作施于哪个 section），失败可定位而非"agent 干了啥"之谜。</li>
+      <li><strong>松门 + 渲染期 expand</strong>：90% 门收敛快、98% 门轮次暴涨而视觉收益甚微；用渲染期空白拉伸找回剩余百分点，安全且只烤一次。</li>
+      <li><strong>共享抽取免协调一致</strong>：稳定 figure 命名不变式让 poster/video/blog 自动交叉引用，错裁只在源修一次即传播到三产物。</li>
+      <li><strong>原生可编辑是契约</strong>：从实时 DOM 重建 PowerPoint（含原生 OMML 公式），改字/换图/改色无需重跑循环。</li>
+      <li><strong>Quiz 与美学真张力</strong>：系统刻意居中——目标密度而非穷尽，既保 Quiz 竞争力又赢所有美学子准则。</li>
+      <li><strong>缺口是生成性而非架构性</strong>：管线只用论文已有图，能匹配布局却画不出人手添加的 bespoke 方法/总览图；补这一缺口会引入分类门本欲压制的幻觉风险。</li>
+    </ul>
+
+    <h2 id="conclusion">6. 总结与启发</h2>
+    <p>研究传播的最后一公里最好被建成一小撮技能的组合：薄薄的、agent 可读的契约共享一个上游抽取器，以分类填充判定而非软偏好分作为出口门。ResearchStudio-Reel 用一个 Paper2Assets bundle + 三个可编辑生成器 + Paper2Reel 查看器实例化该模式，在一个 Claude Code / Codex 会话内把一篇 PDF 变成可印 poster、同步 talk-video 包与双语 Word 博客。在 100 篇基准上 poster 领先所有美学/信息子准则（美学 3.52 vs 真值 2.94），84%–93% 论文赢总分；能力审计显示无先验系统能从一次运行交付全部三种可编辑传播产物。</p>
+    <p><strong>对本人的启发：</strong></p>
+    <ul>
+      <li>当多产物系统各自重做同一上游工作（抽取/清洗）时，把它折进一个共享所有者是低门槛高收益的架构动作——既省成本又免费换来跨产物一致性。</li>
+      <li>"软分平台化"是 agent 评估的通病；换成<strong>分类判定 + 硬渲染门</strong>能把"看起来还行"升级为"可诊断地收敛"，这对任何生成-评审闭环都适用。</li>
+      <li>把<strong>页面当 DOM 而非像素</strong>来桥接 HTML→原生 Office：几何与语义从 DOM 读，使导出可编辑且公式保持可选——这比 PDF→PPT 像素逆推鲁棒得多。</li>
+      <li>"松门 + 渲染期补全"是离散优化循环的实用抗振荡技巧：把门留在振荡带外、用确定性后处理找回百分点。</li>
+      <li>评测设计要诚实：本文明确承认 PaperQuiz 与美学互拉、承认管线无法画 bespoke 图，并把 video/blog 的量化评测留给未来——这种"代理绑定的局限"自述比单纯刷分更有可信度。</li>
+    </ul>
+
+    <h2 id="refs">7. 参考文献（节选）</h2>
+    <ul>
+      <li>[1] Pang et al. Paper2Poster: Towards Multimodal Poster Automation from Scientific Papers. arXiv 2025.</li>
+      <li>[2] Choi et al. PosterForest: Hierarchical Multi-Agent Collaboration for Scientific Poster Generation. 2025.</li>
+      <li>[3] Sun et al. P2P: Automated Paper-to-Poster Generation and Fine-grained Benchmark. 2025.</li>
+      <li>[4] Zhang et al. PosterGen: Aesthetic-aware Multi-modal Paper-to-Poster Generation via Multi-agent LLMs. arXiv:2508.17188, 2025.</li>
+      <li>[5] Zhu, Lin, Shou. Paper2Video: Automatic Video Generation from Scientific Papers. 2025.</li>
+      <li>[6] Liang et al. VideoAgent: Personalized Synthesis of Scientific Videos. 2025.</li>
+      <li>[7] Liu et al. Preacher: Paper-to-Video Agentic System. 2025.</li>
+      <li>[8] HERA — Improving Long Document Context Packaging and Reordering. arXiv.</li>
+      <li>[9] PTSPI; [10] GoSum; [31] LongDPO（长文摘要/打包）。</li>
+      <li>[11] Claude Code; [12] skills 运行时; [13] Codex; [14] Anthropic tool-use API; [34] ReAct; [35] AutoGen; [36] MetaGPT; [37] OpenAI Function-Calling; [38] Voyager-style 库; [39] Adept ACT.</li>
+      <li>[15] headless Chromium (HTML→PDF); [16] LibreOffice; [17] ffmpeg; [18] python-docx; [19] Edge TTS; [40] ppt-master.</li>
+      <li>[20] EfficientPosterGen; [21] APEX; [22] SciPostGen; [23] PosterVerse; [24] SciPostLayout; [25] PPSGen; [26] D2S; [27] DOC2PPT; [28] SlideSpawn; [29] PPTAgent; [30] SlideGen; [32] Project-Mundo; [33] SciLay.</li>
+    </ul>
+    <p style="color:#6c7086;">注：本报告数值、公式、判定带与算法均取自论文 PDF 原文（arXiv 2607.04438）。论文未提供 video/blog 的分级基准分数（仅能力审计 ✓/×），相关章节已如实说明。Table 1 中 Claude Code 与 Codex 两行在 Low/Logic/Cont. 等列存在并列最优，原表以"最优加粗、次优下划线"区分，本报告在并列处对 Reel 两行均加粗呈现。</p>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

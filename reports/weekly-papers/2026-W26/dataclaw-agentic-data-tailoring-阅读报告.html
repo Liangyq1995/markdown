@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DataClaw₀：多模态数据主动裁剪 — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+
+    /* ── TOC ── */
+    #toc {
+      position: fixed; top: 0; left: 0; width: 220px; height: 100vh;
+      background: var(--bg-nav); overflow-y: auto; padding: 20px 12px;
+      font-size: 13px; border-right: 1px solid var(--border);
+    }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a {
+      display: block; color: var(--text); text-decoration: none;
+      padding: 3px 8px; border-radius: 4px; margin-bottom: 2px;
+      transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+
+    /* ── Main ── */
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin-bottom: 0.3em; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      font-size: 0.8em; font-weight: 600; margin: 0 4px;
+      background: #313244; color: var(--heading);
+    }
+    .tag-row { margin: 0.8em 0; }
+    .highlight-box {
+      background: #2a2a3e; border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px 20px; margin: 1em 0;
+    }
+    .highlight-box h4 { color: var(--strong); margin-bottom: 6px; font-size: 1em; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 1em 0; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+</head>
+<body>
+
+<nav id="toc"><h2>目录</h2></nav>
+
+<main>
+
+  <!-- ═══════════════════════════════════════════════════════ HEADER -->
+  <h1>DataClaw₀：从原始流中主动裁剪多模态数据</h1>
+  <div class="tag-row">
+    <span class="badge">arXiv 2606.21337</span>
+    <span class="badge">2026-06-19</span>
+    <span class="badge">👍 70 upvotes</span>
+    <span class="badge">CC BY-NC-SA 4.0</span>
+  </div>
+  <blockquote>
+    <strong>作者：</strong>Cong Wan, Zeyu Guo, Zijian Cai, Jiangyang Li, SongLin Dong, Lin Peng, Xiangyang Luo, Zhiheng Ma, Yihong Gong（共9人）<br>
+    <strong>链接：</strong>
+    <a href="https://arxiv.org/abs/2606.21337" target="_blank">arXiv</a> ·
+    <a href="https://github.com/vancyland/DataClaw0" target="_blank">GitHub</a> ·
+    <a href="https://czjdsg.github.io/MakeAnyData" target="_blank">项目主页</a> ·
+    <a href="https://huggingface.co/papers/2606.21337" target="_blank">Hugging Face</a>
+  </blockquote>
+
+  <!-- ═══════════════════════════════════════════════════════ 概述 -->
+  <h2 id="overview">概述</h2>
+  <p>
+    本文提出 <strong>Agentic Data Tailoring（主动数据裁剪）</strong> 范式，将多模态数据处理从被动标注提升为可学习的高阶能力。
+    核心贡献是 <strong>DataClaw₀-9B</strong> 模型：给定用户意图或下游目标，该 Agent 从长视频、GUI 操作日志、具身轨迹等高熵原始流中
+    过滤冗余信号、重组为密集可验证的结构化监督数据。
+    为解决训练数据悖论（训练数据精炼模型本身需要高质量精炼数据），论文设计了基于
+    <strong>Factual Anchors（事实锚点）</strong> 的两阶段自动构建流水线，并引入首个专用于数据精炼的基准 <strong>DataClaw₀-val</strong>。
+    在视频生成、时空 VQA、GUI 导航三项下游任务上的验证表明，DataClaw₀ 产出的数据质量可与 Gemini-3.1-Pro 媲美，同时成本大幅降低。
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════ 研究背景 -->
+  <h2 id="background">研究背景</h2>
+  <p>
+    随着多模态 AI 系统的快速发展，互联网上积累了海量非结构化多模态流数据——长视频、屏幕录像、机器人操作日志、AIGC 编辑序列等。
+    这类数据存在极高的 <strong>"数据熵"（Data Entropy）</strong>：信息密度低、噪声多、结构松散，
+    既阻碍人类高效获取知识，也制约 AI 后训练（post-training）的质量。
+  </p>
+
+  <h3>现有方法的局限</h3>
+  <div class="two-col">
+    <div class="highlight-box">
+      <h4>启发式规则方法</h4>
+      <p>基于人工设计的规则进行过滤与标注，<strong>泛化能力差</strong>，无法适配多样化的下游任务意图，且维护成本高。</p>
+    </div>
+    <div class="highlight-box">
+      <h4>通用 VLM 标注方法</h4>
+      <p>调用 GPT-4o、Gemini 等大模型进行标注，<strong>成本高昂、单调重复</strong>，且难以捕捉原始数据中深层的程序性逻辑（procedural logic）。</p>
+    </div>
+  </div>
+
+  <h3>核心洞察：数据处理应成为可学习能力</h3>
+  <p>
+    现有方法都是"被动标注"（passive annotation）——给定数据，机械地打标签。
+    论文的核心洞察是：<strong>数据处理本身应是一种可学习的高阶推理能力</strong>，Agent 需要理解用户意图、
+    主动推断数据中的因果关系与程序逻辑，然后有针对性地重组输出。
+    这一范式转变被称为 <strong>Agentic Data Tailoring</strong>。
+  </p>
+
+  <blockquote>
+    <strong>关键问题（数据悖论）：</strong>训练一个能精炼数据的模型，本身就需要高质量的精炼数据——如何打破这一循环？
+    DataClaw₀ 的答案是：利用确定性的事实锚点（Factual Anchors）约束生成式语义合成，以低成本自动构建大规模训练集。
+  </blockquote>
+
+  <!-- ═══════════════════════════════════════════════════════ 核心方法 -->
+  <h2 id="method">核心方法</h2>
+  <p>
+    DataClaw₀ 的方法论由两个紧密耦合的部分组成：<strong>数据集构建的两阶段流水线</strong>
+    和 <strong>基于 Factual Anchors 的语义合成机制</strong>。前者解决训练数据从哪来的问题，
+    后者保证生成数据的事实正确性与结构完整性。
+  </p>
+
+  <h3>整体流程总览</h3>
+  <pre class="mermaid">
+flowchart TD
+    A["🎬 原始多模态流<br/>Raw Streams<br/>(视频 / GUI 日志 / 轨迹 / AIGC)"] --> B
+
+    subgraph Stage1["第一阶段：确定性锚点提取"]
+        B["领域专用工具<br/>Domain-Specific Experts"]
+        B --> C1["对象状态<br/>Object States"]
+        B --> C2["时间边界<br/>Temporal Boundaries"]
+        B --> C3["OCR 文本<br/>OCR Text"]
+        B --> C4["GUI 交互事件<br/>GUI Events"]
+        C1 & C2 & C3 & C4 --> D["🔒 Factual Anchors<br/>确定性事实锚点集合 A"]
+    end
+
+    subgraph Stage2["第二阶段：生成式语义合成"]
+        D --> E["用户意图 / 下游目标<br/>User Intent I"]
+        E --> F["强 VLM<br/>(长程逻辑链推理)"]
+        F --> G["多维推理轨迹<br/>Multimodal Chain-of-Thought"]
+        G --> H["后验锚点验证<br/>Post-hoc Grounding Verification"]
+        H --> I["✅ 结构化输出<br/>Schema-Aligned Y_struct"]
+    end
+
+    I --> J["大规模跨域数据集<br/>五大领域 · 训练 DataClaw₀-9B"]
+
+    style Stage1 fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+    style Stage2 fill:#2a2a3e,stroke:#a6e3a1,color:#cdd6f4
+    style A fill:#313244,stroke:#fab387,color:#cdd6f4
+    style D fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    style I fill:#313244,stroke:#a6e3a1,color:#cdd6f4
+    style J fill:#313244,stroke:#89b4fa,color:#cdd6f4
+  </pre>
+
+  <h3>第一阶段：确定性 Factual Anchors 提取</h3>
+  <p>
+    <strong>是什么：</strong>Factual Anchors（事实锚点）是从原始多模态流中用轻量级确定性工具提取的低级事实信息集合，
+    如物体状态、时间边界、OCR 识别文本、GUI 操作事件等。
+  </p>
+  <p>
+    <strong>为什么：</strong>纯粹依赖强 VLM 进行语义理解容易产生幻觉（hallucination），且成本高。
+    Factual Anchors 提供可靠的低级事实"地基"，将生成式合成约束在事实范围内，
+    有效防止语义漂移，同时大幅降低对昂贵 VLM 的依赖。
+  </p>
+  <p>
+    <strong>怎么做：</strong>针对不同领域使用专用工具：
+  </p>
+  <ul>
+    <li><strong>具身 AI 域：</strong>深度估计、物体检测、3D 位姿追踪（参考 ScanNet、Habitat 等）</li>
+    <li><strong>GUI 域：</strong>UI 元素解析器、点击/滚动事件日志提取器</li>
+    <li><strong>日常生活 / 教育域：</strong>ASR（语音识别）、OCR、场景图解析</li>
+    <li><strong>AIGC 域：</strong>编辑操作元数据解析、帧差分检测</li>
+  </ul>
+  <p>
+    这些工具输出的锚点集合 <strong>A</strong> 具有确定性（deterministic）——同一输入总产生相同结果，
+    可作为后续生成阶段的事实约束。
+  </p>
+
+  <h3>第二阶段：生成式语义合成</h3>
+  <p>
+    <strong>是什么：</strong>以 Factual Anchors A 和用户意图 I 为条件，调用强 VLM（如 Gemini）
+    进行长程逻辑链推理，生成符合 schema 的结构化输出 Y_struct。
+  </p>
+  <p>
+    <strong>为什么：</strong>单纯的锚点提取只有低级事实，缺乏高级语义理解和跨帧逻辑推理。
+    VLM 的生成能力弥补了这一缺口，而 Factual Anchors 则防止 VLM 的幻觉问题。
+    两者结合实现了"确定性事实 + 生成式语义"的互补。
+  </p>
+  <p>
+    <strong>怎么做：</strong>VLM 以 Factual Anchors 为离散节点，执行多模态思维链（Multimodal Chain-of-Thought），
+    在时间维度上进行长程逻辑连接，最终输出经过后验锚点验证的结构化数据。
+    推理完成后，系统还会对照锚点集合 A 进行 <strong>post-hoc grounding verification</strong>，
+    确保输出内容与原始流保持事实一致性。
+  </p>
+
+  <h3>五大数据域</h3>
+  <table>
+    <thead>
+      <tr><th>域</th><th>代表数据类型</th><th>典型锚点</th><th>下游应用</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>日常生活</strong></td><td>家庭场景视频、烹饪教程</td><td>物体状态变化、动作边界</td><td>时空 VQA</td></tr>
+      <tr><td><strong>教育</strong></td><td>讲解视频、实验演示</td><td>ASR 文本、步骤边界</td><td>知识问答</td></tr>
+      <tr><td><strong>具身 AI</strong></td><td>机器人操作轨迹</td><td>3D 位姿、接触事件</td><td>动作视频生成</td></tr>
+      <tr><td><strong>世界模型/AIGC</strong></td><td>图像/视频编辑序列</td><td>编辑操作元数据</td><td>视频生成</td></tr>
+      <tr><td><strong>GUI Agents</strong></td><td>屏幕录像、操作日志</td><td>UI 元素、点击/输入事件</td><td>GUI 导航</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════════════════════════ 模型训练 -->
+  <h2 id="training">模型训练：SFT + GRPO</h2>
+  <p>
+    DataClaw₀-9B 的训练采用两阶段策略：先用 <strong>监督微调（SFT）</strong> 建立基础能力，
+    再用 <strong>组相对策略优化（GRPO）</strong> 进一步对齐复杂裁剪意图。
+    此外，论文还探索了 <strong>Omni 模型</strong>（统一处理所有域）和 <strong>Expert 模型</strong>（每域专用）两种部署范式。
+  </p>
+
+  <h3>训练架构图</h3>
+  <pre class="mermaid">
+flowchart LR
+    subgraph Data["训练数据构建"]
+        D1["原始多模态流"] --> D2["Factual Anchors 提取"]
+        D2 --> D3["VLM 语义合成"]
+        D3 --> D4["大规模跨域数据集<br/>五大物理与数字领域"]
+    end
+
+    subgraph SFT["阶段一：监督微调 SFT"]
+        S1["基座模型 9B"] --> S2["SFT 训练<br/>schema-aligned 输出学习"]
+        S2 --> S3["SFT 检查点"]
+    end
+
+    subgraph GRPO["阶段二：GRPO 强化学习"]
+        G1["SFT 检查点"] --> G2["采样多组输出 G"]
+        G2 --> G3["三维奖励函数 R(Y)"]
+        G3 --> G4["组内归一化优势估计"]
+        G4 --> G5["策略梯度更新"]
+        G5 --> G6["DataClaw₀-9B<br/>最终模型"]
+    end
+
+    subgraph Deploy["部署范式"]
+        G6 --> P1["DataClaw-O<br/>Omni 统一模型"]
+        G6 --> P2["DataClaw-E<br/>Expert 路由模型"]
+    end
+
+    D4 --> S1
+    S3 --> G1
+
+    style Data fill:#2a2a3e,stroke:#fab387,color:#cdd6f4
+    style SFT fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+    style GRPO fill:#2a2a3e,stroke:#a6e3a1,color:#cdd6f4
+    style Deploy fill:#2a2a3e,stroke:#89dceb,color:#cdd6f4
+  </pre>
+
+  <h3>GRPO 奖励函数设计</h3>
+  <p>
+    GRPO 的核心在于设计多维度奖励函数 <strong>R(Y)</strong>，引导模型输出既符合 schema 又忠实于原始流的结构化数据：
+  </p>
+  <div class="highlight-box">
+    <h4>三维奖励函数</h4>
+    <p><strong>R(Y) = λ₁·R_format(Y, Φ) + λ₂·R_anchor(Y, A) + λ₃·R_eff(Y)</strong></p>
+    <ul>
+      <li><strong>R_format</strong>：Schema 合规性检查——输出是否符合目标结构定义 Φ（字段完整性）</li>
+      <li><strong>R_anchor</strong>：锚点对齐度——生成内容与提取的 Factual Anchors A 的语义一致性（语义忠实度）</li>
+      <li><strong>R_eff</strong>：效率惩罚——抑制过度冗长的推理过程，鼓励简洁高效的输出</li>
+    </ul>
+  </div>
+  <p>
+    组内归一化优势估计：对采样的一组输出 {g}，GRPO 计算归一化优势
+    <strong>Â(g) = (R(g) − μ_R) / σ_R</strong>，以组内相对排名替代绝对奖励，
+    稳定训练过程并降低奖励方差。
+  </p>
+
+  <h3>两种部署范式对比</h3>
+  <table>
+    <thead>
+      <tr><th>范式</th><th>名称</th><th>特点</th><th>优势</th><th>劣势</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>统一模型</strong></td>
+        <td>DataClaw-O (Omni)</td>
+        <td>单一模型处理所有五个域</td>
+        <td>部署简单，跨域泛化能力强</td>
+        <td>各域性能略低于专用模型</td>
+      </tr>
+      <tr>
+        <td><strong>专家路由</strong></td>
+        <td>DataClaw-E (Expert)</td>
+        <td>按域路由到专用微调模型</td>
+        <td>域内性能最优，精度更高</td>
+        <td>需要域分类器，部署复杂</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    消融实验表明，Expert 路由对性能至关重要：将 Embodied 域数据送入 GUI 专家模型，
+    Field 分数从 96.50 骤降至 0.00，充分说明<strong>跨域混用会导致严重性能退化</strong>。
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════ 实验结果 -->
+  <h2 id="experiments">实验结果</h2>
+  <p>
+    实验分为两大设置：<strong>Setting A</strong>（DataClaw₀-val 基准上的结构化输出质量评测）
+    和 <strong>Setting B</strong>（以下游 SFT 任务性能为终极验证标准的定向精炼评测）。
+    两个设置共同回答：DataClaw₀ 产出的数据是否真正有助于 AI 模型的适应与提升？
+  </p>
+
+  <h3>Setting A：DataClaw₀-val 基准评测</h3>
+  <p>
+    DataClaw₀-val 是论文构建的<strong>首个专用于数据精炼的基准</strong>，从三个维度评估结构化输出质量：
+  </p>
+  <ul>
+    <li><strong>Field（字段完整性）</strong>：输出是否包含所有必需字段，格式是否正确</li>
+    <li><strong>Semantic（语义忠实度）</strong>：输出内容是否与原始流语义一致</li>
+    <li><strong>Sequence（序列连贯性）</strong>：时序事件的顺序是否正确</li>
+  </ul>
+
+  <div id="chart-val" class="echarts-container" style="height:360px"></div>
+
+  <p>
+    DataClaw-E（Expert 配置）在 Field（97.53）和 Semantic（74.94）维度上与 GPT-4o、Gemini-3.1-Pro 相当，
+    Sequence（48.86）维度略低于 Gemini（58.50）但接近 GPT-4o（49.43）。
+    这说明 DataClaw₀ 在结构化输出质量上已达到闭源顶级 VLM 的水平。
+  </p>
+
+  <h3>Setting B：下游任务定向精炼</h3>
+  <p>
+    固定原始流数据和 SFT 训练预算，<strong>仅改变标注者</strong>（Gemini-3.1-Pro vs. DataClaw），
+    在三个下游任务上评估最终模型性能：GUI 导航、动作视频生成、时空 VQA。
+  </p>
+
+  <div id="chart-downstream" class="echarts-container" style="height:420px"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>数据来源</th>
+        <th>GUI 导航 SSR↑</th>
+        <th>GUI 导航 TSR↑</th>
+        <th>视频生成 FVD↓</th>
+        <th>视频生成 Contact mAP↑</th>
+        <th>VQA Partial↑</th>
+        <th>VQA Overall↑</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>零样本基座</td><td>12.4</td><td>1.2</td><td>385.2</td><td>18.5</td><td>28.3</td><td>9.8</td></tr>
+      <tr><td>基座模型处理</td><td>16.8</td><td>3.5</td><td>362.1</td><td>24.2</td><td>33.5</td><td>14.2</td></tr>
+      <tr><td>Gemini-3.1-Pro 处理</td><td>39.5</td><td>14.2</td><td>295.4</td><td>48.5</td><td>53.4</td><td>31.5</td></tr>
+      <tr style="background:#2a2a3e"><td><strong>DataClaw（Ours）</strong></td><td><strong>38.2</strong></td><td><strong>15.6</strong></td><td><strong>288.6</strong></td><td><strong>51.2</strong></td><td>52.1</td><td><strong>33.2</strong></td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    关键发现：DataClaw 在 <strong>GUI 导航 TSR（+1.4）、视频生成 FVD（-6.8）、Contact mAP（+2.7）、VQA Overall（+1.7）</strong>
+    上均超越 Gemini-3.1-Pro，同时成本仅为其极小分之一。
+    这证明 DataClaw₀ 产出的数据具有更高的信息密度，能在有限数据预算下实现更高效的模型适应。
+  </p>
+
+  <h3>消融实验：奖励设计的重要性</h3>
+  <table>
+    <thead>
+      <tr><th>变体</th><th>Field</th><th>Semantic</th><th>Sequence</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>最小初始化（无 SFT）</td><td>82.50</td><td>36.79</td><td>45.40</td></tr>
+      <tr><td>仅 SFT</td><td>100.00</td><td>82.54</td><td>70.83</td></tr>
+      <tr><td>GRPO（无 R_anchor）</td><td>100.00</td><td>83.32</td><td>70.11</td></tr>
+      <tr style="background:#2a2a3e"><td><strong>GRPO（含 R_anchor）</strong></td><td><strong>100.00</strong></td><td>82.36</td><td><strong>71.96</strong></td></tr>
+    </tbody>
+  </table>
+  <p>
+    加入 R_anchor 奖励后，Sequence 分数（71.96）略高于不含 R_anchor 的版本（70.11），
+    说明锚点对齐奖励对序列连贯性有正向贡献。SFT 阶段对 Field 和 Semantic 的提升最为显著，
+    GRPO 阶段则主要在 Sequence 维度上进一步优化。
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════ 总结与启发 -->
+  <h2 id="insights">总结与启发</h2>
+
+  <h3>核心贡献总结</h3>
+  <ul>
+    <li>
+      <strong>范式创新：</strong>将多模态数据处理从"被动标注"提升为"主动裁剪"，
+      开创了 Agentic Data Tailoring 新范式，为 AI 后训练数据的自动化生产提供了新路径。
+    </li>
+    <li>
+      <strong>工程创新：</strong>Factual Anchors 两阶段流水线巧妙解决了数据悖论——
+      用确定性工具约束生成式合成，在保证事实准确性的前提下实现大规模自动化构建。
+    </li>
+    <li>
+      <strong>模型创新：</strong>SFT + GRPO 的三维奖励设计（Format + Anchor + Efficiency）
+      为多模态结构化输出任务的强化学习提供了可参考的奖励工程范例。
+    </li>
+    <li>
+      <strong>评测创新：</strong>DataClaw₀-val 是首个专用于数据精炼质量评估的基准，
+      Field / Semantic / Sequence 三维度框架为后续研究提供了标准化评测协议。
+    </li>
+  </ul>
+
+  <h3>对研究者的启发</h3>
+  <div class="two-col">
+    <div class="highlight-box">
+      <h4>数据飞轮思路</h4>
+      <p>
+        DataClaw₀ 的成功说明：<strong>用 AI 生产 AI 训练数据</strong> 的闭环是可行的。
+        关键在于用确定性锚点约束生成过程，防止"幻觉传播"。
+        这一思路可推广到任何需要从非结构化数据中提取结构化监督信号的场景。
+      </p>
+    </div>
+    <div class="highlight-box">
+      <h4>下游验证优先</h4>
+      <p>
+        论文将"下游 SFT 任务性能"作为终极验证标准，而非仅看中间指标。
+        这提醒研究者：<strong>数据质量的最终裁判是下游任务表现</strong>，
+        而非标注一致性或人工评分等代理指标。
+      </p>
+    </div>
+    <div class="highlight-box">
+      <h4>专家路由的价值</h4>
+      <p>
+        消融实验清晰展示了跨域混用的危害。
+        对于多域统一模型，<strong>域感知路由或混合专家（MoE）机制</strong>
+        可能是在保持统一部署的同时维持各域性能的关键设计选择。
+      </p>
+    </div>
+    <div class="highlight-box">
+      <h4>GRPO 奖励工程</h4>
+      <p>
+        R_anchor 的引入将"事实锚点对齐"显式纳入强化学习目标，
+        为<strong>基于外部知识源的奖励信号设计</strong>提供了参考。
+        类似思路可用于其他需要事实一致性的生成任务（如 RAG、知识图谱填充）。
+      </p>
+    </div>
+  </div>
+
+  <h3>局限性与未来方向</h3>
+  <ul>
+    <li><strong>代码与权重尚未开源：</strong>论文承诺在接受后发布，目前仅有论文和项目主页可参考。</li>
+    <li><strong>Sequence 维度仍有差距：</strong>DataClaw-E（48.86）与 Gemini（58.50）在序列连贯性上仍有约 10 点差距，长程时序推理是下一步优化重点。</li>
+    <li><strong>域覆盖的扩展：</strong>当前五个域主要覆盖视觉-动作类任务，音频、代码、科学文献等域的扩展有待探索。</li>
+    <li><strong>实时/流式处理：</strong>当前流水线面向离线批处理，在线实时数据裁剪的效率优化是潜在方向。</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════════════════════ 参考文献 -->
+  <h2 id="references">参考文献</h2>
+  <ul>
+    <li>Wan, C. et al. (2026). <em>DataClaw₀: Agentic Tailoring Multimodal Data from Raw Streams</em>. arXiv:2606.21337.</li>
+    <li>Shao, Z. et al. (2024). <em>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models</em>. arXiv:2402.03300. [GRPO 原始论文]</li>
+    <li>Zhang, Z. et al. (2023). <em>Multimodal Chain-of-Thought Reasoning in Language Models</em>. TMLR. [多模态思维链]</li>
+    <li>Savva, M. et al. (2019). <em>Habitat: A Platform for Embodied AI Research</em>. ICCV. [具身 AI 平台]</li>
+    <li>Dai, A. et al. (2017). <em>ScanNet: Richly-annotated 3D Reconstructions of Indoor Scenes</em>. CVPR. [3D 场景数据]</li>
+    <li>GitHub: <a href="https://github.com/vancyland/DataClaw0" target="_blank">vancyland/DataClaw0</a></li>
+    <li>项目主页: <a href="https://czjdsg.github.io/MakeAnyData" target="_blank">czjdsg.github.io/MakeAnyData</a></li>
+    <li>HuggingFace: <a href="https://huggingface.co/papers/2606.21337" target="_blank">huggingface.co/papers/2606.21337</a></li>
+  </ul>
+
+  <hr>
+  <p style="color:#6c7086; font-size:0.85em; text-align:center;">
+    阅读报告生成时间：2026-06-26 · 基于 arXiv 2606.21337 v1
+  </p>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════ SCRIPTS -->
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+  /* ── TOC 自动生成 ── */
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  /* ── TOC 高亮 ── */
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+  /* ── ECharts: DataClaw-val 基准对比 ── */
+  (function() {
+    const chart = echarts.init(document.getElementById('chart-val'));
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'DataClaw₀-val 基准：结构化输出质量对比', left: 'center', top: 12, textStyle: { color: '#89b4fa', fontSize: 14 } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: ['Field（字段完整性）', 'Semantic（语义忠实度）', 'Sequence（序列连贯性）'], bottom: 8, textStyle: { color: '#cdd6f4' } },
+      grid: { left: '3%', right: '4%', bottom: '12%', top: '15%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['Gemini-3.1-Pro', 'GPT-4o', 'DataClaw-E\n(Ours Expert)', 'DataClaw-O\n(Ours Omni)'],
+        axisLabel: { color: '#cdd6f4', fontSize: 12 },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      yAxis: {
+        type: 'value', min: 0, max: 105,
+        axisLabel: { color: '#cdd6f4', formatter: '{value}' },
+        splitLine: { lineStyle: { color: '#45475a' } }
+      },
+      series: [
+        {
+          name: 'Field（字段完整性）',
+          type: 'bar',
+          barGap: '5%',
+          data: [98.12, 97.27, 97.53, 87.65],
+          itemStyle: { color: '#89b4fa' },
+          label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+        },
+        {
+          name: 'Semantic（语义忠实度）',
+          type: 'bar',
+          data: [73.85, 75.15, 74.94, 62.46],
+          itemStyle: { color: '#a6e3a1' },
+          label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+        },
+        {
+          name: 'Sequence（序列连贯性）',
+          type: 'bar',
+          data: [58.50, 49.43, 48.86, 44.82],
+          itemStyle: { color: '#fab387' },
+          label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+        }
+      ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+  })();
+
+  /* ── ECharts: 下游任务对比 ── */
+  (function() {
+    const chart = echarts.init(document.getElementById('chart-downstream'));
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '下游 SFT 任务性能对比（Setting B）', left: 'center', top: 12, textStyle: { color: '#89b4fa', fontSize: 14 } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: {
+        data: ['零样本基座', '基座模型处理', 'Gemini-3.1-Pro 处理', 'DataClaw（Ours）'],
+        bottom: 8, textStyle: { color: '#cdd6f4' }, itemWidth: 14
+      },
+      grid: { left: '3%', right: '4%', bottom: '14%', top: '15%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['GUI SSR↑', 'GUI TSR↑', 'Video Contact mAP↑', 'VQA Partial↑', 'VQA Overall↑'],
+        axisLabel: { color: '#cdd6f4', fontSize: 11, rotate: 15 },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: { color: '#cdd6f4' },
+        splitLine: { lineStyle: { color: '#45475a' } }
+      },
+      series: [
+        {
+          name: '零样本基座',
+          type: 'bar',
+          barGap: '3%',
+          data: [12.4, 1.2, 18.5, 28.3, 9.8],
+          itemStyle: { color: '#585b70' }
+        },
+        {
+          name: '基座模型处理',
+          type: 'bar',
+          data: [16.8, 3.5, 24.2, 33.5, 14.2],
+          itemStyle: { color: '#6c7086' }
+        },
+        {
+          name: 'Gemini-3.1-Pro 处理',
+          type: 'bar',
+          data: [39.5, 14.2, 48.5, 53.4, 31.5],
+          itemStyle: { color: '#89dceb' }
+        },
+        {
+          name: 'DataClaw（Ours）',
+          type: 'bar',
+          data: [38.2, 15.6, 51.2, 52.1, 33.2],
+          itemStyle: { color: '#a6e3a1' },
+          label: { show: true, position: 'top', color: '#a6e3a1', fontSize: 11, fontWeight: 'bold' }
+        }
+      ]
+    });
+    window.addEventListener('resize', () => chart.resize());
+  })();
+</script>
+</body>
+</html>

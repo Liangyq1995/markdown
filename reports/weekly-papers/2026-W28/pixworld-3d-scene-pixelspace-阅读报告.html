@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PixWorld：像素空间统一 3D 场景生成与重建 · 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    .best { color: var(--strong); font-weight: 700; }
+    .second { text-decoration: underline; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .paper-info { margin: 1em 0 2em; }
+    .paper-info td:first-child { background: #2a2a3e; color: var(--heading); font-weight: 600; width: 140px; white-space: nowrap; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>PixWorld：在像素空间统一 3D 场景生成与重建</h1>
+    <p style="color:#6c7086;">Sensen Gao, Zhaoqing Wang, Qihang Cao, Dongdong Yu, Changhu Wang, Jia-Wang Bian — Nanyang Technological University &amp; AISphere</p>
+
+    <table class="paper-info">
+      <tr><th>标题</th><td>PixWorld: Unifying 3D Scene Generation and Reconstruction in Pixel Space</td></tr>
+      <tr><th>核心问题</th><td>如何用一个模型同时完成 3D 场景的生成与重建，并避免潜空间（VAE/RAE）带来的信息损失与额外训练成本</td></tr>
+      <tr><th>核心思路</th><td>把扩散目标直接定义在像素空间的多视图渲染图上，通过可微渲染端到端监督底层 3D 高斯表示，clean/noisy 视图划分天然统一两个任务</td></tr>
+      <tr><th>3D 表示</th><td>Pixel-aligned 3D Gaussian Splatting（像素对齐 3DGS，中心由预测深度反投影得到）</td></tr>
+      <tr><th>模型规模</th><td>约 1.04B 参数，24 层双流 MMDiT（DiT），从零训练</td></tr>
+      <tr><th>几何监督</th><td>Geometry Perception Loss：在冻结的 3D 基础模型（π3）几何感知特征空间中对齐渲染图与真值</td></tr>
+      <tr><th>开源地址</th><td>论文未提供项目/代码链接（截至报告时）</td></tr>
+    </table>
+
+    <h2 id="sec-overview">1. 概述</h2>
+    <p>3D 场景的<strong>重建</strong>（从真实多视图捕获恢复 3D）与<strong>生成</strong>（从稀疏/想象条件合成场景）长期是两条独立的研究线：重建以 feed-forward 回归为主流，生成则以潜空间扩散（latent diffusion）为主流。近期的 Gen3R 尝试用潜空间生成管线同时处理两者，但存在两个根本性缺陷：</p>
+    <ul>
+      <li>扩散目标定义在 VAE/RAE 编码出的中间潜特征上，<strong>无法直接优化底层 3D 表示</strong>；</li>
+      <li>两条分支都承受 VAE/RAE 编码带来的<strong>信息损失</strong>，且该自编码器本身需要额外预训练。</li>
+    </ul>
+    <p>PixWorld 把统一问题重新表述到<strong>像素空间扩散范式</strong>下：扩散变量与渲染输出同处 RGB 域，损失直接施加在多视图可微渲染图上，从而让训练信号与 3D 场景保真度对齐，而非与某个中间潜空间目标对齐。统一进一步简化为“如何让两种任务共享一次前向”——PixWorld 通过把多视图输入划分为 <strong>clean 子集</strong>（驱动重建）与 <strong>noisy 子集</strong>（以 clean 为条件去噪生成），让一个双流 DiT 同时输出像素对齐的 3DGS。</p>
+    <p>由于纯像素级的光度/感知损失不足以约束真实 3D 几何（深度可沿视线漂移、半透明 floater 可平均出合理颜色），PixWorld 进一步提出 <strong>Geometry Perception Loss</strong>：在冻结的 3D 基础模型（π3 / VGGT）的几何感知特征空间中，拉近渲染视图与真值视图，提供超越 2D 的 3D 结构监督。</p>
+    <blockquote>核心论点：去掉 VAE/RAE 这层中间瓶颈，把扩散目标直接放到渲染像素上，是统一 3D 生成与重建、并提升保真度的关键；再叠加 3D 几何感知监督，弥补纯 2D 损失的几何盲区。</blockquote>
+
+    <h2 id="sec-bg">2. 研究背景与动机</h2>
+    <h3 id="sec-bg-gen">2.1 3D 场景生成的三段演进</h3>
+    <p>论文将 3D 生成梳理为三条技术脉络：</p>
+    <div class="timeline-wrap" style="overflow-x:auto;margin:1em 0;">
+      <div class="timeline" style="display:flex;gap:0;min-width:980px;">
+        <div class="tl-col" style="flex:1;display:flex;flex-direction:column;">
+          <div class="tl-period" style="background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;font-size:.95em;border-radius:6px 6px 0 0;">SDS 迭代优化</div>
+          <div class="tl-body" style="flex:1;padding:10px 8px;border:1px solid var(--border);border-radius:0 0 6px 6px;">
+            <div class="tl-item" style="background:#313244;border-radius:5px;padding:7px 10px;margin-bottom:8px;font-size:.88em;line-height:1.5;">
+              <span style="display:inline-block;font-size:.75em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:4px;background:var(--heading);color:#1e1e2e;">2D 先验</span><br>
+              用预训练 2D 扩散模型 + Score Distillation Sampling 优化 3DGS/NeRF；缺多视图约束、跨视图不一致、逐场景优化不可扩展
+            </div>
+          </div>
+        </div>
+        <div class="tl-col" style="flex:1;display:flex;flex-direction:column;">
+          <div class="tl-period" style="background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;font-size:.95em;border-radius:6px 6px 0 0;">多视图重建式生成</div>
+          <div class="tl-body" style="flex:1;padding:10px 8px;border:1px solid var(--border);border-radius:0 0 6px 6px;">
+            <div class="tl-item" style="background:#313244;border-radius:5px;padding:7px 10px;font-size:.88em;line-height:1.5;">
+              <span style="display:inline-block;font-size:.75em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:4px;background:#fab387;color:#1e1e2e;">RGB 先验</span><br>
+              先用 2D 扩散合成多视图/视频，再重建 3D；避免逐场景优化，但仍只靠 2D RGB 先验，几何不一致、多视图保真度弱
+            </div>
+          </div>
+        </div>
+        <div class="tl-col" style="flex:1;display:flex;flex-direction:column;">
+          <div class="tl-period" style="background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;font-size:.95em;border-radius:6px 6px 0 0;">潜空间扩散</div>
+          <div class="tl-body" style="flex:1;padding:10px 8px;border:1px solid var(--border);border-radius:0 0 6px 6px;">
+            <div class="tl-item" style="background:#313244;border-radius:5px;padding:7px 10px;font-size:.88em;line-height:1.5;">
+              <span style="display:inline-block;font-size:.75em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:4px;background:#a6e3a1;color:#1e1e2e;">当前主流</span><br>
+              在压缩潜空间扩散 + 学习 latent→3DGS 解码器；VAE→RAE→3D 基础模型表示空间。Gen3R 在此范式下尝试统一生成与重建
+            </div>
+          </div>
+        </div>
+        <div class="tl-col" style="flex:1;display:flex;flex-direction:column;">
+          <div class="tl-period" style="background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 6px;font-size:.95em;border-radius:6px 6px 0 0;">像素空间扩散 (PixWorld)</div>
+          <div class="tl-body" style="flex:1;padding:10px 8px;border:1px solid var(--border);border-radius:0 0 6px 6px;">
+            <div class="tl-item" style="background:#313244;border-radius:5px;padding:7px 10px;font-size:.88em;line-height:1.5;">
+              <span style="display:inline-block;font-size:.75em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:4px;background:#cba6f7;color:#1e1e2e;">本文</span><br>
+              去掉 VAE/RAE，直接在渲染像素上做 flow matching；通过可微渲染监督 3DGS；单模型统一生成与重建
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h3 id="sec-bg-recon">2.2 3D 场景重建</h3>
+    <p>经典管线依赖 MVS / SfM 估计稠密几何，NeRF 与 3DGS 推动了逐场景优化。为避免昂贵的逐场景拟合，feed-forward 方法直接把稀疏/稠密多视图映射到 3D 表示（LRM 回归 triplane，pixel-aligned 高斯回归器预测逐像素高斯）。这类方法<strong>确定性</strong>且以观测为条件，<strong>无法合成输入视图之外未见内容</strong>——这正是 PixWorld 通过 clean/noisy 划分要补齐的能力。</p>
+
+    <h3 id="sec-bg-pixel">2.3 像素空间生成的启发</h3>
+    <p>潜在扩散主导大规模图像生成，但在生成目标与像素输出之间引入间接性。一批工作（Dhariwal &amp; Nichol、Jabri、Hoogeboom、PixFlow、JiT 等）证明：容量与数据足够时，像素空间生成在保真度上可追平甚至超越潜空间。PixWorld 把这一视角推广到 3D：直接在像素空间扩散，移除中间 VAE/RAE，并通过预测 3DGS 的可微渲染直接监督 3D 表示。</p>
+
+    <h3 id="sec-bg-compare">2.4 与已有统一方案的对比</h3>
+    <table>
+      <tr><th>维度</th><th>Gen3R（潜空间统一）</th><th>PixWorld（像素空间统一）</th></tr>
+      <tr><td>扩散目标空间</td><td>VAE/RAE 潜特征</td><td><strong>渲染 RGB 像素</strong></td></tr>
+      <tr><td>对 3D 表示的直接监督</td><td>否（解耦于渲染输出与 3D 表示）</td><td><strong>是（可微渲染端到端）</strong></td></tr>
+      <tr><td>VAE/RAE 信息损失</td><td>有</td><td><strong>无（移除自编码器）</strong></td></tr>
+      <tr><td>额外预训练成本</td><td>需训练 VAE/RAE</td><td><strong>从零训练，无额外自编码器</strong></td></tr>
+      <tr><td>3D 几何监督</td><td>2D 光度/感知为主</td><td><strong>+ Geometry Perception Loss</strong></td></tr>
+      <tr><td>重建输出形式</td><td>仅点云（不可直接比 NVS）</td><td><strong>3DGS（可渲染 NVS）</strong></td></tr>
+    </table>
+    <h2 id="sec-method">3. 核心方法</h2>
+
+    <h3 id="sec-method-prelim">3.1 预备：像素空间扩散 vs 潜空间扩散</h3>
+    <p>在潜扩散中，图像 $x$ 先被预训练自编码器映射到紧凑潜表示 $E_\mathrm{AE}: x \mapsto z$，扩散在潜空间进行，去噪后的潜再由 $D_\mathrm{AE}: \hat{z} \mapsto \hat{x}$ 映回 RGB。这降低了维度与计算量，但在扩散变量与最终图像监督之间插入了自编码瓶颈。</p>
+    <p>PixWorld 跟随 JiT 采用像素空间图像预测。给定干净图像 $x\in\mathbb{R}^{H\times W\times 3}$、高斯噪声 $\epsilon\sim\mathcal{N}(0,I)$ 与时间步 $t\in[0,1]$，加噪输入由线性插值构造：</p>
+    <p>$$x_t = t\,x + (1-t)\,\epsilon$$</p>
+    <p>去噪器直接参数化为图像预测器：</p>
+    <p>$$f_\theta:(x_t,t,c)\mapsto\hat{x} \tag{1}$$</p>
+    <p>其中 $c$ 为条件（类别标签或文本嵌入）。预测图像转化为速度场 $\hat{v}=(\hat{x}-x_t)/(1-t)$，得到 flow-matching 目标：</p>
+    <p>$$\mathcal{L}_\mathrm{FM}=\mathbb{E}_{x,\epsilon,t}\left[\lVert\hat{v}-v\rVert_2^{2}\right]=\mathbb{E}_{x,\epsilon,t}\left[\frac{\lVert\hat{x}-x\rVert_2^{2}}{(1-t)^{2}}\right] \tag{2}$$</p>
+    <p>其中 $v=x-\epsilon$ 为真值速度。该参数化对 3D 设置尤为诱人：潜扩散把目标定义在编码潜上，使扩散过程与渲染输出及它应监督的 3D 表示解耦；而像素空间扩散让扩散变量与渲染输出同处 RGB 域，<strong>损失可直接施加在渲染图上</strong>，与 3D 场景保真度对齐。</p>
+
+    <h3 id="sec-method-framework">3.2 PixWorld 框架与任务表述</h3>
+    <p>给定含 $N$ 个带位姿视图的场景，记 RGB 图像与相机参数为 $I=\{I_n\}_{n=1}^{N}$、$T=\{T_n\}_{n=1}^{N}$。将视图索引划分为 clean 子集 $\Omega_c$ 与 noisy 子集 $\Omega_n$：</p>
+    <p>$$\Omega_c\cup\Omega_n=\{1,\dots,N\},\quad \Omega_c\cap\Omega_n=\varnothing,\quad |\Omega_c|\ge 1 \tag{3}$$</p>
+    <p>当 $\Omega_n=\varnothing$ 时退化为纯多视图重建；否则 PixWorld 在 clean 条件下预测 noisy 视图。可选文本提示 $y$ 进一步指定场景。每个视图 $n$ 的模型输入定义为：</p>
+    <p>$$\tilde{I}_t^{\,n}=\begin{cases} I_n, & n\in\Omega_c \\ t\,I_n+(1-t)\,\epsilon_n, & n\in\Omega_n,\ \epsilon_n\sim\mathcal{N}(0,I) \end{cases} \tag{4}$$</p>
+    <p>同一场景的所有 noisy 视图共享同一时间步 $t$。记混合多视图输入为 $\tilde{I}_t=\{\tilde{I}_t^{\,n}\}_{n=1}^{N}$。</p>
+    <p><strong>双流扩散 Transformer。</strong>给定 $\tilde{I}_t$，PixWorld 用双流 DiT：</p>
+    <p>$$f_\theta:(\tilde{I}_t,T,y)\mapsto(\hat{D},\hat{G}) \tag{5}$$</p>
+    <p>其中 $\hat{D}=\{\hat{D}_n\}_{n=1}^{N}$ 为预测多视图深度图，$\hat{G}$ 为像素对齐 3D 高斯场景表示。clean 与 noisy 视图由独立输入投影嵌入，再由共享 transformer block 联合处理；noisy 流以采样 $t$ 为条件，clean 流恒接收 $t=1$ 的全去噪时间嵌入；相机参数经 PRoPE 注入，可选文本经交叉注意力融合。</p>
+    <p><strong>3D 高斯解码与渲染。</strong>对第 $n$ 视图第 $p$ 个像素，用预测深度 $\hat{d}_p^{\,n}$ 反投影得到高斯中心：</p>
+    <p>$$\mu_p^{\,n}=\Pi^{-1}(p,\hat{d}_p^{\,n},T_n)$$</p>
+    <p>其中 $\Pi^{-1}$ 为到世界空间的逆投影。聚合所有像素与视图得到 $\hat{G}$，再由可微渲染器 $\mathcal{R}:(\hat{G},T_n)\mapsto\bar{I}_n$ 渲染出多视图集 $\bar{I}=\{\bar{I}_n\}_{n=1}^{N}$。</p>
+
+    <h3 id="sec-method-loss">3.3 渲染、深度与几何感知损失</h3>
+    <p><strong>FM 渲染与深度目标。</strong>为与速度参数化对齐，渲染损失同样写成 FM 形式。对每个 noisy 视图 $n\in\Omega_n$，定义渲染速度与真值速度：</p>
+    <p>$$\bar{v}_n=\frac{\bar{I}_n-\tilde{I}_t^{\,n}}{1-t},\qquad v_n=\frac{I_n-\tilde{I}_t^{\,n}}{1-t}$$</p>
+    <p>由式 (4) 可知 $v_n=I_n-\epsilon_n$。对每个 clean 视图 $n\in\Omega_c$，渲染图 $\bar{I}_n$ 直接以 MSE 监督（clean 视图作为无噪声重建锚点）。总渲染损失：</p>
+    <p>$$\mathcal{L}_\mathrm{render}=\underbrace{\frac{1}{|\Omega_c|}\sum_{n\in\Omega_c}\lVert\bar{I}_n-I_n\rVert_2^{2}}_{\mathcal{L}_\mathrm{recon}}+\mathbf{1}_{[|\Omega_n|>0]}\left(\underbrace{\frac{1}{|\Omega_n|}\sum_{n\in\Omega_n}\lVert\bar{v}_n-v_n\rVert_2^{2}}_{\mathcal{L}_\mathrm{FM}}+\lambda_\mathrm{lpips}\,\mathcal{L}_\mathrm{lpips}\right) \tag{6}$$</p>
+    <p>其中 FM 项等价地写为图像空间形式 $\frac{1}{|\Omega_n|}\sum_{n\in\Omega_n}\frac{\lVert\bar{I}_n-I_n\rVert_2^{2}}{(1-t)^{2}}$，感知项定义为 $\mathcal{L}_\mathrm{lpips}=\mathbf{1}_{[t>t_\mathrm{th}]}\frac{1}{N}\sum_{n=1}^{N}\mathrm{LPIPS}(\bar{I}_n,I_n)$。指示函数 $\mathbf{1}_{[|\Omega_n|>0]}$ 在纯重建（$\Omega_n=\varnothing$）时关闭 FM 项；LPIPS 仅在 $t>t_\mathrm{th}$ 时激活，因加噪输入接近纯噪声时感知监督不可靠。此外每次迭代采样 4–8 个新视图，用 MSE+LPIPS 监督其渲染，正则 3DGS 在任意视角下良好渲染。</p>
+    <p>预测深度用 DA3（Depth Anything 3）伪深度标签 $D^\star=\{D_n^\star\}_{n=1}^{N}$ 监督：</p>
+    <p>$$\mathcal{L}_\mathrm{depth}=\frac{1}{N}\sum_{n=1}^{N}\rho\!\left(\log\hat{D}_n-\log D_n^\star\right) \tag{7}$$</p>
+    <p>其中 $\rho(\cdot)$ 为逐元素 Huber 损失再对像素平均。</p>
+
+    <p><strong>几何感知损失（Geometry Perception Loss）。</strong>光度损失本质上无法完全约束 3D 结构：深度可沿视线漂移、半透明 floater 可平均出合理颜色、视角相关纹理可部分补偿几何错位。为此在冻结 3D 基础模型 $\Psi$（如 VGGT、π3）的特征空间中引入几何监督。对渲染视图集 $\bar{I}$ 与真值视图集 $I$（同相机 $T$）：</p>
+    <p>$$\bar{H}=\Psi(\bar{I},T)=\{\bar{H}_n\}_{n=1}^{N},\qquad H^\star=\Psi(I,T)=\{H_n^\star\}_{n=1}^{N} \tag{8}$$</p>
+    <p>仅当时间步足够大时，最小化两特征场每个位置的余弦距离：</p>
+    <p>$$\mathcal{L}_\mathrm{geo}=\mathbf{1}_{[t>t_\mathrm{th}]}\frac{1}{N\,H'W'}\sum_{n=1}^{N}\sum_{p}\left(1-\frac{\bar{h}_p^{\,n}\cdot h_p^{\star n}}{\lVert\bar{h}_p^{\,n}\rVert_2\,\lVert h_p^{\star n}\rVert_2}\right) \tag{9}$$</p>
+    <p>其中 $\bar{h}_p^{\,n}$、$h_p^{\star n}$ 分别为 $\bar{H}_n$、$H_n^\star$ 在位置 $p$ 的特征向量。因 $\Psi$ 联合处理所有视图与相机，其特征编码的是跨视图 3D 结构而非单图外观——两个单独光度一致但 3D 互不一致的渲染仍会产生不同特征图并产生较大 $\mathcal{L}_\mathrm{geo}$。训练时冻结 $\Psi$，对参考分支 $H^\star$ 停止梯度，仅通过渲染分支 $\bar{H}$ 反传，使 $\Psi$ 纯粹充当结构判据。</p>
+    <p><strong>总目标：</strong></p>
+    <p>$$\mathcal{L}=\mathcal{L}_\mathrm{render}+\lambda_\mathrm{depth}\,\mathcal{L}_\mathrm{depth}+\lambda_\mathrm{geo}\,\mathcal{L}_\mathrm{geo}$$</p>
+    <p>论文设定 $\lambda_\mathrm{depth}=1.0$，$\lambda_\mathrm{lpips}=\lambda_\mathrm{geo}=0.1$，感知与几何项均在 $t>t_\mathrm{th}=0.3$ 时门控。</p>
+    <h3 id="sec-method-arch">3.4 模型架构（双流 MMDiT）</h3>
+    <p>去噪器 $f_\theta$ 为 24 层 DiT，隐藏宽度 $d=1024$，16 注意力头（头维 64），SwiGLU 前馈，Q/K 上 RMSNorm，adaLN-Zero 以扩散时间步为条件。沿用 SD3 风格 MMDiT：每个 block 含两条并行流（拓扑共享、但独立的 pre-LayerNorm / QKV 输出投影 / MLP / adaLN-Zero 权重），clean 流处理 $\Omega_c$，noise 流处理 $\Omega_n$。注意力算子内，两流的 Q/K/V 沿 token 轴拼接（共享 q/k-RMSNorm），对 $[\Omega_c;\Omega_n]$ 联合做一次全注意力，使条件与 noisy token 在每层都交叉；联合输出再拆分回流特定输出投影。两流共享对文本的交叉注意力与单一时间步嵌入器（clean 流取 $t=1$，noise 流取采样 $t$）。输入用 16×16 patchify + 可学习位置嵌入，末层经流特定多任务头输出逐像素深度与 3DGS 属性，高斯中心由预测深度反投影得到。可训练参数共 <strong>1.044B</strong>。</p>
+
+    <pre class="mermaid">
+flowchart TD
+  A["Clean 视图 Ωc"] -->|patchify 16×16| B["Clean 输入投影"]
+  AN["Noisy 视图 Ωn (加噪)"] -->|patchify 16×16| BN["Noisy 输入投影"]
+  B --> M["双流 MMDiT Block ×24"]
+  BN --> M
+  TI["时间步 t<br>clean=t=1, noisy=采样t"] --> M
+  CAM["相机参数 PRoPE"] --> M
+  TXT["文本提示 y (可选)<br>交叉注意力"] --> M
+  M -->|流特定头| DH["深度头 1024→16×16×1"]
+  M -->|流特定头| GH["3DGS 头 1024→16×16×35"]
+  DH --> UN["按预测深度反投影<br>μ = Π⁻¹(p, d̂, T)"]
+  GH --> UN
+  UN --> GS["像素对齐 3DGS Ĝ"]
+  GS -->|可微渲染 R| RND["渲染多视图 Ī"]
+  RND --> L1["Flow Matching 损失 L_FM / L_recon"]
+  RND --> L2["LPIPS 损失"]
+  RND -->|冻结 π3 特征| L3["Geometry Perception 损失 L_geo"]
+  DH --> L4["深度 Huber 损失 L_depth (vs DA3)"]
+    </pre>
+    <p style="color:#6c7086;text-align:center;font-size:.85em;">图：PixWorld 整体数据流——双流 DiT 联合处理 clean/noisy 视图，输出深度+3DGS，可微渲染后用三类损失（FM 渲染、几何感知、深度）端到端监督。</p>
+
+    <h3 id="sec-method-algo">3.5 训练算法伪代码</h3>
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: PixWorld 训练（单次迭代）</div>
+      <p><span class="kw">Input:</span> 带 pose 多视图场景 $\{I_n, T_n\}_{n=1}^{N}$；可选文本 $y$；冻结 3D 批评器 $\Psi=\pi 3$；超参 $\lambda_\mathrm{depth}=1.0,\ \lambda_\mathrm{lpips}=\lambda_\mathrm{geo}=0.1,\ t_\mathrm{th}=0.3$</p>
+      <p><span class="kw">repeat</span></p>
+      <p style="padding-left:1.5em"><span class="cm"># 1. 视图划分：偏向小 |Ωc| 以强化条件生成，保留全 clean 退化以训练几何头</span></p>
+      <p style="padding-left:1.5em">采样 $N\in\{4,\dots,8\}$ 视图，划分为 $\Omega_c,\Omega_n$（满足式3）</p>
+      <p style="padding-left:1.5em"><span class="cm"># 2. 构造加噪输入（同一场景 noisy 视图共享 t）</span></p>
+      <p style="padding-left:1.5em">采样 $t\sim\mathcal{U}(0,1)$；对 $n\in\Omega_n$ 采 $\epsilon_n\sim\mathcal{N}(0,I)$，按式4 得 $\tilde{I}_t^{\,n}$</p>
+      <p style="padding-left:1.5em"><span class="cm"># 3. 双流 DiT 前向 + 解码</span></p>
+      <p style="padding-left:1.5em">$(\hat{D},\hat{G}) \leftarrow f_\theta(\tilde{I}_t,T,y)$；按深度反投影聚合得 $\hat{G}$</p>
+      <p style="padding-left:1.5em"><span class="cm"># 4. 可微渲染 noisy + clean + 4~8 新视角</span></p>
+      <p style="padding-left:1.5em">$\bar{I}_n \leftarrow \mathcal{R}(\hat{G},T_n)$；采样新视图位姿并渲染</p>
+      <p style="padding-left:1.5em"><span class="cm"># 5. 计算损失（各项门控）</span></p>
+      <p style="padding-left:1.5em">若 $\Omega_n\neq\varnothing$：$\mathcal{L}_\mathrm{FM}\leftarrow\frac{1}{|\Omega_n|}\sum\lVert\bar{v}_n-v_n\rVert^{2}$；否则仅 $\mathcal{L}_\mathrm{recon}$</p>
+      <p style="padding-left:1.5em">若 $t>t_\mathrm{th}$：启用 $\mathcal{L}_\mathrm{lpips}$ 与 $\mathcal{L}_\mathrm{geo}=\mathrm{cosdist}(\Psi(\bar{I}),\mathrm{sg}[\Psi(I)])$</p>
+      <p style="padding-left:1.5em">$\mathcal{L}_\mathrm{depth}\leftarrow\frac{1}{N}\sum\rho(\log\hat{D}-\log D^\star)$（$D^\star$ 来自 DA3）</p>
+      <p style="padding-left:1.5em">$\mathcal{L}\leftarrow\mathcal{L}_\mathrm{render}+\lambda_\mathrm{depth}\mathcal{L}_\mathrm{depth}+\lambda_\mathrm{geo}\mathcal{L}_\mathrm{geo}$</p>
+      <p style="padding-left:1.5em"><span class="cm"># 6. 反传更新（文本以 0.2 概率 CFG 丢弃）</span></p>
+      <p style="padding-left:1.5em">AdamW 步更新 $\theta$；EMA 衰减 0.9995；梯度裁剪 1.0</p>
+      <p><span class="kw">until</span> 收敛（约 200K steps）</p>
+    </div>
+
+    <h3 id="sec-method-train">3.6 训练细节</h3>
+    <ul>
+      <li><strong>数据：</strong>Re10K + DL3DV-10K 约 67K 带 pose 场景；每场景采样 $N\in\{4,\dots,8\}$ 视图并划分 $\Omega_c/\Omega_n$（偏小 $|\Omega_c|$）；混入 BLIP-3o 语料的 10M 单图分支，共享扩散骨干作 2D 外观先验。</li>
+      <li><strong>批处理：</strong>每 GPU 每步交替 32 图单视图 batch 与至多 32 图多视图 batch（4–8 视图 × 4–8 场景）。</li>
+      <li><strong>优化：</strong>AdamW，学习率线性衰减 $1\times10^{-4}\to1\times10^{-5}$，EMA 0.9995，梯度裁剪 1.0，CFG 文本丢弃率 0.2。</li>
+      <li><strong>硬件/规模：</strong>32× NVIDIA A800-SXM4-80G，约 200K steps，训练分辨率 336×448，从零训练（无图像/视频模型预训练）。</li>
+      <li><strong>几何批评器：</strong>冻结 π3，参考分支停梯度。</li>
+    </ul>
+
+    <h3 id="sec-method-arch-table">3.7 架构参数预算（Table 6）</h3>
+    <table>
+      <tr><th>模块</th><th>配置</th><th style="text-align:right">#Params</th></tr>
+      <tr><td colspan="3" style="color:var(--heading);font-weight:600;">(a) Tokenization &amp; conditioning</td></tr>
+      <tr><td>Clean-view patch embed</td><td>16×16 patchify, 3→1024</td><td style="text-align:right">0.79 M</td></tr>
+      <tr><td>Noisy-view patch embed</td><td>16×16 patchify, 3→1024</td><td style="text-align:right">0.79 M</td></tr>
+      <tr><td>Positional embedding</td><td>learnable, 588×1024</td><td style="text-align:right">0.60 M</td></tr>
+      <tr><td>Timestep embedder</td><td>sinusoidal 256 + MLP 1024→1024</td><td style="text-align:right">1.31 M</td></tr>
+      <tr><td>Text projection</td><td>MLP 4096→1024→1024</td><td style="text-align:right">5.24 M</td></tr>
+      <tr><td colspan="3" style="color:var(--heading);font-weight:600;">(b) Two-stream MMDiT block (×24; d=1024, h=16, dh=64)</td></tr>
+      <tr><td>QKV / Output / SwiGLU MLP / adaLN-Zero (clean)</td><td>pre-LN + 独立投影</td><td style="text-align:right">3.15+1.05+8.39+6.30 M</td></tr>
+      <tr><td>QKV / Output / SwiGLU MLP / adaLN-Zero (noise)</td><td>同上结构</td><td style="text-align:right">3.15+1.05+8.39+6.30 M</td></tr>
+      <tr><td>Joint full attention</td><td>SDPA over [Ωc;Ωn], shared q,k-RMSNorm</td><td style="text-align:right">~0</td></tr>
+      <tr><td>Cross-attention to text</td><td>两流共享</td><td style="text-align:right">4.20 M</td></tr>
+      <tr><td>per-block subtotal / trunk ×24</td><td>—</td><td style="text-align:right">41.98 M / 1007.6 M</td></tr>
+      <tr><td colspan="3" style="color:var(--heading);font-weight:600;">(c) Multi-task output heads (每流复制)</td></tr>
+      <tr><td>Depth head</td><td>adaLN + linear 1024→16×16×1</td><td style="text-align:right">2×2.36 M</td></tr>
+      <tr><td>3D-Gaussian head</td><td>adaLN + linear 1024→16×16×35</td><td style="text-align:right">2×11.28 M</td></tr>
+      <tr><td colspan="2" style="color:var(--strong);font-weight:700;">Total trainable parameters</td><td style="text-align:right;color:var(--strong);font-weight:700;">1.044 B</td></tr>
+    </table>
+    <h2 id="sec-exp">4. 实验结果与分析</h2>
+    <p>实验覆盖四类协议：RealEstate10K (RE10K) 与 DL3DV-10K 上各随机采 200 个测试场景（限定大相机位姿范围以施压宽基线推理），WorldScore 官方静态 split（2000 场景）。生成协议下所有 baseline 均以相机位姿为条件，除 LVSM 外均额外接收文本条件。指标分三组：新视图合成保真度（PSNR/SSIM/LPIPS）、VBench 式生成质量（I2V Subj/BG、Image Quality、Aesthetic Quality）、相机控制精度（π3 估计的 AUC@{30°,15°,5°}）。</p>
+
+    <h3 id="sec-exp-recon">4.1 3D 场景重建（Table 1）</h3>
+    <p>在 RE10K 与 DL3DV 的 4/8 视图设置下，PixWorld 在所有设置的 PSNR 与 LPIPS 上均为最优，RE10K 的 SSIM 也最优，仅在 DL3DV 的 SSIM 上次于 DepthSplat。即便对比采用了带真值位姿的 with-pose YoNoSplat 更强基线，PixWorld 仍一致提升 PSNR 并在所有情形降低 LPIPS（如 4-view RE10K：0.138 vs 0.143）。</p>
+    <table>
+      <tr><th rowspan="2">方法</th><th colspan="3">RE10K 4-view</th><th colspan="3">RE10K 8-view</th><th colspan="3">DL3DV 4-view</th><th colspan="3">DL3DV 8-view</th></tr>
+      <tr><th>PSNR↑</th><th>SSIM↑</th><th>LPIPS↓</th><th>PSNR↑</th><th>SSIM↑</th><th>LPIPS↓</th><th>PSNR↑</th><th>SSIM↑</th><th>LPIPS↓</th><th>PSNR↑</th><th>SSIM↑</th><th>LPIPS↓</th></tr>
+      <tr><td>MVSplat</td><td>22.58</td><td>0.762</td><td>0.264</td><td>21.64</td><td>0.719</td><td>0.301</td><td>17.11</td><td>0.501</td><td>0.410</td><td>15.75</td><td>0.432</td><td>0.491</td></tr>
+      <tr><td>DepthSplat</td><td>25.16</td><td>0.832</td><td>0.194</td><td>27.77</td><td>0.872</td><td>0.154</td><td>20.38</td><td class="second">0.719</td><td>0.320</td><td>19.26</td><td class="second">0.692</td><td>0.360</td></tr>
+      <tr><td>AnySplat</td><td>20.07</td><td>0.731</td><td>0.286</td><td>20.52</td><td>0.752</td><td>0.262</td><td>20.11</td><td>0.671</td><td>0.318</td><td>20.02</td><td>0.664</td><td>0.327</td></tr>
+      <tr><td>YoNoSplat (with-pose)</td><td class="second">25.86</td><td class="second">0.841</td><td class="second">0.143</td><td class="second">28.35</td><td class="second">0.889</td><td class="second">0.107</td><td class="second">22.89</td><td>0.710</td><td class="second">0.228</td><td class="second">21.92</td><td>0.678</td><td class="second">0.262</td></tr>
+      <tr><td><strong>PixWorld (Ours)</strong></td><td class="best">26.21</td><td class="best">0.844</td><td class="best">0.138</td><td class="best">28.58</td><td class="best">0.892</td><td class="best">0.101</td><td class="best">23.18</td><td class="best">0.714</td><td class="best">0.226</td><td class="best">22.46</td><td class="best">0.681</td><td class="best">0.257</td></tr>
+    </table>
+    <p style="color:#6c7086;font-size:.85em;">注：Gen3R 虽为统一模型但仅支持点云重建，无法直接比 NVS，故未列入。</p>
+
+    <div id="chart-recon" class="echarts-container" style="height:360px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-recon')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '重建 PSNR 对比（Table 1，越高越好）', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['MVSplat','DepthSplat','AnySplat','YoNoSplat','PixWorld'], textStyle: { color: '#cdd6f4' }, top: 28 },
+        grid: { left: 50, right: 24, bottom: 40, top: 80 },
+        xAxis: { type: 'category', data: ['RE10K 4-view','RE10K 8-view','DL3DV 4-view','DL3DV 8-view'], axisLabel: { color: '#cdd6f4' } },
+        yAxis: { type: 'value', name: 'PSNR↑', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#cdd6f4'}, splitLine: { lineStyle: { color: '#45475a' } } },
+        series: [
+          { name:'MVSplat', type:'bar', data:[22.58,21.64,17.11,15.75], itemStyle:{color:'#94e2d5'} },
+          { name:'DepthSplat', type:'bar', data:[25.16,27.77,20.38,19.26], itemStyle:{color:'#fab387'} },
+          { name:'AnySplat', type:'bar', data:[20.07,20.52,20.11,20.02], itemStyle:{color:'#f9e2af'} },
+          { name:'YoNoSplat', type:'bar', data:[25.86,28.35,22.89,21.92], itemStyle:{color:'#89dceb'} },
+          { name:'PixWorld', type:'bar', data:[26.21,28.58,23.18,22.46], itemStyle:{color:'#a6e3a1'}, barGap:'0', label:{show:true,position:'top',color:'#a6e3a1',fontSize:10} }
+        ]
+      });
+    </script>
+
+    <h3 id="sec-exp-1view">4.2 单图生成（Table 2，RE10K / DL3DV 平均）</h3>
+    <p>单图设置下（First-Frame 与 Bidirectional 平均），PixWorld 在两数据集上<strong>每一项指标均居首</strong>：RE10K PSNR 提升 +1.06 dB（18.88 vs 17.82），DL3DV 提升 +0.75 dB（16.50 vs 15.75）。最显著的增益出现在严格位姿阈值上——AUC@5 从 0.546→0.614（RE10K）、0.420→0.485（DL3DV），说明像素空间扩散 + 可微渲染监督能产生几何上更忠实的轨迹。下表为 RE10K 单图生成完整指标。</p>
+    <table>
+      <tr><th>方法 (RE10K 1-view)</th><th>PSNR↑</th><th>SSIM↑</th><th>LPIPS↓</th><th>I2V Subj↑</th><th>I2V BG↑</th><th>I.Q.↑</th><th>Aes.Q↑</th><th>AUC@30↑</th><th>AUC@15↑</th><th>AUC@5↑</th></tr>
+      <tr><td>LVSM</td><td>17.82</td><td>0.603</td><td>0.336</td><td>0.971</td><td>0.970</td><td>0.593</td><td>0.506</td><td>0.710</td><td>0.592</td><td>0.372</td></tr>
+      <tr><td>GF</td><td>15.63</td><td>0.553</td><td>0.454</td><td>0.931</td><td>0.941</td><td>0.504</td><td>0.475</td><td>0.596</td><td>0.478</td><td>0.290</td></tr>
+      <tr><td>Gen3C</td><td>17.26</td><td>0.624</td><td>0.391</td><td>0.951</td><td>0.956</td><td>0.561</td><td>0.524</td><td>0.648</td><td>0.514</td><td>0.334</td></tr>
+      <tr><td>FlashWorld</td><td>16.51</td><td>0.626</td><td>0.403</td><td>0.958</td><td>0.960</td><td class="second">0.615</td><td>0.550</td><td class="second">0.843</td><td class="second">0.758</td><td class="second">0.546</td></tr>
+      <tr><td>Gen3R</td><td>17.59</td><td>0.631</td><td>0.382</td><td>0.974</td><td>0.971</td><td>0.552</td><td>0.536</td><td>0.633</td><td>0.433</td><td>0.147</td></tr>
+      <tr><td><strong>PixWorld (Ours)</strong></td><td class="best">18.88</td><td class="best">0.702</td><td class="best">0.325</td><td class="best">0.979</td><td class="best">0.978</td><td class="best">0.623</td><td class="best">0.556</td><td class="best">0.869</td><td class="best">0.798</td><td class="best">0.614</td></tr>
+    </table>
+    <p style="color:#6c7086;font-size:.85em;">DL3DV 单图生成中 PixWorld 同样全项领先：PSNR 16.50（次优 15.75）、AUC@5 0.485（次优 0.420）。</p>
+
+    <div id="chart-auc" class="echarts-container" style="height:360px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-auc')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '单图生成 · 相机控制 AUC@{30°,15°,5°}（RE10K，越高越好）', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['LVSM','Gen3C','FlashWorld','Gen3R','PixWorld'], textStyle: { color: '#cdd6f4' }, top: 28 },
+        grid: { left: 50, right: 24, bottom: 40, top: 80 },
+        xAxis: { type: 'category', data: ['AUC@30°','AUC@15°','AUC@5°'], axisLabel: { color: '#cdd6f4' } },
+        yAxis: { type: 'value', min: 0.1, max: 0.9, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        series: [
+          { name:'LVSM', type:'line', data:[0.710,0.592,0.372], itemStyle:{color:'#94e2d5'}, smooth:true },
+          { name:'Gen3C', type:'line', data:[0.648,0.514,0.334], itemStyle:{color:'#f9e2af'}, smooth:true },
+          { name:'FlashWorld', type:'line', data:[0.843,0.758,0.546], itemStyle:{color:'#fab387'}, smooth:true },
+          { name:'Gen3R', type:'line', data:[0.633,0.433,0.147], itemStyle:{color:'#89dceb'}, smooth:true },
+          { name:'PixWorld', type:'line', data:[0.869,0.798,0.614], itemStyle:{color:'#a6e3a1'}, lineStyle:{width:3}, symbolSize:9, smooth:true }
+        ]
+      });
+    </script>
+
+    <h3 id="sec-exp-2view">4.3 双图生成（Table 3，平均）</h3>
+    <p>双图条件下（Interpolation 与 Extrapolation 平均），PixWorld 再次在感知、生成与位姿指标上领先，取得最佳 LPIPS（RE10K 0.210 / DL3DV 0.340）与 AUC@5（0.649 / 0.534）。LVSM 仅在原始 PSNR/SSIM 上具竞争力（RE10K 差距 &lt;0.07 dB），反映其确定性回归目标特性。</p>
+    <table>
+      <tr><th>方法 (RE10K 2-view)</th><th>PSNR↑</th><th>SSIM↑</th><th>LPIPS↓</th><th>I2V Subj↑</th><th>I2V BG↑</th><th>I.Q.↑</th><th>Aes.Q↑</th><th>AUC@30↑</th><th>AUC@15↑</th><th>AUC@5↑</th></tr>
+      <tr><td>LVSM</td><td class="best">23.61</td><td class="best">0.819</td><td class="second">0.215</td><td>0.970</td><td>0.963</td><td>0.613</td><td>0.518</td><td class="second">0.871</td><td class="second">0.758</td><td class="second">0.630</td></tr>
+      <tr><td>GF</td><td>18.27</td><td>0.647</td><td>0.353</td><td>0.925</td><td>0.951</td><td>0.525</td><td>0.476</td><td>0.642</td><td>0.573</td><td>0.395</td></tr>
+      <tr><td>Gen3C</td><td>20.12</td><td>0.714</td><td>0.300</td><td>0.948</td><td>0.949</td><td>0.581</td><td>0.527</td><td>0.714</td><td>0.641</td><td>0.446</td></tr>
+      <tr><td>FlashWorld</td><td>21.48</td><td>0.770</td><td>0.257</td><td>0.964</td><td>0.959</td><td>0.619</td><td class="best">0.546</td><td>0.875</td><td>0.812</td><td>0.724</td></tr>
+      <tr><td>Gen3R</td><td>21.33</td><td>0.724</td><td>0.283</td><td>0.970</td><td>0.973</td><td>0.544</td><td>0.539</td><td>0.779</td><td>0.631</td><td>0.582</td></tr>
+      <tr><td><strong>PixWorld (Ours)</strong></td><td class="second">23.54</td><td class="second">0.815</td><td class="best">0.210</td><td class="best">0.974</td><td class="best">0.975</td><td class="best">0.625</td><td class="second">0.559</td><td class="best">0.877</td><td class="best">0.814</td><td class="best">0.649</td></tr>
+    </table>
+    <p style="color:#6c7086;font-size:.85em;">注：LVSM 的 PSNR/SSIM 略高于 PixWorld（差距极小，&lt;0.07 dB），但其在感知质量与位姿控制上明显落后；分配置结果（Appendix C）显示 PixWorld 在更难的 Extrapolation 侧优势最大。</p>
+    <h3 id="sec-exp-world">4.4 WorldScore 基准（Table 4）</h3>
+    <p>在 WorldScore 上，PixWorld 取得最佳总平均（71.04），并在<strong>相机可控性（91.08）</strong>、<strong>3D 一致性（91.39）</strong>、<strong>光度一致性（93.84）</strong>三项排名第一，印证了像素空间 + 几何感知监督在跨视图几何与外观稳定性上的优势。</p>
+    <table>
+      <tr><th>方法</th><th>Camera Ctrl↑</th><th>Object Ctrl↑</th><th>Content Align↑</th><th>3D Consist↑</th><th>Photometric↑</th><th>Style↑</th><th>Subj Quality↑</th><th>Average↑</th></tr>
+      <tr><td>Wan-2.1</td><td>23.53</td><td>40.32</td><td>45.44</td><td>78.74</td><td>78.36</td><td class="second">77.18</td><td class="best">59.38</td><td>57.56</td></tr>
+      <tr><td>WonderJourney</td><td>84.60</td><td>37.10</td><td>35.54</td><td>80.60</td><td>79.03</td><td>62.82</td><td>66.56</td><td>63.75</td></tr>
+      <tr><td>LucidDreamer</td><td class="second">88.93</td><td>41.18</td><td class="best">75.00</td><td class="second">90.37</td><td class="second">90.20</td><td>48.10</td><td>58.99</td><td class="second">70.40</td></tr>
+      <tr><td>FlashWorld</td><td>84.43</td><td class="best">50.28</td><td>56.54</td><td>85.87</td><td>86.72</td><td class="best">79.36</td><td class="second">52.75</td><td>70.85</td></tr>
+      <tr><td><strong>PixWorld (Ours)</strong></td><td class="best">91.08</td><td class="second">46.25</td><td class="second">55.27</td><td class="best">91.39</td><td class="best">93.84</td><td>67.11</td><td>52.36</td><td class="best">71.04</td></tr>
+    </table>
+
+    <div id="chart-world" class="echarts-container" style="height:400px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-world')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'WorldScore 七项指标对比（Table 4）', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['Wan-2.1','WonderJourney','LucidDreamer','FlashWorld','PixWorld'], textStyle: { color: '#cdd6f4' }, top: 28 },
+        grid: { left: 50, right: 24, bottom: 40, top: 80 },
+        xAxis: { type: 'category', data: ['Camera','Object','Content','3D Consist','Photometric','Style','Subj Quality'], axisLabel: { color: '#cdd6f4', fontSize: 10 } },
+        yAxis: { type: 'value', max: 100, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        series: [
+          { name:'Wan-2.1', type:'bar', data:[23.53,40.32,45.44,78.74,78.36,77.18,59.38], itemStyle:{color:'#94e2d5'} },
+          { name:'WonderJourney', type:'bar', data:[84.60,37.10,35.54,80.60,79.03,62.82,66.56], itemStyle:{color:'#f9e2af'} },
+          { name:'LucidDreamer', type:'bar', data:[88.93,41.18,75.00,90.37,90.20,48.10,58.99], itemStyle:{color:'#fab387'} },
+          { name:'FlashWorld', type:'bar', data:[84.43,50.28,56.54,85.87,86.72,79.36,52.75], itemStyle:{color:'#89dceb'} },
+          { name:'PixWorld', type:'bar', data:[91.08,46.25,55.27,91.39,93.84,67.11,52.36], itemStyle:{color:'#a6e3a1'} }
+        ]
+      });
+    </script>
+
+    <h3 id="sec-exp-speed">4.5 推理速度（Table 9）</h3>
+    <p>在单卡 A100-SXM4-80G 上，PixWorld 约 15 秒生成一个场景，与高度优化的 FlashWorld（10 s）同量级。需注意该对比并非严格对等：PixWorld 当前输出分辨率低于视频扩散基线（降低单步算力），且不依赖视频模型先验、无需物化稠密帧序列——仅用 8 个关键帧即可重建 3D 表示，新视图由可微光栅化高效渲染。PixWorld 与 Gen3R 用相近 NFE（100），而 FlashWorld 借蒸馏把 NFE 压到 4。</p>
+    <table>
+      <tr><th>方法</th><th>#Key Frames / scene</th><th>NFE</th><th>Time / scene (s)↓</th></tr>
+      <tr><td>Gen3C</td><td>121</td><td>70</td><td>791</td></tr>
+      <tr><td>Gen3R</td><td>49</td><td>100</td><td>882</td></tr>
+      <tr><td>FlashWorld</td><td>24</td><td>4</td><td class="best">10</td></tr>
+      <tr><td><strong>PixWorld (Ours)</strong></td><td>8</td><td>100</td><td class="second">15</td></tr>
+    </table>
+    <p style="color:#6c7086;font-size:.85em;">论文指出蒸馏与后训练量化是自然的后续加速方向，当前为未蒸馏的 base 模型。</p>
+
+    <h2 id="sec-ablation">5. 消融实验与关键发现</h2>
+    <h3 id="sec-ablation-geo">5.1 Geometry Perception Loss 的作用（Table 5）</h3>
+    <p>在 RE10K 1-view 设置下，控制变量：10K 序列子集、相同设置训练 30K steps，仅切换几何感知损失。移除后三组指标一致退化：</p>
+    <table>
+      <tr><th>Variant</th><th>PSNR↑</th><th>SSIM↑</th><th>LPIPS↓</th><th>I2V Subj↑</th><th>I2V BG↑</th><th>I.Q.↑</th><th>Aes.Q↑</th><th>AUC@30↑</th><th>AUC@15↑</th><th>AUC@5↑</th></tr>
+      <tr><td><strong>Full model</strong></td><td class="best">19.12</td><td class="best">0.717</td><td class="best">0.310</td><td>0.972</td><td>0.975</td><td class="best">0.619</td><td class="best">0.561</td><td class="best">0.886</td><td class="best">0.813</td><td class="best">0.642</td></tr>
+      <tr><td>w/o Geometry Perception</td><td>17.99</td><td>0.612</td><td>0.332</td><td>0.973</td><td>0.974</td><td>0.613</td><td>0.541</td><td>0.847</td><td>0.763</td><td>0.562</td></tr>
+      <tr><td><strong>差距</strong></td><td style="color:var(--strong)">−1.13 dB</td><td style="color:var(--strong)">−0.105</td><td style="color:var(--strong)">+0.022</td><td>≈0</td><td>≈0</td><td>−0.006</td><td>−0.020</td><td>−0.039</td><td>−0.050</td><td style="color:var(--strong)">−0.080 (~12.5%)</td></tr>
+    </table>
+    <p>这一模式恰好印证动机：2D 光度/感知损失能让单帧视觉上仍合理（VBench 式分数几乎不变），但底层 3D 几何未被监督，导致跨视图一致性与位姿保真度受损（PSNR −1.13 dB、AUC@5 相对降约 12.5%）。定性上（Fig.5），完整模型在后期视图上更锐利、位姿控制更精确。</p>
+
+    <div id="chart-abl" class="echarts-container" style="height:320px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-abl')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '消融：移除 Geometry Perception 后的关键指标退化', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['Full model','w/o Geom.'], textStyle: { color: '#cdd6f4' }, top: 28 },
+        grid: { left: 60, right: 24, bottom: 40, top: 80 },
+        xAxis: { type: 'category', data: ['PSNR↑','SSIM↑(×100)','AUC@30↑','AUC@15↑','AUC@5↑'], axisLabel: { color: '#cdd6f4' } },
+        yAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        series: [
+          { name:'Full model', type:'bar', data:[19.12,71.7,0.886,0.813,0.642], itemStyle:{color:'#a6e3a1'}, label:{show:true,position:'top',color:'#a6e3a1',fontSize:10} },
+          { name:'w/o Geom.', type:'bar', data:[17.99,61.2,0.847,0.763,0.562], itemStyle:{color:'#fab387'}, label:{show:true,position:'top',color:'#fab387',fontSize:10} }
+        ]
+      });
+    </script>
+
+    <h3 id="sec-ablation-findings">5.2 关键发现小结</h3>
+    <ul>
+      <li><strong>像素空间直接监督 3D 表示有效：</strong>即便从零训练、无 VAE/RAE，PixWorld 在重建上匹敌 SOTA、在生成上全面超越潜空间方法，证伪了“3D 必须依赖潜空间压缩”的隐性假设。</li>
+      <li><strong>clean/noisy 划分即统一：</strong>同一前向、同一损失公式（式6 指示函数切换）即可在重建（$\Omega_n=\varnothing$）与生成间无缝切换，无需双分支或任务特定头。</li>
+      <li><strong>2D 损失的几何盲区真实存在：</strong>消融显示移除几何感知后 VBench 式分数几乎不动，但 PSNR/SSIM/位姿大幅退化——证明“单帧好看”与“3D 几何正确”是两个不同目标。</li>
+      <li><strong>难侧优势最大：</strong>分配置结果（Appendix C）显示所有方法在 First-Frame / Extrapolation 上退化最严重，而 PixWorld 恰恰在这些难侧优势最大，说明像素空间 + 几何监督对外推、强视差更具泛化性。</li>
+      <li><strong>3D 基础模型作结构判据：</strong>冻结 π3 + 参考分支停梯度，使其纯作 critic，避免被训练分布污染，是低成本引入 3D 监督的优雅做法。</li>
+    </ul>
+
+    <h2 id="sec-limit">6. 局限性</h2>
+    <ul>
+      <li>实验集中于 RealEstate10K、DL3DV-10K 等场景级数据集，对更多样的户外/物体中心场景的泛化仍待评估。</li>
+      <li>像素空间扩散 + 可微渲染在有限分辨率与算力预算下训练，细粒度纹理保真度与向高分辨率多视图扩展仍有提升空间。</li>
+      <li>当前为未蒸馏 base 模型，推理加速（蒸馏 + 量化）是后续工作。</li>
+      <li>潜在社会影响：高质量 3D 重建/生成可能引发隐私敏感场景捕获、合成内容滥用、安全关键场景不可靠部署等风险。</li>
+    </ul>
+
+    <h2 id="sec-insight">7. 总结与启发</h2>
+    <p>PixWorld 的核心贡献是把 3D 生成与重建统一到<strong>像素空间 flow matching + 可微渲染</strong>这一单一范式：去掉 VAE/RAE 中间瓶颈，让扩散目标直接监督底层 3D 高斯；以 clean/noisy 视图划分天然统一两任务；再以冻结 3D 基础模型的几何感知特征弥补 2D 损失的几何盲区。一个 1.04B 的从零训练模型即可在重建上匹敌 SOTA、在生成与 WorldScore 上全面领先潜空间方法。</p>
+    <blockquote>
+      <strong>读后启发：</strong>
+      <ol style="margin:0.5em 0 0 1.2em;">
+        <li><strong>“去潜空间化”趋势。</strong>从 VAE→RAE→3D 基础模型表示空间，潜空间方法一直在追平像素保真度；PixWorld 显示在 3D 这一可微渲染天然提供“像素级可验证目标”的领域，直接回像素空间反而更顺。这暗示凡有可微前向模拟器的生成任务（3D、视频、物理），像素空间监督都可能成为更优解。</li>
+        <li><strong>统一 ≠ 两套头，而是一种条件化。</strong>PixWorld 把“重建 vs 生成”简化为“输入子集是否含噪声”，本质是把任务差异编码进输入的时间步。这种“通过输入构造而非架构分叉实现统一”的思路值得迁移到其他多任务模型。</li>
+        <li><strong>2D 评价指标会骗人。</strong>消融中 VBench 几乎无变化但 PSNR/AUC 大幅退化，提醒：评估 3D/world model 必须有几何维度的指标（位姿 AUC、3D 一致性），否则会被“单帧好看”误导。</li>
+        <li><strong>基础模型即 critic。</strong>冻结一个强 3D 几何模型（π3/VGGT）做特征空间判据，是低成本引入 3D 结构监督的通用范式，可推广到任意“有可微渲染/前向”的生成训练。</li>
+        <li><strong>速度优势来自表示而非蒸馏。</strong>PixWorld 无需物化稠密帧（8 关键帧 + 光栅化），在未蒸馏下已达 FlashWorld 量级，说明 3D 表示路线在长程生成上具结构性效率优势。</li>
+      </ol>
+    </blockquote>
+
+    <h2 id="sec-refs">8. 参考文献（论文内引用精选）</h2>
+    <ul style="font-size:0.9em;line-height:1.7;">
+      <li>Kerbl et al. 3D Gaussian Splatting for Real-Time Radiance Field Rendering. ACM TOG 2023.</li>
+      <li>Li &amp; He. Back to Basics: Let Denoising Generative Models Denoise (JiT). arXiv:2511.13720, 2025.</li>
+      <li>Huang et al. Gen3R: 3D Scene Generation Meets Feed-forward Reconstruction. arXiv:2601.04090, 2026.</li>
+      <li>Wang et al. π3: Permutation-Equivariant Visual Geometry Learning. arXiv:2507.13347, 2025.</li>
+      <li>Wang et al. VGGT: Visual Geometry Grounded Transformer. CVPR 2025.</li>
+      <li>Lin et al. Depth Anything 3: Recovering the Visual Space from Any Views. arXiv:2511.10647, 2025.</li>
+      <li>Peebles &amp; Xie. Scalable Diffusion Models with Transformers (DiT). ICCV 2023.</li>
+      <li>Esser et al. Scaling Rectified Flow Transformers for High-Resolution Image Synthesis (SD3/MMDiT). ICML 2024.</li>
+      <li>Li et al. Cameras as Relative Positional Encoding (PRoPE). NeurIPS 2025.</li>
+      <li>Zhou et al. Stereo Magnification (RealEstate10K). ACM TOG 2018.</li>
+      <li>Ling et al. DL3DV-10K. CVPR 2024.</li>
+      <li>Duan et al. WorldScore: A Unified Evaluation Benchmark for World Generation. arXiv:2504.00983, 2025.</li>
+      <li>Chen et al. MVSplat. ECCV 2024；Xu et al. DepthSplat. CVPR 2025；Ye et al. YoNoSplat. ICLR 2026.</li>
+      <li>Jin et al. LVSM. ICLR 2025；Li et al. FlashWorld. arXiv:2510.13678, 2025；Ren et al. Gen3C. CVPR 2025.</li>
+      <li>Zheng et al. Diffusion Transformers with Representation Autoencoders (RAE). arXiv:2510.11690, 2025.</li>
+    </ul>
+    <p style="color:#6c7086;font-size:0.85em;margin-top:1em;">本报告数据均提取自论文 PDF（arXiv:2607.05373）正文与附录 Table 1–9，公式为原文式 (1)–(9) 的忠实复现；论文未提供项目主页/代码链接。</p>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CosyVoice 系列深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+.part-banner{background:linear-gradient(135deg,#1e1e2e,#2a2a3e);border:1px solid var(--border);border-left:5px solid var(--heading);border-radius:8px;padding:18px 24px;margin:2.5em 0 1.5em;display:flex;align-items:center;gap:16px;}
+.part-banner .part-num{font-size:2.5em;font-weight:900;color:var(--heading);opacity:.4;line-height:1;}
+.part-banner .part-info h3{color:var(--heading);font-size:1.2em;margin:0 0 4px;border:none;padding:0;}
+.part-banner .part-info p{color:#6c7086;font-size:.88em;margin:0;}
+.diff-box{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:1.2em 0;}
+.diff-card{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;}
+.diff-card h4{color:var(--heading);font-size:.95em;margin-bottom:8px;}
+.evolution-arrow{text-align:center;font-size:1.5em;color:var(--heading);margin:0.5em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>CosyVoice 系列深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">CosyVoice 1/2/3 · Speech Lab, Alibaba Group · 2024—2025</p>
+
+<table>
+  <tr><th style="width:100px">代码</th><td>github.com/FunAudioLLM/CosyVoice</td></tr>
+  <tr><th>演示</th><td>funaudiollm.github.io &nbsp;/&nbsp; funaudiollm.github.io/cosyvoice2 &nbsp;/&nbsp; funaudiollm.github.io/cosyvoice3</td></tr>
+  <tr><th>许可证</th><td>Apache 2.0</td></tr>
+</table>
+
+<!-- ═══ 版本演进总览 ═══ -->
+<h2 id="s0">版本演进总览</h2>
+
+<pre class="mermaid">
+flowchart LR
+    V1["CosyVoice 1\n2024\n监督语义 Token\nVQ量化 + OT-CFM\n中英日韩粤 5语言"] -->|"+流式+LLM初始化+FSQ"| V2["CosyVoice 2\n2024-12\n统一流/非流框架\nFSQ量化 + 块感知CFM\n中英日韩 4语言"] -->|"+DiffRO+百万小时+DiT+1.5B"| V3["CosyVoice 3\n2025-05\n野外语音生成\n多任务Tokenizer\n9语言+18方言"]
+</pre>
+
+<table>
+  <tr><th>版本</th><th>核心创新</th><th>训练数据</th><th>模型规模</th><th>语言</th></tr>
+  <tr><td><strong>CosyVoice 1</strong></td><td>首次监督语义 Token（S³）+ OT-CFM</td><td>~170K 小时</td><td>~300M</td><td>中/英/粤/日/韩</td></tr>
+  <tr><td><strong>CosyVoice 2</strong></td><td>FSQ + 统一流式框架 + LLM 初始化 + DPO</td><td>~170K 小时</td><td>0.5B LM + 100M CFM</td><td>中/英/日/韩</td></tr>
+  <tr><td style="color:var(--strong)"><strong>CosyVoice 3</strong></td><td style="color:var(--strong)">多任务 Tokenizer + DiffRO + 百万小时 + DiT</td><td style="color:var(--strong)"><strong>~100万小时</strong></td><td style="color:var(--strong)"><strong>1.5B LM + 300M DiT</strong></td><td style="color:var(--strong)"><strong>9语言+18方言</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ══════════════════════════════════════════ -->
+<div class="part-banner">
+  <div class="part-num">Ⅰ</div>
+  <div class="part-info">
+    <h3>CosyVoice 1：监督语义 Token 奠基</h3>
+    <p>首次将监督 ASR 模型的量化表示用于 TTS · S³ Tokenizer + LLM + OT-CFM</p>
+  </div>
+</div>
+
+<h2 id="a1">A1. 核心贡献</h2>
+
+<div class="tech-card yellow">
+<strong>关键洞察</strong>：传统 TTS 使用<strong>无监督</strong>方式（Encodec、HuBERT）学习语音 token，缺乏显式语义信息和文本对齐。CosyVoice 1 首次提出从有监督 ASR 模型（SenseVoice）中提取 token——即<strong>监督语义语音 Token（S³ Token）</strong>，从根本上解决了内容一致性差的问题。
+</div>
+
+<h2 id="a2">A2. 架构：四大组件</h2>
+
+<pre class="mermaid">
+flowchart LR
+    TXT["文本输入"] --> BPE["BPE 文本分词"] --> TENC["文本编码器\n对齐文本与语音语义空间"]
+    SPEECH["参考语音"] --> S3["S³ Tokenizer\nSenseVoice + VQ\n单码本 4096 codes\n25Hz token 率"]
+    TENC --> LLM["LLM\n自回归生成语音 token\n序列: S v text T token E"]
+    S3 --> LLM
+    LLM --> CFM["OT-CFM 条件流匹配\n语音 token + x-vector + 掩码梅尔谱\n生成梅尔谱"]
+    CFM --> VOC["HiFiGAN 声码器\n梅尔谱 -> 波形"]
+</pre>
+
+<h3>A2.1 S³ Tokenizer（监督语义语音分词器）</h3>
+
+<p>在 SenseVoice ASR 编码器中间层插入向量量化（VQ）层：</p>
+
+<div class="math-block">
+$$H = \mathrm{Encoder}_1(\mathrm{PosEnc}(X))$$
+$$\mu_l = \mathrm{VQ}(h_l, C) = \arg\min_{c_n \in C} \|h_l - c_n\|_2$$
+$$c_{\mu_l} := \alpha c_{\mu_l} + (1-\alpha) h_l \quad \text{（EMA 码本更新）}$$
+$$\tilde{H} = \mathrm{Encoder}_2(\mathrm{PosEnc}(\bar{H}))$$
+</div>
+
+<h3>A2.2 LLM 序列构造与训练目标</h3>
+
+<div class="math-block">
+$$\text{输入序列：} [S,\; v,\; \{\bar{y}_u\}_{u \in [1:U]},\; T,\; \{\mu_l\}_{l \in [1:L]},\; E]$$
+$$\mathcal{L}_\text{LLM} = -\frac{1}{L+1}\sum_{l=1}^{L+1}\log q(\mu_l)$$
+</div>
+
+<h3>A2.3 最优传输条件流匹配（OT-CFM）</h3>
+
+<div class="math-block">
+$$\phi_t^{OT}(X_0, X_1) = (1-(1-\sigma)t)X_0 + tX_1$$
+$$\omega_t(\phi_t^{OT} \mid X_1) = X_1 - (1-\sigma)X_0$$
+$$\mathcal{L}_{OT\text{-}CFM} = \mathbb{E}_{t, p_0, q}\bigl|\omega_t(\phi_t^{OT}(X_0,X_1)\mid X_1) - \nu_t(\phi_t^{OT}(X_0,X_1)\mid\theta)\bigr|$$
+</div>
+
+<p>附加技术：<strong>余弦时间调度器</strong>（为早期生成步骤提供更多 ODE 步数）+ <strong>无分类器引导（CFG）</strong>（训练时以 20% 概率随机丢弃条件，推理时 $\beta=0.7$ 增强生成质量）。</p>
+
+<h2 id="a3">A3. 零样本与跨语言推理</h2>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph ZS["零样本上下文学习（同语言）"]
+        ZS1["提示文本 + 目标文本 拼接"]
+        ZS2["提示语音 token 视为预生成\n自回归从提示后开始生成"]
+    end
+    subgraph CL["跨语言声音克隆（不同语言）"]
+        CL1["仅保留目标文本\n省略提示文本及其 token\n防止源语言韵律影响目标语言"]
+        CL2["语言标识符 LID 加在序列首"]
+    end
+</pre>
+
+<h2 id="a4">A4. 指令增强（CosyVoice-instruct）</h2>
+
+<p>在 base 模型基础上，通过指令微调支持三类可控维度：</p>
+<ul>
+  <li><strong>说话人身份</strong>：描述角色特征（如"Selene，神秘优雅的舞者"）</li>
+  <li><strong>说话风格</strong>：情感（happy/sad/angry）、语速、音高、性别</li>
+  <li><strong>细粒度副语言</strong>：笑声 `[laughter]`、呼吸 `[breath]`、强调词 `<strong>...</strong>`</li>
+</ul>
+
+<h2 id="a5">A5. 主要实验结果</h2>
+
+<table>
+  <tr><th>模型</th><th>WER (LibriTTS)</th><th>SS (LibriTTS)</th></tr>
+  <tr><td>原始录音</td><td>3.01%</td><td>69.67</td></tr>
+  <tr><td>VALL-E</td><td>18.70%</td><td>53.19</td></tr>
+  <tr><td>Exp-2（Hubert token）</td><td>5.05%</td><td>67.85</td></tr>
+  <tr><td>Exp-3（S³ EN token）</td><td>3.93%</td><td>67.85</td></tr>
+  <tr><td style="color:var(--strong)"><strong>CosyVoice（大规模）</strong></td><td style="color:var(--strong)"><strong>3.17%</strong></td><td style="color:var(--strong)"><strong>69.49</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ══════════════════════════════════════════ -->
+<div class="part-banner">
+  <div class="part-num">Ⅱ</div>
+  <div class="part-info">
+    <h3>CosyVoice 2：统一流式合成框架</h3>
+    <p>FSQ 替代 VQ · 预训练 LLM 初始化 · 块感知因果 CFM · 无损流式合成</p>
+  </div>
+</div>
+
+<h2 id="b1">B1. 四大核心改进</h2>
+
+<div class="diff-box">
+  <div class="diff-card">
+    <h4>① FSQ 替代 VQ</h4>
+    <p>VQ 码本利用率仅 23%（963/4096），FSQ 达 <strong>100%（6561/6561）</strong>。ASR 错误率从 18.26% 降至 10.67%（CV EN），保留更多内容信息。</p>
+  </div>
+  <div class="diff-card">
+    <h4>② LLM 初始化 + 去掉文本编码器和说话人向量</h4>
+    <p>用预训练 Qwen2.5-0.5B 初始化，直接对齐文本和语音 token。去掉 x-vector 避免信息泄露（x-vector 携带语言和副语言信息，损害韵律和跨语言能力）。</p>
+  </div>
+  <div class="diff-card">
+    <h4>③ 统一流式/非流式框架</h4>
+    <p>流式：每 N=5 个文本 token 跟 M=15 个语音 token 交替混合。非流式：完整文本后跟完整语音 token。<strong>单一模型支持两种模式，几乎无损。</strong></p>
+  </div>
+</div>
+
+<h2 id="b2">B2. FSQ 量化公式</h2>
+
+<div class="math-block">
+$$\bar{H} = \mathrm{ROUND}(\mathrm{Proj}_\mathrm{down}(H)), \quad \hat{H} = \mathrm{Proj}_\mathrm{up}(\bar{H})$$
+$$\mu_i = \sum_{j=0}^{D-1} \bar{h}_{i,j} \cdot (2K+1)^j \quad \text{（(2K+1)进制索引）}$$
+</div>
+
+<p>FSQ 无需 EMA 更新码本，梯度通过 straight-through estimation 反传。码本大小 $(2K+1)^D = 6561$（$K=3, D=4$），100% 利用率。</p>
+
+<h2 id="b3">B3. 块感知因果流匹配</h2>
+
+<p>流匹配目标（ODE 简化为线性路径）：</p>
+
+<div class="math-block">
+$$\phi_t^{OT}(X_0, X_1) = (1-t)X_0 + tX_1, \quad \omega_t = X_1 - X_0$$
+$$\theta^{*} = \arg\min_\theta\; \mathbb{E}_{p_0,q,t}\bigl|\omega_t - \nu_t(\phi_t^{OT}\mid\theta; \mu, \tilde{X}_1, v)\bigr|_1$$
+</div>
+
+<p>四种因果掩码，单模型覆盖不同场景：</p>
+
+<table>
+  <tr><th>掩码类型</th><th>可见范围</th><th>适用场景</th></tr>
+  <tr><td>Non-causal Mask</td><td>全部帧</td><td>离线，最高质量</td></tr>
+  <tr><td>Full-causal Mask</td><td>仅过去帧</td><td>极低延迟场景</td></tr>
+  <tr><td>Chunk-M Mask</td><td>过去 + M 未来帧</td><td>第一包，低延迟+一定质量</td></tr>
+  <tr><td>Chunk-2M Mask</td><td>过去 + 2M 未来帧</td><td>后续包，接近离线质量</td></tr>
+</table>
+
+<h2 id="b4">B4. DPO 后训练（SFT 阶段）</h2>
+
+<div class="math-block">
+$$\mathcal{L}_{DPO}(\pi_\theta;\pi_\mathrm{ref}) = -\log\sigma\!\left(\beta\log\frac{\pi_\theta(\mu_w|y)}{\pi_\mathrm{ref}(\mu_w|y)} - \beta\log\frac{\pi_\theta(\mu_l|y)}{\pi_\mathrm{ref}(\mu_l|y)}\right)$$
+</div>
+
+<p>创新：直接用 ASR 后端重新预测生成的 token，得到 ASR 奖励，通过 Gumbel-Softmax 使采样可微分，无需完整 TTS 合成就能反传梯度，效率高 4 倍。</p>
+
+<h2 id="b5">B5. 消融实验（逐步改进）</h2>
+
+<table>
+  <tr><th>配置</th><th>test-zh CER↓</th><th>test-en WER↓</th><th>test-hard WER↓</th></tr>
+  <tr><td>CosyVoice（基线）</td><td>3.63%</td><td>4.29%</td><td>11.75%</td></tr>
+  <tr><td>+ LLM 初始化</td><td>2.96%（-18%）</td><td>3.56%（-17%）</td><td>9.93%（-15%）</td></tr>
+  <tr><td>+ 去掉说话人向量</td><td>2.56%（-30%）</td><td>3.05%（-29%）</td><td>8.40%（-29%）</td></tr>
+  <tr><td style="color:var(--strong)"><strong>+ FSQ（CosyVoice 2）</strong></td><td style="color:var(--strong)"><strong>1.45%（-60%）</strong></td><td style="color:var(--strong)"><strong>2.57%（-40%）</strong></td><td style="color:var(--strong)"><strong>6.83%（-42%）</strong></td></tr>
+  <tr><td>+ Pitch Loss</td><td>1.19%（-67%）</td><td>—</td><td>—</td></tr>
+</table>
+
+<h2 id="b6">B6. 主要结果（SEED 测试集）</h2>
+
+<div id="chart-v2" class="echarts-box" style="height:320px"></div>
+
+<hr>
+
+<!-- ══════════════════════════════════════════ -->
+<div class="part-banner">
+  <div class="part-num">Ⅲ</div>
+  <div class="part-info">
+    <h3>CosyVoice 3：野外语音生成</h3>
+    <p>多任务 Tokenizer（MinMo）· DiffRO 可微奖励优化 · 百万小时 · 1.5B DiT · CV3-Eval</p>
+  </div>
+</div>
+
+<h2 id="c1">C1. 核心改进</h2>
+
+<table>
+  <tr><th>改进方向</th><th>CosyVoice 2</th><th>CosyVoice 3</th></tr>
+  <tr><td>Tokenizer 基础模型</td><td>SenseVoice（ASR单任务）</td><td><strong>MinMo（ASR+LID+SER+AED+SA 多任务）</strong></td></tr>
+  <tr><td>后训练方法</td><td>DPO（需完整 TTS 合成）</td><td><strong>DiffRO（直接优化 token，4× 效率）</strong></td></tr>
+  <tr><td>训练数据</td><td>~170K 小时，4语言</td><td><strong>~100万小时，9语言+18方言</strong></td></tr>
+  <tr><td>LM 规模</td><td>0.5B（Qwen2.5-0.5B）</td><td><strong>1.5B</strong></td></tr>
+  <tr><td>CFM 架构</td><td>Causal Conv-Transformer UNet（100M）</td><td><strong>DiT（300M）</strong></td></tr>
+  <tr><td>评测基准</td><td>SEED、LibriSpeech</td><td>SEED + <strong>CV3-Eval（自建多语言野外基准）</strong></td></tr>
+</table>
+
+<h2 id="c2">C2. 多任务 Tokenizer</h2>
+
+<pre class="mermaid">
+flowchart LR
+    SPEECH["输入语音"] --> VE1["MinMo Voice Encoder1\n12层 Transformer + RoPE"]
+    VE1 --> FSQ["FSQ 量化模块\n25Hz token 率\n直通估计反传梯度"]
+    FSQ --> VE2["MinMo Voice Encoder2 + LLM"]
+    VE2 --> TASKS
+    subgraph TASKS["多任务监督目标"]
+        ASR["ASR\n多语言文本识别"]
+        LID["LID\n语言识别"]
+        SER["SER\n语音情感识别"]
+        AED["AED\n音频事件检测"]
+        SA["SA\n说话人分析"]
+    end
+</pre>
+
+<p>训练数据：53万小时（ASR: 36.5万小时 + LID: 8.5万小时 + SER: 4.8万小时 + AED: 2.1万小时 + SA: 1.1万小时）。多任务训练使 token 同时携带语义、情感、语言类型等丰富信息，改善韵律自然度。</p>
+
+<h2 id="c3">C3. DiffRO：可微奖励优化</h2>
+
+<p>传统 RL（如 DPO）需要完整 TTS 合成以区分正负样本，计算代价高且难以区分。DiffRO 直接在 token 层面优化：</p>
+
+<div class="math-block">
+$$\tilde{\mu}_t = \mathrm{GumbelSoftmax}\, P_{\pi_\theta}(\mu_t \mid \mu_{1:t-1}; Y)$$
+$$R_{ASR}(Y) = \log P_{ASR}(\tilde{Y}_n = Y_n \mid Y_{1:n-1}; \tilde{\mu}_{1:T})$$
+$$\pi^{*}_\theta = \max_{\pi_\theta}\; \mathbb{E}[R(Y)] - \beta D_{KL}[\pi_\theta(\mu|Y) \| \pi_{ref}(\mu|Y)]$$
+</div>
+
+<div class="math-block">
+$$D_{KL}[\pi_\theta \| \pi_{ref}] = \sum_{t=1}^{T}\sum_{k=0}^{Q} P_{\pi_\theta}(\mu_t=k)\log\frac{P_{\pi_\theta}(\mu_t=k)}{P_{\pi_{ref}}(\mu_t=k)}$$
+</div>
+
+<p>Gumbel-Softmax 使离散采样变得可微，从而直接通过反向传播优化 LM 参数，无需 RL 训练循环。多任务奖励（MTR）还可联合优化 SER、MOS 预测等声音属性。</p>
+
+<h2 id="c4">C4. 发音内嵌（Pronunciation Inpainting）</h2>
+
+<p>纯 BPE 文本输入对多音字、罕见词的发音缺乏控制。CosyVoice 3 扩展词表，支持<strong>文字与音标混合输入</strong>：</p>
+<ul>
+  <li>中文：用拼音替代多音字（如 "重" → "zhong4"）</li>
+  <li>英文：用 CMU 音素替代罕见词（如 "quinoa" → phoneme sequence）</li>
+</ul>
+
+<h2 id="c5">C5. 自训练文本规范化</h2>
+
+<p>传统 TTS 依赖手工规则文本规范化（TN）。CosyVoice 3 用 LLM（Qwen-Max）生成 TN 数据，通过三路构建辅助训练集（规则 TN + LLM TN + 逆 TN），端到端直接接受原始文本输入。</p>
+
+<h2 id="c6">C6. CV3-Eval：野外多语言基准</h2>
+
+<table>
+  <tr><th>子集</th><th>语言/场景</th><th>样本量</th><th>评估重点</th></tr>
+  <tr><td>多语言声音克隆</td><td>9语言（含 de/fr/ru/it/es）</td><td>每语言 500</td><td>WER/CER + SS</td></tr>
+  <tr><td>跨语言声音克隆</td><td>zh/en/ja/ko 互转</td><td>—</td><td>语言迁移能力</td></tr>
+  <tr><td>情感克隆</td><td>中/英，happy/sad/angry</td><td>每类 100</td><td>情感迁移 vs 文本内容驱动</td></tr>
+  <tr><td>主观：表达性克隆</td><td>新闻/播客/TV 剧/诗歌</td><td>—</td><td>人工 MOS</td></tr>
+  <tr><td>主观：方言克隆</td><td>18 种中文方言</td><td>—</td><td>方言真实性</td></tr>
+</table>
+
+<h2 id="c7">C7. 主要实验结果</h2>
+
+<div id="chart-v3" class="echarts-box" style="height:360px"></div>
+
+<table>
+  <tr><th>模型</th><th>test-zh CER↓</th><th>test-en WER↓</th><th>test-hard CER↓</th></tr>
+  <tr><td>人类录音</td><td>1.26%</td><td>2.14%</td><td>—</td></tr>
+  <tr><td>CosyVoice 2</td><td>1.45%</td><td>2.57%</td><td>6.83%</td></tr>
+  <tr><td>Seed-TTS（闭源）</td><td>1.12%</td><td>2.25%</td><td>7.59%</td></tr>
+  <tr><td>CosyVoice 3-0.5B</td><td>1.16%</td><td>2.02%</td><td>6.08%</td></tr>
+  <tr><td>CosyVoice 3-0.5BRL</td><td>0.75%（-48%）</td><td>1.76%</td><td>5.09%</td></tr>
+  <tr><td>CosyVoice 3-1.5B</td><td>1.12%</td><td>2.21%</td><td>5.83%</td></tr>
+  <tr><td style="color:var(--strong)"><strong>CosyVoice 3-1.5BRL</strong></td><td style="color:var(--strong)"><strong>0.71%（-51%）</strong></td><td style="color:var(--strong)"><strong>1.45%（-44%）</strong></td><td style="color:var(--strong)"><strong>5.66%</strong></td></tr>
+</table>
+
+<p><strong>DiffRO 贡献</strong>：RL 后训练带来 12%~51% 的相对内容一致性提升。</p>
+
+<hr>
+
+<!-- ══════════════════════════════════════════ -->
+<h2 id="d1">横向对比与核心洞见</h2>
+
+<div class="tech-card green">
+<strong>S³ Token → FSQ → 多任务 Tokenizer：Tokenizer 是每代最重要的进化</strong><br>
+三代迭代中，Tokenizer 始终是性能提升的核心杠杆：(1) V1 将无监督 token 换成有监督 ASR token，内容一致性大幅提升；(2) V2 将 VQ（23% 利用率）换成 FSQ（100% 利用率），进一步压缩信息损失；(3) V3 将单任务 ASR 扩展到多任务（ASR+SER+LID+AED+SA），使 token 携带情感、语言类型等丰富信息。<strong>Tokenizer 的设计哲学</strong>：让离散表示尽可能保留"人类觉得重要的信息"。
+</div>
+
+<div class="tech-card blue">
+<strong>DiffRO 相比 DPO/PPO 的架构优势</strong><br>
+传统 TTS RL（DPO/PPO）需要：采样 → 完整 TTS 合成 → ASR 评估 → 计算奖励 → 反传，每步需要 4 次前向计算且梯度无法通过离散采样反传。DiffRO 用 Gumbel-Softmax 让离散采样变得可微，直接在 token 分布上计算 ASR/SER 奖励并反传——不需要运行完整 CFM 和声码器，效率提升约 4 倍，且奖励信号更精细（token 级而非序列级）。
+</div>
+
+<div class="tech-card purple">
+<strong>统一流式框架的工程意义（V2 最重要的工程贡献）</strong><br>
+流式和非流式以往是两个独立模型。CosyVoice 2 的关键发现是：两者本质上是<strong>序列构造方式</strong>的差异（文本-语音交替混合 vs 先文本后语音），可以在同一 LLM 下用不同输入格式统一训练。块感知 CFM 的四种掩码（non-causal/full-causal/chunk-M/chunk-2M）进一步将流式和非流式的质量差异从"模型差异"缩小到"上下文窗口差异"，使流式几乎无损。
+</div>
+
+<div class="tech-card orange">
+<strong>"野外"（in-the-wild）是 V3 的核心定位转变</strong><br>
+V1/V2 主要在广播语音（干净、标准）上取得优异性能，但真实世界的参考语音往往含背景噪声、方言口音、极端情感。CV3-Eval 基准的建立标志着 TTS 评估从"实验室环境"向"实际部署条件"的转变。CosyVoice 3 是迄今第一个在该基准上被系统验证的系统，9 语言覆盖（含 de/fr/ru/it/es）使其成为当前最通用的开源 TTS 系统之一。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月18日 · 基于 CosyVoice (2024), CosyVoice 2 (arXiv:2412.10117), CosyVoice 3 (arXiv:2505.17589) / Speech Lab, Alibaba Group</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  // CosyVoice 2 结果对比
+  const c1=echarts.init(document.getElementById('chart-v2'));
+  c1.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'CosyVoice 2 vs 基线（SEED test-zh CER / test-en WER）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['test-zh CER (↓)','test-en WER (↓)'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['ChatTTS','GPT-SoVITs','OpenVoice','ParlerTTS','CosyVoice 1','CosyVoice 2','CosyVoice 2-S'],axisLabel:{color:'#cdd6f4',rotate:15,fontSize:11}},
+    yAxis:{type:'value',name:'错误率 (%) ↓',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:0,max:8},
+    series:[
+      {name:'test-zh CER (↓)',type:'bar',barMaxWidth:22,
+       data:[{value:null,itemStyle:{color:'rgba(69,71,90,0.6)'}},{value:null},{value:null},{value:null},
+             {value:3.63,itemStyle:{color:'#fab387'}},{value:1.45,itemStyle:{color:'#a6e3a1'}},{value:1.45,itemStyle:{color:'#a6e3a1'}}],
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:11,formatter:p=>p.value?p.value+'%':'—'}},
+      {name:'test-en WER (↓)',type:'bar',barMaxWidth:22,
+       data:[{value:6.84,itemStyle:{color:'rgba(69,71,90,0.5)'}},{value:5.13},{value:3.47},{value:3.16},
+             {value:4.29,itemStyle:{color:'rgba(250,179,135,0.5)'}},{value:2.57,itemStyle:{color:'rgba(166,227,161,0.5)'}},{value:2.38,itemStyle:{color:'rgba(166,227,161,0.5)'}}],
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:11,formatter:p=>p.value+'%'}}
+    ],
+    grid:{left:60,right:20,bottom:70,top:80}
+  });
+
+  // CosyVoice 3 DiffRO 效果
+  const c2=echarts.init(document.getElementById('chart-v3'));
+  c2.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'CosyVoice 3 各变体 SEED 基准内容一致性（CER/WER）',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['test-zh CER','test-en WER','test-hard CER'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',data:['CV2','CV3-0.5B','CV3-0.5BRL','CV3-1.5B','CV3-1.5BRL','Seed-TTS\n(闭源)'],axisLabel:{color:'#cdd6f4',fontSize:11}},
+    yAxis:{type:'value',name:'错误率 (%) ↓',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:0,max:14},
+    series:[
+      {name:'test-zh CER',type:'bar',barMaxWidth:18,
+       data:[{value:1.45,itemStyle:{color:'#fab387'}},{value:1.16,itemStyle:{color:'#89b4fa'}},{value:0.75,itemStyle:{color:'#a6e3a1'}},{value:1.12,itemStyle:{color:'#89b4fa'}},{value:0.71,itemStyle:{color:'#a6e3a1'}},{value:1.12,itemStyle:{color:'rgba(203,166,247,0.8)'}}],
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:10,formatter:p=>p.value+'%'}},
+      {name:'test-en WER',type:'bar',barMaxWidth:18,
+       data:[{value:2.57,itemStyle:{color:'rgba(250,179,135,0.7)'}},{value:2.02,itemStyle:{color:'rgba(137,180,250,0.7)'}},{value:1.76,itemStyle:{color:'rgba(166,227,161,0.7)'}},{value:2.21,itemStyle:{color:'rgba(137,180,250,0.7)'}},{value:1.45,itemStyle:{color:'rgba(166,227,161,0.9)'}},{value:2.25,itemStyle:{color:'rgba(203,166,247,0.6)'}}],
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:10,formatter:p=>p.value+'%'}},
+      {name:'test-hard CER',type:'bar',barMaxWidth:18,
+       data:[{value:6.83,itemStyle:{color:'rgba(250,179,135,0.5)'}},{value:6.08},{value:5.09,itemStyle:{color:'rgba(166,227,161,0.5)'}},{value:5.83},{value:5.66,itemStyle:{color:'rgba(166,227,161,0.5)'}},{value:7.59,itemStyle:{color:'rgba(203,166,247,0.4)'}}],
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:10,formatter:p=>p.value?p.value+'%':'—'}}
+    ],
+    grid:{left:60,right:20,bottom:70,top:80}
+  });
+});
+</script>
+</body>
+</html>

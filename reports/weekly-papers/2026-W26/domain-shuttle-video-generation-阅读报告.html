@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DomainShuttle: 开放域主体驱动文本生成视频 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    tr.highlight td { background: #1a3a2a; color: var(--strong); font-weight: 600; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.6em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+    .tag { display: inline-block; background: #2a2a3e; border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.82em; margin: 2px; color: var(--heading); }
+    .meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin: 1em 0; }
+    .meta-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; }
+    .meta-card .label { font-size: 0.78em; color: #6c7086; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .meta-card .value { color: var(--strong); font-weight: 600; }
+    .formula-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .formula-box .formula-title { color: var(--heading); font-size: 0.9em; font-weight: 600; margin-bottom: 8px; }
+    .component-card { background: #2a2a3e; border-left: 3px solid var(--heading); border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 1em 0; }
+    .component-card h4 { color: var(--strong); font-size: 1em; margin-bottom: 6px; }
+    .insight-box { background: #1a2a1a; border: 1px solid #3a5a3a; border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .insight-box .insight-title { color: var(--strong); font-weight: 600; margin-bottom: 6px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>DomainShuttle：开放域主体驱动文本生成视频</h1>
+
+    <blockquote>
+      <strong>论文：</strong> DomainShuttle: Freeform Open Domain Subject-driven Text-to-video Generation &nbsp;|&nbsp;
+      <strong>arXiv：</strong> <a href="https://arxiv.org/abs/2606.26058" target="_blank">2606.26058</a> &nbsp;|&nbsp;
+      <strong>作者：</strong> Nan Chen, Yiyang Cai, Rongchang Xie, Junwen Pan, Cheng Chen, Weinan Jia, Zhuowei Chen, Wen Zhou, Zhenbang Sun, Wenhan Luo &nbsp;|&nbsp;
+      <strong>发布：</strong> 2026年6月24日 &nbsp;|&nbsp;
+      <strong>👍 点赞：</strong> 55
+    </blockquote>
+
+    <div class="meta-grid">
+      <div class="meta-card">
+        <div class="label">任务类型</div>
+        <div class="value">开放域主体驱动文本生成视频（S2V）</div>
+      </div>
+      <div class="meta-card">
+        <div class="label">核心贡献</div>
+        <div class="value">Domain-MoT + VR-DualRoPE + CCL 三组件框架</div>
+      </div>
+      <div class="meta-card">
+        <div class="label">基础模型</div>
+        <div class="value">Wan2.1-14B / Wan2.2-14B T2V</div>
+      </div>
+      <div class="meta-card">
+        <div class="label">跨域提升</div>
+        <div class="value">CD-Score 提升 18.7%（相对最强基线）</div>
+      </div>
+    </div>
+
+    <h2>概述</h2>
+
+    <p>
+      DomainShuttle 是一个面向<strong>开放域主体驱动文本生成视频</strong>的新型框架，核心目标是同时实现高主体保真度与强生成灵活性——这两个目标在现有方法中往往相互制约。论文针对"域内（In-domain）"与"跨域（Cross-domain）"两种生成场景，提出了三个相互配合的技术组件：<strong>Domain-MoT</strong>（解耦视频与参考特征，引入域感知 AdaLN）、<strong>Video-Reference DualRoPE</strong>（为参考图像与视频 token 分配独立 RoPE 空间）以及 <strong>Cross-Pair Consistent Loss</strong>（提取与域无关的主体内在特征）。实验结果表明，DomainShuttle 在跨域主体一致性指标 CD-Score 上相比现有最优方法提升约 19%，同时在视频质量和文本可控性上保持竞争力。
+    </p>
+
+    <h2>研究背景：主体驱动视频生成</h2>
+
+    <p>
+      主体驱动视频生成（Subject-driven Text-to-Video, S2V）要求模型在给定一张或多张参考图像的条件下，依据文本提示生成包含该主体的视频。这一任务在视频个性化、创意内容生产、数字人等应用场景中具有重要价值。
+    </p>
+
+    <h3>两种核心场景</h3>
+
+    <p>现有 S2V 方法主要面向两类不同的生成需求，它们对主体特征的保留程度要求截然不同：</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>场景</th>
+          <th>目标</th>
+          <th>典型应用</th>
+          <th>挑战</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>域内生成（In-domain）</strong></td>
+          <td>最大化保留参考主体的外观、风格、环境等所有特征</td>
+          <td>数字人复刻、IP 角色动画</td>
+          <td>避免生成漂移，保持高相似度</td>
+        </tr>
+        <tr>
+          <td><strong>跨域生成（Cross-domain）</strong></td>
+          <td>保留主体内在特征，同时允许风格、语义、域属性灵活变化</td>
+          <td>真实人物→水彩/3D动画、幻想角色→真实场景</td>
+          <td>解耦内在特征与域属性，避免过拟合</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>现有方法的局限</h3>
+
+    <p>
+      现有方法（如 Phantom、MAGREF、SkyReels-V3、VACE 等）主要针对域内场景进行优化，过度追求主体保真度，导致其在跨域场景下表现欠佳：当文本提示要求风格迁移或语义变换时，模型要么无法遵循风格指令，要么在执行风格变换时丢失主体一致性。根本原因在于：这些方法未能有效解耦主体的<strong>内在特征</strong>（identity-level features，如脸部结构、物体形状）与<strong>域属性</strong>（domain-level attributes，如材质、光照、艺术风格）。
+    </p>
+
+    <blockquote>
+      <strong>核心洞察：</strong> 理想的 S2V 方法应能像"穿梭机"一样自由在不同域之间切换——在域内场景下忠实还原主体，在跨域场景下灵活适应新域，而不是被迫在两者之间取舍。
+    </blockquote>
+
+    <h2>核心方法：三大组件详解</h2>
+
+    <p>
+      DomainShuttle 基于 Wan2.x-14B T2V 扩散变换器（DiT）构建，通过以下三个相互协作的模块实现域内高保真与跨域高灵活性的统一。整体架构如下图所示：
+    </p>
+
+    <pre class="mermaid">
+flowchart TD
+    A["🖼️ 参考图像\nReference Image(s)"] --> B["3D VAE 编码\n提取 patch 嵌入 f_r"]
+    T["📝 文本提示\nText Prompt"] --> E["文本编码器"]
+    V["🎬 视频噪声潜变量\nVideo Latent"] --> C["3D VAE 编码\n提取 patch 嵌入 f_v"]
+
+    B --> D["Domain-MoT\n域感知混合变换器"]
+    C --> D
+
+    D --> |"域感知 AdaLN\n注入域属性"| F["解耦参考特征\nDecoupled Ref Features"]
+    D --> |"保留视频分支\n原始能力"| G["视频特征\nVideo Features"]
+
+    F --> H["Video-Reference DualRoPE\n独立 RoPE 空间分配"]
+    G --> H
+    E --> H
+
+    H --> I["跨注意力 + 扩散去噪"]
+
+    J["跨对一致性损失 CCL\nCross-Pair Consistent Loss"] -.-> |"训练时约束\n提取内在主体特征"| D
+
+    I --> K["🎥 生成视频\nGenerated Video"]
+
+    style A fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+    style T fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+    style V fill:#2a2a3e,stroke:#89b4fa,color:#cdd6f4
+    style D fill:#1a3a2a,stroke:#a6e3a1,color:#a6e3a1
+    style H fill:#1a2a3a,stroke:#89b4fa,color:#89b4fa
+    style J fill:#3a2a1a,stroke:#fab387,color:#fab387
+    style K fill:#2a3a2a,stroke:#a6e3a1,color:#a6e3a1
+    </pre>
+
+    <h3>组件一：Domain-MoT（域感知混合变换器）</h3>
+
+    <p>
+      Domain-MoT（Domain-aware Mixture of Transformers）是 DomainShuttle 的核心架构创新，解决了跨域 S2V 中主体内在特征与域属性相互纠缠的根本问题。
+    </p>
+
+    <div class="component-card">
+      <h4>是什么</h4>
+      <p>一种将视频潜变量与参考图像特征解耦到两条独立处理路径的变换器架构，并在参考图像分支引入域感知 AdaLN 进行域特定建模。</p>
+    </div>
+
+    <div class="component-card">
+      <h4>为什么需要</h4>
+      <p>若视频特征与参考特征共享同一处理路径，域属性（如水彩风格、3D 卡通质感）会与主体内在特征（如人脸结构）相互污染，导致模型难以在跨域场景下既遵循风格指令又保持主体一致性。</p>
+    </div>
+
+    <div class="component-card">
+      <h4>怎么做</h4>
+      <p>
+        Domain-MoT 将视频潜变量 $\boldsymbol{f}_v$ 和参考图像特征 $\boldsymbol{f}_r$ 经 3D VAE 编码后分别进行 patch 化，随后在<strong>上下文内自注意力（In-context Self-Attention）</strong>中使用独立的 QKV 投影和独立的 RoPE：
+      </p>
+      <p>$$\text{Attn}(\boldsymbol{f}_v, \boldsymbol{f}_r) = \text{softmax}\!\left(\frac{[\boldsymbol{Q}_v; \boldsymbol{Q}_r][\boldsymbol{K}_v; \boldsymbol{K}_r]^\top}{\sqrt{d}}\right)[\boldsymbol{V}_v; \boldsymbol{V}_r]$$</p>
+      <p>
+        其中 $\boldsymbol{Q}_v, \boldsymbol{K}_v, \boldsymbol{V}_v$ 和 $\boldsymbol{Q}_r, \boldsymbol{K}_r, \boldsymbol{V}_r$ 分别来自视频分支和参考分支的独立投影矩阵。这一解耦设计保留了视频分支作为基础模型的原有能力，同时使参考图像分支专注于提取精确的主体特征。
+      </p>
+      <p>
+        更关键的是，<strong>域感知 AdaLN（Domain-aware Adaptive Layer Normalization）</strong>被引入参考图像分支，将域属性（如"水彩风格"、"3D 动画"等文本编码）注入参考特征的归一化过程：
+      </p>
+      <p>$$\text{AdaLN}(\boldsymbol{f}_r, \boldsymbol{c}_d) = \boldsymbol{\gamma}(\boldsymbol{c}_d) \cdot \frac{\boldsymbol{f}_r - \mu}{\sigma} + \boldsymbol{\beta}(\boldsymbol{c}_d)$$</p>
+      <p>其中 $\boldsymbol{c}_d$ 为域条件嵌入，$\boldsymbol{\gamma}(\cdot)$ 和 $\boldsymbol{\beta}(\cdot)$ 为从域条件学习的仿射变换参数。这使得模型能在特征空间中显式区分不同域，实现更精确的跨域 S2V。</p>
+    </div>
+
+    <pre class="mermaid">
+graph TD
+    subgraph "Domain-MoT 架构"
+        A["视频潜变量 f_v\nVideo Latent"] --> B["独立 QKV 投影\nW_Q^v, W_K^v, W_V^v"]
+        C["参考图像特征 f_r\nRef Image Features"] --> D["独立 QKV 投影\nW_Q^r, W_K^r, W_V^r"]
+
+        B --> E["上下文内自注意力\nIn-context Self-Attention\n[Q_v;Q_r][K_v;K_r]^T / sqrt(d)"]
+        D --> E
+
+        E --> F["视频特征输出\n保留基础模型能力"]
+        E --> G["参考特征输出"]
+
+        H["域条件 c_d\nDomain Condition"] --> I["域感知 AdaLN\nγ(c_d)·norm(f_r)+β(c_d)"]
+        G --> I
+
+        I --> J["域感知参考特征\nDomain-aware Ref Features\n区分不同域的特征空间"]
+    end
+
+    style E fill:#1a2a3a,stroke:#89b4fa,color:#89b4fa
+    style I fill:#1a3a2a,stroke:#a6e3a1,color:#a6e3a1
+    style H fill:#3a2a1a,stroke:#fab387,color:#fab387
+    </pre>
+
+    <h3>组件二：Video-Reference DualRoPE（双空间旋转位置编码）</h3>
+
+    <p>
+      在 Domain-MoT 解耦特征的基础上，DomainShuttle 进一步引入 VR-DualRoPE 机制，解决参考图像 token 与视频 token 在位置编码空间中的混淆问题，实现精细的主体级空间建模。
+    </p>
+
+    <div class="component-card">
+      <h4>是什么</h4>
+      <p>将参考图像 token 与视频 token 分配到<strong>相互独立的 RoPE（旋转位置编码）空间</strong>中，使两者的空间位置关系在注意力计算中被显式建模。</p>
+    </div>
+
+    <div class="component-card">
+      <h4>为什么需要</h4>
+      <p>
+        标准 RoPE 将所有 token（包括参考图像 token 和视频 token）编码在同一位置空间中。这导致两个问题：（1）不同主体的参考 token 在位置空间中相互干扰，难以区分；（2）同一主体的参考 token 与视频中对应区域的 token 缺乏有效的空间对应关系。VR-DualRoPE 通过独立空间分配解决这两个问题。
+      </p>
+    </div>
+
+    <div class="component-card">
+      <h4>怎么做</h4>
+      <p>
+        标准 RoPE 通过旋转矩阵对 token 的位置进行编码。对于位置 $m$ 处的 query 向量和位置 $n$ 处的 key 向量，其注意力分数只依赖于相对位置 $m-n$：
+      </p>
+      <p>$$\text{RoPE}(\boldsymbol{q}_m, \boldsymbol{k}_n) = \text{Re}\!\left[(\boldsymbol{q}_m e^{im\theta})(\boldsymbol{k}_n e^{in\theta})^*\right] = f(m-n)$$</p>
+      <p>
+        VR-DualRoPE 为参考图像 token 分配独立的位置坐标系，使得：
+      </p>
+      <ul>
+        <li><strong>不同主体的参考 token</strong> 在各自独立的 RoPE 空间中被显式分离，避免相互干扰；</li>
+        <li><strong>同一主体的参考 token</strong> 在潜变量空间中被拉近，增强主体内聚性；</li>
+        <li>参考图像 token 与视频 token 的位置关系通过独立坐标系精确建模，实现主体级别的精细空间控制。</li>
+      </ul>
+    </div>
+
+    <h3>组件三：Cross-Pair Consistent Loss（跨对一致性损失）</h3>
+
+    <p>
+      CCL 是训练阶段的监督信号设计创新，其目标是引导模型学习与域无关的主体内在特征，而非被域属性所干扰。
+    </p>
+
+    <div class="component-card">
+      <h4>是什么</h4>
+      <p>一种对比式训练损失，通过对齐同一视频对应的两组不同参考图像（域属性不同但主体相同），迫使模型提取主体的本质特征。</p>
+    </div>
+
+    <div class="component-card">
+      <h4>为什么需要</h4>
+      <p>
+        若仅使用重建损失训练，模型可能学习到将参考图像的所有特征（包括背景、光照、风格等域属性）都注入到视频中，而非仅提取主体内在特征。CCL 通过构造"同主体、不同域"的参考图像对，强制模型忽略域属性差异，聚焦于主体本质特征。
+      </p>
+    </div>
+
+    <div class="component-card">
+      <h4>怎么做</h4>
+      <p>
+        在训练时，对于同一个视频，构造两组参考图像 $\mathcal{R}_1$ 和 $\mathcal{R}_2$，它们描述同一主体但来自不同域（如一组为真实照片，另一组为卡通风格）。CCL 约束两组参考图像在模型特征空间中的表示尽可能一致：
+      </p>
+      <p>$$\mathcal{L}_{\text{CCL}} = \mathbb{E}\!\left[\left\|\phi(\mathcal{R}_1) - \phi(\mathcal{R}_2)\right\|_2^2\right]$$</p>
+      <p>
+        其中 $\phi(\cdot)$ 为模型对参考图像的特征提取函数。通过最小化 $\mathcal{L}_{\text{CCL}}$，模型被迫在两组不同域的参考图像中找到共同的主体表示，从而过滤掉域属性的影响，提取真正的内在主体特征。总训练损失为扩散去噪损失与 CCL 的加权组合：
+      </p>
+      <p>$$\mathcal{L} = \mathcal{L}_{\text{diffusion}} + \lambda \mathcal{L}_{\text{CCL}}$$</p>
+    </div>
+
+    <h2>实验结果</h2>
+
+    <p>
+      DomainShuttle 在开放域 S2V 基准上与多个强基线进行了全面对比。评估涵盖视频质量、文本可控性和主体一致性三个维度，分域内和跨域两种场景分别评估。
+    </p>
+
+    <h3>评估指标体系</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>指标</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>视频质量</td>
+          <td>AES↑（归一化美学分）</td>
+          <td>评估生成视频的视觉美学质量</td>
+        </tr>
+        <tr>
+          <td>视频质量</td>
+          <td>MS↑（运动平滑度）</td>
+          <td>评估帧间运动的流畅性</td>
+        </tr>
+        <tr>
+          <td>文本可控性</td>
+          <td>GMEScore↑</td>
+          <td>生成视频与文本提示的语义对齐度</td>
+        </tr>
+        <tr>
+          <td>文本可控性</td>
+          <td>NANO-CLIP↑ / Qwen-CLIP↑</td>
+          <td>基于不同 CLIP 模型的文本-视频相似度</td>
+        </tr>
+        <tr>
+          <td>跨域主体一致性</td>
+          <td>CD-Score↑</td>
+          <td>跨域场景下主体特征保留程度（核心指标）</td>
+        </tr>
+        <tr>
+          <td>跨域主体一致性</td>
+          <td>Qwen-Score↑</td>
+          <td>基于 Qwen 的跨域主体一致性评估</td>
+        </tr>
+        <tr>
+          <td>域内主体一致性</td>
+          <td>DINO-I↑</td>
+          <td>基于 DINO 特征的域内主体相似度</td>
+        </tr>
+        <tr>
+          <td>域内主体一致性</td>
+          <td>CLIP-I↑</td>
+          <td>基于 CLIP 特征的域内主体相似度</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>主实验对比（Table 1）</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>方法</th>
+          <th>AES↑</th>
+          <th>MS↑</th>
+          <th>GMEScore↑</th>
+          <th>CD-Score↑</th>
+          <th>Qwen-Score↑</th>
+          <th>DINO-I↑</th>
+          <th>CLIP-I↑</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Kling 1.6</td>
+          <td>0.515</td>
+          <td>0.965</td>
+          <td>0.596</td>
+          <td>0.725</td>
+          <td>0.771</td>
+          <td>0.401</td>
+          <td>0.672</td>
+        </tr>
+        <tr>
+          <td>VACE-Wan2.1-14B</td>
+          <td>0.517</td>
+          <td>0.985</td>
+          <td>0.671</td>
+          <td>0.538</td>
+          <td>0.769</td>
+          <td>0.326</td>
+          <td>0.695</td>
+        </tr>
+        <tr>
+          <td>MAGREF</td>
+          <td>0.491</td>
+          <td>0.964</td>
+          <td>0.678</td>
+          <td>0.499</td>
+          <td>0.705</td>
+          <td>0.312</td>
+          <td>0.685</td>
+        </tr>
+        <tr>
+          <td>SkyReels-V3</td>
+          <td>0.481</td>
+          <td>0.920</td>
+          <td>0.656</td>
+          <td>0.493</td>
+          <td>0.681</td>
+          <td>0.407</td>
+          <td>0.673</td>
+        </tr>
+        <tr>
+          <td>Phantom</td>
+          <td>0.515</td>
+          <td>0.972</td>
+          <td>0.660</td>
+          <td>0.506</td>
+          <td>0.703</td>
+          <td>0.322</td>
+          <td>0.701</td>
+        </tr>
+        <tr>
+          <td>HuMo</td>
+          <td>0.479</td>
+          <td>0.981</td>
+          <td>0.663</td>
+          <td>0.495</td>
+          <td>0.681</td>
+          <td>0.317</td>
+          <td>0.682</td>
+        </tr>
+        <tr>
+          <td>BindWeave</td>
+          <td>0.450</td>
+          <td>0.963</td>
+          <td>0.617</td>
+          <td>0.510</td>
+          <td>0.629</td>
+          <td>0.317</td>
+          <td>0.681</td>
+        </tr>
+        <tr>
+          <td>FFGO-Wan2.2-14B</td>
+          <td>0.410</td>
+          <td>0.945</td>
+          <td>0.653</td>
+          <td>0.558</td>
+          <td>0.667</td>
+          <td>0.274</td>
+          <td>0.662</td>
+        </tr>
+        <tr>
+          <td>VACE-Wan2.2-14B</td>
+          <td>0.480</td>
+          <td>0.974</td>
+          <td>0.685</td>
+          <td>0.546</td>
+          <td>0.679</td>
+          <td>0.303</td>
+          <td>0.679</td>
+        </tr>
+        <tr class="highlight">
+          <td>Ours (Wan2.1-14B)</td>
+          <td>0.510</td>
+          <td>0.977</td>
+          <td>0.689</td>
+          <td>0.787</td>
+          <td>0.781</td>
+          <td>0.405</td>
+          <td>0.703</td>
+        </tr>
+        <tr class="highlight">
+          <td>Ours (Wan2.2-14B)</td>
+          <td><strong>0.516</strong></td>
+          <td><strong>0.987</strong></td>
+          <td><strong>0.705</strong></td>
+          <td><strong>0.861</strong></td>
+          <td><strong>0.829</strong></td>
+          <td>0.400</td>
+          <td>0.690</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>ECharts 可视化对比</h3>
+
+    <div id="chart-main" class="echarts-container" style="height:400px"></div>
+
+    <h3>消融实验（Ablation Study）</h3>
+
+    <p>
+      消融实验验证了每个组件的独立贡献。所有实验均基于 Wan2.2-14B-T2V，训练步数相同：
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>配置</th>
+          <th>GMEScore↑</th>
+          <th>CD-Score↑</th>
+          <th>DINO-I↑</th>
+          <th>CLIP-I↑</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0</td>
+          <td>Naive Method（基线）</td>
+          <td>0.664</td>
+          <td>0.697</td>
+          <td>0.356</td>
+          <td>0.675</td>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>+ Dual Self-Attn</td>
+          <td>0.671</td>
+          <td>0.715</td>
+          <td>0.367</td>
+          <td>0.683</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>+ Domain-MoT</td>
+          <td>0.687</td>
+          <td>0.783</td>
+          <td>0.396</td>
+          <td>0.697</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>+ VR-DualRoPE</td>
+          <td>0.691</td>
+          <td>0.813</td>
+          <td>0.394</td>
+          <td>0.688</td>
+        </tr>
+        <tr class="highlight">
+          <td>4</td>
+          <td>+ CCL（完整 DomainShuttle）</td>
+          <td><strong>0.705</strong></td>
+          <td><strong>0.861</strong></td>
+          <td><strong>0.400</strong></td>
+          <td>0.690</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div id="chart-ablation" class="echarts-container" style="height:360px"></div>
+
+    <h3>消融实验关键发现</h3>
+    <ul>
+      <li><strong>Domain-MoT 贡献最大：</strong> 从 ID=1 到 ID=2，CD-Score 从 0.715 跃升至 0.783（+9.5%），说明特征解耦与域感知 AdaLN 是跨域性能的关键驱动力。</li>
+      <li><strong>VR-DualRoPE 持续提升：</strong> CD-Score 进一步从 0.783 提升至 0.813（+3.8%），在空间位置建模层面强化了主体级控制。</li>
+      <li><strong>CCL 完成最后突破：</strong> 加入 CCL 后 CD-Score 从 0.813 升至 0.861（+5.9%），同时 GMEScore 也提升，说明内在特征提取有助于文本可控性。</li>
+    </ul>
+
+    <h2>总结与启发</h2>
+
+    <p>
+      DomainShuttle 通过"解耦-独立位置编码-内在特征提取"三步走的设计路线，在开放域 S2V 任务中实现了此前被认为相互矛盾的两个目标：高主体保真度与强生成灵活性。其核心贡献在于将"域"作为一个独立的建模维度，而非让模型隐式地在主体特征和域属性之间权衡。
+    </p>
+
+    <h3>方法论层面的启发</h3>
+
+    <div class="insight-box">
+      <div class="insight-title">1. 特征解耦是跨域泛化的基础</div>
+      <p>Domain-MoT 的设计揭示了一个重要原则：当任务涉及多个正交维度（如"主体身份"与"域风格"），为每个维度分配独立的处理路径，比让单一路径隐式建模更为有效。这一思路可推广到其他需要解耦多维属性的生成任务。</p>
+    </div>
+
+    <div class="insight-box">
+      <div class="insight-title">2. 位置编码设计对多模态对齐至关重要</div>
+      <p>VR-DualRoPE 的成功表明，当参考模态（图像）与生成模态（视频）在语义上存在对应关系但在物理空间上不完全对齐时，为二者分配独立的位置编码空间比共享空间更能捕捉精细的主体级对应关系。这对图像-视频联合建模具有重要参考价值。</p>
+    </div>
+
+    <div class="insight-box">
+      <div class="insight-title">3. 对比式训练损失可显式提取内在表示</div>
+      <p>CCL 的设计思路——通过"同主体、不同域"的图像对对比，迫使模型忽略域属性——是一种优雅的监督信号设计。类似的"不变性诱导损失"在其他需要提取域不变特征的任务（如跨域迁移学习、风格解耦生成）中同样值得借鉴。</p>
+    </div>
+
+    <div class="insight-box">
+      <div class="insight-title">4. "域内-跨域"双场景评估框架值得推广</div>
+      <p>DomainShuttle 提出的双场景评估框架（域内高保真 vs. 跨域高灵活性）比单一的"主体相似度"指标更能全面评估 S2V 方法的实际能力。未来的主体驱动生成研究应采纳这一更完整的评估视角。</p>
+    </div>
+
+    <h3>局限性与未来方向</h3>
+    <ul>
+      <li>DomainShuttle 在域内 DINO-I 指标上（0.400）略低于 Kling 1.6（0.401）和 SkyReels-V3（0.407），说明在极端域内保真度场景下仍有提升空间。</li>
+      <li>训练数据构建（构造"同主体、不同域"的图像对）需要额外的数据工程，可能限制方法的通用性。</li>
+      <li>未来可探索将 Domain-MoT 的域感知建模扩展到更多模态（如音频驱动视频生成）或更细粒度的属性解耦（如姿态、表情、场景）。</li>
+    </ul>
+
+    <h2>参考文献</h2>
+
+    <ul>
+      <li>Nan Chen et al., <em>DomainShuttle: Freeform Open Domain Subject-driven Text-to-video Generation</em>, arXiv:2606.26058, 2026. <a href="https://arxiv.org/abs/2606.26058" target="_blank">链接</a></li>
+      <li>Wan2.1 / Wan2.2 团队, <em>Wan: Open and Advanced Large-Scale Video Generative Models</em>, 2025.</li>
+      <li>Vaswani et al., <em>Attention Is All You Need</em>, NeurIPS 2017.</li>
+      <li>Su et al., <em>RoFormer: Enhanced Transformer with Rotary Position Embedding</em>, Neurocomputing 2024.</li>
+      <li>Perez et al., <em>FiLM: Visual Reasoning with a General Conditioning Layer</em>, AAAI 2018.（AdaLN 前驱工作）</li>
+      <li>Caron et al., <em>Emerging Properties in Self-Supervised Vision Transformers (DINO)</em>, ICCV 2021.</li>
+      <li>Radford et al., <em>Learning Transferable Visual Models From Natural Language Supervision (CLIP)</em>, ICML 2021.</li>
+      <li>SkyReels-V3 团队, <em>SkyReels-V3</em>, 2026.</li>
+      <li>MAGREF 团队, <em>MAGREF: Masked Guidance for Any-Reference Video Generation</em>, 2025/2026.</li>
+      <li>Phantom 团队, <em>Phantom: Subject-consistent Video Generation via Cross-modal Guidance</em>, 2025/2026.</li>
+    </ul>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center;">
+      本报告由 Claude 自动生成 · 基于 arXiv:2606.26058 · 生成日期：2026-06-26
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    // TOC generation
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // Active TOC link on scroll
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+    // Main comparison chart
+    const chartMain = echarts.init(document.getElementById('chart-main'));
+    chartMain.setOption({
+      backgroundColor: '#2a2a3e',
+      title: {
+        text: '主实验对比：各方法核心指标',
+        textStyle: { color: '#89b4fa', fontSize: 14 },
+        left: 'center',
+        top: 10
+      },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: {
+        data: ['CD-Score（跨域主体一致性）', 'GMEScore（文本可控性）', 'DINO-I（域内主体一致性）'],
+        textStyle: { color: '#cdd6f4' },
+        bottom: 0
+      },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '15%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['Kling 1.6', 'VACE\nWan2.1', 'MAGREF', 'SkyReels\nV3', 'Phantom', 'HuMo', 'BindWeave', 'FFGO\nWan2.2', 'VACE\nWan2.2', 'Ours\nWan2.1', 'Ours\nWan2.2'],
+        axisLabel: { color: '#cdd6f4', fontSize: 11 },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      yAxis: {
+        type: 'value',
+        min: 0.3,
+        max: 0.95,
+        axisLabel: { color: '#cdd6f4' },
+        splitLine: { lineStyle: { color: '#45475a' } }
+      },
+      series: [
+        {
+          name: 'CD-Score（跨域主体一致性）',
+          type: 'bar',
+          data: [0.725, 0.538, 0.499, 0.493, 0.506, 0.495, 0.510, 0.558, 0.546, 0.787, 0.861],
+          itemStyle: {
+            color: function(params) {
+              return params.dataIndex >= 9 ? '#a6e3a1' : '#89b4fa';
+            }
+          }
+        },
+        {
+          name: 'GMEScore（文本可控性）',
+          type: 'bar',
+          data: [0.596, 0.671, 0.678, 0.656, 0.660, 0.663, 0.617, 0.653, 0.685, 0.689, 0.705],
+          itemStyle: {
+            color: function(params) {
+              return params.dataIndex >= 9 ? '#94e2d5' : '#74c7ec';
+            }
+          }
+        },
+        {
+          name: 'DINO-I（域内主体一致性）',
+          type: 'bar',
+          data: [0.401, 0.326, 0.312, 0.407, 0.322, 0.317, 0.317, 0.274, 0.303, 0.405, 0.400],
+          itemStyle: {
+            color: function(params) {
+              return params.dataIndex >= 9 ? '#f9e2af' : '#fab387';
+            }
+          }
+        }
+      ]
+    });
+
+    // Ablation study chart
+    const chartAblation = echarts.init(document.getElementById('chart-ablation'));
+    chartAblation.setOption({
+      backgroundColor: '#2a2a3e',
+      title: {
+        text: '消融实验：各组件对 CD-Score 和 GMEScore 的贡献',
+        textStyle: { color: '#89b4fa', fontSize: 14 },
+        left: 'center',
+        top: 10
+      },
+      tooltip: { trigger: 'axis' },
+      legend: {
+        data: ['CD-Score（跨域）', 'GMEScore（文本可控性）'],
+        textStyle: { color: '#cdd6f4' },
+        bottom: 0
+      },
+      grid: { left: '3%', right: '4%', bottom: '15%', top: '18%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: ['Naive\nMethod', '+ Dual\nSelf-Attn', '+ Domain\nMoT', '+ VR-\nDualRoPE', '+ CCL\n(完整)'],
+        axisLabel: { color: '#cdd6f4', fontSize: 12 },
+        axisLine: { lineStyle: { color: '#45475a' } }
+      },
+      yAxis: {
+        type: 'value',
+        min: 0.60,
+        max: 0.90,
+        axisLabel: { color: '#cdd6f4' },
+        splitLine: { lineStyle: { color: '#45475a' } }
+      },
+      series: [
+        {
+          name: 'CD-Score（跨域）',
+          type: 'line',
+          data: [0.697, 0.715, 0.783, 0.813, 0.861],
+          lineStyle: { color: '#a6e3a1', width: 3 },
+          itemStyle: { color: '#a6e3a1' },
+          symbol: 'circle',
+          symbolSize: 8,
+          label: { show: true, color: '#a6e3a1', position: 'top', formatter: '{c}' }
+        },
+        {
+          name: 'GMEScore（文本可控性）',
+          type: 'line',
+          data: [0.664, 0.671, 0.687, 0.691, 0.705],
+          lineStyle: { color: '#89b4fa', width: 3 },
+          itemStyle: { color: '#89b4fa' },
+          symbol: 'circle',
+          symbolSize: 8,
+          label: { show: true, color: '#89b4fa', position: 'bottom', formatter: '{c}' }
+        }
+      ]
+    });
+  </script>
+</body>
+</html>

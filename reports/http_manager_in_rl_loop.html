@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTTP Tool Manager 在 RL Agent Loop 中的使用分析</title>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-dark: #1558b0;
+      --secondary: #34a853;
+      --accent: #fbbc04;
+      --danger: #ea4335;
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --surface2: #f1f3f4;
+      --border: #dadce0;
+      --text: #202124;
+      --text-secondary: #5f6368;
+      --code-bg: #282c34;
+      --code-text: #abb2bf;
+      --shadow: 0 1px 3px rgba(0,0,0,.12), 0 1px 2px rgba(0,0,0,.24);
+      --shadow-md: 0 3px 6px rgba(0,0,0,.15), 0 2px 4px rgba(0,0,0,.12);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    /* ─── 顶栏 ─── */
+    .header {
+      background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+      color: #fff;
+      padding: 40px 48px 32px;
+    }
+    .header h1 { font-size: 2rem; font-weight: 700; margin-bottom: 8px; }
+    .header p  { opacity: .85; font-size: 1rem; max-width: 720px; }
+    .header-meta {
+      margin-top: 18px;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,.18);
+      border: 1px solid rgba(255,255,255,.3);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: .8rem;
+      font-weight: 500;
+    }
+
+    /* ─── 侧边栏布局 ─── */
+    .layout {
+      display: flex;
+      align-items: flex-start;
+    }
+
+    /* ─── 左侧目录（sticky 侧边栏） ─── */
+    .toc {
+      width: 220px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 24px 20px;
+      box-shadow: 2px 0 6px rgba(0,0,0,.06);
+    }
+    .toc h3 { color: var(--primary); margin-bottom: 14px; font-size: .95rem; font-weight: 700; }
+    .toc ol  { padding-left: 16px; }
+    .toc li  { margin-bottom: 6px; line-height: 1.4; }
+    .toc a   { color: var(--text-secondary); text-decoration: none; font-size: .82rem; display: block; padding: 2px 0; }
+    .toc a:hover { color: var(--primary); }
+
+    /* ─── 主内容 ─── */
+    .main { flex: 1; min-width: 0; padding: 32px 40px 60px; }
+
+    section {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 32px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      color: var(--primary-dark);
+      border-bottom: 2px solid var(--primary);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    h3 {
+      font-size: 1.05rem;
+      color: var(--text);
+      margin: 22px 0 10px;
+      font-weight: 600;
+    }
+    h4 {
+      font-size: .95rem;
+      color: var(--text-secondary);
+      margin: 16px 0 8px;
+      font-weight: 600;
+    }
+
+    p { margin-bottom: 12px; }
+
+    /* ─── 文件路径标签 ─── */
+    .filepath {
+      display: inline-block;
+      background: #e8f0fe;
+      color: var(--primary-dark);
+      font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: .8rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+
+    /* ─── 代码块 ─── */
+    pre {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 8px;
+      padding: 20px;
+      overflow-x: auto;
+      font-size: .82rem;
+      line-height: 1.6;
+      margin: 12px 0 16px;
+      font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+    code {
+      font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: .85em;
+    }
+    p code, li code {
+      background: var(--surface2);
+      color: #c62828;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    /* 关键字高亮 */
+    .kw { color: #c678dd; }
+    .fn { color: #61afef; }
+    .str{ color: #98c379; }
+    .cm { color: #5c6370; font-style: italic; }
+    .num{ color: #d19a66; }
+    .cls{ color: #e5c07b; }
+    .dec{ color: #56b6c2; }
+
+    /* ─── 流程图 (纯 CSS) ─── */
+    .flow-diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0;
+      margin: 24px 0;
+      padding: 24px;
+      background: var(--surface2);
+      border-radius: 10px;
+      overflow-x: auto;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      min-height: 48px;
+    }
+
+    .flow-box {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: .82rem;
+      font-weight: 600;
+      white-space: nowrap;
+      box-shadow: var(--shadow);
+      border: 2px solid transparent;
+    }
+
+    .flow-box.trainer  { background: #e8f0fe; border-color: #1a73e8; color: #1a3a6b; }
+    .flow-box.trainer-dark { background: #1a73e8; color: #fff; border-color: #1558b0; }
+    .flow-box.agent    { background: #e6f4ea; border-color: #34a853; color: #1b5e20; }
+    .flow-box.agent-dark { background: #34a853; color: #fff; border-color: #2e7d32; }
+    .flow-box.env      { background: #fce8e6; border-color: #ea4335; color: #b71c1c; }
+    .flow-box.env-dark { background: #ea4335; color: #fff; border-color: #c62828; }
+    .flow-box.http     { background: #fff3e0; border-color: #fb8c00; color: #7f4200; }
+    .flow-box.http-dark{ background: #fb8c00; color: #fff; border-color: #e65100; }
+    .flow-box.state    { background: #f3e5f5; border-color: #8e24aa; color: #4a148c; }
+    .flow-box.state-dark{ background: #8e24aa; color: #fff; border-color: #6a1b9a; }
+    .flow-box.tool     { background: #e0f7fa; border-color: #00acc1; color: #006064; }
+    .flow-box.diamond  {
+      border-radius: 4px;
+      transform: rotate(45deg);
+      padding: 8px;
+      min-width: 56px;
+      min-height: 56px;
+    }
+    .flow-box.diamond span {
+      display: block;
+      transform: rotate(-45deg);
+      font-size: .75rem;
+      text-align: center;
+    }
+
+    .arrow {
+      width: 40px;
+      height: 2px;
+      background: #999;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .arrow::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 6px solid transparent;
+      border-left-color: #999;
+      border-right: none;
+    }
+    .arrow-down {
+      width: 2px;
+      height: 32px;
+      background: #999;
+      margin: 0 auto;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .arrow-down::after {
+      content: "";
+      position: absolute;
+      bottom: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 6px solid transparent;
+      border-top-color: #999;
+      border-bottom: none;
+    }
+    .arrow-label {
+      font-size: .72rem;
+      color: var(--text-secondary);
+      padding: 0 4px;
+      white-space: nowrap;
+    }
+
+    /* ─── 状态机 ─── */
+    .state-machine {
+      display: flex;
+      gap: 0;
+      align-items: center;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding: 24px;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e8f0fe 100%);
+      border-radius: 10px;
+      margin: 16px 0;
+    }
+    .state-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .state-circle {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .78rem;
+      font-weight: 700;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+      border: 3px solid transparent;
+      line-height: 1.3;
+    }
+    .state-circle.pending   { background: #fff9c4; border-color: #f9a825; color: #f57f17; }
+    .state-circle.gen       { background: #e8f5e9; border-color: #43a047; color: #1b5e20; }
+    .state-circle.proc      { background: #e3f2fd; border-color: #1e88e5; color: #0d47a1; }
+    .state-circle.term      { background: #fce4ec; border-color: #e53935; color: #b71c1c; }
+    .state-label {
+      font-size: .72rem;
+      color: var(--text-secondary);
+      max-width: 90px;
+      text-align: center;
+    }
+    .state-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 0 8px;
+    }
+    .state-arrow-line {
+      width: 48px;
+      height: 2px;
+      background: #1a73e8;
+    }
+    .state-arrow-label {
+      font-size: .68rem;
+      color: var(--primary);
+      text-align: center;
+      max-width: 80px;
+    }
+
+    /* ─── 表格 ─── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .85rem;
+      margin: 12px 0;
+    }
+    th {
+      background: var(--primary);
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); }
+    tr:nth-child(even) td { background: var(--surface2); }
+    tr:hover td { background: #e8f0fe; }
+
+    /* ─── 调用链 ─── */
+    .call-chain {
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 10px;
+      padding: 24px;
+      font-family: "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: .8rem;
+      line-height: 1.8;
+      overflow-x: auto;
+      margin: 16px 0;
+      white-space: pre;       /* 保留缩进和换行，不折行 */
+      word-break: normal;
+    }
+    .call-chain .indent { padding-left: 20px; }
+    .call-chain .fn-name  { color: #61afef; }
+    .call-chain .class-name{ color: #e5c07b; }
+    .call-chain .comment  { color: #5c6370; font-style: italic; }
+    .call-chain .arrow-r  { color: #c678dd; }
+    .call-chain .file-tag { color: #98c379; font-size: .72rem; }
+
+    /* ─── 特性卡片 ─── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .feature-card {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 18px;
+      border-left: 4px solid var(--primary);
+    }
+    .feature-card.green  { border-left-color: #34a853; }
+    .feature-card.orange { border-left-color: #fb8c00; }
+    .feature-card.purple { border-left-color: #8e24aa; }
+    .feature-card.red    { border-left-color: #ea4335; }
+    .feature-card h4 {
+      margin: 0 0 8px;
+      font-size: .9rem;
+      color: var(--text);
+    }
+    .feature-card p {
+      font-size: .82rem;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .feature-icon { font-size: 1.4rem; margin-bottom: 6px; }
+
+    /* ─── 信息框 ─── */
+    .info-box {
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 14px 0;
+      font-size: .88rem;
+      display: flex;
+      gap: 10px;
+    }
+    .info-box.blue   { background: #e8f0fe; border-left: 4px solid #1a73e8; }
+    .info-box.green  { background: #e6f4ea; border-left: 4px solid #34a853; }
+    .info-box.yellow { background: #fff8e1; border-left: 4px solid #fbbc04; }
+    .info-box.red    { background: #fce8e6; border-left: 4px solid #ea4335; }
+    .info-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+    /* ─── 参数流 ─── */
+    .param-flow {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .param-block {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 14px;
+      border-top: 3px solid var(--primary);
+    }
+    .param-block h4 { margin: 0 0 8px; font-size: .85rem; }
+    .param-block ul { padding-left: 16px; font-size: .8rem; color: var(--text-secondary); }
+    .param-block li { margin-bottom: 3px; }
+    .param-block.orange { border-top-color: #fb8c00; }
+    .param-block.green  { border-top-color: #34a853; }
+
+    ul, ol { padding-left: 22px; margin-bottom: 10px; }
+    li { margin-bottom: 4px; }
+
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; }
+      .toc {
+        position: static;
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        box-shadow: 0 2px 6px rgba(0,0,0,.06);
+      }
+      .header { padding-left: 16px; padding-right: 16px; }
+      .main { padding: 16px; }
+      .param-flow { grid-template-columns: 1fr; }
+      .state-machine { flex-wrap: wrap; gap: 16px; }
+      .feature-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ 顶栏 ═══ -->
+<div class="header">
+  <h1>🔗 HTTP Tool Manager 在 RL Agent Loop 中的使用分析</h1>
+  <p>深入解析 <code>verl/envs/tool_manager/http_manager.py</code> 如何被 RL 训练框架调用，涵盖初始化、状态机、工具执行全链路</p>
+  <div class="header-meta">
+    <span class="badge">📁 verl/envs/tool_manager/http_manager.py</span>
+    <span class="badge">🔄 RL Agent Loop</span>
+    <span class="badge">🛠️ HTTP Tool Calling</span>
+    <span class="badge">📅 2026-06-30</span>
+  </div>
+</div>
+
+<!-- ═══ 侧边栏 + 主体 ═══ -->
+<div class="layout">
+
+<!-- 左侧目录 -->
+<div class="toc">
+  <h3>📋 目录</h3>
+  <ol>
+    <li><a href="#architecture">总体架构概览</a></li>
+    <li><a href="#module-structure">模块结构与类层次</a></li>
+    <li><a href="#initialization">初始化流程</a></li>
+    <li><a href="#state-machine">Agent Loop 状态机</a></li>
+    <li><a href="#call-chain">完整调用链</a></li>
+    <li><a href="#key-methods">核心方法详解</a></li>
+    <li><a href="#param-flow">参数透传机制</a></li>
+    <li><a href="#special-features">特殊功能</a></li>
+    <li><a href="#config">配置要点</a></li>
+    <li><a href="#real-data">一条真实数据的完整处理流程</a></li>
+    <li><a href="#v2-impl">v2 离线实现（OfflineHTTPToolManager）</a></li>
+    <li><a href="#shell-config">Shell → Hydra → Python 配置传递链</a></li>
+    <li><a href="#response-mask">response_mask 损失计算机制</a></li>
+    <li><a href="#tensorboard-metrics">TensorBoard 训练指标</a></li>
+  </ol>
+</div>
+
+<!-- ═══ 主体 ═══ -->
+<div class="main">
+
+<!-- ─── 1. 总体架构 ─── -->
+<section id="architecture">
+  <h2>1. 总体架构概览</h2>
+  <p>
+    本项目基于 <strong>VERL（Versatile Reinforcement Learning Framework）</strong>，在 PPO/GRPO 等强化学习训练过程中，
+    支持 LLM 在 rollout 阶段通过 HTTP API 调用外部工具（美团搜索、POI 查询等），形成多轮对话轨迹，
+    再用于 actor/critic 的参数更新。
+  </p>
+  <p>
+    <code>http_manager.py</code> 是整个工具调用体系的核心，负责 <strong>工具注册 → 响应解析 → HTTP 执行 → 结果返回</strong> 的全流程。
+  </p>
+
+  <!-- 架构蛇形图：用 CSS Grid 精确定位，避免溢出 -->
+  <div style="background:var(--surface2); border-radius:10px; padding:24px; margin:24px 0; overflow-x:auto;">
+    <div style="display:grid; grid-template-columns: repeat(7,auto); grid-template-rows: auto 32px auto; align-items:center; gap:0; width:fit-content;">
+
+      <!-- Row 1 (格 1-7) -->
+      <div class="flow-box trainer-dark" style="grid-column:1; grid-row:1; white-space:nowrap;">PPO/GRPO 训练入口<br/><small>main_ppo.py</small></div>
+      <div class="arrow"                 style="grid-column:2; grid-row:1;"></div>
+      <div class="flow-box trainer"      style="grid-column:3; grid-row:1; white-space:nowrap;">RayPPOTrainer<br/><small>ray_trainer.py</small></div>
+      <div class="arrow"                 style="grid-column:4; grid-row:1;"></div>
+      <div class="flow-box trainer"      style="grid-column:5; grid-row:1; white-space:nowrap;">generate_sequences()</div>
+      <div class="arrow"                 style="grid-column:6; grid-row:1;"></div>
+      <div class="flow-box agent-dark"   style="grid-column:7; grid-row:1; white-space:nowrap;">RLFactoryToolAgentLoop<br/><small>rl_factory_agent_loop.py</small></div>
+
+      <!-- 连接箭头（从 Row1 最后一格向下） -->
+      <div class="arrow-down" style="grid-column:7; grid-row:2; justify-self:center;"></div>
+
+      <!-- Row 2 right-to-left（格 7→1） -->
+      <div class="flow-box agent"   style="grid-column:7; grid-row:3; white-space:nowrap;">async_step()<br/><small>PROCESSING_TOOLS</small></div>
+      <div class="arrow"            style="grid-column:6; grid-row:3; transform:rotate(180deg);"></div>
+      <div class="flow-box env-dark" style="grid-column:5; grid-row:3; white-space:nowrap;">HTTPEnv.step()<br/><small>http_env.py</small></div>
+      <div class="arrow"            style="grid-column:4; grid-row:3; transform:rotate(180deg);"></div>
+      <div class="flow-box http"    style="grid-column:3; grid-row:3; white-space:nowrap;">HTTPToolManager<br/>.execute_actions()<br/><small>http_manager.py</small></div>
+      <div class="arrow"            style="grid-column:2; grid-row:3; transform:rotate(180deg);"></div>
+      <div class="flow-box http-dark" style="grid-column:1; grid-row:3; white-space:nowrap;">HTTPTool.call()<br/><small>HTTP POST</small></div>
+    </div>
+  </div>
+
+  <div class="info-box blue">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      核心流向：训练主循环发起 rollout → Agent Loop 驱动 LLM 多轮生成 → 解析 tool_call → 通过 HTTPToolManager 执行工具 →
+      工具结果注入对话 → 继续生成，直到终止条件。
+    </div>
+  </div>
+</section>
+
+<!-- ─── 2. 模块结构 ─── -->
+<section id="module-structure">
+  <h2>2. 模块结构与类层次</h2>
+
+  <h3>目录结构</h3>
+  <pre><span class="str">verl/envs/</span>
+├── <span class="fn">tool_manager/</span>
+│   ├── <span class="cm">__init__.py</span>           <span class="cm"># 注册表 TOOL_MANAGER_REGISTRY</span>
+│   ├── <span class="fn">base.py</span>               <span class="cm"># BaseToolManager / BaseTool 抽象基类</span>
+│   ├── <span class="fn">http_manager.py</span>       <span class="cm"># ★ v1 线上 — HTTPToolManager (动态 schema + content/message)</span>
+│   ├── <span class="fn">http_manager_v2.py</span>    <span class="cm"># ★ v2 离线 — OfflineHTTPToolManager (hardcode path + renderedMarkdown)</span>
+│   └── <span class="fn">ds_http_manager.py</span>    <span class="cm"># DSHTTPToolManager (DeepSeek 特化)</span>
+├── <span class="fn">http_env.py</span>               <span class="cm"># HTTPEnv — 环境包装层</span>
+├── <span class="fn">schemas.py</span>                <span class="cm"># ToolResponse 数据结构</span>
+└── <span class="fn">tool_parser.py</span>            <span class="cm"># HTTPToolParser 工具</span></pre>
+
+  <h3>注册表</h3>
+  <div class="filepath">verl/envs/tool_manager/__init__.py</div>
+  <pre><span class="cls">TOOL_MANAGER_REGISTRY</span> = {
+    <span class="cm"># ── v1 线上 agentenv (http_manager.py) — 动态 schema 发现, content/message 响应 ──</span>
+    <span class="str">'http'</span>:               <span class="cls">HTTPToolManager</span>,        <span class="cm"># 通用</span>
+    <span class="str">'qwen3_http'</span>:         <span class="cls">HTTPToolManager</span>,        <span class="cm"># Qwen3 模型</span>
+    <span class="str">'simple'</span>:             <span class="cls">HTTPToolManager</span>,        <span class="cm"># 旧版兼容</span>
+    <span class="str">'deepseek_31_http'</span>:   <span class="cls">DSHTTPToolManager</span>,      <span class="cm"># DeepSeek-31</span>
+    <span class="cm"># ── v2 离线 toolserver (http_manager_v2.py) — hardcode 路径, renderedMarkdown 响应 ──</span>
+    <span class="str">'offline_http'</span>:       <span class="cls">OfflineHTTPToolManager</span>, <span class="cm"># 通用离线</span>
+    <span class="str">'qwen3_offline_http'</span>: <span class="cls">OfflineHTTPToolManager</span>, <span class="cm"># Qwen3 + 离线</span>
+}</pre>
+
+  <h3>类继承关系</h3>
+  <div class="flow-diagram" style="gap:8px;">
+    <div style="display:flex; gap:32px; align-items:flex-start; flex-wrap:wrap;">
+      <!-- 左：Manager -->
+      <div style="display:flex; flex-direction:column; align-items:center; gap:0;">
+        <div class="flow-box trainer" style="min-width:180px;">
+          <div>
+            <strong>BaseToolManager</strong><br/>
+            <small style="color:#5f6368;">ABC</small><br/>
+            <small>• tool_map, functions</small><br/>
+            <small>• _build_tools() abstract</small><br/>
+            <small>• execute_actions() abstract</small>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+        <div class="flow-box agent" style="min-width:180px;">
+          <div>
+            <strong>HTTPToolManager</strong><br/>
+            <small>• _get_tool_schema()</small><br/>
+            <small>• parse_response()</small><br/>
+            <small>• parse_tools()</small><br/>
+            <small>• execute_actions()</small><br/>
+            <small>• call_tool()</small>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+        <div class="flow-box tool" style="min-width:180px;">
+          <div>
+            <strong>DSHTTPToolManager</strong><br/>
+            <small>• 覆写 parse_tools()</small><br/>
+            <small>• DeepSeek 格式解析</small>
+          </div>
+        </div>
+      </div>
+      <!-- v2 Manager -->
+      <div style="display:flex; flex-direction:column; align-items:center; gap:0; margin-left:24px;">
+        <div class="flow-box trainer" style="min-width:180px;">
+          <div>
+            <strong>BaseToolManager</strong><br/>
+            <small style="color:#5f6368;">ABC</small>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+        <div class="flow-box http" style="min-width:180px; border-color:#e65100;">
+          <div>
+            <strong>OfflineHTTPToolManager</strong><br/>
+            <small style="color:#e65100;">v2 离线</small><br/>
+            <small>• OfflineConfig 配置层</small><br/>
+            <small>• _TOOL_CLASS_MAP 注册</small><br/>
+            <small>• parse_tools() (复用 v1)</small>
+          </div>
+        </div>
+      </div>
+      <!-- 右：Tool -->
+      <div style="display:flex; flex-direction:column; align-items:center; gap:0; margin-left:40px;">
+        <div class="flow-box trainer" style="min-width:180px;">
+          <div>
+            <strong>BaseTool</strong><br/>
+            <small>• name, description</small><br/>
+            <small>• get_function_schema()</small><br/>
+            <small>• call() abstract</small>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+        <div class="flow-box http" style="min-width:180px;">
+          <div>
+            <strong>HTTPTool</strong><br/>
+            <small>• base_url, timeout</small><br/>
+            <small>• call() → HTTP POST</small><br/>
+            <small>• 重试逻辑</small><br/>
+            <small>• 参数透传</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 3. 初始化 ─── -->
+<section id="initialization">
+  <h2>3. 初始化流程</h2>
+  <p>
+    整个工具系统在 <code>RLFactoryToolAgentLoop.init_class()</code> 中被初始化（每个 Worker 进程仅执行一次）。
+  </p>
+  <div class="filepath">verl/experimental/agent_loop/rl_factory_agent_loop.py — init_class()</div>
+  <pre><span class="cm"># Step 1: 读取 config.env.tool_manager 判断是否启用 HTTP 工具</span>
+tool_manager_name = config.env.get(<span class="str">"tool_manager"</span>, <span class="str">""</span>)
+use_http = <span class="str">"http"</span> <span class="kw">in</span> tool_manager_name <span class="kw">if</span> tool_manager_name <span class="kw">else False</span>
+
+<span class="kw">if</span> use_http <span class="kw">and</span> _HTTP_ENV_AVAILABLE:
+    <span class="cm"># Step 2: 构建 env_config，把 max_assistant_turns 注入为 max_turns</span>
+    env_config = <span class="dec">dict</span>(config.env)
+    env_config[<span class="str">"max_turns"</span>] = config.actor_rollout_ref.rollout.multi_turn.max_assistant_turns
+
+    <span class="cm"># Step 3: 通过注册表创建 HTTPEnv（内部创建 HTTPToolManager）</span>
+    cls.env_object = <span class="fn">get_env</span>(config.env.name, env_config)
+
+    <span class="cm"># Step 4: 提取工具 schemas 到 cls.tool_schemas（用于注入 chat template）</span>
+    cls.tool_schemas = cls.env_object.tool_manager.functions</pre>
+
+  <h3>HTTPEnv 初始化链</h3>
+  <div class="call-chain">
+<span class="fn-name">get_env</span>(env_name, config)  <span class="comment">← http_env.py</span>
+  └─ <span class="class-name">HTTPEnv</span>.__init__(config)
+       └─ tool_manager_class = <span class="class-name">TOOL_MANAGER_REGISTRY</span>[tool_manager_name]
+          └─ <span class="class-name">HTTPToolManager</span>.__init__(config)
+               ├─ self.base_url = config[<span class="str">'base_url'</span>]        <span class="comment"># 工具服务基地址</span>
+               ├─ self.max_retries = config[<span class="str">'max_retries'</span>]   <span class="comment"># 重试次数</span>
+               ├─ self.tool_call_parser = config[<span class="str">'tool_call_parser'</span>]  <span class="comment"># 如 "qwen25"</span>
+               ├─ self.enable_thinking = config[<span class="str">'enable_thinking'</span>]    <span class="comment"># 是否开启 thinking</span>
+               └─ super().__init__(config)  <span class="arrow-r">→</span> <span class="fn-name">_build_tools</span>()
+                    ├─ 读取 config_path 配置文件（httpTools 格式）
+                    ├─ _load_agent_config_schemas()  <span class="comment">← 从 agent_config.json 读取精确描述</span>
+                    └─ 对每个 tool_name:
+                         ├─ _get_tool_schema()  <span class="comment">← GET /api/tools/list 获取 inputSchema</span>
+                         │    └─ 过滤 IGNORED_KEYS（参数透传逻辑）
+                         └─ HTTPTool.__init__()  <span class="comment">← 创建工具实例，存入 tool_map</span>
+  </div>
+
+  <h3>工具 Schema 双来源机制</h3>
+  <table>
+    <tr>
+      <th>来源</th><th>优先级</th><th>用途</th><th>说明</th>
+    </tr>
+    <tr>
+      <td><code>agent_config.json</code><br/>→ tool_schemas</td>
+      <td>🥇 高</td>
+      <td>注入 LLM chat template</td>
+      <td>描述更精准，由业务方维护</td>
+    </tr>
+    <tr>
+      <td>HTTP API<br/><code>GET /api/tools/list</code></td>
+      <td>🥈 备用</td>
+      <td>实际执行 + schema 兜底</td>
+      <td>工具服务动态返回，自动过滤透传键</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ─── 4. 状态机 ─── -->
+<section id="state-machine">
+  <h2>4. Agent Loop 状态机</h2>
+  <p>
+    <code>RLFactoryToolAgentLoop.run()</code> 通过异步状态机驱动多轮对话。
+    http_manager 在 <strong>GENERATING</strong>（解析）和 <strong>PROCESSING_TOOLS</strong>（执行）两个状态被调用。
+  </p>
+
+  <div class="state-machine">
+    <div class="state-node">
+      <div class="state-circle pending">PENDING<br/>⏳<br/>构建 Prompt</div>
+      <div class="state-label">注入 tool_schemas<br/>应用 chat_template</div>
+    </div>
+    <div class="state-arrow">
+      <div class="state-arrow-line"></div>
+      <div class="state-arrow-label">generate()<br/>→ LLM 生成</div>
+    </div>
+    <div class="state-node">
+      <div class="state-circle gen">GENERATING<br/>🤖<br/>LLM 生成</div>
+      <div class="state-label">parse_response()<br/>识别 tool_call</div>
+    </div>
+    <div class="state-arrow">
+      <div class="state-arrow-line"></div>
+      <div class="state-arrow-label">有工具调用<br/>action_type=<br/>'actions'</div>
+    </div>
+    <div class="state-node">
+      <div class="state-circle proc">PROCESSING<br/>_TOOLS<br/>🔧 执行工具</div>
+      <div class="state-label">execute_actions()<br/>HTTP 调用</div>
+    </div>
+    <div class="state-arrow">
+      <div class="state-arrow-line"></div>
+      <div class="state-arrow-label">工具结果<br/>注入对话<br/>→ 返回 PENDING</div>
+    </div>
+    <div class="state-node">
+      <div class="state-circle term">TERMINATED<br/>✅<br/>终止</div>
+      <div class="state-label">最终答案 /达到<br/>max_turns</div>
+    </div>
+  </div>
+
+  <h3>状态转移详情</h3>
+  <table>
+    <tr>
+      <th>当前状态</th><th>触发条件</th><th>次态</th><th>HTTP Manager 作用</th>
+    </tr>
+    <tr>
+      <td>PENDING</td>
+      <td>开始新轮次</td>
+      <td>GENERATING</td>
+      <td>tool_schemas 作为 functions 注入 chat template</td>
+    </tr>
+    <tr>
+      <td>GENERATING</td>
+      <td>action_type == 'actions'</td>
+      <td>PROCESSING_TOOLS</td>
+      <td><code>parse_response()</code> 提取工具调用信息</td>
+    </tr>
+    <tr>
+      <td>GENERATING</td>
+      <td>action_type == 'answer'</td>
+      <td>TERMINATED</td>
+      <td><code>parse_response()</code> 识别最终答案</td>
+    </tr>
+    <tr>
+      <td>PROCESSING_TOOLS</td>
+      <td>load_skill 调用成功</td>
+      <td>PENDING</td>
+      <td><code>_mock_load_skill()</code> 返回新工具 → 更新 tool_schemas → 清 KV Cache</td>
+    </tr>
+    <tr>
+      <td>PROCESSING_TOOLS</td>
+      <td>普通工具调用完成</td>
+      <td>GENERATING</td>
+      <td><code>execute_actions()</code> 返回结果注入对话</td>
+    </tr>
+    <tr>
+      <td>任意</td>
+      <td>assistant_turns ≥ max_turns</td>
+      <td>TERMINATED</td>
+      <td>—</td>
+    </tr>
+  </table>
+
+  <h3>4.1 response_mask：Token 损失遮罩机制</h3>
+  <p>
+    agent_loop 用 <code>response_mask</code> 列表逐 token 标记是否纳入 PPO/GRPO 损失计算，
+    <strong>1 = 计入 loss（LLM 生成）</strong>，<strong>0 = 不计入 loss（工具结果/用户消息）</strong>。
+  </p>
+
+  <div style="overflow-x:auto; margin: 16px 0;">
+  <table>
+    <tr>
+      <th>Token 来源</th>
+      <th>mask 值</th>
+      <th>代码位置</th>
+      <th>说明</th>
+    </tr>
+    <tr>
+      <td>LLM 生成 (assistant)</td>
+      <td><code style="color:#34a853;font-weight:700;">[1, 1, …, 1]</code></td>
+      <td><code>response_mask += [1] * len(response_ids)</code></td>
+      <td>对话轨迹中 LLM 输出的每个 token，参与梯度更新</td>
+    </tr>
+    <tr>
+      <td>工具结果 (tool response)</td>
+      <td><code style="color:#ea4335;font-weight:700;">[0, 0, …, 0]</code></td>
+      <td><code>response_mask += [0] * len(response_ids)</code></td>
+      <td>HTTP 工具返回内容 tokenize 后追加，不计入损失</td>
+    </tr>
+    <tr>
+      <td>load_skill 重建 prompt</td>
+      <td>全部清空 <code>[]</code></td>
+      <td><code>agent_data.response_mask = []</code></td>
+      <td>工具披露触发 PENDING 状态时，mask 完全重置再重建</td>
+    </tr>
+  </table>
+  </div>
+
+  <div class="call-chain" style="margin:12px 0;">
+<span class="comment">── prompt_ids 拼接顺序（完整一轮）──────────────────────────────────────────</span>
+prompt_ids  = [system_tokens] + [user_tokens]          <span class="comment"># 初始 prompt</span>
+             + [assistant_resp₁]                        <span class="comment"># LLM 生成 → mask = [1,1,...1]</span>
+             + [tool_result₁_tokens]                    <span class="comment"># 工具结果 → mask = [0,0,...0]</span>
+             + [assistant_resp₂]                        <span class="comment"># LLM 生成 → mask = [1,1,...1]</span>
+             + ...
+
+<span class="comment">── 损失只对 mask=1 的位置计算 ────────────────────────────────────────────────</span>
+loss = cross_entropy(logits[mask==1], labels[mask==1])
+  </div>
+
+  <div class="info-box yellow">
+    <span class="info-icon">💡</span>
+    <div>
+      <strong>TOOL_EXHAUSTED_MARKER 与 mask：</strong>当工具返回全部为业务空结果时，
+      结果文本前追加 <code>[[TOOL_EMPTY_EXHAUSTED]]</code>。agent_loop 检测到此标记后，
+      可将该轮工具调用标记为无效，防止 LLM 学习"空结果也继续追问"的错误行为。
+      工具结果本身始终以 mask=0 追加，不参与梯度计算。
+    </div>
+  </div>
+</section>
+
+<!-- ─── 5. 调用链 ─── -->
+<section id="call-chain">
+  <h2>5. 完整调用链</h2>
+
+  <h3>5.1 RL 训练 → Rollout → 工具执行全链路</h3>
+  <div class="call-chain">
+<span class="comment">══════ RL 训练主循环 ══════</span>
+<span class="class-name">RayPPOTrainer</span>.<span class="fn-name">fit</span>()
+  └─ async_rollout_manager.<span class="fn-name">generate_sequences</span>()
+       └─ <span class="class-name">RLFactoryToolAgentLoop</span>.<span class="fn-name">run</span>(data)   <span class="file-tag">rl_factory_agent_loop.py</span>
+            │
+            ├─ <span class="comment">[ PENDING 状态 ]</span>
+            │   └─ apply_chat_template(tools=<span class="class-name">self</span>.tool_schemas)
+            │         <span class="comment"># tool_schemas = env_object.tool_manager.functions</span>
+            │
+            ├─ <span class="comment">[ GENERATING 状态 ]</span>
+            │   ├─ server_manager.<span class="fn-name">generate</span>(prompt_ids)  <span class="comment"># SGLang/vLLM 推理</span>
+            │   └─ <span class="fn-name">decode_and_parse</span>(response_ids)
+            │         └─ env_object.tool_manager.<span class="fn-name">parse_response</span>(text, current_functions)
+            │               ├─ _get_reasoning_parser().<span class="fn-name">parse_non_stream</span>(text)
+            │               │     <span class="comment"># 分离 &lt;think&gt;...&lt;/think&gt; 思维链</span>
+            │               ├─ 检测 &lt;answer&gt;...&lt;/answer&gt;  <span class="arrow-r">→</span> action_type='answer'
+            │               └─ <span class="fn-name">parse_tools</span>(content, current_functions)
+            │                     ├─ _get_fc_detector()  <span class="comment"># 懒加载 sglang FunctionCallParser</span>
+            │                     ├─ _build_sglang_tools(current_functions)
+            │                     └─ detector.<span class="fn-name">detect_and_parse</span>(response, tools)
+            │                           <span class="arrow-r">→</span> action_type='actions', tool_info=[{name, args}]
+            │
+            └─ <span class="comment">[ PROCESSING_TOOLS 状态 ]</span>
+                └─ <span class="fn-name">async_step</span>([decoded_response])
+                      └─ env_object.<span class="fn-name">step</span>(responses, tool_kwargs, remaining_turns)
+                           <span class="file-tag">http_env.py</span>
+                           └─ tool_manager.<span class="fn-name">execute_actions</span>(responses, batch_tools_kwargs)
+                                <span class="file-tag">http_manager.py</span>
+                                ├─ <span class="fn-name">parse_response</span>(response)   <span class="comment"># 再次解析确认</span>
+                                └─ <span class="fn-name">call_tool</span>(tool_name, tool_args, tool_kwargs=tool_kwargs)
+                                     ├─ 特殊路由: load_skill → <span class="fn-name">_mock_load_skill</span>()
+                                     ├─ 特殊路由: agent_handoff → <span class="fn-name">_mock_agent_handoff</span>()
+                                     └─ 普通工具: <span class="class-name">HTTPTool</span>.<span class="fn-name">call</span>(params, tool_kwargs)
+                                          <span class="file-tag">http_manager.py — HTTPTool</span>
+                                          ├─ 合并参数: params + tool_kwargs(透传) + 系统默认
+                                          ├─ POST <span class="str">{base_url}/api/tools/{tool_name}</span>
+                                          │    Headers: Authorization: {http_tool_auth_token}
+                                          ├─ 失败重试 (max_retries 次, sleep 1s)
+                                          └─ 空结果重试 (_is_empty_tool_result → _MAX_EMPTY_RETRIES)
+  </div>
+
+  <h3>5.2 load_skill 渐进式工具披露流程</h3>
+  <div class="call-chain">
+<span class="comment">LLM 调用 load_skill(skill_id="xxx") 时的特殊处理流程</span>
+
+<span class="fn-name">call_tool</span>(<span class="str">"load_skill"</span>, params)
+  └─ <span class="fn-name">_mock_load_skill</span>(params)
+       ├─ 读取 agent_config.json → skills 列表
+       ├─ 找到 skill_id 对应的 skill
+       ├─ <span class="fn-name">_extract_tools_from_skill</span>(skill)
+       │    └─ 从 skill.disclose_tool_ids 获取新工具列表
+       │    └─ 从 agent_config.tool_schemas 构建 function schema
+       └─ 返回: {"content": "...", "new_tools": [...], "should_refresh_tools": true}
+
+<span class="comment">回到 agent_loop:</span>
+<span class="kw">if</span> should_refresh_tools <span class="kw">and</span> new_tools:
+    ├─ 将 new_tools 追加到 self.tool_schemas
+    ├─ server_manager.<span class="fn-name">clear_kv_cache</span>(request_id)  <span class="comment"># 清 KV Cache 避免 prompt 不一致</span>
+    ├─ 重置 response_ids / response_mask / response_logprobs
+    └─ return <span class="class-name">AgentState</span>.PENDING   <span class="comment"># 重新构建 prompt，注入更新后的工具列表</span>
+  </div>
+</section>
+
+<!-- ─── 6. 核心方法 ─── -->
+<section id="key-methods">
+  <h2>6. 核心方法详解</h2>
+
+  <h3>6.1 <code>_get_tool_schema(tool_name)</code> — 获取工具 Schema</h3>
+  <div class="filepath">verl/envs/tool_manager/http_manager.py : 144-176</div>
+  <pre><span class="kw">def</span> <span class="fn">_get_tool_schema</span>(<span class="dec">self</span>, tool_name: <span class="dec">str</span>) -> Dict:
+    <span class="cm">"""从工具服务 HTTP API 获取工具的输入 Schema，并过滤透传参数"""</span>
+    response = requests.<span class="fn">get</span>(<span class="str">f"{self.base_url}/api/tools/list"</span>)
+    <span class="kw">for</span> tool_json <span class="kw">in</span> all_tools:
+        <span class="kw">if</span> tool_json[<span class="str">'name'</span>] == tool_name:
+            schema = tool_json[<span class="str">'inputSchema'</span>].<span class="fn">copy</span>()
+            <span class="cm"># 过滤 IGNORED_KEYS（useCache/userId/lat/lng 等），记录哪些键需要透传</span>
+            <span class="kw">for</span> key <span class="kw">in</span> <span class="dec">self</span>.IGNORED_KEYS:
+                <span class="kw">if</span> key <span class="kw">in</span> schema[<span class="str">'properties'</span>]:
+                    <span class="kw">del</span> schema[<span class="str">'properties'</span>][key]
+                    removed_keys.<span class="fn">append</span>(key)
+            <span class="dec">self</span>.tool_ignored_keys[tool_name] = removed_keys  <span class="cm"># 记录该工具的透传键</span>
+            <span class="kw">return</span> {<span class="str">'name'</span>: ..., <span class="str">'description'</span>: ..., <span class="str">'parameters'</span>: schema}</pre>
+
+  <div class="info-box yellow">
+    <span class="info-icon">💡</span>
+    <div>IGNORED_KEYS 机制：<code>useCache, userId, lat, lng, cityId</code> 等参数从 LLM 可见的 Schema 中移除，
+    但实际调用时由 agent_loop 通过 <code>tool_kwargs</code> 透传，避免 LLM 幻觉填入错误值。</div>
+  </div>
+
+  <h3>6.2 <code>parse_response(response_content)</code> — 响应解析</h3>
+  <div class="filepath">verl/envs/tool_manager/http_manager.py : 461-504</div>
+  <pre><span class="kw">def</span> <span class="fn">parse_response</span>(<span class="dec">self</span>, response_content: <span class="dec">str</span>, current_functions: <span class="dec">list</span> = None):
+    <span class="cm">"""解析模型输出，识别工具调用 vs 最终答案
+
+    Returns: (action_type, tool_info, reasoning_content, normal_text)
+    """</span>
+    <span class="cm"># Step 1: 用 sglang ReasoningParser 分离 &lt;think&gt; 思维链</span>
+    <span class="kw">if</span> <span class="dec">self</span>.enable_thinking:
+        reasoning_content, content = <span class="dec">self</span>.<span class="fn">_get_reasoning_parser</span>().<span class="fn">parse_non_stream</span>(text)
+
+    <span class="cm"># Step 2: 检测 &lt;answer&gt;...&lt;/answer&gt; 标签</span>
+    answer_match = re.<span class="fn">search</span>(<span class="str">r'&lt;answer&gt;(.*?)&lt;/answer&gt;'</span>, content, re.DOTALL)
+    <span class="kw">if</span> answer_match:
+        <span class="kw">return</span> <span class="str">'answer'</span>, answer_text, reasoning_content, content
+
+    <span class="cm"># Step 3: 提取 &lt;tool_call&gt;...&lt;/tool_call&gt; 工具调用</span>
+    normal_text, tools = <span class="dec">self</span>.<span class="fn">parse_tools</span>(content, current_functions=current_functions)
+
+    <span class="kw">if</span> isinstance(tools, <span class="dec">list</span>):
+        <span class="kw">return</span> <span class="str">'actions'</span>, tools, reasoning_content, normal_text  <span class="cm"># 有工具调用</span>
+    <span class="kw">else</span>:
+        <span class="kw">return</span> <span class="str">'answer'</span>, normal_text, reasoning_content, normal_text  <span class="cm"># 纯文本回复</span></pre>
+
+  <h3>6.3 <code>parse_tools(response)</code> — sglang 工具解析</h3>
+  <div class="filepath">verl/envs/tool_manager/http_manager.py : 536-557</div>
+  <pre><span class="kw">def</span> <span class="fn">parse_tools</span>(<span class="dec">self</span>, response: <span class="dec">str</span>, current_functions: <span class="dec">list</span> = None):
+    <span class="cm">"""使用 sglang FunctionCallParser 解析 &lt;tool_call&gt; 格式工具调用"""</span>
+    <span class="kw">if</span> <span class="str">"&lt;tool_call&gt;"</span> <span class="kw">not in</span> response:
+        <span class="kw">return</span> response, None  <span class="cm"># 无工具调用</span>
+
+    detector = <span class="dec">self</span>.<span class="fn">_get_fc_detector</span>()        <span class="cm"># 懒加载 FunctionCallParser</span>
+    tools = <span class="dec">self</span>.<span class="fn">_build_sglang_tools</span>(current_functions)  <span class="cm"># 实时构建 Tool 列表</span>
+    result = detector.<span class="fn">detect_and_parse</span>(response, tools)
+
+    <span class="kw">return</span> result.normal_text, [
+        {<span class="str">"name"</span>: item.name, <span class="str">"args"</span>: item.parameters}
+        <span class="kw">for</span> item <span class="kw">in</span> result.calls <span class="kw">if</span> item.name
+    ]</pre>
+
+  <h3>6.4 <code>execute_actions(responses)</code> — 批量工具执行</h3>
+  <div class="filepath">verl/envs/tool_manager/http_manager.py : 559-639</div>
+  <pre><span class="kw">def</span> <span class="fn">execute_actions</span>(<span class="dec">self</span>, responses, batch_tools_kwargs=None, remaining_tool_turns=None, intents=None):
+    <span class="cm">"""批量执行工具调用，返回 (actions, tool_results)"""</span>
+    <span class="kw">for</span> i, response <span class="kw">in</span> <span class="fn">enumerate</span>(responses):
+        action_type, tool_info, _, _ = <span class="dec">self</span>.<span class="fn">parse_response</span>(response)
+
+        <span class="kw">if</span> action_type == <span class="str">'actions'</span>:
+            first_tool = tool_info[<span class="num">0</span>]
+            tool_name = first_tool[<span class="str">'name'</span>]
+            tool_args  = first_tool[<span class="str">'args'</span>]
+
+            result = <span class="dec">self</span>.<span class="fn">call_tool</span>(tool_name, tool_args, tool_kwargs=tool_kwargs)
+            actions.<span class="fn">append</span>(tool_name)
+            tool_results.<span class="fn">append</span>(result)
+
+        <span class="kw">elif</span> action_type == <span class="str">'answer'</span>:
+            actions.<span class="fn">append</span>(<span class="str">""</span>)
+            tool_results.<span class="fn">append</span>(tool_info)  <span class="cm"># 答案文本直接作为结果</span>
+
+    <span class="kw">return</span> actions, tool_results</pre>
+
+  <h3>6.5 GENERATING 状态 — 工具参数类型校验</h3>
+  <div class="filepath">verl/experimental/agent_loop/rl_factory_agent_loop.py — _handle_generating_state()</div>
+  <p>
+    在解析到 <code>action_type='actions'</code> 后，agent_loop 会立即对 LLM 生成的参数进行类型校验，
+    防止格式错误的调用流入工具服务。
+  </p>
+  <pre><span class="cm"># 构建 schema 属性映射（工具名 → {参数名: {type: ...}}）</span>
+schema_props = {
+    tool.<span class="fn">get</span>(<span class="str">'name'</span>): tool.<span class="fn">get</span>(<span class="str">'parameters'</span>, {}).<span class="fn">get</span>(<span class="str">'properties'</span>, {})
+    <span class="kw">for</span> tool <span class="kw">in</span> <span class="dec">self</span>.tool_schemas
+}
+
+<span class="kw">for</span> tc <span class="kw">in</span> parsed_tool_calls:
+    props = schema_props.<span class="fn">get</span>(tc[<span class="str">'name'</span>], {})
+    <span class="kw">for</span> param_name, param_val <span class="kw">in</span> tc[<span class="str">'args'</span>].items():
+        expected_type = props.<span class="fn">get</span>(param_name, {}).<span class="fn">get</span>(<span class="str">'type'</span>, <span class="str">''</span>)
+        <span class="kw">if</span> expected_type == <span class="str">'array'</span>  <span class="kw">and not isinstance</span>(param_val, <span class="dec">list</span>):
+            invalid_param = <span class="str">f"expected array, got {type(param_val).__name__}"</span>
+        <span class="kw">elif</span> expected_type == <span class="str">'object'</span> <span class="kw">and not isinstance</span>(param_val, <span class="dec">dict</span>):
+            invalid_param = <span class="str">f"expected object, got {type(param_val).__name__}"</span>
+
+<span class="cm"># 类型校验失败 → AgentError.RolloutFormatError，生成一条拒绝消息后继续</span></pre>
+
+  <div class="info-box yellow">
+    <span class="info-icon">⚠️</span>
+    <div>
+      类型校验只覆盖 <code>array</code> / <code>object</code> 两种强类型。
+      <code>string</code> / <code>integer</code> 类型由工具服务侧自行处理。
+      校验失败不终止 rollout，而是记录 <code>AgentError.RolloutFormatError</code> 并继续生成。
+    </div>
+  </div>
+
+  <h3>6.6 <code>HTTPTool.call(params)</code> — HTTP 请求执行</h3>
+  <div class="filepath">verl/envs/tool_manager/http_manager.py : 653-760</div>
+  <pre><span class="kw">def</span> <span class="fn">call</span>(<span class="dec">self</span>, params, **kwargs) -> <span class="dec">str</span>:
+    url = <span class="str">f"{self.base_url}/api/tools/{self.name}"</span>
+
+    <span class="cm"># 参数合并：工具参数 + 透传参数(tool_kwargs) + 系统默认值</span>
+    params = params.<span class="fn">copy</span>()
+    <span class="kw">for</span> key, value <span class="kw">in</span> tool_kwargs.items():
+        <span class="kw">if</span> key <span class="kw">not in</span> params:   <span class="cm"># 工具调用参数优先</span>
+            params[key] = value
+    params[<span class="str">'useCache'</span>] = params.<span class="fn">get</span>(<span class="str">'useCache'</span>, True)
+    params[<span class="str">'searchSource'</span>] = params.<span class="fn">get</span>(<span class="str">'searchSource'</span>, <span class="num">6</span>)
+
+    <span class="cm"># 重试逻辑 (最多 max_retries 次, 每次 sleep 1s)</span>
+    <span class="kw">for</span> attempt <span class="kw">in</span> <span class="fn">range</span>(<span class="dec">self</span>.max_retries):
+        response = requests.<span class="fn">post</span>(url, json=params, headers={<span class="str">"Authorization"</span>: token})
+        final_result = result.<span class="fn">get</span>(<span class="str">'content'</span>) <span class="kw">or</span> result.<span class="fn">get</span>(<span class="str">'message'</span>)
+        <span class="kw">break</span>
+
+    <span class="cm"># 空结果重试（特定工具）</span>
+    <span class="kw">if</span> <span class="fn">_is_empty_tool_result</span>(<span class="dec">self</span>.name, final_result):
+        <span class="kw">for</span> _ <span class="kw">in</span> <span class="fn">range</span>(_MAX_EMPTY_RETRIES):  <span class="cm"># 最多 3 次</span>
+            ...
+        <span class="kw">else</span>:
+            final_result = TOOL_EXHAUSTED_MARKER + final_result  <span class="cm"># 加标记通知 mask</span>
+
+    <span class="kw">return</span> final_result</pre>
+</section>
+
+<!-- ─── 7. 参数透传 ─── -->
+<section id="param-flow">
+  <h2>7. 参数透传（Passthrough）机制</h2>
+  <p>
+    部分参数（用户位置、城市 ID 等）不应由 LLM 自行填充，而应由系统统一注入。
+    这套机制通过 <strong>三层参数流</strong> 实现：
+  </p>
+
+  <div class="param-flow">
+    <div class="param-block">
+      <h4>① LLM 可见 Schema（精简版）</h4>
+      <ul>
+        <li>从 HTTP API 获取完整 Schema</li>
+        <li>删除 IGNORED_KEYS 列表中的参数</li>
+        <li>LLM 只看到业务相关参数</li>
+        <li>避免 LLM 幻觉填错位置信息</li>
+      </ul>
+    </div>
+    <div class="param-block orange">
+      <h4>② tool_kwargs 透传（agent_loop → tool）</h4>
+      <ul>
+        <li>agent_loop 从数据集读取 default_tool_kwargs</li>
+        <li>包含: userId, lat, lng, cityId 等</li>
+        <li>在 call_tool() 中按工具过滤</li>
+        <li>只注入该工具 schema 中有的透传键</li>
+      </ul>
+    </div>
+    <div class="param-block green">
+      <h4>③ 系统默认参数（HTTP 请求层）</h4>
+      <ul>
+        <li>useCache = True</li>
+        <li>searchSource = 6</li>
+        <li>customParams = ""</li>
+        <li>工具参数优先，不覆盖</li>
+      </ul>
+    </div>
+  </div>
+
+  <pre><span class="cm"># IGNORED_KEYS 完整列表（从 Schema 隐藏，通过 tool_kwargs 透传）</span>
+<span class="cls">IGNORED_KEYS</span> = [
+    <span class="str">"useCache"</span>, <span class="str">"uuid"</span>, <span class="str">"userId"</span>, <span class="str">"lat"</span>, <span class="str">"lng"</span>,
+    <span class="str">"cityId"</span>, <span class="str">"appVersion"</span>, <span class="str">"deviceType"</span>,
+    <span class="str">"originalQuery"</span>, <span class="str">"searchSource"</span>, <span class="str">"customParams"</span>
+]</pre>
+
+  <div class="info-box green">
+    <span class="info-icon">✅</span>
+    <div>
+      精妙之处：每个工具记录了自己实际需要透传的键（<code>self.tool_ignored_keys[tool_name]</code>），
+      <code>call_tool()</code> 中只把对应工具实际有的透传键注入，避免不必要的参数污染。
+    </div>
+  </div>
+</section>
+
+<!-- ─── 8. 特殊功能 ─── -->
+<section id="special-features">
+  <h2>8. 特殊功能</h2>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h4>Thinking 内容提取</h4>
+      <p>通过 sglang <code>ReasoningParser</code> 懒加载，支持 Qwen3 的 <code>&lt;think&gt;...&lt;/think&gt;</code> 思维链提取。
+      仅当 <code>enable_thinking=True</code> 时启用，独立于工具调用流程。</p>
+    </div>
+    <div class="feature-card green">
+      <div class="feature-icon">📚</div>
+      <h4>渐进式工具披露</h4>
+      <p><code>load_skill(skill_id)</code> 工具由本地 mock 实现。LLM 调用后，
+      新工具 schema 追加到 <code>tool_schemas</code>，并触发 KV Cache 清理和 PENDING 状态重置，
+      让新工具在下一轮生成中可见。</p>
+    </div>
+    <div class="feature-card orange">
+      <div class="feature-icon">🔄</div>
+      <h4>空结果重试</h4>
+      <p>针对特定工具（<code>meituan_search_poi</code> 等）的业务空结果进行透明重试（最多 3 次）。
+      若全部为空，在结果前追加 <code>[[TOOL_EMPTY_EXHAUSTED]]</code> 标记，供 agent_loop 执行 token mask。</p>
+    </div>
+    <div class="feature-card purple">
+      <div class="feature-icon">🤝</div>
+      <h4>多模型格式适配</h4>
+      <p>通过 <code>TOOL_MANAGER_REGISTRY</code> 扩展：Qwen3 使用标准 <code>&lt;tool_call&gt;</code> 格式，
+      DeepSeek 使用 <code>DSHTTPToolManager</code> 覆写解析逻辑，支持全角/半角混合括号。</p>
+    </div>
+    <div class="feature-card red">
+      <div class="feature-icon">🏪</div>
+      <h4>业务路由 Mock</h4>
+      <p><code>agent_handoff(id, rewriteQuery)</code> 工具本地 mock 实现，根据 <code>id</code>
+      模拟美团内不同业务（外卖/医药/酒旅）的路由响应，无需真实服务。</p>
+    </div>
+    <div class="feature-card" style="border-left-color:#00acc1;">
+      <div class="feature-icon">⚡</div>
+      <h4>懒加载解析器</h4>
+      <p><code>_fc_parser</code>（FunctionCallParser）和 <code>_reasoning_parser</code> 均为懒加载，
+      首次使用时实例化后复用，避免每个请求重复初始化 sglang 组件的开销。</p>
+    </div>
+  </div>
+
+  <h3>空结果判断逻辑</h3>
+  <pre><span class="kw">def</span> <span class="fn">_is_empty_tool_result</span>(tool_name: <span class="dec">str</span>, result: <span class="dec">str</span>) -> <span class="dec">bool</span>:
+    <span class="kw">if</span> tool_name == <span class="str">"meituan_search_poi"</span>:
+        <span class="kw">return</span> <span class="str">"未找到相关供给"</span> <span class="kw">in</span> result <span class="kw">or</span> <span class="str">"空结果"</span> <span class="kw">in</span> result
+    <span class="kw">if</span> tool_name == <span class="str">"id_detail_pro"</span>:
+        <span class="kw">return</span> <span class="str">"id_detail工具未能找到商家详情结果"</span> <span class="kw">in</span> result
+    <span class="kw">if</span> tool_name == <span class="str">"meituan_search_mix"</span>:
+        <span class="kw">return</span> <span class="str">"工具未能搜索到相关结果"</span> <span class="kw">in</span> result
+    <span class="kw">return</span> False</pre>
+</section>
+
+<!-- ─── 9. 配置要点 ─── -->
+<section id="config">
+  <h2>9. 配置要点</h2>
+
+  <h3>关键配置字段（config.env）</h3>
+  <table>
+    <tr>
+      <th>字段</th><th>类型</th><th>说明</th><th>示例值</th>
+    </tr>
+    <tr>
+      <td><code>tool_manager</code></td>
+      <td>str</td>
+      <td>工具管理器类型，驱动注册表选择</td>
+      <td><code>"qwen3_http"</code></td>
+    </tr>
+    <tr>
+      <td><code>name</code></td>
+      <td>str</td>
+      <td>环境名，映射到 ENV_REGISTRY</td>
+      <td><code>"search"</code></td>
+    </tr>
+    <tr>
+      <td><code>base_url</code></td>
+      <td>str</td>
+      <td>工具服务基地址</td>
+      <td><code>"https://agentenv.sankuai.com"</code></td>
+    </tr>
+    <tr>
+      <td><code>config_path</code></td>
+      <td>str</td>
+      <td>业务配置文件路径（.pydata 格式）</td>
+      <td><code>"/path/to/config.pydata"</code></td>
+    </tr>
+    <tr>
+      <td><code>tool_call_parser</code></td>
+      <td>str</td>
+      <td>sglang 解析器名称</td>
+      <td><code>"qwen25"</code> / <code>"qwen3_coder"</code></td>
+    </tr>
+    <tr>
+      <td><code>reasoning_parser</code></td>
+      <td>str</td>
+      <td>思维链解析器类型</td>
+      <td><code>"qwen3"</code></td>
+    </tr>
+    <tr>
+      <td><code>enable_thinking</code></td>
+      <td>bool</td>
+      <td>是否开启思维链提取</td>
+      <td><code>false</code></td>
+    </tr>
+    <tr>
+      <td><code>HTTP_TOOL_AUTH_TOKEN</code></td>
+      <td>str</td>
+      <td>工具服务鉴权 Token</td>
+      <td>从环境变量读取</td>
+    </tr>
+    <tr>
+      <td><code>max_retries</code></td>
+      <td>int</td>
+      <td>HTTP 请求失败重试次数</td>
+      <td><code>3</code></td>
+    </tr>
+    <tr>
+      <td><code>tool_timeout</code></td>
+      <td>int</td>
+      <td>HTTP 请求超时（秒）</td>
+      <td><code>30</code></td>
+    </tr>
+    <tr>
+      <td><code>max_turns</code></td>
+      <td>int</td>
+      <td>最大工具调用轮数（由 max_assistant_turns 传入）</td>
+      <td><code>8</code></td>
+    </tr>
+  </table>
+
+  <h3>agent_config.json 结构</h3>
+  <pre>{
+    <span class="str">"agent_config_path"</span>: <span class="str">"agent_config_xxx.json"</span>,   <span class="cm">// 指向具体业务配置</span>
+    <span class="str">"tool_schemas"</span>: [              <span class="cm">// 工具精确描述</span>
+        {
+            <span class="str">"tool_id"</span>: <span class="str">"meituan_search_poi"</span>,
+            <span class="str">"name"</span>: <span class="str">"meituan_search_poi"</span>,
+            <span class="str">"description"</span>: <span class="str">"美团 POI 搜索工具..."</span>,
+            <span class="str">"input_fields"</span>: [
+                {<span class="str">"name"</span>: <span class="str">"keyword"</span>, <span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"required"</span>: true, ...}
+            ]
+        }
+    ],
+    <span class="str">"skills"</span>: [                    <span class="cm">// 渐进式披露技能</span>
+        {
+            <span class="str">"name"</span>: <span class="str">"advanced_search"</span>,
+            <span class="str">"content"</span>: <span class="str">"高级搜索说明..."</span>,
+            <span class="str">"disclose_tool_ids"</span>: [<span class="str">"id_detail_pro"</span>]  <span class="cm">// 加载此 skill 后新增工具</span>
+        }
+    ]
+}</pre>
+
+  <div class="info-box red">
+    <span class="info-icon">⚠️</span>
+    <div>
+      <strong>注意：</strong>当 <code>tool_manager</code> 字段不包含 <code>"http"</code> 关键字时，
+      系统会抛出 <code>RuntimeError("HTTP environment system is not available")</code>，
+      当前版本已移除非 HTTP 工具系统的降级支持。
+    </div>
+  </div>
+</section>
+
+<!-- ─── 10. 真实训练数据示例 ─── -->
+<section id="real-data">
+  <h2>10. 一条真实数据的完整处理流程</h2>
+  <p>
+    以 <code>train.jsonl</code> 中一条 <strong>dining / find-shop</strong> 场景记录为例，
+    逐步展示从原始数据到 <code>verl/envs</code> 工具执行的全过程。
+  </p>
+
+  <div class="info-box blue">
+    <span class="info-icon">📋</span>
+    <div>
+      <strong>示例记录：</strong>用户在北京西单，问「团购套餐有哪些呀」。
+      系统需调用 <code>meituan_search_mix</code> 搜索附近餐厅团购信息。
+    </div>
+  </div>
+
+  <!-- ── 原始记录 ── -->
+  <h3>原始 JSONL 记录（关键字段）</h3>
+  <div class="filepath">train.jsonl — 第 92 条（dining 场景）</div>
+  <pre><span class="cls">{</span>
+  <span class="str">"data_source"</span>: <span class="str">"business-data"</span>,
+
+  <span class="cm">// ① LLM 输入 — 直接作为 messages 传入 apply_chat_template</span>
+  <span class="str">"prompt"</span>: [
+    { <span class="str">"role"</span>: <span class="str">"system"</span>,
+      <span class="str">"content"</span>: <span class="str">"# 一、角色与定位\n你是美团 Agent「小团」…\n# 三、工具列表\n…meituan_search_mix…"</span> },
+    { <span class="str">"role"</span>: <span class="str">"user"</span>,
+      <span class="str">"content"</span>: <span class="str">"# 用户和环境信息\n- 用户当前地址：北京市西城区西单北大街131号\n- 当前日期：2026年5月23号，周六，上午 10:23\n\n# 当前请求\nuser:团购套餐有哪些呀"</span> }
+  ],
+
+  <span class="cm">// ② 透传给工具 — LLM 不可见，由 agent_loop 注入 env.step()</span>
+  <span class="str">"extra_info"</span>: {
+    <span class="str">"scenario"</span>:     <span class="str">"dining"</span>,
+    <span class="str">"first_intent"</span>:  <span class="str">"gen"</span>,
+    <span class="str">"second_intent"</span>: <span class="str">"find-shop"</span>,
+    <span class="str">"tool_call_num"</span>: <span class="num">1</span>,
+    <span class="str">"default_tool_kwargs"</span>: {
+      <span class="str">"lat"</span>:           <span class="num">39.911322</span>,    <span class="cm">// 北京西单纬度</span>
+      <span class="str">"lng"</span>:           <span class="num">116.373319</span>,   <span class="cm">// 北京西单经度</span>
+      <span class="str">"userId"</span>:        <span class="str">"9231946476"</span>,
+      <span class="str">"uuid"</span>:          <span class="str">"81EA41C6C3BE478BA30932D7139E902B"</span>,
+      <span class="str">"originalQuery"</span>: <span class="str">"团购套餐有哪些呀"</span>,
+      <span class="str">"searchSource"</span>:  <span class="num">15</span>
+    }
+  },
+
+  <span class="cm">// ③ Reward 标签 — rollout 结束后计算 reward 时使用</span>
+  <span class="str">"reward_model"</span>: {
+    <span class="str">"ground_truth"</span>: { <span class="str">"intent"</span>: <span class="str">"dining_gen_find-shop"</span>, <span class="str">"query"</span>: <span class="str">"团购套餐有哪些呀"</span> },
+    <span class="str">"style"</span>: <span class="str">"rule"</span>
+  }
+<span class="cls">}</span></pre>
+
+  <!-- ── 步骤卡片 ── -->
+  <h3>逐步处理流程</h3>
+
+  <!-- Step 0 -->
+  <div style="display:flex;gap:0;margin-bottom:4px;align-items:flex-start;">
+    <div style="min-width:32px;height:32px;border-radius:50%;background:#1a73e8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px;">0</div>
+    <div style="margin-left:16px;flex:1;">
+      <h4 style="margin:0 0 6px;font-size:1rem;">环境初始化 <code>get_env()</code></h4>
+      <p style="margin:0 0 8px;font-size:.87rem;color:#5f6368;">训练开始前，<code>RLFactoryToolAgentLoop.init_class()</code> 按 config 创建 <code>HTTPEnv</code>，完成工具注册。</p>
+      <pre style="margin:0;"><span class="kw">from</span> verl.envs.http_env <span class="kw">import</span> <span class="fn">get_env</span>
+
+env = <span class="fn">get_env</span>(<span class="str">"search"</span>, {
+    <span class="str">"tool_manager"</span>:       <span class="str">"qwen3_http"</span>,    <span class="cm"># → HTTPToolManager (v1)</span>
+    <span class="str">"config_path"</span>:        <span class="str">"configs/http_tools_config.pydata"</span>,
+    <span class="str">"tool_call_parser"</span>:   <span class="str">"qwen25"</span>,
+    <span class="str">"HTTP_TOOL_AUTH_TOKEN"</span>: <span class="str">"…"</span>,
+    <span class="str">"max_turns"</span>:          <span class="num">8</span>,
+})
+<span class="cm"># env.tool_manager.functions 已包含 meituan_search_mix schema</span>
+cls.tool_schemas = env.tool_manager.functions</pre>
+    </div>
+  </div>
+
+  <div style="width:2px;height:20px;background:#e0e0e0;margin:0 0 4px 15px;"></div>
+
+  <!-- Step 1 -->
+  <div style="display:flex;gap:0;margin-bottom:4px;align-items:flex-start;">
+    <div style="min-width:32px;height:32px;border-radius:50%;background:#f9a825;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px;">1</div>
+    <div style="margin-left:16px;flex:1;">
+      <h4 style="margin:0 0 6px;font-size:1rem;">PENDING — 构建 Prompt</h4>
+      <p style="margin:0 0 8px;font-size:.87rem;color:#5f6368;">
+        直接使用记录中的 <code>prompt</code> 字段（已含工具 schema 的 system 消息），追加工具列表后 tokenize。
+      </p>
+      <pre style="margin:0;"><span class="cm"># agent_loop 代码（简化）</span>
+messages = data[<span class="str">"prompt"</span>]   <span class="cm"># [system, user]，来自 JSONL</span>
+prompt_ids = <span class="fn">apply_chat_template</span>(
+    messages,
+    tools = cls.tool_schemas,   <span class="cm"># meituan_search_mix / load_skill …</span>
+)
+<span class="cm"># user 消息已包含：</span>
+<span class="cm">#   "用户当前地址：北京市西城区西单北大街131号"</span>
+<span class="cm">#   "user:团购套餐有哪些呀"</span></pre>
+    </div>
+  </div>
+
+  <div style="width:2px;height:20px;background:#e0e0e0;margin:0 0 4px 15px;"></div>
+
+  <!-- Step 2 -->
+  <div style="display:flex;gap:0;margin-bottom:4px;align-items:flex-start;">
+    <div style="min-width:32px;height:32px;border-radius:50%;background:#43a047;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px;">2</div>
+    <div style="margin-left:16px;flex:1;">
+      <h4 style="margin:0 0 6px;font-size:1rem;">GENERATING — LLM 推理 + 解析</h4>
+      <p style="margin:0 0 8px;font-size:.87rem;color:#5f6368;">
+        SGLang 推理生成 token，解码后调 <code>parse_response()</code> 识别工具调用。
+      </p>
+      <pre style="margin:0;"><span class="cm"># LLM 生成的原始文本</span>
+decoded = <span class="str">"&lt;tool_call&gt;\n{\"name\":\"meituan_search_mix\",\"arguments\":{\"queries\":[\"团购套餐\"]}}\n&lt;/tool_call&gt;"</span>
+
+<span class="cm"># parse_response：sglang FunctionCallParser 解析</span>
+action_type, tool_info, reasoning, normal_text = \
+    env.tool_manager.<span class="fn">parse_response</span>(decoded, current_functions=tool_schemas)
+
+<span class="cm"># 返回值：</span>
+<span class="cm">#   action_type = 'actions'</span>
+<span class="cm">#   tool_info   = [{"name": "meituan_search_mix", "args": '{"queries":["团购套餐"]}'}]</span>
+<span class="cm">#   reasoning   = None</span></pre>
+    </div>
+  </div>
+
+  <div style="width:2px;height:20px;background:#e0e0e0;margin:0 0 4px 15px;"></div>
+
+  <!-- Step 3 -->
+  <div style="display:flex;gap:0;margin-bottom:4px;align-items:flex-start;">
+    <div style="min-width:32px;height:32px;border-radius:50%;background:#1e88e5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px;">3</div>
+    <div style="margin-left:16px;flex:1;">
+      <h4 style="margin:0 0 6px;font-size:1rem;">PROCESSING_TOOLS — 调用 <code>env.step()</code></h4>
+      <p style="margin:0 0 8px;font-size:.87rem;color:#5f6368;">
+        agent_loop 从 <code>extra_info</code> 提取透传字段，构造 <code>env.step()</code> 的参数。
+      </p>
+      <pre style="margin:0;"><span class="cm"># agent_loop 从数据集提取参数</span>
+default_tool_kwargs = data[<span class="str">"extra_info"</span>][<span class="str">"default_tool_kwargs"</span>]
+<span class="cm"># = {"lat":39.911322, "lng":116.373319, "userId":"9231946476",</span>
+<span class="cm">#    "uuid":"81EA41C6...", "originalQuery":"团购套餐有哪些呀", "searchSource":15}</span>
+
+intents = [{
+    <span class="str">"scenario"</span>:     data[<span class="str">"extra_info"</span>][<span class="str">"scenario"</span>],      <span class="cm"># "dining"</span>
+    <span class="str">"first_intent"</span>:  data[<span class="str">"extra_info"</span>][<span class="str">"first_intent"</span>],  <span class="cm"># "gen"</span>
+    <span class="str">"second_intent"</span>: data[<span class="str">"extra_info"</span>][<span class="str">"second_intent"</span>], <span class="cm"># "find-shop"</span>
+}]
+
+results, dones, valid_actions, is_tools = env.<span class="fn">step</span>(
+    responses           = [decoded],
+    default_tool_kwargs = [default_tool_kwargs],
+    remaining_tool_turns = max_turns - assistant_turns - <span class="num">1</span>,  <span class="cm"># = 7</span>
+    intents             = intents,
+)</pre>
+    </div>
+  </div>
+
+  <div style="width:2px;height:20px;background:#e0e0e0;margin:0 0 4px 15px;"></div>
+
+  <!-- Step 4 -->
+  <div style="display:flex;gap:0;margin-bottom:4px;align-items:flex-start;">
+    <div style="min-width:32px;height:32px;border-radius:50%;background:#fb8c00;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px;">4</div>
+    <div style="margin-left:16px;flex:1;">
+      <h4 style="margin:0 0 6px;font-size:1rem;">HTTP 工具请求 — <code>HTTPTool.call()</code></h4>
+      <p style="margin:0 0 8px;font-size:.87rem;color:#5f6368;">
+        <code>execute_actions()</code> 调 <code>call_tool()</code>，LLM 参数与透传参数合并后发 HTTP POST。
+      </p>
+      <pre style="margin:0;"><span class="cm"># execute_actions 内部：合并 LLM 参数 + default_tool_kwargs</span>
+final_params = {
+    <span class="cm"># ← LLM 生成的工具参数</span>
+    <span class="str">"queries"</span>: [<span class="str">"团购套餐"</span>],
+
+    <span class="cm"># ← default_tool_kwargs 透传（LLM 不可见）</span>
+    <span class="str">"lat"</span>:           <span class="num">39.911322</span>,
+    <span class="str">"lng"</span>:           <span class="num">116.373319</span>,
+    <span class="str">"userId"</span>:        <span class="str">"9231946476"</span>,
+    <span class="str">"uuid"</span>:          <span class="str">"81EA41C6C3BE478BA30932D7139E902B"</span>,
+    <span class="str">"originalQuery"</span>: <span class="str">"团购套餐有哪些呀"</span>,
+    <span class="str">"searchSource"</span>:  <span class="num">15</span>,
+
+    <span class="cm"># ← 系统默认（HTTPTool 固定注入）</span>
+    <span class="str">"useCache"</span>:     <span class="kw">True</span>,
+    <span class="str">"customParams"</span>: <span class="str">""</span>,
+}
+
+<span class="cm"># POST http://&lt;toolserver&gt;/api/tools/meituan_search_mix</span>
+<span class="cm"># Headers: {"Authorization": "…"}</span>
+<span class="cm"># Response: result.get("content") or result.get("message")</span></pre>
+    </div>
+  </div>
+
+  <div style="width:2px;height:20px;background:#e0e0e0;margin:0 0 4px 15px;"></div>
+
+  <!-- Step 5 -->
+  <div style="display:flex;gap:0;margin-bottom:4px;align-items:flex-start;">
+    <div style="min-width:32px;height:32px;border-radius:50%;background:#43a047;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px;">5</div>
+    <div style="margin-left:16px;flex:1;">
+      <h4 style="margin:0 0 6px;font-size:1rem;">结果注入 → 最终答案 → TERMINATED</h4>
+      <p style="margin:0 0 8px;font-size:.87rem;color:#5f6368;">
+        工具结果追加到对话，LLM 生成最终回答，<code>parse_response()</code> 识别 <code>&lt;answer&gt;</code> 后终止。
+      </p>
+      <pre style="margin:0;"><span class="cm"># env.step 返回值</span>
+results      = [{ <span class="str">"content"</span>: <span class="str">"## 西单周边团购推荐\n**全聚德（西单店）**…"</span> }]
+is_tools     = [<span class="kw">True</span>]   <span class="cm"># 有效工具调用</span>
+valid_actions = [<span class="kw">True</span>]
+
+<span class="cm"># 下一轮 GENERATING：LLM 生成</span>
+<span class="cm"># "&lt;answer&gt;为您推荐以下西单附近团购套餐…&lt;/answer&gt;"</span>
+action_type = <span class="str">'answer'</span>   <span class="cm"># → TERMINATED</span></pre>
+    </div>
+  </div>
+
+  <div style="width:2px;height:20px;background:#e0e0e0;margin:0 0 4px 15px;"></div>
+
+  <!-- Step 6 -->
+  <div style="display:flex;gap:0;margin-bottom:20px;align-items:flex-start;">
+    <div style="min-width:32px;height:32px;border-radius:50%;background:#8e24aa;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px;">6</div>
+    <div style="margin-left:16px;flex:1;">
+      <h4 style="margin:0 0 6px;font-size:1rem;">Reward 计算（rollout 结束后）</h4>
+      <p style="margin:0 0 8px;font-size:.87rem;color:#5f6368;">
+        对比 LLM 实际意图与 <code>ground_truth</code>，用 rule-based 方式计算 reward，反馈给 PPO/GRPO。
+      </p>
+      <pre style="margin:0;"><span class="cm"># ground_truth（来自 JSONL reward_model 字段）</span>
+ground_truth = {
+    <span class="str">"intent"</span>: <span class="str">"dining_gen_find-shop"</span>,
+    <span class="str">"query"</span>:  <span class="str">"团购套餐有哪些呀"</span>
+}
+<span class="cm"># 对比 LLM 输出的意图字符串</span>
+<span class="cm"># reward = 1.0 (完全匹配) / 0.5 (部分匹配) / 0.0 (不匹配)</span>
+<span class="cm"># 该 reward 用于 PPO advantage 计算</span></pre>
+    </div>
+  </div>
+
+  <!-- ── 字段映射总览 ── -->
+  <h3>字段映射总览</h3>
+  <p>同一条记录中各字段对应的 <code>verl/envs</code> 调用参数：</p>
+  <table>
+    <thead>
+      <tr><th>JSONL 字段</th><th>具体值</th><th>流入 verl/envs 的位置</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>prompt</code></td>
+        <td>[system（含工具 schema）, user（含地址+查询）]</td>
+        <td><code>apply_chat_template(messages=prompt)</code></td>
+      </tr>
+      <tr>
+        <td><code>extra_info.default_tool_kwargs.lat/lng</code></td>
+        <td><code>39.911322 / 116.373319</code></td>
+        <td><code>env.step(default_tool_kwargs=…)</code> → HTTP body <code>locationInfo</code></td>
+      </tr>
+      <tr>
+        <td><code>extra_info.default_tool_kwargs.userId</code></td>
+        <td><code>"9231946476"</code></td>
+        <td><code>env.step(default_tool_kwargs=…)</code> → HTTP body <code>userInfo.userId</code></td>
+      </tr>
+      <tr>
+        <td><code>extra_info.default_tool_kwargs.originalQuery</code></td>
+        <td><code>"团购套餐有哪些呀"</code></td>
+        <td><code>env.step(default_tool_kwargs=…)</code> → HTTP body <code>originalQuery</code></td>
+      </tr>
+      <tr>
+        <td><code>extra_info.scenario/first_intent/second_intent</code></td>
+        <td><code>dining / gen / find-shop</code></td>
+        <td><code>env.step(intents=[{scenario, first_intent, second_intent}])</code></td>
+      </tr>
+      <tr>
+        <td><code>extra_info.tool_call_num</code></td>
+        <td><code>1</code></td>
+        <td>参考值，可设为 <code>max_turns</code> 上限</td>
+      </tr>
+      <tr>
+        <td><code>reward_model.ground_truth</code></td>
+        <td><code>{"intent":"dining_gen_find-shop"}</code></td>
+        <td>rollout 后 reward 计算，不经过 <code>verl/envs</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box green">
+    <span class="info-icon">💡</span>
+    <div>
+      <strong>设计要点：</strong>
+      lat/lng/userId/uuid 等敏感信息不出现在 <code>prompt</code>（LLM 可见部分），
+      仅通过 <code>default_tool_kwargs</code> 在工具调用时注入 HTTP 请求体，
+      确保 LLM 无法直接感知用户身份和精确位置。
+    </div>
+  </div>
+
+  <!-- 10.1 数据记录结构 -->
+  <h3>10.1 数据记录结构与 Agent Loop 映射</h3>
+  <p>每条 JSONL 记录的顶层字段及其在训练流程中的作用：</p>
+  <table>
+    <thead>
+      <tr>
+        <th>字段路径</th>
+        <th>示例值</th>
+        <th>在 Agent Loop 中的用途</th>
+        <th>流向</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>prompt[0]</code> (system)</td>
+        <td><em>"# 一、角色与定位\n你是美团 Agent「小团」…（含工具 schema）"</em></td>
+        <td>注入 system 消息，包含角色设定 + 所有工具的 JSON Schema</td>
+        <td><span style="color:#1a73e8;font-weight:600;">→ apply_chat_template(messages)</span></td>
+      </tr>
+      <tr>
+        <td><code>prompt[1]</code> (user)</td>
+        <td><em>"# 用户和环境信息\n- 用户当前地址：南通南通市第一人民医院(新院)\n…\nuser:我想要华氏大药房的地址在哪边？"</em></td>
+        <td>注入 user 消息，包含用户地理位置、时间上下文和实际查询</td>
+        <td><span style="color:#1a73e8;font-weight:600;">→ apply_chat_template(messages)</span></td>
+      </tr>
+      <tr>
+        <td><code>extra_info.default_tool_kwargs</code></td>
+        <td><code>{"lat":31.98, "lng":120.93, "userId":"695…", "uuid":"904F…", "originalQuery":"…", "searchSource":15}</code></td>
+        <td>透传给每次 <code>env.step()</code>，注入工具 HTTP 请求体，LLM 不可见</td>
+        <td><span style="color:#ea4335;font-weight:600;">→ env.step(default_tool_kwargs=…)</span></td>
+      </tr>
+      <tr>
+        <td><code>extra_info.scenario</code><br/><code>extra_info.first_intent</code><br/><code>extra_info.second_intent</code></td>
+        <td><code>"medicine"</code> / <code>"gen"</code> / <code>"find-shop"</code></td>
+        <td>组合为 <code>intents</code> 列表传给 <code>env.step()</code>，供工具服务路由和意图理解使用</td>
+        <td><span style="color:#ea4335;font-weight:600;">→ env.step(intents=…)</span></td>
+      </tr>
+      <tr>
+        <td><code>extra_info.tool_call_num</code></td>
+        <td><code>1</code></td>
+        <td>预期工具调用轮次，可用于设置 <code>remaining_tool_turns</code> 上限</td>
+        <td><span style="color:#fb8c00;font-weight:600;">→ 参考值（非强制）</span></td>
+      </tr>
+      <tr>
+        <td><code>reward_model.ground_truth</code></td>
+        <td><code>{"intent":"medicine_gen_find-shop", "query":"我想要华氏大药房的地址在哪边？"}</code></td>
+        <td>训练完成后用于 reward 计算，对比 LLM 输出的意图与标准答案</td>
+        <td><span style="color:#8e24aa;font-weight:600;">→ reward 计算（rollout 后）</span></td>
+      </tr>
+      <tr>
+        <td><code>reward_model.style</code></td>
+        <td><code>"rule"</code></td>
+        <td>指定 reward 计算方式为规则匹配（而非模型打分）</td>
+        <td><span style="color:#8e24aa;font-weight:600;">→ reward 计算策略</span></td>
+      </tr>
+      <tr>
+        <td><code>data_source</code></td>
+        <td><code>"business-data"</code></td>
+        <td>数据来源标识，用于日志追踪和数据集统计</td>
+        <td><span style="color:#5f6368;font-weight:600;">→ 元信息</span></td>
+      </tr>
+      <tr>
+        <td><code>ability</code></td>
+        <td><code>"fact-reasoning"</code></td>
+        <td>能力标签，用于多任务训练时的能力分类</td>
+        <td><span style="color:#5f6368;font-weight:600;">→ 元信息</span></td>
+      </tr>
+      <tr>
+        <td><code>lat / lng / user_id / uuid / history</code></td>
+        <td><code>null</code></td>
+        <td>顶层字段均为 null，实际值由 <code>extra_info.default_tool_kwargs</code> 提供</td>
+        <td><span style="color:#5f6368;font-weight:600;">→ 忽略</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box blue">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      <strong>关键设计：</strong><code>prompt</code> 字段中已经包含完整的工具 Schema（system 消息），
+      因此 <code>apply_chat_template</code> 直接使用 <code>prompt</code> 字段，无需额外拼接工具定义。
+      地理位置、用户身份等敏感信息通过 <code>default_tool_kwargs</code> 透传，对 LLM 完全不可见。
+    </div>
+  </div>
+
+  <!-- 10.2 default_tool_kwargs 详解 -->
+  <h3>10.2 <code>default_tool_kwargs</code> 字段详解</h3>
+  <p>
+    <code>extra_info.default_tool_kwargs</code> 中的每个字段在工具 HTTP 请求中都有明确的语义映射：
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>字段</th>
+        <th>示例值</th>
+        <th>注入到 HTTP 请求的位置</th>
+        <th>服务端用途</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>lat</code></td>
+        <td><code>31.980174</code></td>
+        <td>请求体 <code>locationInfo.lat</code></td>
+        <td>用户当前纬度，用于 POI 搜索的地理范围过滤</td>
+      </tr>
+      <tr>
+        <td><code>lng</code></td>
+        <td><code>120.926453</code></td>
+        <td>请求体 <code>locationInfo.lng</code></td>
+        <td>用户当前经度，与 lat 共同定位用户位置</td>
+      </tr>
+      <tr>
+        <td><code>userId</code></td>
+        <td><code>"6950343798"</code></td>
+        <td>请求体 <code>userInfo.userId</code></td>
+        <td>用户身份标识，用于个性化推荐和权限校验</td>
+      </tr>
+      <tr>
+        <td><code>uuid</code></td>
+        <td><code>"904F8DBF304F462B9B46DA0B634F817C"</code></td>
+        <td>请求体 <code>userInfo.uuid</code></td>
+        <td>设备唯一标识，用于会话追踪和去重</td>
+      </tr>
+      <tr>
+        <td><code>originalQuery</code></td>
+        <td><code>"我想要华氏大药房的地址在哪边？"</code></td>
+        <td>请求体 <code>originalQuery</code></td>
+        <td>用户原始自然语言查询，供搜索服务做语义理解</td>
+      </tr>
+      <tr>
+        <td><code>searchSource</code></td>
+        <td><code>15</code></td>
+        <td>请求体 <code>searchSource</code></td>
+        <td>搜索来源渠道标识，用于流量归因和 A/B 实验分组</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box yellow">
+    <span class="info-icon">⚡</span>
+    <div>
+      <strong>透传机制：</strong>这些字段通过 <code>HTTPTool.call()</code> 中的参数合并逻辑（<code>kwargs.update(default_tool_kwargs)</code>）
+      注入到每次工具调用的 HTTP 请求体中，LLM 生成的工具参数（如 <code>queries</code>）与透传参数合并后一起发送，
+      确保工具服务获得完整的上下文信息。
+    </div>
+  </div>
+
+  <!-- 10.3 完整数据流 -->
+  <h3>10.3 完整数据流：从 JSONL 记录到工具执行</h3>
+  <p>以下展示一条 medicine/find-shop 记录从数据加载到工具 HTTP 调用的完整链路：</p>
+
+  <div class="call-chain"><span class="comment"># ── 数据源 ──────────────────────────────────────────────────────</span>
+<span class="file-tag">train.jsonl</span> 一条记录（medicine / find-shop）
+  <span class="arrow-r">↓</span> <span class="class-name">RLHFDataset</span>.__getitem__() 读取并反序列化
+
+<span class="comment"># ── Agent Loop 入口 ──────────────────────────────────────────────</span>
+  <span class="arrow-r">↓</span> <span class="class-name">RLFactoryToolAgentLoop</span>.<span class="fn-name">run</span>(data)
+
+      <span class="comment">## 状态: PENDING</span>
+      <span class="fn-name">apply_chat_template</span>(
+          messages = data[<span class="str">"prompt"</span>],          <span class="comment"># system + user 两条消息</span>
+          tools    = tool_manager.functions   <span class="comment"># 从工具服务拉取的 schema 列表</span>
+      )
+      <span class="arrow-r">→</span> 生成 tokenized input_ids
+
+      <span class="comment">## 状态: GENERATING</span>
+      LLM 推理生成:
+      <span class="str">"&lt;tool_call&gt;{"name":"meituan_search_mix","arguments":{"queries":["华氏大药房"]}}&lt;/tool_call&gt;"</span>
+
+      <span class="fn-name">parse_response</span>(decoded_response)
+      <span class="arrow-r">→</span> action_type = <span class="str">'actions'</span>
+      <span class="arrow-r">→</span> parsed_actions = [{<span class="str">"name"</span>: <span class="str">"meituan_search_mix"</span>, <span class="str">"arguments"</span>: {<span class="str">"queries"</span>: [<span class="str">"华氏大药房"</span>]}}]
+
+<span class="comment"># ── 工具执行 ─────────────────────────────────────────────────────</span>
+      <span class="comment">## 状态: PROCESSING_TOOLS</span>
+      <span class="class-name">HTTPEnv</span>.<span class="fn-name">step</span>(
+          responses           = [decoded_response],
+          default_tool_kwargs = [{
+              <span class="str">"lat"</span>:           <span class="num">31.980174</span>,
+              <span class="str">"lng"</span>:           <span class="num">120.926453</span>,
+              <span class="str">"userId"</span>:        <span class="str">"6950343798"</span>,
+              <span class="str">"uuid"</span>:          <span class="str">"904F8DBF304F462B9B46DA0B634F817C"</span>,
+              <span class="str">"originalQuery"</span>: <span class="str">"我想要华氏大药房的地址在哪边？"</span>,
+              <span class="str">"searchSource"</span>:  <span class="num">15</span>
+          }],
+          remaining_tool_turns = <span class="num">7</span>,
+          intents = [{
+              <span class="str">"scenario"</span>:      <span class="str">"medicine"</span>,
+              <span class="str">"first_intent"</span>:  <span class="str">"gen"</span>,
+              <span class="str">"second_intent"</span>: <span class="str">"find-shop"</span>
+          }]
+      )
+      <span class="arrow-r">↓</span> <span class="class-name">HTTPToolManager</span>.<span class="fn-name">execute_actions</span>(parsed_actions, default_tool_kwargs, intents)
+      <span class="arrow-r">↓</span> <span class="class-name">HTTPTool</span>(<span class="str">"meituan_search_mix"</span>).<span class="fn-name">call</span>(
+              queries        = [<span class="str">"华氏大药房"</span>],      <span class="comment"># LLM 生成的参数</span>
+              lat            = <span class="num">31.980174</span>,         <span class="comment"># default_tool_kwargs 透传</span>
+              lng            = <span class="num">120.926453</span>,
+              userId         = <span class="str">"6950343798"</span>,
+              uuid           = <span class="str">"904F8DBF304F462B9B46DA0B634F817C"</span>,
+              originalQuery  = <span class="str">"我想要华氏大药房的地址在哪边？"</span>,
+              searchSource   = <span class="num">15</span>
+          )
+
+<span class="comment"># ── HTTP 请求 ─────────────────────────────────────────────────────</span>
+      <span class="arrow-r">→</span> HTTP POST <span class="str">http://&lt;tool-service&gt;/api/tools/meituan_search_mix</span>
+        Body: {
+            <span class="str">"queries"</span>:       [<span class="str">"华氏大药房"</span>],
+            <span class="str">"lat"</span>:           <span class="num">31.980174</span>,
+            <span class="str">"lng"</span>:           <span class="num">120.926453</span>,
+            <span class="str">"userId"</span>:        <span class="str">"6950343798"</span>,
+            <span class="str">"uuid"</span>:          <span class="str">"904F8DBF304F462B9B46DA0B634F817C"</span>,
+            <span class="str">"originalQuery"</span>: <span class="str">"我想要华氏大药房的地址在哪边？"</span>,
+            <span class="str">"searchSource"</span>:  <span class="num">15</span>
+        }
+      <span class="arrow-r">→</span> 工具服务返回搜索结果（华氏大药房地址、营业时间等）
+
+<span class="comment"># ── 结果注入 &amp; 继续生成 ────────────────────────────────────────────</span>
+      <span class="arrow-r">↓</span> 工具结果拼接为 tool 消息，追加到对话历史
+      <span class="arrow-r">↓</span> 回到 GENERATING 状态，LLM 生成最终回答
+      <span class="arrow-r">↓</span> action_type = <span class="str">'answer'</span> → 进入 TERMINATED 状态
+
+<span class="comment"># ── Reward 计算 ────────────────────────────────────────────────────</span>
+      rollout 完成后，对比:
+        LLM 输出意图  vs  ground_truth = {<span class="str">"intent"</span>: <span class="str">"medicine_gen_find-shop"</span>, <span class="str">"query"</span>: <span class="str">"…"</span>}
+      <span class="arrow-r">→</span> 计算 rule-based reward → 用于 PPO/GRPO 参数更新</div>
+
+  <!-- 10.4 场景分布 -->
+  <h3>10.4 训练集场景分布（前10）</h3>
+  <p>
+    训练数据覆盖美团多个业务场景，各场景样本量如下。每个场景对应不同的工具调用模式和意图分类：
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>场景 (scenario)</th>
+        <th>样本数</th>
+        <th>占比</th>
+        <th>代表性示例 query</th>
+        <th>典型工具</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>dining</code> 餐饮</td>
+        <td>403</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#e8f0fe;border-radius:5px;overflow:hidden;">
+              <div style="width:100%;height:100%;background:#1a73e8;border-radius:5px;"></div>
+            </div>
+            <span>20.4%</span>
+          </div>
+        </td>
+        <td>"附近有什么好吃的餐厅推荐？"</td>
+        <td><code>meituan_search_mix</code></td>
+      </tr>
+      <tr>
+        <td><code>waimai</code> 外卖</td>
+        <td>400</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#e8f0fe;border-radius:5px;overflow:hidden;">
+              <div style="width:99%;height:100%;background:#1a73e8;border-radius:5px;"></div>
+            </div>
+            <span>20.2%</span>
+          </div>
+        </td>
+        <td>"帮我订一份麦当劳外卖，要大薯条"</td>
+        <td><code>waimai_search</code></td>
+      </tr>
+      <tr>
+        <td><code>medicine</code> 医药</td>
+        <td>275</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#e6f4ea;border-radius:5px;overflow:hidden;">
+              <div style="width:68%;height:100%;background:#34a853;border-radius:5px;"></div>
+            </div>
+            <span>13.9%</span>
+          </div>
+        </td>
+        <td>"我想要华氏大药房的地址在哪边？"</td>
+        <td><code>meituan_search_mix</code></td>
+      </tr>
+      <tr>
+        <td><code>other</code> 其他</td>
+        <td>247</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#e6f4ea;border-radius:5px;overflow:hidden;">
+              <div style="width:61%;height:100%;background:#34a853;border-radius:5px;"></div>
+            </div>
+            <span>12.5%</span>
+          </div>
+        </td>
+        <td>"现在几点了？帮我查一下天气"</td>
+        <td><code>get_time</code> / <code>get_weather</code></td>
+      </tr>
+      <tr>
+        <td><code>flash</code> 闪购</td>
+        <td>237</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#fff3e0;border-radius:5px;overflow:hidden;">
+              <div style="width:59%;height:100%;background:#fb8c00;border-radius:5px;"></div>
+            </div>
+            <span>12.0%</span>
+          </div>
+        </td>
+        <td>"帮我买两瓶可乐，要冰镇的"</td>
+        <td><code>flash_search</code></td>
+      </tr>
+      <tr>
+        <td><code>fuwu</code> 服务</td>
+        <td>203</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#fff3e0;border-radius:5px;overflow:hidden;">
+              <div style="width:50%;height:100%;background:#fb8c00;border-radius:5px;"></div>
+            </div>
+            <span>10.3%</span>
+          </div>
+        </td>
+        <td>"附近有没有上门按摩服务？"</td>
+        <td><code>meituan_search_mix</code></td>
+      </tr>
+      <tr>
+        <td><code>shangou</code> 闪购(商超)</td>
+        <td>141</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#fce8e6;border-radius:5px;overflow:hidden;">
+              <div style="width:35%;height:100%;background:#ea4335;border-radius:5px;"></div>
+            </div>
+            <span>7.1%</span>
+          </div>
+        </td>
+        <td>"帮我找家附近的超市，买点生活用品"</td>
+        <td><code>shangou_search</code></td>
+      </tr>
+      <tr>
+        <td><code>jiudian</code> 酒店</td>
+        <td>32</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#f3e5f5;border-radius:5px;overflow:hidden;">
+              <div style="width:8%;height:100%;background:#8e24aa;border-radius:5px;"></div>
+            </div>
+            <span>1.6%</span>
+          </div>
+        </td>
+        <td>"帮我预订今晚的如家酒店"</td>
+        <td><code>hotel_search</code></td>
+      </tr>
+      <tr>
+        <td><code>travel</code> 旅游</td>
+        <td>32</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#f3e5f5;border-radius:5px;overflow:hidden;">
+              <div style="width:8%;height:100%;background:#8e24aa;border-radius:5px;"></div>
+            </div>
+            <span>1.6%</span>
+          </div>
+        </td>
+        <td>"查一下从上海到北京的高铁票"</td>
+        <td><code>travel_search</code></td>
+      </tr>
+      <tr>
+        <td><code>lvyou</code> 旅游(景点)</td>
+        <td>30</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:100px;height:10px;background:#f3e5f5;border-radius:5px;overflow:hidden;">
+              <div style="width:7%;height:100%;background:#8e24aa;border-radius:5px;"></div>
+            </div>
+            <span>1.5%</span>
+          </div>
+        </td>
+        <td>"附近有什么好玩的景点推荐？"</td>
+        <td><code>poi_search</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="info-box green">
+    <span class="info-icon">✅</span>
+    <div>
+      <strong>数据分布特点：</strong>dining 和 waimai 合计占约 40%，是训练集的主要场景；
+      medicine、other、flash、fuwu 四类合计约占 48%，覆盖了美团核心生活服务场景；
+      jiudian、travel、lvyou 属于低频但高价值场景，样本数较少需关注模型在这些场景的泛化能力。
+    </div>
+  </div>
+
+  <!-- 10.5 数据设计要点 -->
+  <h3>10.5 数据设计要点</h3>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h4>隐私隔离</h4>
+      <p>用户真实坐标（lat/lng）、userId、uuid 通过 <code>default_tool_kwargs</code> 透传，不出现在 LLM 可见的 prompt 中，保护用户隐私。</p>
+    </div>
+    <div class="feature-card green">
+      <div class="feature-icon">🎯</div>
+      <h4>意图标注</h4>
+      <p><code>first_intent + second_intent</code> 提供细粒度意图标签（如 gen/find-shop），<code>ground_truth.intent</code> 组合为完整意图串，支持规则 reward。</p>
+    </div>
+    <div class="feature-card orange">
+      <div class="feature-icon">🌐</div>
+      <h4>真实请求上下文</h4>
+      <p><code>originalQuery</code> 和 <code>searchSource</code> 保留了真实的搜索上下文，工具服务可利用这些信息做更精准的召回和排序。</p>
+    </div>
+    <div class="feature-card purple">
+      <div class="feature-icon">📐</div>
+      <h4>Schema 内嵌</h4>
+      <p>工具 Schema 直接内嵌在 system prompt 中，确保训练时 LLM 看到的工具定义与推理时完全一致，避免分布偏移。</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ─── 11. v2 离线实现 ─── -->
+<section id="v2-impl">
+  <h2>11. v2 离线实现（OfflineHTTPToolManager）</h2>
+  <p>
+    当 <code>tool_manager</code> 为 <code>offline_http</code> 或 <code>qwen3_offline_http</code> 时，
+    框架使用 <code>http_manager_v2.py</code> 中的 <code>HTTPToolManager</code>（即 <code>OfflineHTTPToolManager</code>）。
+    v2 针对<strong>离线工具服务器（internal toolserver）</strong>设计，与 v1 的核心差异如下：
+  </p>
+
+  <h3>11.1 v1 vs v2 对比</h3>
+  <table>
+    <tr>
+      <th>维度</th>
+      <th>v1 (http_manager.py)</th>
+      <th>v2 (http_manager_v2.py)</th>
+    </tr>
+    <tr>
+      <td><strong>目标环境</strong></td>
+      <td>线上 agentenv（美团内网）</td>
+      <td>离线 toolserver（训练集群内网）</td>
+    </tr>
+    <tr>
+      <td><strong>工具 Schema 来源</strong></td>
+      <td>动态 — <code>GET /api/tools/list</code> 拉取</td>
+      <td>静态 — <code>_TOOL_CLASS_MAP</code> + <code>agent_config.json</code></td>
+    </tr>
+    <tr>
+      <td><strong>请求路径</strong></td>
+      <td>动态 — <code>/api/tools/{tool_name}</code></td>
+      <td>硬编码 — 每个工具类声明 <code>path: str</code></td>
+    </tr>
+    <tr>
+      <td><strong>响应字段</strong></td>
+      <td><code>result.get('content') or result.get('message')</code></td>
+      <td><code>data.get('renderedMarkdown')</code></td>
+    </tr>
+    <tr>
+      <td><strong>请求体构造</strong></td>
+      <td>直接传 LLM 参数 + tool_kwargs 合并</td>
+      <td>子类实现 <code>build_request()</code>，显式组装结构化请求</td>
+    </tr>
+    <tr>
+      <td><strong>配置层</strong></td>
+      <td>直接读 config dict</td>
+      <td><code>OfflineConfig</code> 类（默认值 + 运行时覆盖）</td>
+    </tr>
+    <tr>
+      <td><strong>HTTP 封装</strong></td>
+      <td>内联 requests 调用</td>
+      <td><code>OfflineHttpClient</code>（与业务解耦）</td>
+    </tr>
+    <tr>
+      <td><strong>注册键</strong></td>
+      <td><code>http</code> / <code>qwen3_http</code> / <code>simple</code></td>
+      <td><code>offline_http</code> / <code>qwen3_offline_http</code></td>
+    </tr>
+  </table>
+
+  <h3>11.2 v2 四层架构</h3>
+  <div class="flow-diagram" style="gap:8px;">
+    <div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:0;">
+        <div class="flow-box trainer" style="min-width:200px; text-align:left; padding:12px 16px;">
+          <strong>① OfflineConfig</strong><br/>
+          <small>• BASE_URL（可被 config_path 覆盖）</small><br/>
+          <small>• MAX_RETRIES = 5</small><br/>
+          <small>• TIMEOUT = 300s</small><br/>
+          <small>• LAT/LNG 北京望京 mock 默认值</small>
+        </div>
+        <div class="arrow-down"></div>
+        <div class="flow-box agent" style="min-width:200px; text-align:left; padding:12px 16px;">
+          <strong>② OfflineHttpClient</strong><br/>
+          <small>• post(path, body, token) → str|None</small><br/>
+          <small>• 与业务完全解耦</small><br/>
+          <small>• 重试 + raise_for_status</small><br/>
+          <small>• 返回 renderedMarkdown</small>
+        </div>
+        <div class="arrow-down"></div>
+        <div class="flow-box http" style="min-width:200px; text-align:left; padding:12px 16px;">
+          <strong>③ HTTPTool（抽象基类）</strong><br/>
+          <small>• path: str（子类声明）</small><br/>
+          <small>• build_request(args) → dict（子类实现）</small><br/>
+          <small>• call() → 透传参数合并 + 调 OfflineHttpClient</small><br/>
+          <small>• _lat_lng / _user_info / _location_info 辅助</small>
+        </div>
+        <div class="arrow-down"></div>
+        <div class="flow-box state" style="min-width:200px; text-align:left; padding:12px 16px;">
+          <strong>④ HTTPToolManager</strong><br/>
+          <small>• 读 config_path → _TOOL_CLASS_MAP 按名实例化</small><br/>
+          <small>• OfflineConfig.BASE_URL 从配置文件覆盖</small><br/>
+          <small>• parse_tools() / parse_response() 复用 v1 逻辑</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3>11.3 _TOOL_CLASS_MAP 工具路径</h3>
+  <p>v2 中每个工具对应一个具体子类，声明 <code>path</code> 并实现 <code>build_request()</code>：</p>
+  <table>
+    <tr>
+      <th>tool_name</th>
+      <th>子类</th>
+      <th>path（hardcode）</th>
+      <th>核心请求字段</th>
+    </tr>
+    <tr>
+      <td><code>meituan_search_mix</code><br/><code>meituan_search_mix_v2</code></td>
+      <td><code>MeituanSearchMixTool</code></td>
+      <td><code>/toolserver/api/v1/tools/search</code></td>
+      <td>searchInput.queries, locationInfo, userInfo</td>
+    </tr>
+    <tr>
+      <td><code>content_search_plus_v2</code></td>
+      <td><code>ContentSearchPlusV2Tool</code></td>
+      <td><code>/toolserver/api/v1/tools/content</code></td>
+      <td>contentSearchInput.requirement, locationInfo</td>
+    </tr>
+    <tr>
+      <td><code>meituan_search_poi</code></td>
+      <td><code>MeituanSearchPoiTool</code></td>
+      <td><code>/toolserver/api/v1/tools/poi</code></td>
+      <td>poiId, searchInput.queries, locationInfo</td>
+    </tr>
+    <tr>
+      <td><code>id_detail_pro</code><br/><code>id_detail_pro_v2</code></td>
+      <td><code>IdDetailProTool</code></td>
+      <td><code>/toolserver/api/v1/tools/detail</code></td>
+      <td>ids[], deviceInfo.appVersion, locationInfo</td>
+    </tr>
+    <tr>
+      <td><code>search_bookable_merchants</code><br/><code>search_bookable_merchants_v2</code></td>
+      <td><code>SearchBookableMerchantsTool</code></td>
+      <td><code>/toolserver/api/v1/tools/bookable</code></td>
+      <td>reserveType, dateBegin, timeBegin, searchInput</td>
+    </tr>
+  </table>
+
+  <h3>11.4 子类实现示例</h3>
+  <div class="filepath">verl/envs/tool_manager/http_manager_v2.py — MeituanSearchMixTool</div>
+  <pre><span class="kw">class</span> <span class="cls">MeituanSearchMixTool</span>(<span class="cls">HTTPTool</span>):
+    path = <span class="str">"/toolserver/api/v1/tools/search"</span>  <span class="cm"># ← hardcode</span>
+
+    <span class="kw">def</span> <span class="fn">build_request</span>(<span class="dec">self</span>, arguments: <span class="dec">dict</span>) -> <span class="dec">dict</span>:
+        lat, lng = <span class="dec">self</span>.<span class="fn">_lat_lng</span>(arguments)   <span class="cm"># 从 arguments 或 default_tool_kwargs 取经纬度</span>
+        <span class="kw">return</span> {
+            <span class="str">"searchInput"</span>: {
+                <span class="str">"queries"</span>:    arguments.<span class="fn">get</span>(<span class="str">"queries"</span>, []),
+                <span class="str">"level"</span>:      arguments.<span class="fn">get</span>(<span class="str">"level"</span>, <span class="num">1</span>),
+                <span class="str">"searchMode"</span>: <span class="num">1</span>,
+                **<span class="dec">self</span>.<span class="fn">_opt</span>(<span class="str">"originalQuery"</span>, arguments.<span class="fn">get</span>(<span class="str">"originalQuery"</span>)),
+            },
+            <span class="str">"renderConfig"</span>: {<span class="str">"mode"</span>: <span class="str">"think"</span>, <span class="str">"searchType"</span>: <span class="str">"3"</span>},
+            <span class="str">"sessionInfo"</span>:  <span class="dec">self</span>.<span class="fn">_session_info</span>(),       <span class="cm"># {"searchSource": 6}</span>
+            <span class="str">"userInfo"</span>:     <span class="dec">self</span>.<span class="fn">_user_info</span>(arguments),  <span class="cm"># {uuid, userId}</span>
+            <span class="str">"locationInfo"</span>: <span class="dec">self</span>.<span class="fn">_location_info</span>(lat, lng), <span class="cm"># {latitude, longitude}</span>
+        }
+<span class="cm"># 新增工具只需继承 HTTPTool，声明 path，实现 build_request()，在 _TOOL_CLASS_MAP 登记</span></pre>
+
+  <div class="info-box blue">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      <strong>v2 扩展规则：</strong>在 <code>_TOOL_CLASS_MAP</code> 中登记工具名 → 子类映射后，
+      工具自动被 <code>_build_tools()</code> 按配置文件中的 <code>tool_names</code> 实例化。
+      <strong>其他任何代码（manager、agent_loop、env）不需要修改。</strong>
+    </div>
+  </div>
+</section>
+
+<!-- ─── 12. Shell 配置传递链 ─── -->
+<section id="shell-config">
+  <h2>12. Shell → Hydra → Python 配置传递链</h2>
+  <p>
+    <code>env.tool_manager=http</code> 从 shell 脚本到 Python 代码的完整解析路径如下。
+    整条链由 <strong>Hydra（omegaconf）</strong> 驱动。
+  </p>
+
+  <div class="call-chain">
+<span class="comment">═══ 第 1 步：shell 脚本 CLI 参数 ════════════════════════════════════════════</span>
+<span class="file-tag">rlfactory_35b_16-16_sh_reward_server_http.sh</span>
+python -m verl.experimental.fully_async_policy.fully_async_main \
+    --config-name=<span class="str">'fully_async_ppo_megatron_trainer.yaml'</span> \
+    env.name=search \
+    env.mcp_mode=<span class="str">http</span> \
+    env.tool_manager=<span class="str">http</span> \        <span class="comment"># ← 选择 v1 HTTPToolManager</span>
+    +env.tool_call_parser=<span class="str">qwen3_coder</span> \
+    +env.reasoning_parser=<span class="str">qwen3</span>
+
+<span class="comment">═══ 第 2 步：Hydra YAML 基础值（被 CLI 覆盖）═══════════════════════════════</span>
+<span class="file-tag">verl/trainer/config/rlfactory/env.yaml</span>
+env:
+  name: null
+  tool_manager: null          <span class="comment"># CLI 传入 "http" 覆盖此默认值</span>
+  mcp_mode: null
+  tool_call_parser: null
+
+<span class="comment">═══ 第 3 步：Python 代码读取 Hydra config ════════════════════════════════════</span>
+<span class="file-tag">verl/experimental/agent_loop/rl_factory_agent_loop.py — init_class()</span>
+<span class="comment"># Hydra 将 config.env 解析为 DictConfig，config.env.tool_manager = "http"</span>
+tool_manager_name = config.env.get(<span class="str">"tool_manager"</span>, <span class="str">""</span>)  <span class="comment"># → "http"</span>
+use_http = <span class="str">"http"</span> <span class="kw">in</span> tool_manager_name              <span class="comment"># → True</span>
+
+<span class="comment">═══ 第 4 步：env_config 构建并传入 HTTPEnv ═══════════════════════════════════</span>
+env_config = <span class="dec">dict</span>(config.env)
+<span class="comment"># env_config 包含所有 env.* 参数（含 tool_call_parser、HTTP_TOOL_AUTH_TOKEN 等）</span>
+env_config[<span class="str">"max_turns"</span>] = config.actor_rollout_ref.rollout.multi_turn.max_assistant_turns
+
+cls.env_object = <span class="fn">get_env</span>(config.env.name, env_config)
+<span class="comment"># get_env → HTTPEnv.__init__ → TOOL_MANAGER_REGISTRY["http"] → HTTPToolManager(env_config)</span>
+  </div>
+
+  <h3>12.1 关键参数对照</h3>
+  <table>
+    <tr>
+      <th>Shell 参数</th>
+      <th>Python 访问路径</th>
+      <th>最终用途</th>
+    </tr>
+    <tr>
+      <td><code>env.tool_manager=http</code></td>
+      <td><code>config.env.tool_manager</code></td>
+      <td>TOOL_MANAGER_REGISTRY 查表，选择 HTTPToolManager</td>
+    </tr>
+    <tr>
+      <td><code>env.mcp_mode=http</code></td>
+      <td><code>config.env.mcp_mode</code></td>
+      <td>env 底层通信协议（HTTP vs WebSocket），与 tool_manager 独立</td>
+    </tr>
+    <tr>
+      <td><code>env.name=search</code></td>
+      <td><code>config.env.name</code></td>
+      <td>ENV_REGISTRY 查表，选择 HTTPEnv</td>
+    </tr>
+    <tr>
+      <td><code>+env.tool_call_parser=qwen3_coder</code></td>
+      <td><code>config.env.tool_call_parser</code></td>
+      <td>sglang FunctionCallParser 初始化类型</td>
+    </tr>
+    <tr>
+      <td><code>+env.reasoning_parser=qwen3</code></td>
+      <td><code>config.env.reasoning_parser</code></td>
+      <td>sglang ReasoningParser 初始化类型</td>
+    </tr>
+    <tr>
+      <td><code>+env.HTTP_TOOL_AUTH_TOKEN=…</code></td>
+      <td><code>config.env.HTTP_TOOL_AUTH_TOKEN</code></td>
+      <td>工具 HTTP 请求 Authorization header</td>
+    </tr>
+    <tr>
+      <td><code>env.tool_timeout=100</code></td>
+      <td><code>config.env.tool_timeout</code></td>
+      <td>HTTPTool 请求超时秒数</td>
+    </tr>
+  </table>
+
+  <div class="info-box blue">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      <strong>env.mcp_mode vs env.tool_manager：</strong>这是两个独立参数，常被混淆。
+      <code>mcp_mode</code> 控制 agent_loop 与 env 之间的通信协议（HTTP/stdio/websocket 等）；
+      <code>tool_manager</code> 控制 env 内部使用哪套工具管理器实现（v1/v2/deepseek）。
+      目前 shell 脚本中两者均设为 <code>http</code>，但含义完全不同。
+    </div>
+  </div>
+
+  <h3>12.2 选择 v2 离线实现的 shell 写法</h3>
+  <pre><span class="cm"># 将 tool_manager 改为 offline_http 即可切换到 v2</span>
+python -m verl.experimental.fully_async_policy.fully_async_main \
+    env.tool_manager=<span class="str">offline_http</span> \       <span class="cm"># ← v2 OfflineHTTPToolManager</span>
+    env.mcp_mode=<span class="str">http</span> \
+    env.config_path=<span class="str">"/path/to/offline_tools.pydata"</span> \
+    +env.HTTP_TOOL_AUTH_TOKEN=<span class="str">"…"</span> \
+    <span class="cm"># 其余参数不变</span></pre>
+</section>
+
+<!-- ─── 总结 ─── -->
+<section>
+  <h2>📊 总结</h2>
+  <p>
+    <code>http_manager.py</code> 在整个 RL 训练体系中处于 <strong>工具执行的核心位置</strong>，
+    它将三大职责融合在一起：
+  </p>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🧩</div>
+      <h4>工具注册 &amp; Schema 管理</h4>
+      <p>从 HTTP API + agent_config 双来源加载工具，构建 LLM 可见的 functions 列表，动态支持渐进式披露。</p>
+    </div>
+    <div class="feature-card green">
+      <div class="feature-icon">🔍</div>
+      <h4>响应解析</h4>
+      <p>集成 sglang FunctionCallParser，区分 thinking/tool_call/answer 三种输出类型，支持多模型格式。</p>
+    </div>
+    <div class="feature-card orange">
+      <div class="feature-icon">🌐</div>
+      <h4>可靠 HTTP 执行</h4>
+      <p>提供失败重试 + 空结果重试两层保障，参数透传机制确保系统参数正确注入而不暴露给 LLM。</p>
+    </div>
+  </div>
+
+  <table style="margin-top: 20px;">
+    <tr>
+      <th>文件</th><th>行数</th><th>职责</th>
+    </tr>
+    <tr><td><code>verl/envs/tool_manager/http_manager.py</code></td><td>761</td><td>★ v1 线上：HTTPToolManager + HTTPTool（动态 schema）</td></tr>
+    <tr><td><code>verl/envs/tool_manager/http_manager_v2.py</code></td><td>694</td><td>★ v2 离线：OfflineHTTPToolManager（hardcode path + renderedMarkdown）</td></tr>
+    <tr><td><code>verl/envs/tool_manager/base.py</code></td><td>80</td><td>抽象基类定义接口</td></tr>
+    <tr><td><code>verl/envs/tool_manager/ds_http_manager.py</code></td><td>118</td><td>DeepSeek 格式特化</td></tr>
+    <tr><td><code>verl/envs/tool_manager/__init__.py</code></td><td>32</td><td>注册表 TOOL_MANAGER_REGISTRY（含 offline 条目）</td></tr>
+    <tr><td><code>verl/envs/http_env.py</code></td><td>124</td><td>HTTPEnv 包装层，对接 agent_loop</td></tr>
+    <tr><td><code>verl/experimental/agent_loop/rl_factory_agent_loop.py</code></td><td>865+</td><td>状态机驱动多轮 agent 交互 + response_mask + 参数类型校验</td></tr>
+  </table>
+
+  <h3>关键机制速查</h3>
+  <table style="margin-top: 12px;">
+    <tr>
+      <th>机制</th><th>位置</th><th>一句话说明</th>
+    </tr>
+    <tr><td>注册表选择</td><td><code>TOOL_MANAGER_REGISTRY[tool_manager]</code></td><td>shell <code>env.tool_manager=http/offline_http</code> → Hydra → 注册表查表</td></tr>
+    <tr><td>response_mask</td><td><code>agent_data.response_mask</code></td><td>LLM 生成 token=1，工具结果 token=0，只有 1 计入梯度</td></tr>
+    <tr><td>TOOL_EXHAUSTED</td><td><code>TOOL_EXHAUSTED_MARKER</code></td><td>业务空结果超过 3 次重试后前缀标记，供 loop 判断</td></tr>
+    <tr><td>参数类型校验</td><td><code>_handle_generating_state()</code></td><td>array/object 参数类型不符 → RolloutFormatError，不中断 rollout</td></tr>
+    <tr><td>KV Cache 清理</td><td><code>clear_kv_cache(request_id)</code></td><td>load_skill 更新工具列表后，PENDING 重建 prompt 前必须清理</td></tr>
+  </table>
+</section>
+
+</div><!-- /main -->
+
+</div><!-- /layout -->
+
+<div style="text-align:center; color: var(--text-secondary); font-size: .8rem; padding: 24px; margin-top: 8px;">
+  生成于 2026-06-30 · 基于 verl/envs/tool_manager/http_manager.py 代码分析
+</div>
+
+</body>
+</html>

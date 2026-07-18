@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GLM-5.2 技术解析报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;color:var(--text);}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;}
+.note{font-size:.88em;color:#a6adc8;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>GLM-5.2 技术解析报告</h1>
+<p class="meta">智谱 AI · 面向长程任务（Long-Horizon）的旗舰模型 · 原文 2026-06-16 · 报告整理日期：2026-07-18</p>
+
+<table>
+  <tr><th>一句话定位</th><td>在<strong>扎实的 1M 上下文</strong>上，把长程编码 Agent 能力推到开源第一梯队，并对齐闭源前沿</td></tr>
+  <tr><th>相对前代</th><td>较 GLM-5.1：长程编码、标准编码、推理多项大幅跃升；上下文由约 200K 扩展到 <strong>1M</strong></td></tr>
+  <tr><th>关键技术</th><td>IndexShare（DSA 索引器共享）· MTP+IndexShare/KVShare · slime Agentic RL · 防作弊（Anti-hack）· Effort 档位</td></tr>
+  <tr><th>开源许可</th><td>MIT · HuggingFace / ModelScope 公开权重 · 支持 vLLM / SGLang / transformers 等</td></tr>
+  <tr><th>原文</th><td><a href="https://z.ai/blog/glm-5.2" target="_blank" rel="noopener">https://z.ai/blog/glm-5.2</a></td></tr>
+</table>
+
+<div class="tech-card blue">
+  <strong>阅读主线</strong>：长程任务 ≠ 只把窗口拉大。GLM-5.2 的叙事是「1M 要在真实编码 Agent 轨迹上可用」——用训练数据覆盖大规模实现 / 自动研究 / 性能优化 / 复杂调试，再用 IndexShare 把稀疏注意力的索引成本压下去，再用 slime + 单轨迹 PPO + Anti-hack 把后训练做稳。
+</div>
+
+<hr>
+
+<h2 id="s1">一、发布要点与能力画像</h2>
+
+<p>GLM-5.2 被定位为面向<strong>长程任务</strong>的旗舰模型。官方强调四项新增/强化能力：</p>
+<ul>
+  <li><strong>Solid 1M Context</strong>：稳定支撑长程工作的 100 万 token 上下文，而不只是「宣称支持」。</li>
+  <li><strong>Advanced Coding + Flexible Effort</strong>：更强编码能力，并提供多档 thinking effort，在性能与时延之间权衡。</li>
+  <li><strong>Improved Architecture</strong>：IndexShare 让每 4 个稀疏注意力层共享同一 indexer，1M 上下文下每 token FLOPs 约降 <strong>2.9×</strong>；改进 MTP 层，投机解码接受长度最高提升约 <strong>20%</strong>。</li>
+  <li><strong>Pure Open</strong>：MIT 开源，无区域限制。</li>
+</ul>
+
+<blockquote>
+「1M context is easy to claim, but much harder to keep reliable under real engineering pressure.」——长上下文要在 messy coding-agent trajectories 上仍然保质，而不是只吃更多 token。
+</blockquote>
+
+<h3 id="s1-1">1.1 长程编码三连测（相对定位）</h3>
+<table>
+  <tr><th>基准</th><th>测什么</th><th>GLM-5.2 相对前沿</th></tr>
+  <tr><td><strong>FrontierSWE</strong></td><td>小时级到数十小时的开放技术项目</td><td>仅落后 Opus 4.8 约 1%；略胜 GPT-5.5 1%；相对 Opus 4.7 高约 11%</td></tr>
+  <tr><td><strong>PostTrainBench</strong></td><td>给一张 H100，评测 Agent 能把小模型后训练提升多少</td><td>优于 Opus 4.7 与 GPT-5.5；仅次于 Opus 4.8</td></tr>
+  <tr><td><strong>SWE-Marathon</strong></td><td>超长程工程（编译器、kernel 优化、生产级服务）</td><td>落后 Opus 4.8 约 13%；仍仅次于 Opus 系列</td></tr>
+</table>
+<p>三条基准上，GLM-5.2 均为<strong>开源第一</strong>。</p>
+
+<h3 id="s1-2">1.2 标准编码与 Effort 档位</h3>
+<ul>
+  <li><strong>Terminal-Bench 2.1</strong>：81.0 vs 63.5（相对 GLM-5.1）</li>
+  <li><strong>SWE-bench Pro</strong>：62.1 vs 58.4</li>
+</ul>
+<p>Terminal-Bench 2.1 上 81.0 接近 Claude Opus 4.8 的 85.0，并领先 Gemini 3.1 Pro。</p>
+
+<div class="tech-card green">
+  <strong>Effort 控制</strong>：用户可显式选择推理强度（High / Max）。同等 token 预算下，GLM-5.2 的 agentic coding 显著强于 5.1，能力大致落在 Opus 4.7–4.8 之间；Max 档可在难题上继续加算力。
+</div>
+
+<pre class="mermaid">
+graph LR
+  A[长程任务需求] --> B[1M 可用上下文]
+  B --> C[IndexShare 降 indexer 成本]
+  B --> D[长上下文 Serving 工程]
+  A --> E[Agentic RL]
+  E --> F[slime 基础设施]
+  E --> G[单轨迹 PPO + Compaction]
+  E --> H[Anti-hack 在线防护]
+  C --> I[GLM-5.2]
+  D --> I
+  F --> I
+  G --> I
+  H --> I
+  I --> J[Effort: High / Max]
+  I --> K[开源 MIT + 本地部署]
+</pre>
+
+<hr>
+
+<h2 id="s2">二、1M 上下文架构：IndexShare 与 MTP</h2>
+
+<h3 id="s2-1">2.1 IndexShare for DSA</h3>
+<ul>
+  <li>每 <strong>4</strong> 个 Transformer 层共享一个轻量 indexer。</li>
+  <li>indexer 放在 4 层组的第一层，算出的 <strong>topk indices</strong> 复用给后续 3 层。</li>
+  <li>3/4 层不再重复做 indexer 点积与 topk，1M 下每 token FLOPs 约降 <strong>2.9×</strong>。</li>
+  <li>从 mid-training 起用 IndexShare，序列长度从 128K 起步。</li>
+</ul>
+
+<div class="math-block">
+$$
+\text{Indexer cost ratio} \approx \frac{1}{4}\quad(\text{every 4 layers share one indexer})
+$$
+</div>
+
+<pre class="mermaid">
+graph TD
+  L1[Layer 1: Indexer + Sparse Attn] --> L2[Layer 2: reuse topk]
+  L2 --> L3[Layer 3: reuse topk]
+  L3 --> L4[Layer 4: reuse topk]
+  L4 --> L5[Layer 5: new Indexer]
+  L5 --> L6[Layer 6: reuse topk]
+</pre>
+
+<div class="tech-card yellow">
+  <strong>工程直觉</strong>：稀疏注意力里，贵的往往不只是「挑 k 个 token」，而是<strong>每层都跑一遍 indexer</strong>。IndexShare 把「选谁」和「怎么算」解耦——选指标准每 4 层更新一次。
+</div>
+
+<h3 id="s2-2">2.2 MTP：IndexShare + KVShare</h3>
+<p>改进 MTP 层，服务投机解码两个目标：</p>
+<ol>
+  <li><strong>降低 draft 成本</strong>：MTP 上也用 IndexShare。</li>
+  <li><strong>提高接受率</strong>：消除 GLM-5.1 MTP 中 training–inference 不一致。</li>
+</ol>
+<p>IndexShare 后第二步复用第一步 topk，使 $h_5$ 只能 attend 到 $h_1\ldots h_4$，KV 全部来自目标模型 hidden，与训练对齐。另引入 Rejection sampling 与 End-to-end TV loss。</p>
+
+<table>
+  <tr><th>方法（MTP steps=7）</th><th>Acceptance Length</th></tr>
+  <tr><td>Baseline</td><td>4.56</td></tr>
+  <tr><td>+ IndexShare + KV Share</td><td>5.10</td></tr>
+  <tr><td>+ Rejection Sampling</td><td>5.29</td></tr>
+  <tr><td>+ End-to-end TV Loss</td><td><strong>5.47（+20%）</strong></td></tr>
+</table>
+
+<hr>
+
+<h2 id="s3">三、1M 上下文 Serving 工程</h2>
+
+<p>上下文扩到 1M 后，瓶颈从算力转向 <strong>KV-cache 容量</strong>、随长度增长的 kernel、CPU 侧调度。IndexShare 降 FLOPs，但<strong>不按比例减小 KV 体积</strong>。</p>
+<ol>
+  <li>在 LayerSplit 上做更细粒度显存管理与并行，抬高可用 KV 容量。</li>
+  <li>优化随长度增长的 kernel，并与 cache 传输流水线协同。</li>
+  <li>优化 CPU 侧 cache 管理与调度，减少 GPU 流水气泡。</li>
+</ol>
+
+<div class="tech-card blue">
+  <strong>系统取舍</strong>：架构侧省的是 indexer 计算；Serving 侧仍要正面打 KV。两条账分开看。
+</div>
+
+<hr>
+
+<h2 id="s4">四、slime：Agentic RL 基础设施</h2>
+
+<p>slime 覆盖 white-box / black-box rollout、compact trajectory、sub-agent workflow。后训练用 slime 做并行 <strong>OPD</strong>，十多个 expert 合并进最终模型，全过程约 <strong>2 天</strong>。训推可对接不同并行、路由、PD disaggregation；配合 <strong>KV-cache FP8</strong> 提升大规模 RL 与推理并发。</p>
+
+<pre class="mermaid">
+graph LR
+  T[Training] --> S[slime]
+  S --> W[White/Black-box Rollout]
+  S --> C[Compact Trajectory]
+  S --> A[Sub-agent Workflow]
+  S --> O[Parallel OPD ~2 days]
+  O --> M[Final GLM-5.2]
+  S --> I[Inference adapters]
+  I --> P[Serving: PD / routing / FP8 KV]
+</pre>
+
+<hr>
+
+<h2 id="s5">五、长程 RL 与 Anti-hack</h2>
+
+<h3 id="s5-1">5.1 单轨迹 Critic PPO</h3>
+<p>长程轨迹经 compaction 后，同 prompt 下 trace 数量与长度不齐。从 group-wise 转向 <strong>critic-based PPO</strong>：对单条 rollout 学习，用 critic 估 token-level advantage；所有 compacted 子轨迹纳入训练，用 token-level loss 处理长度不平衡。</p>
+
+<h3 id="s5-2">5.2 Anti-hack</h3>
+<p>编码 RL 易 reward hacking（读评测产物、抄答案、curl 源码等）。两阶段检测：规则过滤器（高召回）+ LLM judge（保精度）。在线拦截可疑 tool call 并返回 dummy，但<strong>不终止整条 rollout</strong>，避免训练不稳。</p>
+
+<div class="tech-card red">
+  <strong>设计要点</strong>：惩罚「这一步捷径」，不是「整局作废」。
+</div>
+
+<hr>
+
+<h2 id="s6">六、完整基准对照</h2>
+
+<div id="chart-coding" class="echarts-container" style="height:420px"></div>
+
+<h3 id="s6-1">6.1 Reasoning</h3>
+<table>
+  <tr><th>Benchmark</th><th>GLM-5.2</th><th>GLM-5.1</th><th>Qwen3.7-Max</th><th>DeepSeek-V4-Pro</th><th>Claude Opus 4.8</th><th>GPT-5.5</th><th>Gemini 3.1 Pro</th></tr>
+  <tr><td>HLE</td><td>40.5</td><td>31.0</td><td>41.4</td><td>37.7</td><td>49.8*</td><td>41.4*</td><td>45.0</td></tr>
+  <tr><td>HLE w/ Tools</td><td>54.7</td><td>52.3</td><td>53.5</td><td>48.2</td><td>57.9*</td><td>52.2*</td><td>51.4*</td></tr>
+  <tr><td>CritPt</td><td><strong>20.9</strong></td><td>4.6</td><td>13.4</td><td>12.9</td><td>20.9</td><td>27.1</td><td>17.7</td></tr>
+  <tr><td>AIME 2026</td><td><strong>99.2</strong></td><td>95.3</td><td>97.0</td><td>94.6</td><td>95.7</td><td>98.3</td><td>98.2</td></tr>
+  <tr><td>HMMT Nov. 2025</td><td>94.4</td><td>94.0</td><td>95.0</td><td>94.4</td><td>96.5</td><td>96.5</td><td>94.8</td></tr>
+  <tr><td>HMMT Feb. 2026</td><td>92.5</td><td>82.6</td><td>97.1</td><td>95.2</td><td>96.7</td><td>96.7</td><td>87.3</td></tr>
+  <tr><td>IMOAnswerBench</td><td><strong>91.0</strong></td><td>83.8</td><td>90.0</td><td>89.8</td><td>83.5</td><td>—</td><td>81.0</td></tr>
+  <tr><td>GPQA-Diamond</td><td>91.2</td><td>86.2</td><td>90.0</td><td>90.1</td><td>93.6</td><td>93.6</td><td>94.3</td></tr>
+</table>
+
+<h3 id="s6-2">6.2 Coding</h3>
+<table>
+  <tr><th>Benchmark</th><th>GLM-5.2</th><th>GLM-5.1</th><th>Qwen3.7-Max</th><th>DeepSeek-V4-Pro</th><th>Claude Opus 4.8</th><th>GPT-5.5</th><th>Gemini 3.1 Pro</th></tr>
+  <tr><td>SWE-bench Pro</td><td>62.1</td><td>58.4</td><td>60.6</td><td>55.4</td><td>69.2</td><td>58.6</td><td>54.2</td></tr>
+  <tr><td>NL2Repo</td><td>48.9</td><td>42.7</td><td>47.2</td><td>35.5</td><td>69.7</td><td>50.7</td><td>33.4</td></tr>
+  <tr><td>DeepSWE</td><td>46.2</td><td>18.0</td><td>18.0</td><td>8.0</td><td>58.0</td><td>70.0</td><td>10.0</td></tr>
+  <tr><td>ProgramBench</td><td>63.7</td><td>50.9</td><td>—</td><td>47.8</td><td>71.9</td><td>70.8</td><td>39.5</td></tr>
+  <tr><td>Terminal Bench 2.1 Terminus-2</td><td><strong>81.0</strong></td><td>63.5</td><td>75.0</td><td>64.0</td><td>85.0</td><td>84.0</td><td>74.0</td></tr>
+  <tr><td>FrontierSWE Dominance</td><td><strong>74.4</strong></td><td>30.5</td><td>—</td><td>29.0</td><td>75.1</td><td>72.6</td><td>39.6</td></tr>
+  <tr><td>PostTrainBench</td><td><strong>34.3</strong></td><td>20.1</td><td>—</td><td>—</td><td>37.2</td><td>28.4</td><td>21.6</td></tr>
+  <tr><td>SWE-Marathon</td><td>13.0</td><td>1.0</td><td>—</td><td>—</td><td>26.0</td><td>12.0</td><td>4.0</td></tr>
+</table>
+
+<h3 id="s6-3">6.3 Agentic</h3>
+<table>
+  <tr><th>Benchmark</th><th>GLM-5.2</th><th>GLM-5.1</th><th>Qwen3.7-Max</th><th>DeepSeek-V4-Pro</th><th>Claude Opus 4.8</th><th>GPT-5.5</th><th>Gemini 3.1 Pro</th></tr>
+  <tr><td>MCP-Atlas Public Set</td><td>76.8</td><td>71.8</td><td>76.4</td><td>73.6</td><td>77.8</td><td>75.3</td><td>69.2</td></tr>
+  <tr><td>Tool-Decathlon</td><td>48.2</td><td>40.7</td><td>—</td><td>52.8</td><td>59.9</td><td>55.6</td><td>48.8</td></tr>
+</table>
+<p class="note">* 表示 full set。跨 harness 数字勿直接横比。</p>
+
+<hr>
+
+<h2 id="s7">七、使用与部署</h2>
+<ul>
+  <li>Coding Plan：模型名 <code>GLM-5.2</code>（Claude Code 中 <code>GLM-5.2[1m]</code> 开 1M）；Effort：High / Max。</li>
+  <li>配额：高峰 3×、非高峰 2×；限时促销至 9 月底非高峰 1×（高峰 14:00–18:00 UTC+8）。</li>
+  <li>文档：<a href="https://docs.z.ai/devpack/overview" target="_blank" rel="noopener">docs.z.ai/devpack/overview</a></li>
+  <li>本地：HuggingFace / ModelScope；支持 transformers、vLLM、SGLang、xLLM、ktransformers。</li>
+  <li>网页：<a href="https://z.ai/" target="_blank" rel="noopener">Z.ai</a> · 订阅 <a href="https://z.ai/subscribe" target="_blank" rel="noopener">z.ai/subscribe</a></li>
+</ul>
+
+<hr>
+
+<h2 id="s8">八、要点总结</h2>
+<table>
+  <tr><th>维度</th><th>结论</th></tr>
+  <tr><td>产品叙事</td><td>长程 Agent 交付，而不是「更大窗口」口号</td></tr>
+  <tr><td>架构</td><td>IndexShare 砍 indexer 成本；MTP+KVShare+TV loss 抬高投机接受长度约 20%</td></tr>
+  <tr><td>系统</td><td>1M Serving 瓶颈在 KV/调度/kernel</td></tr>
+  <tr><td>后训练</td><td>slime + 并行 OPD（约 2 天）；长程用单轨迹 critic PPO</td></tr>
+  <tr><td>安全训练</td><td>Anti-hack：规则+LLM judge，在线拦截单步</td></tr>
+  <tr><td>开源位势</td><td>长程三连开源领先；闭源仍以 Opus 系列为标尺</td></tr>
+</table>
+
+<blockquote>
+若只记三件事：<strong>(1)</strong> IndexShare 让 1M DSA 算得起；<strong>(2)</strong> slime/OPD/Anti-hack 让长程 Agent RL 训得稳；<strong>(3)</strong> 分数上开源第一梯队，闭源仍以 Opus 为标尺。
+</blockquote>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">
+本报告根据智谱 AI 官方博文 <a href="https://z.ai/blog/glm-5.2">GLM-5.2: Built for Long-Horizon Tasks</a>（2026-06-16）整理。生成日期：2026-07-18。
+</p>
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h)=>{
+  const a=document.createElement('a');
+  a.href='#'+h.id;
+  a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('toc-h3');
+  toc.appendChild(a);
+});
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  });
+},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+
+const chart=echarts.init(document.getElementById('chart-coding'));
+chart.setOption({
+  backgroundColor:'#24243e',
+  textStyle:{color:'#cdd6f4'},
+  tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+  legend:{data:['GLM-5.2','GLM-5.1','Opus 4.8','GPT-5.5'],textStyle:{color:'#cdd6f4'},top:8},
+  grid:{left:48,right:24,top:48,bottom:64},
+  xAxis:{
+    type:'category',
+    data:['FrontierSWE','PostTrainBench','SWE-Marathon','Terminal-Bench 2.1','SWE-bench Pro','DeepSWE'],
+    axisLabel:{color:'#a6adc8',rotate:28,fontSize:11},
+    axisLine:{lineStyle:{color:'#45475a'}}
+  },
+  yAxis:{
+    type:'value',name:'Score',
+    nameTextStyle:{color:'#a6adc8'},
+    axisLabel:{color:'#a6adc8'},
+    splitLine:{lineStyle:{color:'#313244'}}
+  },
+  series:[
+    {name:'GLM-5.2',type:'bar',data:[74.4,34.3,13.0,81.0,62.1,46.2],itemStyle:{color:'#89b4fa'}},
+    {name:'GLM-5.1',type:'bar',data:[30.5,20.1,1.0,63.5,58.4,18.0],itemStyle:{color:'#6c7086'}},
+    {name:'Opus 4.8',type:'bar',data:[75.1,37.2,26.0,85.0,69.2,58.0],itemStyle:{color:'#cba6f7'}},
+    {name:'GPT-5.5',type:'bar',data:[72.6,28.4,12.0,84.0,58.6,70.0],itemStyle:{color:'#a6e3a1'}}
+  ]
+});
+window.addEventListener('resize',()=>chart.resize());
+</script>
+</body>
+</html>

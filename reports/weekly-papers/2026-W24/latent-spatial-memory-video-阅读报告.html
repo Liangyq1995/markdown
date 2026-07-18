@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Latent Spatial Memory | 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825; --text: #cdd6f4;
+      --heading: #89b4fa; --link: #89dceb; --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; } a { color: var(--link); } strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); } tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8em; font-weight: 700; margin-right: 6px; }
+    .badge-blue { background: #89b4fa; color: #1e1e2e; }
+    .badge-green { background: #a6e3a1; color: #1e1e2e; }
+    .badge-orange { background: #fab387; color: #1e1e2e; }
+    .badge-purple { background: #cba6f7; color: #1e1e2e; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .highlight-row td { background: #2a3a2e !important; color: var(--strong); font-weight: 600; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 18px 24px; margin: 1em 0; }
+    .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 1em 0; }
+    .metric-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; text-align: center; }
+    .metric-value { font-size: 2em; font-weight: 700; color: var(--strong); }
+    .metric-label { font-size: 0.85em; color: #6c7086; margin-top: 4px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Latent Spatial Memory for Video World Models</h1>
+<p>
+  <span class="badge badge-blue">arXiv 2606.09828</span>
+  <span class="badge badge-green">ZJU × Microsoft Research</span>
+  <span class="badge badge-orange">HF 本周 Top-4 · 184 upvotes</span>
+  <span class="badge badge-purple">CC BY-NC-SA 4.0</span>
+</p>
+<p style="color:#6c7086;font-size:0.9em;">Weijie Wang* · Haoyu Zhao* · Yifan Yang · Feng Chen · Zeyu Zhang · Yefei He · Zicheng Duan · Donny Y. Chen · Yuqing Yang · Bohan Zhuang &nbsp;|&nbsp; 浙江大学 · Microsoft Research · 阿德莱德大学 · 莫纳什大学 &nbsp;|&nbsp; 2026-06-08</p>
+
+<table style="margin-top:1.2em;">
+  <tr><th style="width:120px">标题</th><td>Latent Spatial Memory for Video World Models</td></tr>
+  <tr><th>核心问题</th><td>现有视频世界模型依赖 RGB 空间显式点云记忆，每步需要光栅化+VAE 重编码，计算代价高且像素空间绕道丢弃扩散模型原生隐空间特征；如何在 VAE 隐空间直接维护持久化 3D 缓存？</td></tr>
+  <tr><th>提出方法</th><td>Mirage：隐空间记忆（Latent Spatial Memory）+ 深度引导反投影构建 + 直接隐空间 warping 读取</td></tr>
+  <tr><th>关键结果</th><td>端到端速度 <strong>10.57×</strong>，3D 缓存内存 <strong>55×</strong>，WorldScore SOTA（70.36），RealEstate10K 最佳 SSIM/闭环 PSNR</td></tr>
+  <tr><th>开源地址</th><td>
+    <a href="https://aka.ms/latent-spatial-memory" target="_blank">项目主页 aka.ms/latent-spatial-memory</a> &nbsp;|&nbsp;
+    <a href="https://github.com/microsoft/LatentSpatialMemory" target="_blank">GitHub microsoft/LatentSpatialMemory</a>
+  </td></tr>
+</table>
+
+<div class="metric-grid" style="margin-top:1.5em;">
+  <div class="metric-card">
+    <div class="metric-value">10.57×</div>
+    <div class="metric-label">端到端视频生成速度提升</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">55×</div>
+    <div class="metric-label">3D 缓存 GPU 内存节省</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">70.36</div>
+    <div class="metric-label">WorldScore 平均分（SOTA）</div>
+  </div>
+</div>
+
+<hr>
+
+<h2>概述</h2>
+<p>
+  视频世界模型（Video World Model）的核心使命是生成长时序、几何一致的视频序列，使生成的帧能够在同一世界坐标系下保持多视角一致性。现有主流方案借助显式 RGB 点云记忆（RGB Point Cloud Memory）实现这一目标：将观察到的 RGB 帧通过深度估计提升为 3D 点云，在每个生成步骤中将点云光栅化为目标视角图像，再通过 VAE 编码器重新编码为隐向量，注入扩散主干网络。这一流程虽然有效，但存在两个根本性瓶颈。
+</p>
+<p>
+  <strong>计算瓶颈</strong>：每个条件化步骤都需要在像素分辨率 $H \times W$ 下执行光栅化与 VAE 编码，而生成器消耗的是隐分辨率 $h \times w = H/s \times W/s$ 的张量（$s=16$），计算量不必要地放大了 $s^2 = 256$ 倍。<strong>表示瓶颈</strong>：RGB 像素空间的绕道不能保留扩散模型原生隐空间的丰富特征——VAE 重建误差、光栅化伪影、可见性空洞以及分布偏移都会降低条件化信号的质量。
+</p>
+<p>
+  本文提出 <strong>Mirage</strong> 框架，核心创新是<strong>隐空间记忆（Latent Spatial Memory）</strong>：将扩散模型 VAE 编码器产生的隐空间 token 直接与世界坐标绑定，构成持久化 3D 缓存 $\mathcal{M} = \{(p_i, f_i)\}$，其中 $p_i \in \mathbb{R}^3$ 为世界坐标，$f_i \in \mathbb{R}^C$ 为完整通道隐向量。查询时，通过单次隐分辨率投影（latent-resolution projection）直接获取目标视角的隐向量，完全跳过像素空间重建。这一设计使缓存尺寸缩小 $s^2$ 倍，并将每步条件化的关键路径中的像素级操作全部消除。
+</p>
+<p>
+  实验表明，Mirage 在 WorldScore 基准上达到所有对比方法中的最高平均分（70.36），在 RealEstate10K 新视角合成和闭环一致性测试中均超越 Spatia 等强基线，同时端到端生成速度提升 10.57 倍，3D 缓存 GPU 内存占用降低 55 倍。这一工作表明，将空间记忆从像素空间迁移到隐空间，是视频世界模型走向长时序、高效率生成的关键突破。Mirage 以 Wan2.2-TI2V-5B（5B 参数）为骨干，在 32 张 A100 上训练，生成分辨率达 $704 \times 1280$，每片段 33 帧。
+</p>
+
+<hr>
+
+<h2>研究背景</h2>
+
+<h3>视频世界模型的发展脉络</h3>
+<p>
+  大规模视频扩散模型（Sora、Wan2.1/2.2、CogVideoX、Allegro 等）已展现出合成逼真序列的强大能力，推动了将其用作世界模拟器的研究热潮。这类模型在 VAE 压缩的隐空间中执行去噪，显著降低计算成本，支持更高分辨率、更长时长的生成。近年来，Diffusion Transformer（DiT）成为主流骨干，各种自回归和流式扩展方案进一步拓展了生成序列的长度。然而，大多数视频扩散模型本质上是二维的——帧序列在没有显式 3D 场景几何建模的情况下合成，导致在大幅相机运动或长时序展开时出现<strong>几何漂移（geometric drift）</strong>和视差违规（parallax violation）。
+</p>
+
+<h3>相机可控视频生成</h3>
+<p>
+  一条并行研究线致力于将视频扩散模型条件化于显式相机轨迹，代表方法包括：通过额外控制模块注入相机位姿（MotionCtrl、CameraCtrl）、对极线注意力机制（SEVA、SynCamMaster）、以及以 3D 感知渲染信号作为条件输入（ViewCrafter、FlexWorld）。这些方法在单次生成过程中提供了精细的相机控制，但<strong>不维护跨生成步骤的持久场景表示</strong>——每个片段独立生成，重访区域或超出模型上下文窗口时会引入不一致性。
+</p>
+
+<h3>显式 RGB 空间记忆的问题</h3>
+<p>
+  为维护空间一致性，WonderJourney、WonderWorld、Voyager、Spatia、Gen3C 等工作通过显式 3D 空间记忆增强视频扩散管线。核心策略是将 RGB 帧通过深度估计提升为点云，累积到持久 3D 缓存，并在每步渲染目标视角条件图像。VMem 引入 surfel 索引视图记忆改善时序一致性。
+</p>
+<blockquote>
+  核心痛点：现有空间记忆设计完全在 RGB 像素空间操作，每步条件化需要：(1) 将点云光栅化为像素分辨率图像；(2) 将渲染图像重新编码为隐向量。这既计算密集，又因反复编解码积累误差，丢弃扩散模型原生隐空间的丰富特征。
+</blockquote>
+
+<h3>相关工作对比</h3>
+<table>
+  <thead>
+    <tr><th>方法</th><th>记忆类型</th><th>记忆空间</th><th>持久化</th><th>主要局限</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>WonderJourney [14]</td><td>RGB 点云</td><td>像素空间</td><td>是</td><td>计算代价高，重编码损耗大</td></tr>
+    <tr><td>WonderWorld [13]</td><td>RGB 点云</td><td>像素空间</td><td>是</td><td>同上</td></tr>
+    <tr><td>Voyager [12]</td><td>RGB 点云</td><td>像素空间</td><td>是</td><td>同上</td></tr>
+    <tr><td>Spatia [11]</td><td>RGB 点云 + ControlNet</td><td>像素空间</td><td>是</td><td>每步光栅化+VAE 编码</td></tr>
+    <tr><td>Gen3C</td><td>RGB 点云</td><td>像素空间</td><td>是</td><td>内存随轨迹快速增长</td></tr>
+    <tr><td>VMem [57]</td><td>视图记忆</td><td>像素空间</td><td>是</td><td>检索成本随存储视图数线性增长</td></tr>
+    <tr><td>SEVA [49]</td><td>无持久记忆</td><td>—</td><td>否</td><td>长时序几何漂移</td></tr>
+    <tr><td>ViewCrafter [48]</td><td>无持久记忆</td><td>—</td><td>否</td><td>单次生成，无法重访</td></tr>
+    <tr class="highlight-row"><td><strong>Mirage（本文）</strong></td><td><strong>隐空间点云</strong></td><td><strong>VAE 隐空间</strong></td><td><strong>是</strong></td><td><strong>无 RGB 绕道，高效持久</strong></td></tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>隐空间记忆机制</h2>
+
+<h3>核心思想：从 RGB 到隐空间的范式转变</h3>
+<p>
+  传统 RGB 点云记忆的形式为 $\mathcal{M}_{rgb} = \{(p_i, c_i)\}$，其中 $p_i \in \mathbb{R}^3$，$c_i \in [0,1]^3$。查询时需执行完整的像素空间绕道：
+</p>
+<p>$$\hat{z}_t = \mathcal{E}\!\left(\text{Rasterise}(\mathcal{M}_{rgb};\; E_t, K_t)\right)$$</p>
+<p>
+  其中 $\text{Rasterise}(\cdot)$ 表示 z-buffer 投影后的着色操作，$\mathcal{E}$ 为 VAE 编码器。这一操作在像素分辨率 $H \times W$ 下执行，而生成器消耗的是隐分辨率 $h \times w$ 的张量，造成不必要的 $s^2$ 倍计算浪费。
+</p>
+<p>
+  Mirage 提出的隐空间记忆形式为：
+</p>
+<p>$$\mathcal{M} = \{(p_i, f_i)\},\quad p_i \in \mathbb{R}^3,\; f_i \in \mathbb{R}^C$$</p>
+<p>
+  每个记忆元素将世界坐标 $p_i$ 与直接来自 VAE 编码器的完整通道隐向量 $f_i$ 配对，与扩散主干网络的原生输入空间完全匹配，无需任何桥接编码器。
+</p>
+
+<h3>深度引导反投影（Memory Construction）</h3>
+<p>
+  给定帧的隐向量张量 $z \in \mathbb{R}^{C \times h \times w}$、度量深度图 $D$、相机内参 $K$ 和外参 $E$（来自前馈重建器 DepthAnything 3），首先将深度图下采样至隐分辨率并相应缩放内参。每个隐空间格点 $(u,v)$ 通过标准针孔反投影提升至世界空间，生成一个记忆元素：
+</p>
+<p>$$p_{uv} = \pi^{-1}(u, v, D(u,v);\; K, E)$$</p>
+<p>$$F_{uv} = z[:, v, u]$$</p>
+<p>
+  其中 $\pi^{-1}$ 表示标准针孔反投影，$F_{uv} \in \mathbb{R}^C$ 为锚定在 $p_{uv}$ 处的隐 token。初始缓存通过对第一帧 $I^0$ 的编码隐向量应用上式进行初始化，后续通过自回归记忆更新扩充。
+</p>
+<p>
+  <strong>关键设计选择</strong>：在隐分辨率（而非像素分辨率）执行反投影。对比方案是将隐向量上采样至像素分辨率再提升，但消融实验表明这会引入超出主干预训练分布的插值特征，导致 3D 一致性从 92.21 骤降至 84.90。在原生隐网格匹配几何既更高效又更忠实。
+</p>
+
+<h3>隐空间记忆读取（Latent-space Warping）</h3>
+<p>
+  给定目标视角 $(E_t, K_t)$，通过将所有记忆点投影到目标相机网格的隐分辨率来查询记忆。对每个目标格点，使用 z-buffer 保留最前方的投影点并检索其关联隐 token：
+</p>
+<p>$$i_t(u,v) = \arg\min_{i \in \Omega_t(u,v)} \left[E_t p_i\right]_z$$</p>
+<p>$$\hat{z}_t(u,v) = F_{i_t(u,v)}$$</p>
+<p>
+  其中 $\Omega_t(u,v)$ 表示在目标视角 $(E_t, K_t)$ 下投影到隐格点 $(u,v)$ 且深度为正的记忆点集合，$[\cdot]_z$ 提取深度坐标。$\Omega_t(u,v) = \emptyset$ 的格点填零。同时生成二值可见性掩码 $m_t \in \{0,1\}^{h \times w}$，使去噪器能区分真正未见区域与可见但值为零的区域。
+</p>
+<p>
+  <strong>关键性质</strong>：读取结果已在主干网络的隐空间中，无需任何桥接编码器，完全消除了 RGB 缓存管线所需的光栅化-重编码步骤。当缓存从源帧构建并从同一视角查询时，式 (5) 在可见格点上恢复对应的源视角隐 token（精度受离散化和遮挡限制）。
+</p>
+
+<h3>动态对象过滤与缓存更新</h3>
+<p>
+  每个片段生成后，Mirage 用新观察到的静态场景内容更新 $\mathcal{M}$。通过前馈重建器估计深度和相机参数，将帧重编码为干净 VAE 隐向量 $\tilde{z}_t = \mathcal{E}(I^t)$，并通过式 (4) 将对应隐 token 反投影至缓存：
+</p>
+<p>$$\mathcal{M} \leftarrow \mathcal{M} \cup \{(p_{uv}, F_{uv})\}_{(u,v) \in \Lambda_t}$$</p>
+<p>
+  其中 $\Lambda_t$ 包含有效深度、排除动态对象和天空区域的隐格点（通过开放词汇实体提取器和视频分割器 [26] 检测）。这一过滤防止瞬态或几何不可靠内容污染持久缓存。当前片段的隐向量同时作为下一片段的短期时序上下文向前传递。
+</p>
+
+<h3>效率分析：为何快 $s^2$ 倍</h3>
+<div class="info-card">
+  <p>VAE 空间压缩率 $s=16$（Wan2.2 的 $16\times16$ 空间压缩），因此：</p>
+  <ul style="margin-left:1.5em;margin-top:0.5em;">
+    <li>缓存中每帧点数：$h \times w = (H/16) \times (W/16)$，比像素点数少 256 倍</li>
+    <li>缓存读取在隐分辨率 $44 \times 80$ 执行，而非像素分辨率 $704 \times 1280$</li>
+    <li>消除了每步的 VAE 编码（约占 RGB 管线 80% 时延）</li>
+    <li>解码-重编码对被摊销到整个片段，从不出现在条件化循环的关键路径中</li>
+    <li>实测：Mirage 每帧缓存读取稳定在 0.25s，而 Spatia 约 2.88s，Gen3C 随轨迹增长至 7.63s</li>
+  </ul>
+</div>
+
+<hr>
+
+<h2>Mirage 架构</h2>
+
+<h3>整体架构流程</h3>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph INIT ["初始化阶段"]
+        I0["输入帧 I₀\n+ 相机轨迹"] --> ENC["VAE 编码器 E\n隐向量 z₀"]
+        I0 --> DEPTH0["深度估计\nDepthAnything 3\n深度图 D₀"]
+        ENC --> LIFT["深度引导反投影\np_uv = π⁻¹(u,v,D(u,v);K,E)\nF_uv = z₀[:,v,u]"]
+        DEPTH0 --> LIFT
+    end
+
+    LIFT --> MEM[("持久化隐空间记忆 M\n{ (p_i, f_i) }")]
+
+    subgraph LOOP ["自回归生成循环 chunk t=1..N"]
+        MEM --> READ["隐空间记忆读取\nz-buffer 投影到目标视角\nẑ_t + 可见性掩码 m_t"]
+        READ --> CTRL["ControlNet 侧分支\n注入记忆特征"]
+        NOISE["高斯噪声 ε"] --> DENO["视频扩散主干\nWan2.2-TI2V-5B\n40步 UniPC 调度"]
+        CTRL --> DENO
+        DENO --> OUT["解码输出片段 I_t\n33帧 @ 704×1280"]
+    end
+
+    subgraph UPDATE ["缓存更新"]
+        OUT --> DEPTH2["深度估计\n生成帧深度图"]
+        OUT --> SEG["动态对象分割\n排除运动实体和天空"]
+        OUT --> RENC["重编码\nz̃_t = E(I_t)"]
+        DEPTH2 --> UPD["反投影更新\nM ← M ∪ {(p_uv,F_uv)}_{Λ_t}"]
+        SEG --> UPD
+        RENC --> UPD
+        UPD --> MEM
+    end
+
+    style MEM fill:#313244,stroke:#89b4fa,stroke-width:2px
+    style DENO fill:#2a2a3e,stroke:#a6e3a1,stroke-width:2px
+    style CTRL fill:#2a2a3e,stroke:#fab387,stroke-width:2px
+</pre>
+
+<h3>扩散主干：Wan2.2-TI2V-5B</h3>
+<p>
+  Mirage 以 Wan2.2-TI2V-5B（5B 参数文本/图像到视频扩散变换器）作为骨干网络。其 VAE 的压缩率为 $4 \times 16 \times 16$（时间 4×，空间 16×），隐通道数 $C=48$。每个生成片段包含 9 个隐帧，分辨率 $44 \times 80$，对应 33 帧 RGB 视频，分辨率 $704 \times 1280$。
+</p>
+
+<h3>ControlNet 风格侧分支</h3>
+<p>
+  隐空间记忆读取结果 $\hat{z}_t$ 和可见性掩码 $m_t$ 拼接后传入 ControlNet 风格侧分支，该分支将记忆特征注入视频扩散主干。侧分支从 Wan2.2 对应模块初始化，无需额外桥接编码器（因读取结果已在主干的隐空间中）。此外，<strong>分段感知旋转编码（segment-aware rotary encodings）</strong>用于在单次前向传播中标记带噪目标帧、干净前驱帧和干净参考帧。
+</p>
+
+<h3>两阶段训练策略</h3>
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: Mirage 两阶段训练流程</div>
+  <p><span class="kw">Stage 1</span>: <span class="cm">// 冻结主干，仅训练侧分支</span></p>
+  <p style="padding-left:1.5em"><span class="fn">freeze</span>(<span class="var">backbone</span>, <span class="var">VAE</span>)</p>
+  <p style="padding-left:1.5em"><span class="fn">train</span>(<span class="var">ControlNet_side_branch</span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// 对齐隐空间记忆读取与主干特征空间，不干扰预训练生成先验</span></p>
+  <p style="padding-left:1.5em"><span class="kw">loss</span>: flow-matching objective on target frames</p>
+  <p><span class="kw">Stage 2</span>: <span class="cm">// 联合训练侧分支 + LoRA</span></p>
+  <p style="padding-left:1.5em"><span class="fn">attach</span> rank-<span class="num">64</span> LoRA adapters to self-attention projections</p>
+  <p style="padding-left:1.5em"><span class="fn">train</span>(<span class="var">ControlNet_side_branch</span> + <span class="var">LoRA</span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// 轻量适配记忆条件，保留外观和运动先验</span></p>
+  <p style="padding-left:1.5em"><span class="kw">loss</span>: flow-matching objective on target frames</p>
+  <p><span class="kw">Hardware</span>: <span class="num">32</span>× A100 GPU, global batch size <span class="num">64</span></p>
+  <p><span class="kw">Optimizer</span>: AdamW + bfloat16 mixed precision</p>
+  <p><span class="kw">Inference</span>: UniPC flow scheduler, <span class="num">40</span> sampling steps</p>
+</div>
+<p>
+  两阶段训练的关键洞见：若直接联合训练，主干会在侧分支尚未成熟时就适应不良的条件信号，导致训练不稳定。先冻结主干训练侧分支，再解锁 LoRA 进行联合微调，可显著稳定收敛（单阶段 63.18 vs 两阶段 70.36）。
+</p>
+
+<h3>自回归生成循环</h3>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant I0 as 输入帧 I₀
+    participant M as 隐空间记忆 M
+    participant G as 扩散生成器
+    participant U as 缓存更新器
+
+    I0->>M: 编码 + 深度引导反投影（初始化 M）
+    loop 每个片段 chunk t = 1 to N
+        M->>G: 隐空间投影读取 ẑ_t + 可见性掩码 m_t
+        G->>G: 40步去噪（ControlNet侧分支注入）
+        G->>U: 解码输出帧 I_t
+        U->>U: 深度估计 + 动态对象过滤
+        U->>U: 重编码为干净隐向量 z̃_t
+        U->>M: 反投影更新 M ← M ∪ 新点集
+    end
+</pre>
+
+<hr>
+
+<h2>实验结果</h2>
+
+<h3>效率对比：速度与内存（H100 实测）</h3>
+<p>
+  在单张 NVIDIA H100 上测量，随自回归片段数增加，每帧缓存读取时间和峰值缓存 GPU 内存如下：
+</p>
+
+<div id="chart-speed" class="echarts-container" style="height:340px"></div>
+<script>
+(function(){
+  var chart = echarts.init(document.getElementById('chart-speed'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '每帧缓存读取时间（s/frame）随片段数变化', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['Mirage (Ours)', 'Spatia', 'Gen3C', 'VMem'], textStyle: { color: '#cdd6f4' }, bottom: 8 },
+    grid: { left: '8%', right: '5%', top: 55, bottom: 55 },
+    xAxis: { type: 'category', data: ['Chunk 1', 'Chunk 2', 'Chunk 3', 'Chunk 4', 'Chunk 5'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'value', name: 's/frame', nameTextStyle: { color: '#6c7086' }, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [
+      { name: 'Mirage (Ours)', type: 'bar', data: [0.79, 0.25, 0.25, 0.25, 0.25], itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#a6e3a1', fontSize: 11 } },
+      { name: 'Spatia', type: 'bar', data: [2.80, 2.88, 2.88, 2.87, 2.90], itemStyle: { color: '#f38ba8' }, label: { show: true, position: 'top', color: '#f38ba8', fontSize: 11 } },
+      { name: 'Gen3C', type: 'bar', data: [4.03, 5.03, 6.32, 6.00, 7.63], itemStyle: { color: '#fab387' }, label: { show: true, position: 'top', color: '#fab387', fontSize: 11 } },
+      { name: 'VMem', type: 'bar', data: [4.07, 6.19, 6.79, 7.24, 7.25], itemStyle: { color: '#cba6f7' }, label: { show: true, position: 'top', color: '#cba6f7', fontSize: 11 } }
+    ]
+  });
+})();
+</script>
+
+<div id="chart-mem" class="echarts-container" style="height:340px"></div>
+<script>
+(function(){
+  var chart = echarts.init(document.getElementById('chart-mem'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '峰值缓存 VRAM（MiB）随片段数变化', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['Mirage (Ours)', 'Spatia', 'Gen3C', 'VMem'], textStyle: { color: '#cdd6f4' }, bottom: 8 },
+    grid: { left: '8%', right: '5%', top: 55, bottom: 55 },
+    xAxis: { type: 'category', data: ['Chunk 1', 'Chunk 2', 'Chunk 3', 'Chunk 4', 'Chunk 5'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'value', name: 'MiB', nameTextStyle: { color: '#6c7086' }, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [
+      { name: 'Mirage (Ours)', type: 'bar', data: [0.46, 0.90, 1.36, 1.80, 2.25], itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#a6e3a1', fontSize: 10 } },
+      { name: 'Spatia', type: 'bar', data: [22.3, 43.8, 43.8, 43.8, 43.8], itemStyle: { color: '#f38ba8' }, label: { show: true, position: 'top', color: '#f38ba8', fontSize: 10 } },
+      { name: 'Gen3C', type: 'bar', data: [23.4, 47.1, 73.3, 98.4, 124.0], itemStyle: { color: '#fab387' }, label: { show: true, position: 'top', color: '#fab387', fontSize: 10 } },
+      { name: 'VMem', type: 'bar', data: [18.8, 33.8, 48.8, 63.8, 78.8], itemStyle: { color: '#cba6f7' }, label: { show: true, position: 'top', color: '#cba6f7', fontSize: 10 } }
+    ]
+  });
+})();
+</script>
+
+<blockquote>
+  在匹配的展开长度下，端到端视频生成速度比 RGB 管线快 <strong>10.57×</strong>，3D 缓存 GPU 内存消耗少 <strong>55×</strong>。差距随视野扩大而增大——RGB 基线最终在隐空间记忆能轻松完成的轨迹上耗尽内存预算。Mirage 缓存每片段仅增长约 0.45 MiB，而 Gen3C 增长约 25 MiB/片段。
+</blockquote>
+
+<h3>WorldScore 主要结果</h3>
+<p>
+  WorldScore 报告十项指标，涵盖可控性、一致性、质量和运动。Mirage 在所有对比方法中取得最高平均分（70.36），超越记忆增强基线 Spatia（69.73），明显优于所有缺乏持久空间表示的基础视频生成器。Mirage 在 3D 一致性（92.21）和照片一致性（93.95）上的领先优势尤为突出。
+</p>
+<table>
+  <thead>
+    <tr><th>方法</th><th>平均分↑</th><th>静态分↑</th><th>动态分↑</th><th>3D一致性↑</th><th>照片一致性↑</th><th>运动平滑↑</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>WonderJourney [14]</td><td>54.19</td><td>63.75</td><td>44.63</td><td>35.54</td><td>80.60</td><td>80.26</td></tr>
+    <tr><td>InvisibleStitch [53]</td><td>51.95</td><td>61.12</td><td>42.78</td><td>29.53</td><td>88.51</td><td>—</td></tr>
+    <tr><td>WonderWorld [13]</td><td>61.79</td><td>72.69</td><td>50.88</td><td>71.25</td><td>86.87</td><td>—</td></tr>
+    <tr><td>Voyager [12]</td><td>66.08</td><td>77.62</td><td>54.53</td><td>68.92</td><td>81.56</td><td>—</td></tr>
+    <tr><td>Spatia [11]</td><td>69.73</td><td>72.63</td><td>66.82</td><td>69.95</td><td>86.40</td><td>80.36</td></tr>
+    <tr><td>VideoCrafter2 [33]</td><td>50.03</td><td>52.57</td><td>47.49</td><td>72.46</td><td>65.14</td><td>—</td></tr>
+    <tr><td>CogVideoX-I2V [4]</td><td>60.64</td><td>62.15</td><td>59.12</td><td>36.73</td><td>86.21</td><td>60.15</td></tr>
+    <tr><td>Wan2.1 [2]</td><td>55.21</td><td>57.56</td><td>52.85</td><td>45.44</td><td>78.74</td><td>54.27</td></tr>
+    <tr class="highlight-row"><td><strong>Mirage（本文）</strong></td><td><strong>70.36</strong></td><td><strong>73.60</strong></td><td><strong>67.11</strong></td><td><strong>92.21</strong></td><td><strong>93.95</strong></td><td><strong>80.36</strong></td></tr>
+  </tbody>
+</table>
+
+<h3>WorldScore 综合对比可视化</h3>
+<div id="chart-worldscore" class="echarts-container" style="height:360px"></div>
+<script>
+(function(){
+  var chart = echarts.init(document.getElementById('chart-worldscore'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'WorldScore 各方法平均分对比', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+    tooltip: { trigger: 'axis' },
+    grid: { left: '10%', right: '5%', top: 55, bottom: 65 },
+    xAxis: { type: 'category', data: ['WonderJourney', 'InvisibleStitch', 'WonderWorld', 'Voyager', 'FlashWorld', 'Spatia', 'VideoCrafter2', 'CogVideoX', 'Wan2.1', 'Mirage'], axisLabel: { color: '#cdd6f4', rotate: 25, fontSize: 11 }, axisLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'value', name: '平均分', min: 45, nameTextStyle: { color: '#6c7086' }, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: 54.19, itemStyle: { color: '#6c7086' } },
+        { value: 51.95, itemStyle: { color: '#6c7086' } },
+        { value: 61.79, itemStyle: { color: '#6c7086' } },
+        { value: 66.08, itemStyle: { color: '#89b4fa' } },
+        { value: 60.23, itemStyle: { color: '#6c7086' } },
+        { value: 69.73, itemStyle: { color: '#89b4fa' } },
+        { value: 50.03, itemStyle: { color: '#6c7086' } },
+        { value: 60.64, itemStyle: { color: '#6c7086' } },
+        { value: 55.21, itemStyle: { color: '#6c7086' } },
+        { value: 70.36, itemStyle: { color: '#a6e3a1' } }
+      ],
+      label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+    }]
+  });
+})();
+</script>
+
+<h3>RealEstate10K 新视角合成与闭环一致性</h3>
+<table>
+  <thead>
+    <tr><th>方法</th><th>PSNR↑</th><th>SSIM↑</th><th>LPIPS↓</th><th>PSNR_C↑</th><th>SSIM_C↑</th><th>LPIPS_C↓</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>SEVA [49]</td><td>13.07</td><td>0.515</td><td>0.445</td><td>—</td><td>—</td><td>—</td></tr>
+    <tr><td>VMem [57]</td><td>14.62</td><td>0.522</td><td>0.426</td><td>—</td><td>—</td><td>—</td></tr>
+    <tr><td>ViewCrafter [48]</td><td>15.78</td><td>0.580</td><td>0.396</td><td>14.79</td><td>0.481</td><td>0.365</td></tr>
+    <tr><td>FlexWorld [54]</td><td>16.25</td><td>0.593</td><td>0.370</td><td>12.20</td><td>0.428</td><td>0.598</td></tr>
+    <tr><td>Voyager [12]</td><td>17.79</td><td>0.636</td><td>0.297</td><td>17.66</td><td>0.540</td><td>0.380</td></tr>
+    <tr><td>Spatia [11]</td><td><strong>18.58</strong></td><td>0.646</td><td>0.254</td><td>19.38</td><td>0.579</td><td><strong>0.213</strong></td></tr>
+    <tr class="highlight-row"><td><strong>Mirage（本文）</strong></td><td>18.38</td><td><strong>0.779</strong></td><td><strong>0.250</strong></td><td><strong>20.05</strong></td><td><strong>0.825</strong></td><td>0.228</td></tr>
+  </tbody>
+</table>
+<p>
+  在新视角合成设置中，Mirage 取得最佳 SSIM（0.779，远超 Spatia 的 0.646）和最佳 LPIPS（0.250），PSNR 接近 Spatia（18.38 vs 18.58）。在闭环设置（相机轨迹返回起始视角）中，Mirage 取得最佳 PSNR_C（20.05）和 SSIM_C（0.825），表明隐空间记忆能将生成器锚定到连贯的几何表示，即使相机离开后再返回某区域也能保持一致性。
+</p>
+
+<hr>
+
+<h2>消融实验</h2>
+
+<h3>组件消融（WorldScore 子集）</h3>
+<table>
+  <thead>
+    <tr><th>变体</th><th>平均分↑</th><th>静态分↑</th><th>动态分↑</th><th>3D一致性↑</th><th>照片一致性↑</th></tr>
+  </thead>
+  <tbody>
+    <tr class="highlight-row"><td><strong>Mirage（完整）</strong></td><td><strong>70.36</strong></td><td><strong>73.60</strong></td><td><strong>67.11</strong></td><td><strong>92.21</strong></td><td><strong>93.95</strong></td></tr>
+    <tr><td>替换为显式 RGB 点云</td><td>67.71</td><td>70.49</td><td>64.93</td><td>90.75</td><td>91.10</td></tr>
+    <tr><td>特征上采样至像素分辨率提升</td><td>60.85</td><td>62.41</td><td>59.28</td><td>84.90</td><td>79.81</td></tr>
+    <tr><td>禁用动态对象过滤</td><td>61.20</td><td>62.69</td><td>59.70</td><td>80.88</td><td>76.10</td></tr>
+    <tr><td>单阶段训练</td><td>63.18</td><td>65.15</td><td>61.20</td><td>87.11</td><td>84.47</td></tr>
+  </tbody>
+</table>
+
+<div id="chart-ablation" class="echarts-container" style="height:320px"></div>
+<script>
+(function(){
+  var chart = echarts.init(document.getElementById('chart-ablation'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '消融实验：各组件对平均分的贡献', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+    tooltip: { trigger: 'axis' },
+    grid: { left: '5%', right: '5%', top: 55, bottom: 80 },
+    xAxis: { type: 'category', data: ['完整 Mirage', '替换为 RGB 点云', '像素分辨率提升', '禁用动态过滤', '单阶段训练'], axisLabel: { color: '#cdd6f4', rotate: 20, fontSize: 11 }, axisLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'value', name: '平均分', min: 55, nameTextStyle: { color: '#6c7086' }, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: 70.36, itemStyle: { color: '#a6e3a1' } },
+        { value: 67.71, itemStyle: { color: '#89b4fa' } },
+        { value: 60.85, itemStyle: { color: '#f38ba8' } },
+        { value: 61.20, itemStyle: { color: '#f38ba8' } },
+        { value: 63.18, itemStyle: { color: '#fab387' } }
+      ],
+      label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 12 }
+    }]
+  });
+})();
+</script>
+
+<h3>各组件贡献分析</h3>
+<p>
+  <strong>隐空间 vs. RGB 记忆</strong>：将隐缓存替换为相同源帧的 RGB 点云（保持主干和训练方案不变），平均分从 70.36 降至 67.71，3D 一致性从 92.21 降至 90.75。这证实 RGB 绕道丢弃了主干能利用的信息——存储的特征向量携带了三色通道无法表达的语义和纹理信息。
+</p>
+<p>
+  <strong>几何下采样 vs. 特征上采样</strong>：将隐向量上采样至像素分辨率再提升（而非在隐分辨率提升），平均分骤降至 60.85，3D 一致性降至 84.90。像素分辨率插值产生超出主干预训练分布的特征，引入严重分布偏移。在原生隐网格匹配几何既更高效又更忠实。
+</p>
+<p>
+  <strong>动态对象过滤</strong>：禁用运动对象和天空的排除掩码，长时序稳定性显著下降（3D 一致性 80.88，照片一致性 76.10）。陈旧动态内容持续存在于记忆中并被投影回未来片段，是漂移的主要来源。效果在 3D 和照片一致性上最为显著。
+</p>
+<p>
+  <strong>两阶段训练</strong>：单阶段联合训练平均分 63.18，远低于两阶段 70.36。先冻结主干训练侧分支，再解锁 LoRA 稳定收敛，是关键设计选择。
+</p>
+
+<h3>深度源鲁棒性</h3>
+<table>
+  <thead>
+    <tr><th>深度源</th><th>平均分↑</th><th>静态分↑</th><th>动态分↑</th><th>3D一致性↑</th><th>照片一致性↑</th></tr>
+  </thead>
+  <tbody>
+    <tr class="highlight-row"><td><strong>DepthAnything 3（默认）</strong></td><td><strong>70.36</strong></td><td><strong>73.60</strong></td><td><strong>67.11</strong></td><td><strong>92.21</strong></td><td><strong>93.95</strong></td></tr>
+    <tr><td>MapAnything</td><td>69.66</td><td>72.78</td><td>66.53</td><td>91.89</td><td>93.32</td></tr>
+    <tr><td>UniDepth</td><td>69.13</td><td>72.15</td><td>66.10</td><td>91.63</td><td>92.79</td></tr>
+  </tbody>
+</table>
+<p>
+  Mirage 对深度源的鲁棒性良好：换用噪声更多的深度估计器，性能下降幅度有限（平均分差距 &lt; 1.3）。ControlNet 风格侧分支将投影缓存视为<strong>软几何提示</strong>而非硬约束，动态过滤器在最差异常值进入记忆前将其移除，共同保证了深度鲁棒性。
+</p>
+
+<hr>
+
+<h2>局限性</h2>
+
+<p>
+  <strong>动态场景支持不足</strong>：动态区域过滤器将运动实体排除在持久记忆之外，因为其几何不可靠。Mirage 无法跨片段维护动态演员（如人物、车辆）的状态。以普遍运动为主的场景（人群、交通流）从缓存中获益有限，而以刚性几何为主的场景（室内建筑）效果最佳。跨片段持久化动态内容是未来工作的自然方向。
+</p>
+<p>
+  <strong>深度估计依赖</strong>：记忆构建和更新均依赖前馈深度估计器（DepthAnything 3）。虽然对深度源有一定鲁棒性，但在深度估计困难的场景（反光表面、透明物体、无纹理区域）中，记忆质量可能下降。
+</p>
+<p>
+  <strong>训练数据分布偏差</strong>：模型在 RealEstate10K 上训练，主要包含室内房产视频。虽然定性实验表明对室外和自然场景有一定泛化能力，但在训练分布之外场景的系统性评估尚不充分。
+</p>
+<p>
+  <strong>缓存增长策略</strong>：当前实现缓存随轨迹线性增长（约 0.45 MiB/片段），对于极长轨迹可能仍会积累显著内存。论文未讨论缓存剔除或遗忘策略，这在实际部署中是必要的。
+</p>
+<p>
+  <strong>隐空间特征漂移</strong>：扩散模型的隐空间并非完全欧氏空间——不同时间步、不同视角下的隐向量可能存在分布差异，长时序累积可能引入新的漂移形式，尽管实验表明这在实践中影响有限。
+</p>
+
+<hr>
+
+<h2>总结与启发</h2>
+
+<p>
+  Mirage 的核心贡献是一个优雅的范式转变：将视频世界模型的空间记忆从像素 RGB 空间迁移到扩散模型的原生 VAE 隐空间。这一看似简单的改变，实际上触及了视频世界模型的两个根本性矛盾——<strong>生成质量与计算效率的矛盾</strong>，以及<strong>几何一致性与表示保真度的矛盾</strong>。通过在隐空间直接维护 3D 状态，Mirage 同时解决了这两个矛盾，而非在两者之间权衡。
+</p>
+<p>
+  从技术深度看，Mirage 的成功揭示了一个重要原则：<strong>条件化信号应与生成器的原生特征空间对齐</strong>。RGB 点云记忆的根本问题不仅是计算代价，更是其强迫生成器在两个不兼容的信号空间（像素 RGB 与扩散隐空间）之间架桥，引入分布偏移。Mirage 通过在隐空间直接操作，消除了这一鸿沟，使几何提示和语义特征得以无缝融合——这也解释了为何 Mirage 在 3D 一致性（92.21 vs Spatia 的 69.95）上的领先幅度远超预期。
+</p>
+<p>
+  从工程实践看，$s^2$ 倍的效率增益是 VAE 压缩率的自然副产品，而非额外设计。这提示我们：<strong>在压缩表示空间中操作，不仅节省内存，还能从根本上改变算法复杂度的量级</strong>。对于其他需要维护持久状态的生成任务（3D 场景生成、长视频编辑、具身智能），类似的"在隐空间中操作"原则可能同样适用。
+</p>
+<p>
+  从更宏观的视角看，Mirage 代表了视频世界模型走向"可扩展长时序生成"的重要一步。当前视频生成的主要瓶颈之一是上下文窗口限制——自回归模型只能条件化于有限的前驱帧，导致几何漂移随轨迹延伸而累积。隐空间记忆提供了一种轻量级的"外部记忆"机制，使生成器能够在不扩大上下文窗口的情况下维护长期几何一致性。这与大语言模型中的 KV Cache 压缩、检索增强生成（RAG）等思路有深刻的类比关系——都是通过外部持久化存储弥补有限上下文的局限。
+</p>
+<p>
+  未来最值得关注的方向包括：(1) <strong>动态内容持久化</strong>——为运动对象维护独立的隐空间轨迹；(2) <strong>缓存剔除/压缩</strong>——支持无限长轨迹的内存管理；(3) <strong>跨域泛化</strong>——从室内房产扩展到开放域场景；(4) <strong>与 3DGS/NeRF 结合</strong>——探索更丰富的场景表示形式；(5) <strong>具身智能应用</strong>——将隐空间记忆用于机器人导航和操作中的世界模型。
+</p>
+<blockquote>
+  核心启发：不要让生成器的条件化信号跨越不必要的表示空间边界。在扩散模型的隐空间中直接维护 3D 状态，是视频世界模型走向高效、高质量长时序生成的关键设计原则。隐空间不仅是计算的"捷径"，更是保留语义与几何信息的"高保真通道"。
+</blockquote>
+
+<hr>
+
+<h2>参考文献</h2>
+<p style="font-size:0.9em;line-height:2.2;">
+  [1] Wan2.1 Team. <em>Wan: Open and Advanced Large-Scale Video Generative Models</em>. 2025.<br>
+  [2] Wan2.2 Team. <em>Wan2.2: Advanced Large-Scale Video Generation</em>. 2025. [Mirage 骨干]<br>
+  [4] Yang et al. <em>CogVideoX: Text-to-Video Diffusion Models with An Expert Transformer</em>. 2024.<br>
+  [11] Yang et al. <em>Spatia: Spatial Memory for Video Generation</em>. 2025. [RGB 点云 + ControlNet 主要基线]<br>
+  [12] Xing et al. <em>Voyager: Long-Horizon Video Generation with World Modeling</em>. 2025.<br>
+  [13] Yu et al. <em>WonderWorld: Interactive 3D Scene Generation Using a Gaussian Process</em>. 2024.<br>
+  [14] Yu et al. <em>WonderJourney: Going from Somewhere to Anywhere</em>. 2023.<br>
+  [20] Yang et al. <em>DepthAnything 3: Towards Universal Monocular Depth Estimation</em>. 2025. [Mirage 默认深度源]<br>
+  [25] Zhang et al. <em>Adding Conditional Control to Text-to-Image Diffusion Models (ControlNet)</em>. ICCV 2023.<br>
+  [26] Video Segmenter. <em>Dynamic object segmentation for cache filtering</em>. 2025.<br>
+  [27] Huang et al. <em>WorldScore: A Unified Evaluation Benchmark for World Generation</em>. 2025.<br>
+  [29] Zhou et al. <em>Stereo Magnification: Learning View Synthesis using Multiplane Images (RealEstate10K)</em>. SIGGRAPH 2018.<br>
+  [30] Lipman et al. <em>Flow Matching for Generative Modeling</em>. ICLR 2023.<br>
+  [33] He et al. <em>VideoCrafter2: Overcoming Data Limitations for High-Quality Video Diffusion Models</em>. 2024.<br>
+  [38] Peebles &amp; Xie. <em>Scalable Diffusion Models with Transformers (DiT)</em>. ICCV 2023.<br>
+  [48] Yu et al. <em>ViewCrafter: Taming Video Diffusion Models for High-Fidelity Novel View Synthesis</em>. 2024.<br>
+  [49] Liu et al. <em>SEVA: Generalizable and Efficient Camera-Controlled Video Generation</em>. 2025.<br>
+  [53] Engstler et al. <em>InvisibleStitch: Generating Smooth 3D Scenes with Depth-Guided Inpainting</em>. 2024.<br>
+  [54] FlexWorld. <em>Progressively Broadening Vision-Language Models for Flexible 3D Generation</em>. 2025.<br>
+  [57] VMem. <em>Persistent View Memory for Consistent Video Generation</em>. 2025.<br>
+  [58] Su et al. <em>RoFormer: Enhanced Transformer with Rotary Position Embedding</em>. 2024.<br>
+  [60] Hu et al. <em>LoRA: Low-Rank Adaptation of Large Language Models</em>. ICLR 2022.<br>
+  [61] FlashWorld. <em>Flash World: Efficient and Scalable World Generation</em>. 2025.<br>
+  [62] Chung et al. <em>LucidDreamer: Domain-free Generation of 3D Gaussian Splatting Scenes</em>. 2023.<br>
+  [64] MapAnything. <em>Metric Depth Estimation</em>. 2025.<br>
+  [65] Piccinelli et al. <em>UniDepth: Universal Monocular Metric Depth Estimation</em>. CVPR 2024.
+</p>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 's' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs = new IntersectionObserver(es => es.forEach(e => {
+    const l = toc.querySelector('a[href="#' + e.target.id + '"]');
+    if (l) l.classList.toggle('active', e.isIntersecting);
+  }), { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+</script>
+</body>
+</html>

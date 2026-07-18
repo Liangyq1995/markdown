@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent-Native Memory System 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    .tag { display: inline-block; background: #313244; color: var(--heading); border-radius: 4px; padding: 2px 8px; font-size: 0.82em; margin: 2px; }
+    .highlight-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .finding { background: #1a2a1a; border-left: 3px solid var(--strong); padding: 10px 16px; margin: 0.8em 0; border-radius: 0 4px 4px 0; }
+    .finding-num { color: var(--strong); font-weight: bold; }
+    .meta-info { color: #6c7086; font-size: 0.9em; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.82em; font-weight: 600; margin-right: 6px; }
+    .badge-blue { background: #1e3a5f; color: #89b4fa; }
+    .badge-green { background: #1a3a1a; color: #a6e3a1; }
+    .badge-orange { background: #3a2a10; color: #fab387; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>Are We Ready For An Agent-Native Memory System?</h1>
+    <blockquote>
+      <p>
+        <strong>arXiv:</strong> <a href="https://arxiv.org/abs/2606.24775" target="_blank">2606.24775</a> &nbsp;|&nbsp;
+        <strong>发表时间：</strong> 2026年6月23日 &nbsp;|&nbsp;
+        <strong>点赞数：</strong> 92
+      </p>
+      <p>
+        <strong>作者：</strong> Wei Zhou, Xuanhe Zhou, Shaokun Han, Hongming Xu, Guoliang Li, Zhiyu Li, Feiyu Xiong, Fan Wu
+      </p>
+      <p>
+        <strong>机构：</strong> 上海交通大学 &amp; 清华大学
+      </p>
+      <p>
+        <strong>代码：</strong>
+        <a href="https://github.com/OpenDataBox/MemoryData" target="_blank">github.com/OpenDataBox/MemoryData</a> &nbsp;|&nbsp;
+        <a href="https://github.com/OpenDataBox/awesome-agent-memory" target="_blank">awesome-agent-memory</a>
+      </p>
+    </blockquote>
+
+    <!-- ==================== 概述 ==================== -->
+    <h2>概述</h2>
+    <p>
+      大型语言模型（LLM）智能体的记忆系统已从简单的检索增强生成（RAG）机制演进为支持持久信息存储、检索与动态更新的复杂数据管理系统。然而，现有评测方法将记忆系统视为"整体黑盒"，仅依赖 F1、BLEU 等端到端指标，无法揭示各子模块的性能瓶颈与设计取舍。
+    </p>
+    <p>
+      本文从<strong>数据管理视角</strong>出发，提出一个将智能体记忆解构为四大核心模块的分析框架：记忆表示与存储、抽取、检索与路由、维护。基于该框架，作者对 <strong>12 个代表性记忆系统</strong>和 2 个基线在 <strong>5 类基准工作负载（涵盖 11 个数据集）</strong>上进行了系统性评测，揭示了不同架构的适用场景与关键权衡，并为构建真正"智能体原生"的记忆系统指出了研究方向。
+    </p>
+
+    <div class="highlight-box">
+      <strong>核心结论一句话：</strong>没有任何单一记忆架构能在所有场景下占据主导地位；系统效能高度依赖于记忆结构与工作负载瓶颈之间的对齐程度。
+    </div>
+
+    <!-- ==================== 研究背景与动机 ==================== -->
+    <h2>研究背景与动机</h2>
+    <p>
+      随着 LLM 智能体从单轮对话走向多轮、多任务的长期交互场景，记忆系统的重要性日益凸显。记忆系统需要在多次推理步骤之间维持状态，使智能体能够利用历史上下文进行推理和行动。近年来涌现出 MemGPT、Mem0、A-MEM、Zep、Cognee、MemoryOS 等多种记忆系统，但它们在设计哲学上差异显著。
+    </p>
+
+    <h3>现有评测的局限性</h3>
+    <p>
+      当前评测方法存在三大核心问题：
+    </p>
+    <ul>
+      <li><strong>黑盒视角：</strong>仅测量端到端任务指标（F1、BLEU、EM），无法定位性能瓶颈来自哪个子模块。</li>
+      <li><strong>场景单一：</strong>多数评测局限于对话问答，忽略了动态更新、长期稳定性等关键维度。</li>
+      <li><strong>缺乏成本分析：</strong>未将延迟、计算开销纳入系统性比较，导致实际部署决策缺乏依据。</li>
+    </ul>
+
+    <h3>研究动机</h3>
+    <p>
+      作者认为，要真正理解记忆系统的性能，必须：（1）将记忆系统解构为可独立分析的功能模块；（2）在多样化工作负载下进行对比实验；（3）通过消融研究量化各模块的贡献。这正是本文提出"智能体原生记忆系统"评测框架的核心动机。
+    </p>
+
+    <div class="highlight-box">
+      <p>
+        <strong>形式化定义：</strong>智能体记忆系统被定义为一个四元组
+        $\mathcal{M}_{sys} = \langle \mathcal{R}, \mathcal{S}, \mathcal{Q}, \mathcal{U} \rangle$，
+        其中 $\mathcal{R}$ 为表示模块，$\mathcal{S}$ 为存储模块，$\mathcal{Q}$ 为检索与路由模块，$\mathcal{U}$ 为维护模块，每个模块掌管记忆生命周期的不同阶段。
+      </p>
+    </div>
+
+    <!-- ==================== 核心方法 ==================== -->
+    <h2>核心方法：四模块分析框架</h2>
+    <p>
+      本节是论文的核心贡献。作者从数据管理视角将智能体记忆系统拆解为四个功能模块，并为每个模块建立了结构化的技术分类体系，以便进行原则性比较。
+    </p>
+
+    <pre class="mermaid">
+flowchart TD
+    INPUT["🗣️ 智能体交互流\n（对话 / 事件 / 观察）"]
+
+    subgraph MOD1["模块 1：记忆表示与存储"]
+      direction LR
+      R1["逻辑表示\n序列 / 图 / 混合"]
+      R2["物理存储\n向量引擎 / 图数据库 / 上下文寄存器"]
+      R1 --- R2
+    end
+
+    subgraph MOD2["模块 2：记忆抽取"]
+      direction LR
+      E1["分段策略\n固定窗口 / 语义分割"]
+      E2["记忆化策略\n精细 / 粗粒度"]
+      E1 --- E2
+    end
+
+    subgraph MOD3["模块 3：检索与路由"]
+      direction LR
+      Q1["检索算法\n稠密向量 / BM25 / 图遍历"]
+      Q2["路由策略\n单跳 / 多跳 / 混合"]
+      Q1 --- Q2
+    end
+
+    subgraph MOD4["模块 4：记忆维护"]
+      direction LR
+      U1["更新策略\n局部 / 全局重组"]
+      U2["遗忘机制\n LRU / 重要性衰减"]
+      U1 --- U2
+    end
+
+    AGENT["🤖 智能体推理引擎"]
+
+    INPUT --> MOD2
+    MOD2 --> MOD1
+    MOD1 --> MOD3
+    MOD3 --> AGENT
+    AGENT --> MOD4
+    MOD4 --> MOD1
+
+    style MOD1 fill:#1a2a3a,stroke:#89b4fa,color:#cdd6f4
+    style MOD2 fill:#1a3a2a,stroke:#a6e3a1,color:#cdd6f4
+    style MOD3 fill:#3a2a1a,stroke:#fab387,color:#cdd6f4
+    style MOD4 fill:#2a1a3a,stroke:#cba6f7,color:#cdd6f4
+    style AGENT fill:#2a2a3e,stroke:#89b4fa,color:#89b4fa
+    style INPUT fill:#2a2a3e,stroke:#6c7086,color:#cdd6f4
+    </pre>
+
+    <h3>模块一：记忆表示与存储（Memory Representation &amp; Storage）</h3>
+    <p>
+      这是整个记忆系统的基础层，决定了信息以何种结构编码、以何种方式持久化，直接影响后续检索的粒度与推理的兼容性。该模块分为两个子组件：
+    </p>
+    <ul>
+      <li>
+        <strong>逻辑表示（Logical Representation）：</strong>定义暴露给智能体系统的结构编码方式，决定容量、可访问性以及表达能力、检索粒度与推理兼容性之间的权衡。主要分为三类：
+        <ul>
+          <li><strong>序列式（Sequential）：</strong>将记忆建模为平坦的一维序列，缺乏显式结构抽象。代表系统：MemoChat、MemGPT。优点是简单、延迟低；缺点是随上下文增长，检索精度下降。</li>
+          <li><strong>图结构式（Graph-based）：</strong>将实体与关系建模为知识图谱或场景图，支持结构化查询与多跳推理。代表系统：Zep、Cognee、A-MEM。优点是事实更新精准；缺点是构建成本高，延迟大。</li>
+          <li><strong>混合式（Hybrid）：</strong>结合多种表示范式，兼顾灵活性与结构化能力。代表系统：MemoryOS、LightMem。</li>
+        </ul>
+      </li>
+      <li>
+        <strong>物理存储（Physical Storage）：</strong>指定持久化与索引结构，包括易失性上下文寄存器、稠密向量引擎（如 FAISS）或拓扑图数据库（如 Neo4j）。不同物理存储对写入延迟、检索吞吐量有显著影响。
+      </li>
+    </ul>
+
+    <table>
+      <thead>
+        <tr>
+          <th>表示类型</th>
+          <th>代表系统</th>
+          <th>优势</th>
+          <th>劣势</th>
+          <th>适用场景</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>序列式</td>
+          <td>MemoChat, MemGPT</td>
+          <td>低延迟、实现简单</td>
+          <td>长上下文检索精度低</td>
+          <td>短期对话、单轮问答</td>
+        </tr>
+        <tr>
+          <td>图结构式</td>
+          <td>Zep, Cognee, A-MEM</td>
+          <td>事实更新精准、多跳推理</td>
+          <td>构建成本高、写入延迟大</td>
+          <td>知识密集型、实体追踪</td>
+        </tr>
+        <tr>
+          <td>混合式</td>
+          <td>MemoryOS, LightMem</td>
+          <td>兼顾灵活性与结构化</td>
+          <td>系统复杂度高</td>
+          <td>多任务、长期交互</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>模块二：记忆抽取（Memory Extraction）</h3>
+    <p>
+      记忆抽取模块负责从原始交互流中识别并提炼出值得保存的信息单元。这一步骤的质量直接决定了存储内容的表示保真度（Representation Fidelity），是后续检索与推理的基础。
+    </p>
+    <p>
+      <strong>是什么：</strong>从对话、事件或观察流中提取结构化记忆片段的过程，包括分段（Segmentation）和记忆化（Memorization）两个子步骤。
+    </p>
+    <p>
+      <strong>为什么：</strong>原始交互流包含大量冗余信息，若直接存储会造成检索噪声；但过度压缩又会丢失关键上下文，影响可答性（Answerability）。
+    </p>
+    <p>
+      <strong>怎么做：</strong>主要策略包括：
+    </p>
+    <ul>
+      <li><strong>固定窗口分段：</strong>按固定轮次或 token 数切割，简单高效但可能切断语义连贯的对话线。</li>
+      <li><strong>语义分段：</strong>基于主题连贯性动态切割，保留完整语义单元，但计算成本更高。</li>
+      <li><strong>精细记忆化（Fine Memorization）：</strong>提取离散事实与实体，存储粒度细，支持精确检索；但对话连贯性可能损失。</li>
+      <li><strong>粗粒度记忆化（Coarse Memorization）：</strong>保留更多上下文，牺牲部分精确性换取更好的可答性。</li>
+    </ul>
+    <p>
+      <strong>关键发现：</strong>实验表明，更宽泛、选择性较低的抽取策略能更好地保留下游可答性所需的上下文。保守的主题分组更不容易切断持续的对话线或孤立简短的旁白（如一次性的爱好提及）。
+    </p>
+
+    <h3>模块三：检索与路由（Memory Retrieval &amp; Query Routing）</h3>
+    <p>
+      检索与路由模块决定了智能体如何在当前推理状态下动态识别并提取相关历史上下文。这是整个记忆生命周期中最直接影响任务效果的模块，也是最容易成为瓶颈的环节。
+    </p>
+    <p>
+      <strong>是什么：</strong>该模块涵盖完整的查询执行谱系，定义了遍历索引所使用的操作算法、谓词评估和智能体工作流。
+    </p>
+    <p>
+      <strong>为什么：</strong>不同任务对检索策略的需求差异巨大：单跳事实查询适合精确向量检索；时序推理需要时间感知路由；多跳推理则需要图遍历能力。
+    </p>
+    <p>
+      <strong>怎么做：</strong>主要检索策略包括：
+    </p>
+    <ul>
+      <li><strong>稠密向量检索（Dense Retrieval）：</strong>基于语义相似度，适合模糊查询，但对精确事实可能返回语义相近却事实错误的结果。</li>
+      <li><strong>BM25 关键词检索：</strong>基于词频统计，对精确词汇匹配效果好，与向量检索互补。</li>
+      <li><strong>图遍历（Graph Traversal）：</strong>沿实体关系边多跳查询，适合知识图谱结构，支持复杂推理链。</li>
+      <li><strong>混合路由（Hybrid Routing）：</strong>结合多种检索策略，通过智能体决策选择最优路径。</li>
+    </ul>
+    <p>
+      <strong>关键发现：</strong>图结构系统在单跳事实召回上表现优异，但在时序推理上挣扎；复合混合系统在对话问答上领先。有效的记忆系统在不同 LLM 骨干下保持鲁棒，因为它们在答案生成之前将证据定位外部化。
+    </p>
+
+    <h3>模块四：记忆维护（Memory Maintenance）</h3>
+    <p>
+      记忆维护模块负责随时间演进对记忆库进行更新、整合与清理，是保证系统长期稳定性与一致性的关键。这也是成本差异最显著的模块。
+    </p>
+    <p>
+      <strong>是什么：</strong>在新信息写入后对现有记忆进行更新（Update）、合并（Merge）、删除（Delete）或重组（Reorganization）的过程。
+    </p>
+    <p>
+      <strong>为什么：</strong>随着交互积累，记忆库会产生冗余、矛盾甚至过时的信息。如果不进行维护，检索精度会随时间退化，长期稳定性（Long-horizon Stability）无法保证。
+    </p>
+    <p>
+      <strong>怎么做：</strong>
+    </p>
+    <ul>
+      <li><strong>局部维护（Localized Maintenance）：</strong>仅更新受影响的记忆节点，写入传播范围有界，成本低。LightMem 采用分段压缩与有界混合检索，保持接近低成本区间。</li>
+      <li><strong>全局重组（Global Reorganization）：</strong>写入时触发全图或全库重构，保证一致性但代价高昂。Zep Local 在某些基准上每次查询延迟超过 2800 秒。</li>
+      <li><strong>遗忘机制：</strong>基于重要性评分或时间衰减淘汰低价值记忆，防止记忆库无限膨胀。</li>
+    </ul>
+    <p>
+      <strong>关键发现：</strong>局部维护比全局重组更具成本效益。运营效率的高低，取决于每次写入在结构中传播的范围，而非是否使用结构化表示本身。
+    </p>
+
+    <!-- ==================== 评测设计 ==================== -->
+    <h2>评测设计</h2>
+    <p>
+      本文构建了迄今为止最全面的智能体记忆系统评测基准，涵盖多个维度的研究问题（RQ）。
+    </p>
+
+    <h3>评测对象</h3>
+    <p>
+      共评测 <strong>12 个代表性记忆系统</strong>和 2 个参考基线，涵盖不同的表示、存储、路由与维护策略组合：
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>系统</th>
+          <th>表示类型</th>
+          <th>核心特点</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>MemGPT</td>
+          <td>序列式（分层）</td>
+          <td>内存分层管理，模拟操作系统内存调度</td>
+        </tr>
+        <tr>
+          <td>Mem0</td>
+          <td>混合（实体中心）</td>
+          <td>提取离散事实，内置实体链接，多信号检索</td>
+        </tr>
+        <tr>
+          <td>A-MEM</td>
+          <td>混合（实体中心）</td>
+          <td>Zettelkasten 风格，记忆间互联</td>
+        </tr>
+        <tr>
+          <td>Zep</td>
+          <td>图结构</td>
+          <td>时序知识图谱，支持实体追踪与时序推理</td>
+        </tr>
+        <tr>
+          <td>Cognee</td>
+          <td>图结构</td>
+          <td>认知图谱，语义丰富但构建成本高</td>
+        </tr>
+        <tr>
+          <td>MemoryOS</td>
+          <td>混合（分层）</td>
+          <td>操作系统式分层缓存，高效用但延迟高</td>
+        </tr>
+        <tr>
+          <td>LightMem</td>
+          <td>混合（轻量）</td>
+          <td>分段压缩 + 有界混合检索，高效率前沿</td>
+        </tr>
+        <tr>
+          <td>MemoChat</td>
+          <td>序列式</td>
+          <td>Memo 增强对话一致性</td>
+        </tr>
+        <tr>
+          <td>MemTree</td>
+          <td>树结构</td>
+          <td>层次化记忆树，支持摘要与细节分层</td>
+        </tr>
+        <tr>
+          <td>Memree</td>
+          <td>序列式（增强）</td>
+          <td>高效率前沿，低延迟</td>
+        </tr>
+        <tr>
+          <td>MemOS Fast/Fine</td>
+          <td>混合</td>
+          <td>Fast vs Fine 记忆化策略对比</td>
+        </tr>
+        <tr>
+          <td>LightMem Hybrid Raw</td>
+          <td>混合（原始）</td>
+          <td>用户侧与全量原始记忆对比</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>五类基准工作负载与 11 个数据集</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>研究问题</th>
+          <th>评测维度</th>
+          <th>代表数据集</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>RQ1：整体有效性</td>
+          <td>任务效果（Task Effectiveness）</td>
+          <td>LoCoMo, LongMemEval, MemBench</td>
+        </tr>
+        <tr>
+          <td>RQ2：检索保真度</td>
+          <td>检索精度（Retrieval Fidelity）</td>
+          <td>LongBench, MemoryAgentBench</td>
+        </tr>
+        <tr>
+          <td>RQ3：动态更新鲁棒性</td>
+          <td>更新正确性（Update Correctness）</td>
+          <td>LifelongAgentBench, 动态问答集</td>
+        </tr>
+        <tr>
+          <td>RQ4：长期稳定性</td>
+          <td>长时域稳定性（Long-horizon Stability）</td>
+          <td>LifelongAgentBench 长序列</td>
+        </tr>
+        <tr>
+          <td>RQ5：运营成本</td>
+          <td>延迟与计算开销（Operational Cost）</td>
+          <td>全部基准的时间开销追踪</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ==================== 实验结果与分析 ==================== -->
+    <h2>实验结果与分析</h2>
+    <p>
+      本节汇总论文的核心实验发现，从五个维度揭示不同记忆架构的性能特征与适用场景。
+    </p>
+
+    <h3>RQ1：整体有效性——没有通用赢家</h3>
+    <p>
+      端到端评测的最核心发现是：<strong>没有任何单一记忆架构能在所有场景下占据主导地位</strong>。不同系统在不同工作负载上的表现差异显著：
+    </p>
+
+    <div class="finding">
+      <span class="finding-num">发现 1：</span> 复合混合系统（如 MemoryOS）在对话式问答（Conversational QA）上领先，而图结构系统（如 Zep、Cognee）在单跳事实召回上表现优异，但在时序推理上挣扎。
+    </div>
+
+    <div class="finding">
+      <span class="finding-num">发现 2：</span> 保持轨迹的记忆系统（Trace-preserving，如 Mem0）在任务成功率上达到约 55%，在特定场景下具有竞争力。
+    </div>
+
+    <div id="chart-rq1" class="echarts-container" style="height:380px"></div>
+    <script>
+      var chartRQ1 = echarts.init(document.getElementById('chart-rq1'));
+      chartRQ1.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '各记忆系统在代表性基准上的性能对比（示意）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 14 } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: {
+          data: ['对话QA (LoCoMo EM)', '事实召回 (LongMemEval)', '长期稳定性'],
+          textStyle: { color: '#cdd6f4' },
+          top: 30
+        },
+        grid: { left: '3%', right: '4%', bottom: '3%', top: '80px', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['MemoryOS', 'LightMem', 'Mem0', 'A-MEM', 'Zep', 'Cognee', 'MemTree', 'MemoChat'],
+          axisLabel: { color: '#cdd6f4', rotate: 20, fontSize: 11 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '得分',
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#313244' } }
+        },
+        series: [
+          {
+            name: '对话QA (LoCoMo EM)',
+            type: 'bar',
+            barGap: '5%',
+            data: [22, 25.5, 18, 16, 14, 13, 17, 12],
+            itemStyle: { color: '#89b4fa' }
+          },
+          {
+            name: '事实召回 (LongMemEval)',
+            type: 'bar',
+            data: [20.7, 25.3, 22, 19, 24, 21, 18, 15],
+            itemStyle: { color: '#a6e3a1' }
+          },
+          {
+            name: '长期稳定性',
+            type: 'bar',
+            data: [68, 75, 55, 50, 62, 58, 60, 45],
+            itemStyle: { color: '#fab387' }
+          }
+        ]
+      });
+    </script>
+
+    <h3>RQ2：检索保真度——结构对齐决定精度</h3>
+    <p>
+      检索保真度实验揭示了记忆结构与查询类型之间的对齐关系：
+    </p>
+    <ul>
+      <li>图结构系统在需要实体关系推理的查询上检索精度最高，但在时序查询上表现不佳。</li>
+      <li>混合检索（语义向量 + BM25 + 实体匹配）在多种查询类型上保持稳定，是鲁棒性最强的策略。</li>
+      <li>纯向量检索在语义模糊查询上表现好，但对精确事实可能返回语义相近却事实错误的结果。</li>
+    </ul>
+
+    <h3>RQ3：动态更新鲁棒性——局部更新优于全局重组</h3>
+    <p>
+      动态更新实验对比了不同维护策略在信息变更场景下的表现：
+    </p>
+    <div class="finding">
+      <span class="finding-num">发现 3：</span> 图结构系统在事实更新正确性上表现最优，因为图的局部性使得更新可以精准定位到相关节点，而不影响其他记忆。
+    </div>
+    <div class="finding">
+      <span class="finding-num">发现 4：</span> 序列式系统在动态更新场景下表现最差，因为新信息难以精确覆盖旧信息，容易产生矛盾记忆并存的问题。
+    </div>
+
+    <h3>RQ4：长期稳定性——结构化记忆的优势</h3>
+    <p>
+      长时域稳定性评测模拟了智能体在数百轮交互后的记忆质量：
+    </p>
+    <ul>
+      <li>具有显式结构（图、树）的系统在长期交互后衰退较慢，因为结构约束了冗余信息的积累。</li>
+      <li>纯序列系统随交互轮次增加，检索精度显著下降。</li>
+      <li>LightMem 通过分段压缩在低成本下维持了较好的长期稳定性。</li>
+    </ul>
+
+    <h3>RQ5：运营成本——效率前沿分析</h3>
+    <p>
+      成本分析揭示了性能与延迟之间的根本权衡：
+    </p>
+
+    <div id="chart-cost" class="echarts-container" style="height:360px"></div>
+    <script>
+      var chartCost = echarts.init(document.getElementById('chart-cost'));
+      chartCost.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '记忆系统效用-延迟权衡（示意散点图）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 14 } },
+        tooltip: {
+          formatter: function(params) {
+            return params.data[2] + '<br/>延迟: ' + params.data[0] + 's<br/>归一化效用: ' + params.data[1];
+          }
+        },
+        xAxis: {
+          name: '平均查询延迟 (秒)',
+          nameTextStyle: { color: '#6c7086' },
+          type: 'value',
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#313244' } }
+        },
+        yAxis: {
+          name: '归一化效用',
+          nameTextStyle: { color: '#6c7086' },
+          type: 'value',
+          min: 60,
+          max: 90,
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#313244' } }
+        },
+        series: [{
+          type: 'scatter',
+          symbolSize: function(data) { return 16; },
+          data: [
+            [17.3, 76, 'LightMem'],
+            [20, 72, 'Memree'],
+            [28.6, 82, 'MemoryOS'],
+            [116.5, 84, 'Cognee'],
+            [155.1, 85, 'Zep'],
+            [374.2, 78, 'Mem0'],
+            [460.2, 70, 'MemoChat'],
+            [490.0, 80, 'MemoryOS (LongBench)'],
+            [552.1, 75, 'A-MEM'],
+            [116.7, 73, 'MemTree']
+          ],
+          label: {
+            show: true,
+            formatter: function(params) { return params.data[2]; },
+            position: 'top',
+            color: '#cdd6f4',
+            fontSize: 11
+          },
+          itemStyle: { color: '#89b4fa', opacity: 0.85 }
+        }]
+      });
+    </script>
+
+    <div class="finding">
+      <span class="finding-num">发现 5：</span> 高效用系统（如 MemoryOS 归一化效用 82.0）需要约 28.6 秒/查询；而 Cognee 和 Zep 达到 84+ 效用时需要 116.5 秒和 155.1 秒，代价显著更高。
+    </div>
+    <div class="finding">
+      <span class="finding-num">发现 6：</span> 在 LongBench 工作负载上，Zep Local 每次查询延迟超过 2800 秒，而 LightMem 仅需 17.3 秒。这表明运营效率由写入传播范围决定，而非是否使用结构化表示。
+    </div>
+
+    <h3>消融研究：各模块的量化贡献</h3>
+    <p>
+      通过系统性地每次只修改一个模块并生成受控变体，论文量化了各模块对四个关键指标的影响：
+    </p>
+
+    <div id="chart-ablation" class="echarts-container" style="height:320px"></div>
+    <script>
+      var chartAblation = echarts.init(document.getElementById('chart-ablation'));
+      chartAblation.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '消融研究：各模块对关键指标的影响（示意）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 14 } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: {
+          data: ['表示保真度', '检索精度', '更新正确性', '长期稳定性'],
+          textStyle: { color: '#cdd6f4' },
+          top: 30
+        },
+        grid: { left: '3%', right: '4%', bottom: '3%', top: '80px', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['表示与存储', '抽取策略', '检索与路由', '维护策略'],
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '相对影响度 (%)',
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#313244' } }
+        },
+        series: [
+          { name: '表示保真度', type: 'bar', data: [85, 62, 30, 45], itemStyle: { color: '#89b4fa' } },
+          { name: '检索精度', type: 'bar', data: [40, 35, 88, 30], itemStyle: { color: '#a6e3a1' } },
+          { name: '更新正确性', type: 'bar', data: [50, 28, 35, 90], itemStyle: { color: '#fab387' } },
+          { name: '长期稳定性', type: 'bar', data: [55, 40, 45, 82], itemStyle: { color: '#cba6f7' } }
+        ]
+      });
+    </script>
+
+    <p>
+      关键消融发现：
+    </p>
+    <ul>
+      <li><strong>MemOS Fast vs Fine 记忆化：</strong>Fast Memorize 在 LoCoMo 上远超 Fine Memorize（25.5 vs 2.5 EM；40.8 vs 5.0 Ans. F1），尽管 Fine 在 LongMemEval 上略高（22.3 vs 20.7 Substr. EM）。说明更宽泛的抽取策略对下游可答性更有利。</li>
+      <li><strong>LightMem Hybrid Raw vs User-Only Raw：</strong>混合原始记忆在 LoCoMo 上略优（25.5 vs 24.2 EM），而 LongMemEval 结果几乎不变（两者均为 31.4 ROUGE-L F1），说明全量原始记忆在某些场景下提供了额外的上下文覆盖。</li>
+    </ul>
+
+    <!-- ==================== 总结与启发 ==================== -->
+    <h2>总结与启发</h2>
+    <p>
+      本文从数据管理视角对智能体记忆系统进行了迄今最系统的实验研究，揭示了若干对从业者和研究者都具有重要指导意义的洞见。
+    </p>
+
+    <h3>核心结论汇总</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>维度</th>
+          <th>核心结论</th>
+          <th>实践建议</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>架构选择</td>
+          <td>没有通用最优架构，效能取决于记忆结构与工作负载瓶颈的对齐</td>
+          <td>根据主要任务类型（对话QA/事实更新/长期追踪）选择对应架构</td>
+        </tr>
+        <tr>
+          <td>抽取策略</td>
+          <td>宽泛抽取比精细抽取更有利于保留下游可答性</td>
+          <td>优先考虑保留上下文完整性，而非追求精确的事实提取</td>
+        </tr>
+        <tr>
+          <td>检索设计</td>
+          <td>混合检索（语义+关键词+实体）在多场景下最鲁棒</td>
+          <td>避免单一检索策略，构建多信号融合的检索层</td>
+        </tr>
+        <tr>
+          <td>维护成本</td>
+          <td>局部维护比全局重组更具成本效益</td>
+          <td>设计有界写入传播机制，避免每次更新触发全库重组</td>
+        </tr>
+        <tr>
+          <td>LLM 骨干</td>
+          <td>有效记忆系统对 LLM 骨干变化鲁棒</td>
+          <td>记忆系统设计应独立于特定 LLM，通过外部证据定位提升鲁棒性</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>对未来研究的启发</h3>
+    <p>
+      基于实验发现，作者指出了构建真正"智能体原生"记忆系统的若干研究方向：
+    </p>
+    <ul>
+      <li><strong>超越平面向量数据库：</strong>开发者需要采用模块化、工作负载对齐的设计，在丰富结构与局部维护之间取得平衡。</li>
+      <li><strong>自适应记忆架构：</strong>未来系统应能根据工作负载特征动态调整记忆结构，而非固定在某一范式。</li>
+      <li><strong>联合优化：</strong>如何同时优化检索质量、更新一致性与计算效率，是核心开放问题。</li>
+      <li><strong>评测框架演进：</strong>需要超越静态基准，设计能衡量终身适应性、不确定性管理和涌现行为的评测方法。</li>
+      <li><strong>统计显著性：</strong>当前评测中观察到的性能差异的统计显著性有待进一步验证。</li>
+    </ul>
+
+    <h3>个人思考</h3>
+    <blockquote>
+      <p>本文最大的价值在于将"记忆系统评测"从黑盒端到端测量推进到了模块化白盒分析。这一框架不仅对学术研究有指导意义，对工程实践同样重要：在选择或设计记忆系统时，应首先明确主要工作负载类型（是对话QA、知识更新还是长期追踪），再针对性地优化对应模块，而非盲目追求某一系统的整体排名。</p>
+      <p>局部维护优于全局重组这一发现，与数据库领域的 WAL（Write-Ahead Log）和局部索引更新思想一脉相承，体现了数据管理视角对 AI 系统设计的深刻影响。</p>
+    </blockquote>
+
+    <!-- ==================== 参考文献 ==================== -->
+    <h2>参考文献</h2>
+    <ul>
+      <li>Zhou et al. (2026). <em>Are We Ready For An Agent-Native Memory System?</em> arXiv:2606.24775. <a href="https://arxiv.org/abs/2606.24775" target="_blank">链接</a></li>
+      <li>Packer et al. (2023). <em>MemGPT: Towards LLMs as Operating Systems.</em></li>
+      <li>Chhikara et al. <em>Mem0: The Memory Layer for Personalized AI.</em></li>
+      <li>Xu et al. <em>A-MEM: Agentic Memory for LLM Agents.</em></li>
+      <li>Rasmussen et al. <em>Zep: A Temporal Knowledge Graph Architecture for Agent Memory.</em></li>
+      <li>Kang et al. (2025). <em>MemoryOS: Memory Operating System for LLM Agents.</em></li>
+      <li>Zhang et al. (2025). <em>A Survey on the Memory Mechanism of Large Language Model based Agents.</em></li>
+      <li>Zheng et al. (2025). <em>LifelongAgentBench: Evaluating LLM Agents as Lifelong Learners.</em></li>
+      <li>Tan et al. (2025). <em>MemBench: Towards More Comprehensive Evaluation on the Memory of LLM-based Agents.</em> ACL 2025 (Findings).</li>
+      <li>Wu et al. (2026). <em>Memory in the LLM Era: Modular Architectures and Strategies in a Unified Framework.</em> VLDB 2026.</li>
+      <li>代码仓库：<a href="https://github.com/OpenDataBox/MemoryData" target="_blank">github.com/OpenDataBox/MemoryData</a></li>
+      <li>论文列表：<a href="https://github.com/OpenDataBox/awesome-agent-memory" target="_blank">github.com/OpenDataBox/awesome-agent-memory</a></li>
+    </ul>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+
+    // TOC generation
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // Intersection observer for active TOC link
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

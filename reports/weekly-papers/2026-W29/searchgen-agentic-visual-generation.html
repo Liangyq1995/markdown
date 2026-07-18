@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SearchGen：Agentic 视觉生成的知识边界演化 | 论文阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .paper-info td:first-child { background: #2a2a3e; color: var(--heading); font-weight: 600; width: 22%; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>Search Beyond What Can Be Taught：Agentic 视觉生成中的知识边界演化</h1>
+
+    <h2 id="section-overview">1. 概述</h2>
+
+    <table class="paper-info">
+      <tr><th>标题</th><td>Search Beyond What Can Be Taught: Evolving the Knowledge Boundary in Agentic Visual Generation</td></tr>
+      <tr><th>核心问题</th><td>视觉生成器擅长渲染却会"自信地编造"未知内容；用户请求无界、演化、长尾（新角色、热门实体、cutoff 后事件），构成结构性"世界知识瓶颈"——生成器在固定语料训练，而视觉世界开放。论文提出通过 agentic 检索 + 生成器/reasoner 协同训练来发现并演化这条"知识边界"。</td></tr>
+      <tr><th>机构</th><td>HKUST（香港科技大学）、University of Waterloo（滑铁卢大学）、Qwen Applications（阿里巴巴）、Imperial College London（帝国理工）</td></tr>
+      <tr><th>核心作者</th><td>Haozhe Wang, Weijia Feng, Jinpeng Yu, Che Liu, Ping Nie, Fangzhen Lin, Jiaming Liu, Ruihua Huang, Jimmy Lin, Wenhu Chen, Cong Wei</td></tr>
+      <tr><th>开源地址</th><td><a href="https://haozheh3.github.io/SearchGen">https://haozheh3.github.io/SearchGen</a>（代码、模型、数据集、co-training corpus、search corpus 全部释放）</td></tr>
+      <tr><th>arXiv</th><td>2607.05382（v3, 2026-07-09）</td></tr>
+    </table>
+
+    <p>现代视觉生成器在标准基准上已接近饱和，但在一类真实用户请求上仍然失败——它们会用精细的笔触"自信地编造"未知的世界知识（2025 大阪世博会吉祥物、斯巴达方阵的青铜甲胄、不丹国旗的雷龙图案等）。论文把这一现象诊断为<strong>世界知识瓶颈（world-knowledge bottleneck）</strong>而非视觉合成瓶颈：生成器在固定语料、固有知识 cutoff 下训练，而用户请求是无界、演化、深度长尾的。</p>
+
+    <p>为系统研究该问题，作者分析了生产级 AIGC 平台的 20,840 条用户 prompt，提炼出<strong>12 类失败模式</strong>，并构建了 <strong>SEARCHGEN-20K / SEARCHGEN-BENCH</strong>（20,839 条 prompt，覆盖 12 类失败、22 个域），配套预执行的多模态 <strong>SEARCHGEN-CORPUS-1M</strong>（145,642 条归档搜索会话、559,973 个唯一 URL、370,733 条缓存下载）以支持离线、可复现研究。在 SEARCHGEN-Bench 上，前沿开源生成器仅得 <strong>21–28/100</strong>，相比在仅需参数化知识的 prompt 上的 63–75 分出现高达 <strong>40 分的崩塌</strong>，而这一崩塌在现有基准上完全不可见。</p>
+
+    <p>自然解药是给生成器装上搜索工具（agentic visual generation）。但作者发现<strong>naive search 会失败</strong>：无差别检索会给生成器本已能处理的 prompt 注入噪声，反而降低质量。根因被追溯到一个<strong>生成器特定的、可演化的知识边界</strong>——介于"生成器可通过训练内化的知识"与"必须保留在外部上下文的知识"之间的分野。这条边界虽难以预先指定，却可通过一个 <strong>teach-then-search 协同训练框架</strong>被发现：先用在线迭代 DPO 教生成器内化它能吸收的知识，再用 rejection-sampling finetuning 重新校准 reasoner 去搜索生成器学不会的部分。即便最简配方（1 次 DPO + 1 次 RFT，4B 生成器 + 8B reasoner）也产生单调改进，校准后的 8B reasoner 在同一 4B 生成器上甚至略超万亿参数前沿 oracle。</p>
+
+    <blockquote>核心命题（论文 Conclusion）：关键不是构建一个知道一切的模型，而是构建一个"知道自己不知道什么"的系统。这条 split 形成生成器特定的知识边界，虽难以 a priori 指定，却可通过 co-training 发现——而此自觉察来自 co-training 动力学，而非单纯 scale。</blockquote>
+
+    <hr>
+
+    <h2 id="section-background">2. 研究背景与动机</h2>
+
+    <h3 id="bg-bottleneck">2.1 世界知识瓶颈：忠实生成受限于知识而非渲染</h3>
+
+    <p>视觉生成器在固定语料上训练，带有固有的知识 cutoff；而用户请求所依赖的世界是开放、演化、长尾的。两者的不匹配即<strong>世界知识瓶颈</strong>。该瓶颈被一个结构性盲点加剧：生成器被训练为"永远产出一张图像"，因此<strong>没有任何机制识别自己不知道什么</strong>——无法说出"我缺乏忠实渲染此内容的知识"，也没有获取它的协议。论文把这一瓶颈端到端地刻画出来：从真实用户行为中测绘世界知识生成全景、构建大规模数据集与基准、量化它对前沿生成器的削弱程度，并指出 naive search 不但不能解决，反而引入新的失败。</p>
+
+    <p>作者从生产级 text-to-image 平台分析了 <strong>20,840 条真实用户 prompt</strong>，发现需求远比现有基准所暗示的更多样、长尾、快速演化。从中提炼出 12 类复发失败模式（见 §3.1 表）。这些类别沿一条结构性轴分裂，直接决定搜索设计：</p>
+
+    <ul>
+      <li><strong>需要视觉参考、难以用语言指定</strong>：游戏角色的服装剪影、国旗的精确色域——任何文本描述都无法完全指定，但一旦检索到，生成器即可条件化其上。例如《崩坏：星穹铁道》的角色 Jingliu 需要精确的视觉身份（服装、武器、配色）。</li>
+      <li><strong>需要文本知识、无视觉捷径</strong>：中国朝代时间线（含日期与开国皇帝）完全依赖结构化事实内容；DNA 复制的阿兹特克风格信息图需要精确的生化标签与流程顺序，视觉捷径罕见而百科文本可供应。</li>
+      <li><strong>介于两者之间、需双模态同时</strong>：墨西哥瓦哈卡的 alebrije 龙需视觉参考（文化专属色谱惯例）+ 文本知识（alebrije 与普通龙之别）；2025 大阪世博会吉祥物需时间新鲜的视觉参考 + 晚于模型训练的文本语境。</li>
+    </ul>
+
+    <p>这种"视觉身份 × 事实精确"双轴结构直接催生了 §3 的<strong>模态感知搜索协议</strong>：纯视觉或纯文本搜索都不够，模态选择必须按知识缺口逐个决定。论文使用 Google Search API，把 image search 与 web search 作为 reasoner 在每个知识缺口之间调用的两件不同工具。</p>
+
+    <h3 id="bg-blindspot">2.2 现有基准的盲区</h3>
+
+    <p>现有基准评估的都是"已知视觉概念内"的组合性与美学质量：GenAI-Bench 测 prompt 遵循、T2I-CompBench 测空间推理与属性绑定、DALL-Eval 测物体关系、HEIM 做整体多维评估；VLM 自动评判如 TIFA、人工 grounded 度量如 Gecko 使可扩展的忠实度评估成为可能。但"a red cube on a blue sphere"这类 prompt 测的是空间推理，<strong>假设生成器已知道 cube 与 sphere 长什么样</strong>。SEARCHGEN-Bench 互补：它瞄准训练分布之外的概念（文化符号、近期实体、小众字体），衡量的是<strong>知识缺失而非推理失败</strong>。差距触目惊心：Flux.2-Klein-9B 在 GenAI-Bench 上得分高于 4.0/5.0，却在 SEARCHGEN-Bench 上低于 30/100——超过 60 个百分点的落差，没有现有评估能捕捉。</p>
+
+    <p>更结构性的证据来自 §4 的实验：在仅需参数化知识的 prompt 上，开源与商业生成器得分相当（67–75/100）；而在搜索密集型 prompt 上，同一批开源生成器崩塌到 22–28，而带集成搜索的商业系统几乎不掉。这个 40 分的分化被现有基准完全忽视。</p>
+
+    <h3 id="bg-vs-rag">2.3 与 agentic RAG / 工具增强生成的区别</h3>
+
+    <p>论文在 Related Work 中清晰地把自己与三条前驱工作流区分开来：</p>
+
+    <table>
+      <tr><th>工作流</th><th>代表</th><th>关键设定</th><th>本文区别</th></tr>
+      <tr><td>搜索增强生成（视觉）</td><td>Re-Imagen、RDM、KNN-Diffusion、Gen-Searcher、IP-Adapter、DreamBooth、BLIP-Diffusion</td><td>搜索<strong>永远开启</strong>，对每个 prompt 触发检索，无论生成器是否已具备该知识</td><td>作者从真实生产 AIGC 请求出发，建立真实失败模式分类与数据集；§2 分析表明无差别搜索会主动降低相当一部分 prompt 质量，使"是否搜索"本身成为<strong>一阶设计变量</strong>；并提出 reasoner 与生成器<strong>共同演化</strong></td></tr>
+      <tr><td>选择性/自适应检索（文本）</td><td>Self-RAG、FLARE、Toolformer、CRAG、Adaptive-RAG、Mallen et al.、Kandpal et al.</td><td>学习"何时搜索"——Self-RAG 发射检索控制 token，FLARE 在预测置信度下降时触发，Mallen/Kandpal 表明流行实体靠参数化、稀有实体靠检索</td><td>视觉搜索失败结构性不同：表现为空间扭曲、身份混合、风格污染（§2.5），无文本域对应物，需模态专属 triage 与集成；更根本的是，<strong>这些方法都不与生成器协同训练搜索策略</strong>——检索决策针对固定生成模型学习，而本文 co-training 在每次生成器改进后重新校准搜索策略</td></tr>
+      <tr><td>工具增强/agentic 图像生成</td><td>GenAgent、RPG-DiffusionMaster、LLM-grounded Diffusion、IterComp、Instruct-Imagen、RationalRewards</td><td>用 LLM 规划分解复杂 prompt，提升<strong>组合性</strong>生成（在生成器既有知识内）</td><td>这些系统假设生成器已拥有相关视觉概念、聚焦组合安排，无一处理<strong>知识缺失</strong>（生成器从未见过的概念）。本文是互补的：agentic 规划可提升搜索增强输出的组合质量，但不能替代搜索所提供的缺失知识</td></tr>
+      <tr><td>自改进/co-training 系统</td><td>Self-Rewarding LM、SPIN</td><td>模型自我评判产出以生成训练信号；或自我博弈迭代区分模型产出与 ground truth</td><td>本文为视觉生成实例化此原则：Phase 1（DPO）从搜索增强示范中教生成器暴露其先前缺失的知识，Phase 2（RFT）重新校准 reasoner 至强化后生成器的偏移边界。<strong>刻意的"teach → search"顺序与边界发现机制</strong>区别于对称自我博弈：这里生成器与 reasoner 占据结构不同角色、朝互补方向改进</td></tr>
+    </table>
+
+    <blockquote><strong>核心定位</strong>：论文不是又一个"搜索增强扩散模型"，而是把"何时搜索 / 搜索什么 / 如何集成"作为与生成器<strong>联合</strong>的一阶设计变量，并提出该变量所依赖的"知识边界"虽 generator-specific 且随训练漂移，却可通过 co-training <strong>被发现</strong>——为视觉生成的递归自改进奠定基础。</blockquote>
+
+    <hr>
+
+    <h2 id="section-method">3. 核心方法</h2>
+
+    <h3 id="method-overview">3.1 方法总览</h3>
+
+    <p>整套系统围绕一个核心哲学展开：<strong>只在缺失知识位于生成器边界之外时才搜索，并控制检索内容如何进入生成</strong>。这需要决定三件事——何时搜索、用哪种模态、如何在不引入搜索噪声的前提下集成证据。论文用两个互锁组件实现它：(1) 一个<strong>抗噪 agentic reasoner</strong>，通过 gate–filter–integrate 三阶段协议控制搜索触发、参考选择与外部信息集成（§3.3）；(2) 一个 <strong>co-training 框架</strong>，先教生成器扩展知识边界，再把 reasoner 重新校准到强化后生成器的新边界（§3.5）。</p>
+
+    <p>下图给出单次请求的端到端流程：</p>
+
+    <pre class="mermaid">
+flowchart TD
+    A["User Prompt 用户请求"] --> B["Gate 识别知识缺口"]
+    B --> C{"缺口严重度?"}
+    C -->|"critical / important"| D["提出模态标签查询 image 或 web"]
+    C -->|"moderate / minimal"| SKIP["SKIP 不检索"]
+    D --> E["Image / Web Search 检索"]
+    E --> F["Filter 选择最填缺口的参考"]
+    F --> G["Integrate 融合为 enriched prompt"]
+    SKIP --> G
+    G --> H["Generator 渲染图像"]
+    H --> I["VLM Judge 9 维评分"]
+    I --> J{"质量是否提升?"}
+    J -.->|"co-training 校准"| K["知识边界 发现与演化"]
+    K -.-> B
+    </pre>
+
+    <h3 id="method-dataset">3.2 SearchGen 数据构建</h3>
+
+    <p>SEARCHGEN-20K 的构建是"answer-first 策略"驱动的：先从一个前沿模型出发，基于 seed 上下文选择<strong>自包含的世界知识缺口</strong>，使每条 prompt 在构造时即携带知识缺口引用——结构化 slot 指明生成器可能缺乏的视觉或文本知识，每个 slot 带 severity 标签（critical / important / moderate / minimal）与 justification 字段。这些标注大幅减轻了自动评估的负担。</p>
+
+    <p><strong>构建三步走</strong>：</p>
+    <ol>
+      <li><strong>Layer 1（seed 实体库）</strong>：从 10,840 条真实用户 prompt 提取 <strong>31,537 个实体</strong>，跨 22 个主域，每个标注 canonical name、估计训练集频率、ground-truth 视觉参考（若有）与区分属性；分布刻意长尾以镜像真实需求。其中 <strong>93.1% 的实体仅出现在单条 prompt</strong>——任何可行训练集的参数化学习都无法覆盖这种尾部需求，<strong>搜索在结构上不可避免</strong>。</li>
+      <li><strong>Layer 2（prompt 合成）</strong>：模板实例化生成结构化草稿 → 前沿 LLM 重写为自然用户风格请求（保留 grounded 实体、模态要求与 checklist 可验证事实，温度调高以多样化表面形式）→ 质控剔除歧义/文化敏感/与失败模式错位的 prompt。每条 prompt 配 2–4 个 ground-truth 搜索查询、3–8 个关键视觉元素的二值 checklist、1–5 评估 rubric。</li>
+      <li><strong>标注可靠性</strong>：两名标注者独立标注 2,000 个失败样本，迭代精炼 schema 至 <strong>Cohen's κ &gt; 0.85</strong>，再应用到全部 10,840 条生产 prompt。</li>
+    </ol>
+
+    <p>最终数据集统计：20,188 行（20,187 unique prompt），平均每 prompt <strong>5.2 个多模态知识缺口</strong>（90.5% 带 3+ 缺口），标注 34,694 个视觉参考 slot、16,345 个文本知识 slot；划分为 train（20,000）、validation（128）、test（751）。语料刻意双语：英文 58%（平均 266 字符，偏描述性展开）、中文 42%（平均 89 字符，偏密集隐式指定），捕捉真实跨语言 prompt 行为而非翻译模板。文化覆盖横跨东亚、南亚、中东、非洲、拉美等，因为知识缺口集中在长尾文化概念上，西方中心基准会低估失效严重度。</p>
+
+    <h4 id="failure-taxonomy">12 类失败模式分类</h4>
+
+    <table>
+      <tr><th>类别</th><th>主导模态</th><th>示例 prompt</th></tr>
+      <tr><td>Temporal – Recent（时效-近期）</td><td>Both</td><td>The mascot for the 2025 Osaka Expo in its official pose and colors</td></tr>
+      <tr><td>Temporal – Current（时效-当前）</td><td>Both</td><td>Current FIFA World Cup group stage rankings as a scoreboard graphic</td></tr>
+      <tr><td>Entity &amp; IP（实体与 IP）</td><td>Visual</td><td>Jingliu from Honkai: Star Rail wielding her ice sword</td></tr>
+      <tr><td>Concept &amp; Symbol（概念与符号）</td><td>Both</td><td>The national flag of Bhutan with the correct Druk dragon design</td></tr>
+      <tr><td>Factual &amp; Historical（事实与历史）</td><td>Both</td><td>Spartan phalanx at Thermopylae with historically accurate bronze armor</td></tr>
+      <tr><td>Cultural Specificity（文化特异性）</td><td>Both</td><td>A traditional Oaxacan alebrije dragon with authentic chromatic patterns</td></tr>
+      <tr><td>Visual / UI / UX</td><td>Visual</td><td>iOS 17 Weather app screenshot showing a thunderstorm animation</td></tr>
+      <tr><td>Data Visualization</td><td>Textual</td><td>China dynastic timeline with accurate dates and founding emperors</td></tr>
+      <tr><td>Text / Typography</td><td>Textual</td><td>Art Nouveau concert poster with period-authentic display lettering</td></tr>
+      <tr><td>Complex Composite（复杂复合）</td><td>Both</td><td>Aztec-style infographic of DNA replication with labeled process stages</td></tr>
+      <tr><td>Vague / Abstract（模糊与抽象）</td><td>Textual</td><td>The feeling of nostalgia on a rainy afternoon in a small Japanese town</td></tr>
+      <tr><td>Implicit Reasoning（隐式推理）</td><td>Both</td><td>Cozy mountain cabin interior in the style of a Miyazaki film</td></tr>
+    </table>
+    <figcaption>表 3.1：12 类失败模式按失败来源组织，Modality 列指明所需主导知识类型——直接决定该调 image search 还是 web search。</figcaption>
+
+    <h4 id="assets">可复现 harness：SEARCHGEN-CORPUS-1M</h4>
+
+    <p>复现搜索增强生成通常需要付费 API 访问搜索引擎与一组生成器，且结果随服务变更漂移。作者移除这一障碍，释放完整训练数据与预执行冻结的搜索语料：</p>
+
+    <table>
+      <tr><th>资产</th><th>规模</th><th>支撑的研究</th></tr>
+      <tr><td>训练轨迹（20,188 prompt）</td><td>90,452 条推理轨迹（跨前沿 reasoner）</td><td>搜索策略 / 奖励学习</td></tr>
+      <tr><td>图像生成</td><td>281,925 张（多 reasoner 配置 × 前沿生成器）</td><td>偏好与蒸馏数据</td></tr>
+      <tr><td>归档搜索会话</td><td>145,642 条（image 108,800 / web 36,842）</td><td>可复现检索，无需 live API</td></tr>
+      <tr><td>SERP 命中（唯一 URL）</td><td>559,973 个</td><td>检索 / grounding 研究</td></tr>
+      <tr><td>缓存下载</td><td>370,733 条（image 259,178 / web 111,555）</td><td>完全离线 replay</td></tr>
+    </table>
+    <figcaption>表 3.2：释放资产一览。所有搜索均预执行并冻结，pipeline 可在无 live API key、无搜索结果漂移下 replay，把昂贵工作流转为偏好学习、奖励建模、搜索策略设计、检索研究的离线基底。</figcaption>
+
+    <hr>
+
+    <h3 id="method-boundary">3.3 知识边界：形式化定义</h3>
+
+    <p>§2 的观察揭示了一个隐含假设：在"生成器已知的"与"必须搜索的"之间存在一个良定义的 partition。该 partition 真实存在，但它是 <strong>generator-specific 且在训练下漂移</strong>——搜索对某些 prompt 有益、对另一些有害，而平衡随生成器能力变化。论文把这一量定义为<strong>知识边界</strong>。</p>
+
+    <blockquote><strong>Definition 1（Knowledge Boundary）</strong>。设 $K$ 为分布 $P$ 中 prompt 所需的世界知识单元（实体、文化符号、字体身份、流程规范等）的集合。对参数为 $\theta$ 的生成器 $G_\theta$、prompt $p \in P$、条件上下文 $c$（搜索返回的参考与文本），设 $Q(G_\theta, p, c) \in [0,1]$ 为有界质量函数。对固定容差 $\epsilon \gt 0$，定义可内化知识与上下文知识集合：</blockquote>
+
+    <p>$$K_\mathrm{int}(\theta) = \left\{\, k \in K \;:\; \mathbb{E}_{p \mid k}\!\left[\, Q(G_\theta,\, p,\, \mathrm{SEARCH}(k)) - Q(G_\theta,\, p,\, \varnothing)\,\right] \lt \epsilon \,\right\}$$</p>
+
+    <p>$$K_\mathrm{ctx}(\theta) = K \,\setminus\, K_\mathrm{int}(\theta)$$</p>
+
+    <p>其中期望遍历 $P$ 中所有需要知识单元 $k$ 的 prompt，$\mathrm{SEARCH}(k)$ 表示对知识单元 $k$ 执行搜索协议所得的条件上下文。二元组 $(K_\mathrm{int}(\theta), K_\mathrm{ctx}(\theta))$ 构成 $K$ 的一个 generator-specific partition，称为<strong>知识边界 $B(\theta)$</strong>。若 prompt $p$ 需要 $k \in K_\mathrm{ctx}(\theta)$，则称 $p$ 相对 $G_\theta$ 是 search-intensive 的。该边界是 generator-specific 的：依赖 $\theta$ 且在训练下漂移——当 $\theta'$ 来自对搜索增强示范做 DPO 时，$K_\mathrm{int}(\theta) \subseteq K_\mathrm{int}(\theta')$。</p>
+
+    <p><strong>关键洞察</strong>：某些知识可内化，搜索不应为其触发；另一些知识是上下文性的，搜索在结构上必不可少。且边界不必 a priori 可知——作者发现它<strong>可通过 co-training 被发现</strong>：通过测量每 prompt 的"有无搜索"质量差，其分布在 co-training 下会漂移（Figure 9b 中，DPO 后 per-prompt no-search 质量的 CDF 右移，shaded 区域即"新内化"的知识——先前质量差超过 $\epsilon$、如今落入 $\epsilon$ 之内、从 $K_\mathrm{ctx}$ 迁移到 $K_\mathrm{int}$）。</p>
+
+    <h3 id="method-reasoner">3.4 抗噪 Agentic Reasoner：Gate–Filter–Integrate 三阶段</h3>
+
+    <p>Naive search 之所以降低生成质量，是因为噪声在三个结构上不同的点进入：<strong>是否搜索的决定、参考的选择、外部内容的集成</strong>。单一 filter 无法同时应对三者，每个都需要专属防御。论文提出三阶段 agentic 搜索协议，在每一点上按序抑制噪声。这三个阶段构成 agent 的 reason-and-act 循环，并对应 SFT 语料中的 Task A / B / C 轨迹。</p>
+
+    <pre class="mermaid">
+graph TD
+    P["User Prompt p"] --> S1
+    subgraph S1["Stage 1 Gate 任务 A"]
+        S1A["识别知识缺口"] --> S1B["按 type 与 severity 分类"]
+        S1B --> S1C{"severity 是 critical 或 important?"}
+        S1C -->|"是"| S1D["提出查询 带 modality 标签"]
+        S1C -->|"否"| S1SKIP["过滤 最多 3 查询 或 SKIP"]
+    end
+    S1D --> SR["Image Search 或 Web Search 执行"]
+    SR --> S2
+    subgraph S2["Stage 2 Filter 任务 B"]
+        S2A["候选参考 0..N"] --> S2B["选最填缺口 且最小化冗余的参考"]
+    end
+    S2 --> S3
+    subgraph S3["Stage 3 Integrate 任务 C"]
+        S3A["融合 prompt + 缺口分析 + 视觉/文本知识"] --> S3B["路由视觉参考经自然语言"]
+        S3B --> S3C["输出 enriched prompt + grounded citation"]
+    end
+    S3 --> GEN["Generator G theta"]
+    </pre>
+    <figcaption>图 3.2：三阶段抗噪协议。Gate 决定何时行动与调用哪个工具；Filter 选择工具返回；Integrate 把观察同化进生成——视觉参考通过自然语言路由，避免原始像素 conditioning 泄漏风格/背景/布局。</figcaption>
+
+    <p>三阶段细节：</p>
+    <ul>
+      <li><strong>Stage 1 Gate</strong>：给定 prompt $p$，reasoner 识别知识缺口、按类型与严重度分类、提出带模态标签（image | web）的搜索查询。仅 critical 或 important 缺口触发搜索，其余被过滤，产生最多 3 条查询或 SKIP。论文给出对照案例：对"上海中心大厦黄昏海报"（critical 视觉身份缺口）触发 image search；对"蓝白瓷茶壶产品照"（无命名实体/事件/文化专属）SKIP——这种纪律防止过检索。</li>
+      <li><strong>Stage 2 Filter</strong>：多模态搜索执行后，选择"恰好填满特定缺口同时最小化无关内容"的参考。实证表明此阶段减少 copy effect（§2.5）——视觉捷径被从搜索结果中过滤。例如亚特兰大 UV 指数仪表盘的 3 个候选中，仅候选 1 带城市专属布局，filter 按索引选中。</li>
+      <li><strong>Stage 3 Integrate</strong>：即便精选的视觉参考也可能携带远超知识缺口所需的信息，被生成器当作视觉捷径利用——原始像素 conditioning 泄漏风格、背景、布局。故集成阶段把视觉参考<strong>经自然语言路由</strong>：reasoner 把原始 prompt、缺口分析、检索到的视觉/文本知识融合为 enriched 文本规范。除原始照片外，生成器还收到 grounded citation 指明确切借用什么，如"following Image I, render the character in a teal-and-gold robe"。这为忠实生成保留缺失知识、丢弃会主导输出的像素级噪声。</li>
+    </ul>
+
+    <p>论文把两类搜索失败模式对应到阶段：搜索对生成器本已处理的 prompt 触发、返回参考覆盖准确内部知识——这是 <strong>concept corruption（gating failure）</strong>；参考携带过多原始信息成为复制模板而非知识补充——这是 <strong>copy effect（filtering failure）</strong>。两者直接催生 gate–filter–integrate 协议。</p>
+
+    <hr>
+
+    <h3 id="method-cotrain">3.5 Co-Training：Teach, Then Search</h3>
+
+    <p>知识边界只在生成器参数改变时才会漂移，因此发现边界必须训练生成器本身、而非仅调整搜索策略。Co-training 在两侧按序作用：先强化生成器使更少 prompt 需搜索，再把 reasoner 重新校准到强化后生成器的边界。两个阶段执行边界上互补的运动：Phase 1 把边界<strong>外推</strong>（内化稳定知识 + 构建抗噪），Phase 2 把搜索策略<strong>内收</strong>以匹配，使搜索恰在知识仍处于生成器扩展容量之外时触发。</p>
+
+    <pre class="mermaid">
+graph TD
+    subgraph P0["Phase 0 监督暖启动"]
+        T["约20K 专家轨迹 Task A/B/C"] --> R0["SFT Qwen3-VL-8B Reasoner R phi0"]
+    end
+    subgraph P1["Phase 1 Teach 生成器内化"]
+        R0 -->|enriched prompt 与参考| SAMP["每 prompt 采样 M 张图"]
+        SAMP --> SCR["VLM judge 9 维评分"]
+        SCR --> PAIR["top vs worst 构偏好对"]
+        PAIR --> DPO["在线迭代 Diffusion-DPO"]
+        DPO --> GDPO["G theta prime 内化稳定知识 + 抗噪"]
+    end
+    subgraph P2["Phase 2 Search 重新校准 reasoner"]
+        GDPO -->|强化后生成器作环境| ROL["rollout N 条轨迹"]
+        R0 --> ROL
+        ROL --> ADV["group-relative advantage"]
+        ADV --> FILT["仅保留正优势轨迹"]
+        FILT --> RFT["rejection-sampling finetuning"]
+        RFT --> RFIN["校准 reasoner R phi prime"]
+    end
+    GDPO --> FIN["最终生成器"]
+    RFIN --> FIN2["最终系统"]
+    </pre>
+    <figcaption>图 3.3：Co-training 框架。先教生成器它能内化的，再把 reasoner 校准到搜索它学不会的。Phase 1 的 DPO 同时承担两职：外推边界 + 教生成器使用不完美参考而不被腐蚀；Phase 2 的 RFT 则让边界从奖励信号中浮现，无需显式边界标签。</figcaption>
+
+    <h4 id="phase0">Phase 0：监督暖启动</h4>
+    <p>Co-training 需要一个遵循三阶段协议的 reasoner。先用约 10,000 条专家标注 Task A/B/C 轨迹对 <strong>Qwen3-VL-8B</strong> 做监督微调（对应 gate/filter/integrate）。所得 reasoner 产出结构良好的分析，但仍 <strong>generator-agnostic</strong>：它对任何可能困难的内容都搜索，而非只对某一具体生成器实际失败的内容搜索。</p>
+
+    <h4 id="phase1">Phase 1：Teach what the generator can internalize（在线迭代 DPO）</h4>
+    <p>暖启动后的 reasoner 提供搜索增强输入（视觉参考 + 文本 prompt），把生成器暴露于其先前缺乏的知识。基于原始文本 prompt 与增强输入，通过<strong>在线迭代 Diffusion-DPO</strong> 训练生成器内化世界知识。每个 episode 中，生成器每 prompt 采样 $M$ 张图像，由 SEARCHGEN-20K 评估协议评分，从最高分与最低分世代构造偏好对。DPO 强化生成器自身的最佳产出，内化视觉身份足够稳定可吸收进参数的知识。Phase 1 后生成器 $G^{(1)}_\theta$ 扩展了知识边界：先前需搜索的概念现在驻留于参数。DPO 训练还构建了视觉生成的<strong>抗噪性</strong>：因生成器在搜索增强输入上训练，它学会在不被噪声主导的前提下纳入不完美视觉参考——只学干净输入的生成器会把每个 conditioning 信号视作权威，正是 concept corruption 与 copy effect 的根因。</p>
+
+    <p><strong>Phase 1 适配 flow-matching 的 DPO 损失</strong>（论文 Algorithm 1 给出）：设 $v_\theta$ 为 flow-matching 速度场、$t$ 为扩散时间步、$\beta=100$ 为 DPO 温度、$\theta_\mathrm{ref}$ 经 EMA（decay 0.99）更新，偏好对由每 prompt 的 $M$ 张世代组构造：</p>
+
+    <p>$$\mathcal{L}_\mathrm{DPO}(\theta) = -\,\mathbb{E}_{(x_w, x_l, \tilde{p}, t)}\!\left[\,\log \sigma\!\left(\beta \log \frac{v_\theta(x_{w,t} \mid \tilde{p})}{v_{\theta_\mathrm{ref}}(x_{w,t} \mid \tilde{p})} - \beta \log \frac{v_\theta(x_{l,t} \mid \tilde{p})}{v_{\theta_\mathrm{ref}}(x_{l,t} \mid \tilde{p})}\right)\right]$$</p>
+
+    <p>其中 $x_w, x_l$ 分别为组内最高分与最低分世代（chosen/rejected），$\tilde{p}=R_{\phi_0}(p)$ 为经 gate–filter–integrate 的搜索增强规范。偏好构造附 SSIM 惩罚（$0.95$）以抑制 chosen/rejected 近同的退化对；flow-matching 用 Flow-SDE 调度（noise 1.0、time shift 1.0、时间步截断 0.1）。梯度更新为 $\theta \leftarrow \theta - \eta_1 \nabla_\theta \mathcal{L}_\mathrm{DPO}(\theta)$。</p>
+
+    <h4 id="phase2">Phase 2：Search what the generator cannot be taught（rejection-sampling finetuning）</h4>
+    <p>生成器边界已漂移，reasoner 策略失配——仍在搜索生成器已内化的概念。重新校准使用 <strong>rejection-sampling finetuning（RFT）</strong>：从 Phase 0 reasoner 配 $G^{(1)}_\theta$ rollout $N_\mathrm{traj}$ 条轨迹，对结果图像评分，计算 group-relative advantage，仅保留正优势轨迹用于 reasoner 续训。正确 abstain 的轨迹得高分被强化，不必要搜索腐蚀输出的轨迹得低分被丢弃。Reasoner <strong>无需显式边界标签</strong>即学会强化后生成器的边界——边界从奖励信号中浮现。把 search agent 的 trace rollout、评分、强化正优势轨迹，本质是把 agent 策略针对"生成器作为环境"做优化。</p>
+
+    <p><strong>group-relative advantage</strong>（论文 Algorithm 1 第 18 行）：设 $\bar{s} = \frac{1}{N_\mathrm{traj}}\sum_n s_n$、$\sigma_s = \mathrm{std}(\{s_n\})$，则</p>
+
+    <p>$$A_n = \frac{s_n - \bar{s}}{\sigma_s + \delta}$$</p>
+
+    <p>仅保留 $A_n \gt 0$ 的轨迹 $\tau_n$ 进入 $\mathcal{T}_\mathrm{rft}$，reasoner 经 $R_{\phi'} \leftarrow \arg\min_\phi \sum_{\tau \in \mathcal{T}_\mathrm{rft}} \mathcal{L}_\mathrm{SFT}(\phi; \tau)$ 完成 SFT。完整 RFT 周期约 $4 \times 8$ GPU-hours。</p>
+
+    <h4 id="algo1">Algorithm 1：Co-Training 伪代码</h4>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Co-Training — Teach, Then Search</div>
+      <p><span class="kw">Require:</span> 生成器 <span class="var">G_θ</span>，base VLM <span class="var">R_ϕ</span>，数据集 <span class="var">D = {p_i}_{i=1}^{N}</span>，质量函数 <span class="var">Q</span>，容差 <span class="var">ϵ</span></p>
+      <p><span class="kw">Ensure:</span>  协同训练后生成器 <span class="var">G_{θ'}</span>，校准后 reasoner <span class="var">R_{ϕ'}</span></p>
+      <p style="padding-left:0.5em"><span class="cm">— Phase 0: 监督暖启动 —</span></p>
+      <p style="padding-left:1.5em"><span class="num">1:</span> 收集专家轨迹 <span class="var">T_sft = {(p_i, a_i^A, a_i^B, a_i^C)}</span> 对应 Task A/B/C <span class="cm">▷ 约 20K</span></p>
+      <p style="padding-left:1.5em"><span class="num">2:</span> <span class="var">R_{ϕ0}</span> ← <span class="kw">arg min</span><span class="fn">_ϕ</span> <span class="fn">L_SFT</span>(<span class="var">ϕ; p, a</span>) <span class="cm">▷ 结构化任务输出的交叉熵</span></p>
+      <p style="padding-left:0.5em"><span class="cm">— Phase 1: 在线迭代 DPO（生成器）—</span></p>
+      <p style="padding-left:1.5em"><span class="num">3:</span> <span class="kw">for</span> 每个 episode <span class="var">e = 1, ..., T1</span> <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="num">4:</span>   采样 batch <span class="var">B_e ⊂ D</span></p>
+      <p style="padding-left:3em"><span class="num">5:</span>   <span class="kw">for</span> 每个 <span class="var">p ∈ B_e</span> <span class="kw">do</span></p>
+      <p style="padding-left:4.5em"><span class="num">6:</span>     <span class="var">p̃</span> ← <span class="fn">R_{ϕ0}(p)</span> <span class="cm">▷ gate–filter–integrate 增强规范</span></p>
+      <p style="padding-left:4.5em"><span class="num">7:</span>     生成 <span class="var">M</span> 张图：{<span class="var">x_j</span>}_{j=1}^{M} ~ <span class="fn">G_θ(· | p̃)</span></p>
+      <p style="padding-left:4.5em"><span class="num">8:</span>     评分：<span class="var">s_j</span> ← <span class="fn">Score(p, x_j)</span> <span class="cm">▷ 与 Def.1 的 Q 不同的图像评分函数</span></p>
+      <p style="padding-left:4.5em"><span class="num">9:</span>     构偏好对：<span class="var">x_w</span> ← <span class="var">x_{arg max s_j}</span>，<span class="var">x_l</span> ← <span class="var">x_{arg min s_j}</span></p>
+      <p style="padding-left:3em"><span class="num">10:</span>  <span class="kw">end for</span></p>
+      <p style="padding-left:3em"><span class="num">11:</span>  经 flow-matching DPO 损失更新：<span class="fn">L_DPO(θ)</span>（见上方公式）</p>
+      <p style="padding-left:3em"><span class="num">12:</span>  <span class="var">θ</span> ← <span class="var">θ</span> − <span class="var">η_1</span> <span class="fn">∇_θ</span> <span class="fn">L_DPO(θ)</span></p>
+      <p style="padding-left:1.5em"><span class="num">13:</span> <span class="kw">end for</span></p>
+      <p style="padding-left:1.5em"><span class="num">14:</span> <span class="var">G_{θ'}</span> ← <span class="var">G_θ</span> <span class="cm">▷ DPO 强化生成器</span></p>
+      <p style="padding-left:0.5em"><span class="cm">— Phase 2: rejection finetuning（reasoner）—</span></p>
+      <p style="padding-left:1.5em"><span class="num">15:</span> <span class="kw">for</span> 每个 <span class="var">p ∈ D_rft ⊂ D</span> <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="num">16:</span>  rollout <span class="var">N_traj</span> 条轨迹 {<span class="var">τ_n</span>}_{n=1}^{N_traj}，<span class="var">τ_n = R_{ϕ0}(p)</span>，得图像 <span class="var">x_n ~ G_{θ'}(· | τ_n)</span></p>
+      <p style="padding-left:3em"><span class="num">17:</span>  评分：<span class="var">s_n</span> ← <span class="fn">Score(p, x_n)</span></p>
+      <p style="padding-left:3em"><span class="num">18:</span>  group-relative advantage：<span class="var">A_n</span> ← (<span class="var">s_n − s̄</span>) / (<span class="var">σ_s + δ</span>)</p>
+      <p style="padding-left:1.5em"><span class="num">19:</span> <span class="kw">end for</span></p>
+      <p style="padding-left:1.5em"><span class="num">20:</span> 过滤：<span class="var">T_rft</span> ← {<span class="var">τ_n</span> : <span class="var">A_n &gt; 0</span>} <span class="cm">▷ 保留正优势轨迹</span></p>
+      <p style="padding-left:1.5em"><span class="num">21:</span> <span class="var">R_{ϕ'}</span> ← <span class="kw">arg min</span><span class="fn">_ϕ</span> <span class="fn">Σ_{τ ∈ T_rft}</span> <span class="fn">L_SFT(ϕ; τ)</span> <span class="cm">▷ 滤后轨迹上 SFT</span></p>
+      <p style="padding-left:1.5em"><span class="num">22:</span> <span class="kw">return</span> (<span class="var">G_{θ'}</span>, <span class="var">R_{ϕ'}</span>)</p>
+    </div>
+
+    <h3 id="method-eval">3.6 评估协议</h3>
+
+    <p>评估目标是把<strong>世界知识失败与渲染失败区分开来</strong>，全自动化。论文采用两套互补评分组件（9 维，每维 0–100，整体取适用维均值）：</p>
+    <ul>
+      <li><strong>知识敏感（prompt-adaptive，5 维）</strong>：Checklist Verification（3–10 条二值关键视觉元素检查）、Rubric-adaptive Scoring（2–4 个类别定制加权维度）、Prompt Faithfulness（请求的主体/属性/动作/场景/风格的呈现与准确）、Visual Reference Fidelity（对参考图像的身份/属性/风格忠实度）、Textual Knowledge Fidelity（事实/系统/概念/流程等文本知识缺口正确性）。这些组件随 prompt 变化、直接衡量知识在场。</li>
+      <li><strong>渲染质量（knowledge-invariant，4 维）</strong>：Image Quality、Text Rendering、AI Naturalness、Composition &amp; Aesthetics、Physical Plausibility。固定跨所有 prompt、独立于知识衡量生成能力。</li>
+    </ul>
+    <p>评分由 <strong>Gemini-3-Flash VLM judge</strong> 完成，在 500 条 prompt–image 对上与人工评分的 <strong>Spearman ρ = 0.87</strong>。每条评分附 Anchor/Adjustment/Computed 三段可审计理由。搜索密集 prompt（651 条）按 Nano Banana Pro no-search 质量三分为 Set I（最易）、Set II、Set III（最难），partition 跨所有实验固定。</p>
+
+    <hr>

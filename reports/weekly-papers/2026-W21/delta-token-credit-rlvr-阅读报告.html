@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DelTA: 可验证奖励强化学习中的判别式Token信用分配 — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    em { color: #f9e2af; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    .best { color: var(--strong); font-weight: 700; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.5em; }
+    li { margin: 0.25em 0; }
+    .badge { display: inline-block; font-size: 0.78em; font-weight: 700; padding: 2px 8px; border-radius: 10px; background: var(--heading); color: #1e1e2e; margin-right: 4px; }
+    .badge.orange { background: #fab387; }
+    .badge.green  { background: #a6e3a1; }
+    .badge.purple { background: #cba6f7; }
+    .badge.red    { background: #f38ba8; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 20px 28px; margin: 1em 0; }
+    .highlight-box { background: #1a2a1a; border: 1px solid #4a7a4a; border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .warning-box { background: #2a1a1a; border: 1px solid #7a4a4a; border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .formula-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 16px 22px; margin: 1em 0; text-align: center; }
+    /* algo-box */
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); font-family: 'Segoe UI', system-ui, sans-serif; }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    /* method card grid */
+    .method-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin: 1em 0; }
+    .method-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+    .method-card h4 { color: var(--heading); margin-bottom: 8px; font-size: 1em; }
+    /* timeline */
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 900px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.95em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.88em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+    .comparison-table td.best-cell { color: var(--strong); font-weight: 700; }
+    .section-intro { font-size: 0.97em; color: #a6adc8; margin-bottom: 1.2em; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$']],
+        displayMath: [['$$','$$']],
+        packages: {'[+]': ['boldsymbol']}
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<!-- ==================== 标题 ==================== -->
+<h1>DelTA: 可验证奖励强化学习中的<br>判别式 Token 信用分配</h1>
+<p style="color:#6c7086; font-size:0.9em; margin-top:4px;">
+  <span class="badge">RLVR</span>
+  <span class="badge green">Token Credit Assignment</span>
+  <span class="badge purple">Discriminator View</span>
+  <span class="badge orange">Qwen3 · 数学推理</span>
+  &nbsp;阅读报告 · 2026-W21
+</p>
+
+<!-- ==================== 1. 论文信息表 ==================== -->
+<h2 id="paper-info">1. 论文基本信息</h2>
+<table>
+  <tr><th style="width:120px">标题</th><td>DelTA: Discriminative Token Credit Assignment for Reinforcement Learning from Verifiable Rewards</td></tr>
+  <tr><th>作者</th><td>Kaiyi Zhang, Wei Wu, Yankai Lin（中国人民大学 RUCBM）</td></tr>
+  <tr><th>发布时间</th><td>2026 年 5 月 20 日（arXiv:2605.21467v1）</td></tr>
+  <tr><th>社区热度</th><td>204 upvotes（截至 2026-W21）</td></tr>
+  <tr><th>核心问题</th><td>RLVR 训练中，响应级奖励如何转化为 token 级概率变化？现有方法的质心构造被高频格式化 token 主导，真正有判别力的方向被稀释。</td></tr>
+  <tr><th>主要贡献</th><td>引入"线性判别器"视角解读 RLVR 更新，提出 DelTA 算法通过迭代精化质心、估计 token 系数，对 RLVR 代理函数进行系数重加权。</td></tr>
+  <tr><th>核心结果</th><td>Qwen3-8B-Base 上平均 +3.26 分（7 个数学基准），Qwen3-14B-Base 上平均 +2.62 分。</td></tr>
+  <tr><th>开源地址</th><td><a href="https://github.com/RUCBM/DelTA" target="_blank">https://github.com/RUCBM/DelTA</a>（基于 verl 框架）</td></tr>
+</table>
+
+<!-- ==================== 2. 核心问题与动机 ==================== -->
+<h2 id="motivation">2. 核心问题与动机</h2>
+<p class="section-intro">RLVR 中有一个根本性的粒度错位：奖励在序列层面（整条响应对或错），但策略参数的梯度更新作用于每个 token。弄清"哪个 token 该获得多少信用"是提升样本效率和训练稳定性的关键。</p>
+
+<h3 id="token-credit-problem">2.1 Token 信用分配问题</h3>
+<p>
+  在当前主流的 RLVR 方法（GRPO、DAPO 等）中，策略梯度被所有 token 均匀或按优势加权，而不区分 token 的判别价值。
+  这导致两个问题：
+</p>
+<ul>
+  <li><strong>格式化 token 主导</strong>：换行符、句号、数字标注等高频 token 在多条响应中高度共享，它们贡献的梯度方向接近各 side（正/负样本侧）的均值，形成"公共噪声"，会主导质心方向。</li>
+  <li><strong>真正有辨别力的方向被稀释</strong>：那些在正确响应中出现、在错误响应中不出现（或反之）的"稀疏但判别性"的 token，由于数量少，在简单平均下贡献权重不足。</li>
+</ul>
+<blockquote>
+  论文原文：<em>"centroid construction can be dominated by shared high-frequency patterns, such as formatting tokens, diluting sparse yet discriminative directions."</em>
+</blockquote>
+
+<h3 id="intuition">2.2 直觉举例</h3>
+<div class="info-card">
+  <p>考虑一道数学题，模型生成 N 条响应：正确的 $N^{+}$ 条和错误的 $N^{-}$ 条。</p>
+  <p>在所有响应中，<code>"\\n"</code>（换行）、<code>"."</code>（句号）、<code>"="</code>（等号）等 token 几乎无处不在。它们在两侧的梯度向量高度相似——这些方向对于区分"对与错"毫无贡献，却在数量上占据了大多数，拉偏了 $\bar{\mu}_{+}$ 和 $\bar{\mu}_{-}$ 的估计。</p>
+  <p>相反，关键推理步骤中的 token（如某个中间变量的正确赋值）仅在正确响应里出现，其梯度方向强烈侧特异，才是真正值得被放大的信号。</p>
+</div>
+
+<!-- ==================== 3. 背景与相关工作 ==================== -->
+<h2 id="background">3. 背景与相关工作</h2>
+<p class="section-intro">本节梳理从 RLHF 到 RLVR 的方法谱系，以及与 Token 信用分配相关的前驱工作。</p>
+
+<h3 id="rlhf-rlvr">3.1 从 RLHF 到 RLVR 的方法演进</h3>
+
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">2017</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">算法</span><br>
+          <strong>PPO</strong>（Schulman et al.）<br>近端策略优化，引入 clip 约束和 value baseline，成为 RLHF 基础算法
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2022–2023</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">方法</span><br>
+          <strong>InstructGPT / RLHF</strong><br>用人类偏好奖励模型训练语言模型，开创 LLM 对齐范式
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">数学</span><br>
+          <strong>DeepSeekMath / GRPO</strong><br>无需价值网络，用组内相对优势替代 baseline；开创 RLVR 路径
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">方法</span><br>
+          <strong>DAPO</strong>（Yu et al.）<br>去掉 KL 惩罚，允许 clip-higher，引入 token 级策略梯度
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag purple">信用</span><br>
+          <strong>VinePPO</strong>（Kazemnejad）<br>用 Monte Carlo rollout 估计 token 级优势
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag green">信用</span><br>
+          <strong>FIPO</strong>（Ma et al.）<br>用未来 KL 影响力（future-KL influence）对 token 加权
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2026</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">方法</span><br>
+          <strong>DAPO+FT（Forking Tokens）</strong><br>用 token 熵阈值筛选"分叉 token"
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">方法</span><br>
+          <strong>SparsePO</strong>（Meng et al.）<br>稀疏化策略优化
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">方法</span><br>
+          <strong>SAPO / CAPO</strong><br>不同角度的 token 重要性估计
+        </div>
+        <div class="tl-item" style="background:#1a2a1a; border: 1px solid #4a7a4a;">
+          <span class="tl-tag green">本文</span><br>
+          <strong>DelTA</strong><br>判别式质心精化 + token 系数重加权
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3 id="methods-comparison">3.2 各方法的有效 Token 权重对比</h3>
+<p>论文 Appendix E 将多种 RLVR 变体统一为质心估计器框架，按各方法对 token 的有效权重 $\rho_{i,t}$ 分类：</p>
+<table>
+  <thead>
+    <tr><th>方法</th><th>token 有效权重 $\rho_{i,t}$</th><th>主要特点</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>GRPO</td><td>$1/|o_i|$（响应长度归一化）</td><td>组内相对优势，无 value 网络</td></tr>
+    <tr><td>DAPO</td><td>$1$（均匀权重）</td><td>去 KL，clip-higher，token 级梯度</td></tr>
+    <tr><td>DAPO + Forking Tokens</td><td>$\mathbf{1}[H_{i,t} \geq \tau]$（熵阈值掩码）</td><td>只保留"分叉"高熵 token</td></tr>
+    <tr><td>FIPO</td><td>$f_{i,t}$（未来 KL 影响力）</td><td>前向影响力估计</td></tr>
+    <tr><td><strong>DelTA</strong></td><td><strong>$\lambda_{i,t}$（判别对比系数）</strong></td><td>跨正负侧对比，迭代质心精化</td></tr>
+  </tbody>
+</table>
+<p>DelTA 是唯一一个显式利用<strong>正负双侧对比信息</strong>来估计 token 权重的方法，其他方法均仅基于单侧统计。</p>
+
+<!-- ==================== 4. 方法流程 ==================== -->
+<h2 id="method-overview">4. 方法流程总览</h2>
+
+<h3 id="pipeline-flowchart">4.1 DelTA 训练流程（Mermaid Flowchart）</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["策略模型 π_θ"] -->|"采样 G 条响应"| B["响应组 {o_1,...,o_G}"]
+    B --> C["可验证奖励函数 r(o_i)"]
+    C --> D["计算优势 A_i = Normalize(r_i)"]
+    D --> E{"A_i > 0 ?"}
+    E -->|"正样本"| F["正侧 token 集合 S+"]
+    E -->|"负样本"| G["负侧 token 集合 S-"]
+
+    F --> H["计算 token 梯度代理 v_i,t"]
+    G --> H
+
+    H --> I["初始化质心 μ+^0, μ-^0\n（优势加权均值）"]
+    I --> J["K 次迭代精化\n计算 α_i,t 软分配系数"]
+    J --> K["更新质心 μ+^k+1, μ-^k+1"]
+    K -->|"K 次后"| L["最终系数 λ_i,t\n= λ_min + (λ_max - λ_min)·α*_i,t"]
+
+    L --> M["DelTA 代理目标 J_DelTA(θ)\n系数重加权的 RLVR 损失"]
+    M --> N["梯度更新 θ ← θ + η∇J_DelTA"]
+    N --> A
+</pre>
+
+<h3 id="discriminator-view-diagram">4.2 线性判别器视角（判别器抽象图）</h3>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph POS ["正样本侧 (A_i > 0)"]
+        direction TB
+        P1["token v_1,t1"]
+        P2["token v_2,t2"]
+        P3["格式 token (高频)"]
+        P4["关键推理 token (判别)"]
+    end
+
+    subgraph NEG ["负样本侧 (A_i < 0)"]
+        direction TB
+        N1["token v_3,t1"]
+        N2["token v_4,t2"]
+        N3["格式 token (高频)"]
+        N4["错误推理 token"]
+    end
+
+    P3 -.->|"共享方向 被稀释"| C["质心 μ+"]
+    N3 -.->|"共享方向 被稀释"| D["质心 μ-"]
+    P4 ==>|"侧特异方向 被放大"| C
+    N4 ==>|"侧特异方向 被放大"| D
+
+    C --> E["线性判别平面\nw = μ+ - μ-"]
+    D --> E
+
+    E --> F{"token v_i,t 的\n判别系数 λ_i,t"}
+    F -->|"高判别力 λ→1.2"| G["放大更新贡献"]
+    F -->|"低判别力 λ→0.8"| H["降低更新贡献"]
+</pre>
+
+<!-- ==================== 5. 关键技术详解 ==================== -->
+<h2 id="technical-details">5. 关键技术详解</h2>
+
+<h3 id="rlvr-gradient">5.1 RLVR 策略梯度公式与推导</h3>
+
+<p>以 DAPO 为代表的 RLVR 方法使用以下代理目标进行策略优化。给定提示 $q$，模型采样 $G$ 条响应 $\{o_1, \ldots, o_G\}$，对第 $i$ 条响应计算规范化优势 $\hat{A}_i$。</p>
+
+<p><strong>DAPO/RLVR 代理目标：</strong></p>
+<p>$$J_\mathrm{RLVR}(\theta) = \mathbb{E}_{q \sim \mathcal{D},\, o_i \sim \pi_{\theta_\mathrm{old}}(\cdot|q)} \left[ \frac{1}{\sum_{i,t} 1} \sum_{i=1}^{G} \sum_{t=1}^{|o_i|} \min\!\left( r_{i,t} \hat{A}_i,\; \mathrm{clip}(r_{i,t}, 1-\epsilon, 1+\epsilon)\, \hat{A}_i \right) \right]$$</p>
+
+<p>其中 $r_{i,t} = \dfrac{\pi_\theta(o_{i,t} \mid q, o_{i,\lt t})}{\pi_{\theta_\mathrm{old}}(o_{i,t} \mid q, o_{i,\lt t})}$ 是重要性权重比率。</p>
+
+<p><strong>策略梯度的一阶展开：</strong></p>
+<p>对于任意上下文 $c$ 下的候选 token $x$，对数概率的变化量可用一阶 Taylor 展开近似：</p>
+<p>$$\Delta \log \pi(x|c) \approx \left( \nabla_\theta \log \pi_\theta(x|c)\big|_{\theta_\mathrm{old}} \right)^\top \Delta\theta$$</p>
+
+<p>定义 token 梯度向量 $v_{i,t} \triangleq \nabla_\theta \log \pi_{\theta_\mathrm{old}}(o_{i,t} \mid q, o_{i,\lt t})$，则 RLVR 更新方向可展开为：</p>
+<p>$$\Delta\theta_\mathrm{RLVR} \propto \sum_{A_i \gt 0} \sum_t A_i \cdot v_{i,t} \;-\; \sum_{A_i \lt 0} \sum_t |A_i| \cdot v_{i,t}$$</p>
+
+<h3 id="discriminator-math">5.2 线性判别器视角的数学分析</h3>
+
+<p>引入 side-wise 总质量 $M_{+} = \sum_{A_i \gt 0} \sum_t A_i$ 和 $M_{-} = \sum_{A_i \lt 0} \sum_t |A_i|$，以及各侧的<strong>优势加权质心</strong>：</p>
+
+<p>$$\bar{\mu}_{+} = \frac{\sum_{A_i \gt 0} \sum_t A_i \cdot v_{i,t}}{M_{+}}, \qquad \bar{\mu}_{-} = \frac{\sum_{A_i \lt 0} \sum_t |A_i| \cdot v_{i,t}}{M_{-}}$$</p>
+
+<p>则策略更新方向变为<strong>质心差</strong>形式：</p>
+<p>$$\Delta\theta_\mathrm{RLVR} \propto M_{+}\,\bar{\mu}_{+} \;-\; M_{-}\,\bar{\mu}_{-}$$</p>
+
+<p>对于任意 token $(i,t)$，其对数概率的变化为：</p>
+<p>$$\Delta \log \pi(o_{i,t}|\cdot) \propto v_{i,t}^\top \left(M_{+}\,\bar{\mu}_{+} - M_{-}\,\bar{\mu}_{-}\right)$$</p>
+
+<div class="highlight-box">
+  <p><strong>核心发现：</strong> 上式恰好是一个<strong>线性判别器</strong>——token $v_{i,t}$ 的对数概率增减，取决于其梯度向量与"辨别方向" $w = \bar{\mu}_{+} - \bar{\mu}_{-}$ 的内积正负。</p>
+  <ul>
+    <li>$v_{i,t}^\top w \gt 0$：token 的对数概率被增大（与正侧方向对齐）</li>
+    <li>$v_{i,t}^\top w \lt 0$：token 的对数概率被降低（与负侧方向对齐）</li>
+    <li>共享高频 token 的 $v_{i,t}$ 在两侧差异不大，导致 $\bar{\mu}_{+} \approx \bar{\mu}_{-}$，判别器退化</li>
+  </ul>
+</div>
+
+<p><strong>最小二乘解释（Appendix D）：</strong> 论文进一步证明，优势加权质心也是以下加权最小二乘问题的解：</p>
+<p>$$\bar{\mu}_{+} = \arg\min_{\mu} \sum_{A_i \gt 0} \sum_t A_i \cdot \|v_{i,t} - \mu\|^2$$</p>
+<p>这意味着格式化 token（大量存在于正负两侧，梯度方向相近）会拉着质心偏离真正的侧特异方向，产生有偏估计。</p>
+
+<h3 id="delta-algorithm">5.3 DelTA 的 Token 系数估计算法</h3>
+
+<p>DelTA 通过在两侧质心与 token 梯度向量之间建立<strong>软分配</strong>，迭代精化质心，使正负侧质心更具对比性。</p>
+
+<p><strong>软分配系数的闭合解</strong>（通过熵正则化优化导出）：</p>
+<p>对于正侧 token ($A_i \gt 0$)：</p>
+<p>$$\alpha_{i,t} = \sigma\!\left( \frac{\|v_{i,t} - \mu_{-}\|^2 - \|v_{i,t} - \mu_{+}\|^2}{\gamma_{+}} \right)$$</p>
+<p>对于负侧 token ($A_i \lt 0$)：</p>
+<p>$$\alpha_{i,t} = \sigma\!\left( \frac{\|v_{i,t} - \mu_{+}\|^2 - \|v_{i,t} - \mu_{-}\|^2}{\gamma_{-}} \right)$$</p>
+<p>其中 $\sigma(\cdot)$ 为 sigmoid 函数，$\gamma_{\pm}$ 为自适应温度参数。</p>
+
+<p><strong>质心更新：</strong></p>
+<p>$$\mu_{+}^{(k+1)} = \frac{\sum_{A_i \gt 0} \sum_t A_i \cdot \alpha_{i,t}^{(k)} \cdot v_{i,t}}{\sum_{A_i \gt 0} \sum_t A_i \cdot \alpha_{i,t}^{(k)}}$$</p>
+
+<p><strong>最终 token 系数：</strong></p>
+<p>$$\lambda_{i,t} = \lambda_{\min} + (\lambda_{\max} - \lambda_{\min}) \cdot \alpha_{i,t}^{*}, \quad [\lambda_{\min}, \lambda_{\max}] = [0.8,\; 1.2]$$</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: DelTA — 判别式 Token 系数估计</div>
+  <p><span class="kw">Input:</span> <span class="var">token 梯度代理</span> {<span class="var">v̂_i,t</span>}, 优势 {<span class="var">A_i</span>}, 迭代次数 <span class="num">K</span>, 范围 [<span class="num">λ_min</span>, <span class="num">λ_max</span>] = [<span class="num">0.8</span>, <span class="num">1.2</span>]</p>
+  <p><span class="kw">Output:</span> <span class="var">token 系数</span> {<span class="var">λ_i,t</span>}</p>
+  <hr style="border-color:var(--border); margin:8px 0;">
+  <p><span class="cm">// Step 1: 初始化质心为优势加权均值</span></p>
+  <p style="padding-left:1.5em"><span class="var">μ₊⁽⁰⁾</span> ← <span class="fn">AdvWeightedMean</span>(<span class="var">v̂_i,t</span> : <span class="var">A_i</span> &gt; 0)</p>
+  <p style="padding-left:1.5em"><span class="var">μ₋⁽⁰⁾</span> ← <span class="fn">AdvWeightedMean</span>(<span class="var">v̂_i,t</span> : <span class="var">A_i</span> &lt; 0)</p>
+  <p></p>
+  <p><span class="kw">for</span> <span class="var">k</span> = <span class="num">0</span>, <span class="num">1</span>, ..., <span class="num">K-1</span> <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 2: 计算自适应温度参数</span></p>
+  <p style="padding-left:1.5em"><span class="var">γ₊</span> ← <span class="fn">AdaptiveTemp</span>(<span class="var">v̂_i,t</span>, <span class="var">μ₊⁽ᵏ⁾</span>, <span class="var">μ₋⁽ᵏ⁾</span> : <span class="var">A_i</span> &gt; 0)</p>
+  <p style="padding-left:1.5em"><span class="var">γ₋</span> ← <span class="fn">AdaptiveTemp</span>(<span class="var">v̂_i,t</span>, <span class="var">μ₊⁽ᵏ⁾</span>, <span class="var">μ₋⁽ᵏ⁾</span> : <span class="var">A_i</span> &lt; 0)</p>
+  <p></p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 3: 计算软分配系数 α_i,t</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for each</span> <span class="var">(i, t)</span> <span class="kw">with</span> <span class="var">A_i</span> &gt; 0:</p>
+  <p style="padding-left:3em"><span class="var">α_i,t</span> ← <span class="fn">σ</span>( (‖<span class="var">v̂_i,t</span> − <span class="var">μ₋⁽ᵏ⁾</span>‖² − ‖<span class="var">v̂_i,t</span> − <span class="var">μ₊⁽ᵏ⁾</span>‖²) / <span class="var">γ₊</span> )</p>
+  <p style="padding-left:1.5em"><span class="kw">for each</span> <span class="var">(i, t)</span> <span class="kw">with</span> <span class="var">A_i</span> &lt; 0:</p>
+  <p style="padding-left:3em"><span class="var">α_i,t</span> ← <span class="fn">σ</span>( (‖<span class="var">v̂_i,t</span> − <span class="var">μ₊⁽ᵏ⁾</span>‖² − ‖<span class="var">v̂_i,t</span> − <span class="var">μ₋⁽ᵏ⁾</span>‖²) / <span class="var">γ₋</span> )</p>
+  <p></p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 4: 用 α 精化质心</span></p>
+  <p style="padding-left:1.5em"><span class="var">μ₊⁽ᵏ⁺¹⁾</span> ← Σ(<span class="var">A_i</span>·<span class="var">α_i,t</span>·<span class="var">v̂_i,t</span> : <span class="var">A_i</span>&gt;0) / Σ(<span class="var">A_i</span>·<span class="var">α_i,t</span> : <span class="var">A_i</span>&gt;0)</p>
+  <p style="padding-left:1.5em"><span class="var">μ₋⁽ᵏ⁺¹⁾</span> ← Σ(|<span class="var">A_i</span>|·<span class="var">α_i,t</span>·<span class="var">v̂_i,t</span> : <span class="var">A_i</span>&lt;0) / Σ(|<span class="var">A_i</span>|·<span class="var">α_i,t</span> : <span class="var">A_i</span>&lt;0)</p>
+  <p><span class="kw">end for</span></p>
+  <p></p>
+  <p><span class="cm">// Step 5: 映射到 [λ_min, λ_max] 范围，并自归一化</span></p>
+  <p><span class="kw">for each</span> <span class="var">(i, t)</span>:</p>
+  <p style="padding-left:1.5em"><span class="var">λ_i,t</span> ← <span class="num">0.8</span> + (<span class="num">1.2</span> − <span class="num">0.8</span>) · <span class="var">α*_i,t</span>  <span class="cm">// α* 为收敛后的 α</span></p>
+  <p style="padding-left:1.5em"><span class="var">λ_i,t</span> ← <span class="var">λ_i,t</span> · (<span class="fn">len</span>(<span class="var">sequence</span>) / Σ<span class="var">λ_i,t</span>)  <span class="cm">// 自归一化，保持期望总步长不变</span></p>
+  <p><span class="kw">return</span> {<span class="var">λ_i,t</span>}</p>
+</div>
+
+<h3 id="reweighting">5.4 质心重加权机制与代理目标</h3>
+
+<p>获得 token 系数 $\{\lambda_{i,t}\}$ 后，DelTA 对标准 RLVR 代理目标进行重加权：</p>
+
+<p>$$J_\mathrm{DelTA}(\theta) = \mathbb{E}\left[\frac{1}{\sum_{i,t} \lambda_{i,t}} \sum_{i=1}^{G} \sum_{t=1}^{|o_i|} \lambda_{i,t} \cdot \min\!\left( r_{i,t}\,\hat{A}_i,\; \mathrm{clip}(r_{i,t})\,\hat{A}_i \right)\right]$$</p>
+
+<p>自归一化项 $\frac{1}{\sum_{i,t}\lambda_{i,t}}$ 确保总更新步长期望不变，避免超参敏感性。</p>
+
+<h3 id="gradient-proxy">5.5 梯度代理的实用近似</h3>
+
+<p>全参数梯度向量 $v_{i,t} \in \mathbb{R}^{|\theta|}$ 维度极高，存储和计算代价昂贵。论文提出用<strong>最后一层 logit 层的输出行向量</strong>作为代理：</p>
+
+<p>$$\hat{v}_t = (1 - p_t(y_t)) \cdot h_t$$</p>
+
+<p>其中 $h_t$ 是最后一层 Transformer 的隐层表示，$p_t(y_t)$ 是当前 token 的预测概率，整体使用 <strong>stop-gradient</strong>（只用于估计系数，不参与反向传播）。</p>
+
+<div class="info-card">
+  <p><strong>直觉：</strong> $(1 - p_t(y_t)) \cdot h_t$ 正比于 cross-entropy 对 logit 的梯度（softmax 的雅可比对角项），是梯度方向的一个廉价但合理的近似。消融实验（Table 4）表明，用 Top-K hidden-gradient 代理可进一步提升 +1.02 分。</p>
+</div>
+
+<!-- ==================== 6. 实验结果 ==================== -->
+<h2 id="experiments">6. 实验结果</h2>
+<p class="section-intro">
+  实验在 Qwen3-8B-Base 和 Qwen3-14B-Base 上进行，训练数据为 DeepMath-103K，评测 7 个数学基准（AIME 2024/2025/2026、HMMT 25-Feb/25-Nov/26-Feb、Brumo25），每题生成 16 条响应取均值，最大生成长度 30,000 tokens。
+</p>
+
+<h3 id="main-results-8b">6.1 Qwen3-8B-Base 主实验结果</h3>
+
+<table class="comparison-table">
+  <thead>
+    <tr>
+      <th>方法</th>
+      <th>AIME24</th><th>AIME25</th><th>AIME26</th>
+      <th>HMMT25-Feb</th><th>HMMT25-Nov</th><th>HMMT26-Feb</th>
+      <th>Brumo25</th><th><strong>Avg</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DAPO</td>
+      <td>34.79</td><td>23.33</td><td>24.17</td>
+      <td>13.54</td><td>12.08</td><td>16.86</td>
+      <td>36.46</td><td>22.95</td>
+    </tr>
+    <tr>
+      <td>DAPO + Forking Tokens</td>
+      <td>36.67</td><td>23.96</td><td>26.46</td>
+      <td>15.62</td><td>15.42</td><td>17.05</td>
+      <td>39.17</td><td>24.80</td>
+    </tr>
+    <tr>
+      <td>SAPO</td>
+      <td>38.75</td><td>24.37</td><td>26.25</td>
+      <td>14.58</td><td>16.04</td><td>17.42</td>
+      <td>39.37</td><td>25.14</td>
+    </tr>
+    <tr>
+      <td>FIPO</td>
+      <td>37.50</td><td>23.13</td><td>23.96</td>
+      <td>14.58</td><td>12.92</td><td>17.99</td>
+      <td>37.71</td><td>23.89</td>
+    </tr>
+    <tr style="background: #1a2a1a;">
+      <td><strong>DelTA (ours)</strong></td>
+      <td class="best">43.13</td><td class="best">26.46</td><td class="best">28.12</td>
+      <td class="best">18.33</td><td class="best">18.54</td><td class="best">20.27</td>
+      <td class="best">44.79</td><td class="best">28.40</td>
+    </tr>
+  </tbody>
+</table>
+<p style="color:#6c7086; font-size:0.88em; margin-top:4px;">最强基线为 SAPO (25.14)，DelTA 提升 <strong style="color:var(--strong)">+3.26</strong> 分。</p>
+
+<h3 id="main-results-14b">6.2 Qwen3-14B-Base 主实验结果</h3>
+
+<table class="comparison-table">
+  <thead>
+    <tr>
+      <th>方法</th>
+      <th>AIME24</th><th>AIME25</th><th>AIME26</th>
+      <th>HMMT25-Feb</th><th>HMMT25-Nov</th><th>HMMT26-Feb</th>
+      <th>Brumo25</th><th><strong>Avg</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DAPO</td>
+      <td>51.25</td><td>32.29</td><td>39.79</td>
+      <td>19.79</td><td>30.00</td><td>25.38</td>
+      <td>48.13</td><td>35.09</td>
+    </tr>
+    <tr>
+      <td>DAPO + Forking Tokens</td>
+      <td>54.37</td><td>33.75</td><td>41.46</td>
+      <td>20.42</td><td>31.67</td><td>24.81</td>
+      <td>52.08</td><td>36.77</td>
+    </tr>
+    <tr>
+      <td>SAPO</td>
+      <td>53.96</td><td>34.17</td><td>41.46</td>
+      <td>20.62</td><td>28.33</td><td>24.05</td>
+      <td>50.21</td><td>35.94</td>
+    </tr>
+    <tr>
+      <td>FIPO</td>
+      <td>54.58</td><td>35.00</td><td>42.50</td>
+      <td>21.46</td><td>32.29</td><td>24.43</td>
+      <td>52.08</td><td>37.29</td>
+    </tr>
+    <tr style="background: #1a2a1a;">
+      <td><strong>DelTA (ours)</strong></td>
+      <td class="best">56.87</td><td class="best">37.92</td><td class="best">45.21</td>
+      <td class="best">26.04</td><td class="best">32.92</td><td class="best">26.89</td>
+      <td class="best">54.79</td><td class="best">39.91</td>
+    </tr>
+  </tbody>
+</table>
+<p style="color:#6c7086; font-size:0.88em; margin-top:4px;">最强基线为 FIPO (37.29)，DelTA 提升 <strong style="color:var(--strong)">+2.62</strong> 分。</p>
+
+<h3 id="echarts-main">6.3 ECharts 可视化：7 基准对比</h3>
+
+<div id="chart-8b" class="echarts-container" style="height:380px"></div>
+<p style="text-align:center; color:#6c7086; font-size:0.85em; margin-top:0">图1：Qwen3-8B-Base — 各方法在 7 个数学基准上的得分</p>
+
+<div id="chart-14b" class="echarts-container" style="height:380px; margin-top:24px;"></div>
+<p style="text-align:center; color:#6c7086; font-size:0.85em; margin-top:0">图2：Qwen3-14B-Base — 各方法在 7 个数学基准上的得分</p>
+
+<div id="chart-avg" class="echarts-container" style="height:320px; margin-top:24px;"></div>
+<p style="text-align:center; color:#6c7086; font-size:0.85em; margin-top:0">图3：平均分对比（8B 和 14B）</p>
+
+<script>
+(function(){
+  var categories = ['AIME24','AIME25','AIME26','HMMT25-Feb','HMMT25-Nov','HMMT26-Feb','Brumo25'];
+  var commonTheme = {
+    backgroundColor: '#2a2a3e',
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { textStyle: { color: '#cdd6f4' }, top: 8 },
+    grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
+    xAxis: { type: 'category', data: categories, axisLabel: { color: '#cdd6f4', rotate: 15 }, axisLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } }
+  };
+
+  // 8B chart
+  var c8b = echarts.init(document.getElementById('chart-8b'));
+  c8b.setOption(Object.assign({}, commonTheme, {
+    series: [
+      { name:'DAPO',       type:'bar', data:[34.79,23.33,24.17,13.54,12.08,16.86,36.46], itemStyle:{color:'#45475a'} },
+      { name:'DAPO+FT',    type:'bar', data:[36.67,23.96,26.46,15.62,15.42,17.05,39.17], itemStyle:{color:'#6c7086'} },
+      { name:'SAPO',       type:'bar', data:[38.75,24.37,26.25,14.58,16.04,17.42,39.37], itemStyle:{color:'#89b4fa'} },
+      { name:'FIPO',       type:'bar', data:[37.50,23.13,23.96,14.58,12.92,17.99,37.71], itemStyle:{color:'#cba6f7'} },
+      { name:'DelTA',      type:'bar', data:[43.13,26.46,28.12,18.33,18.54,20.27,44.79], itemStyle:{color:'#a6e3a1'} }
+    ]
+  }));
+
+  // 14B chart
+  var c14b = echarts.init(document.getElementById('chart-14b'));
+  c14b.setOption(Object.assign({}, commonTheme, {
+    series: [
+      { name:'DAPO',       type:'bar', data:[51.25,32.29,39.79,19.79,30.00,25.38,48.13], itemStyle:{color:'#45475a'} },
+      { name:'DAPO+FT',    type:'bar', data:[54.37,33.75,41.46,20.42,31.67,24.81,52.08], itemStyle:{color:'#6c7086'} },
+      { name:'SAPO',       type:'bar', data:[53.96,34.17,41.46,20.62,28.33,24.05,50.21], itemStyle:{color:'#89b4fa'} },
+      { name:'FIPO',       type:'bar', data:[54.58,35.00,42.50,21.46,32.29,24.43,52.08], itemStyle:{color:'#cba6f7'} },
+      { name:'DelTA',      type:'bar', data:[56.87,37.92,45.21,26.04,32.92,26.89,54.79], itemStyle:{color:'#a6e3a1'} }
+    ]
+  }));
+
+  // Avg chart
+  var cAvg = echarts.init(document.getElementById('chart-avg'));
+  cAvg.setOption({
+    backgroundColor: '#2a2a3e',
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { textStyle: { color: '#cdd6f4' }, top: 8 },
+    grid: { left: '4%', right: '4%', bottom: '8%', containLabel: true },
+    xAxis: { type: 'category', data: ['DAPO','DAPO+FT','SAPO','FIPO','DelTA'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+    yAxis: { type: 'value', min: 18, max: 44, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [
+      { name:'Qwen3-8B-Base',  type:'bar', data:[22.95,24.80,25.14,23.89,28.40], itemStyle:{color:'#89b4fa'}, label:{show:true, position:'top', color:'#cdd6f4'} },
+      { name:'Qwen3-14B-Base', type:'bar', data:[35.09,36.77,35.94,37.29,39.91], itemStyle:{color:'#a6e3a1'}, label:{show:true, position:'top', color:'#cdd6f4'} }
+    ]
+  });
+})();
+</script>
+
+<!-- ==================== 7. 消融实验 ==================== -->
+<h2 id="ablation">7. 消融实验分析</h2>
+
+<h3 id="ablation-opposite-side">7.1 对侧对比是否必要（Table 2）</h3>
+
+<p>论文验证了"必须使用对侧（opposite-side）信息才能产生有效的判别系数"这一核心假设：</p>
+
+<table>
+  <thead>
+    <tr><th>变体</th><th>AIME25</th><th>AIME26</th><th>HMMT25-Nov</th><th>HMMT26-Feb</th><th>Avg (4项)</th></tr>
+  </thead>
+  <tbody>
+    <tr style="background:#1a2a1a;">
+      <td><strong>DelTA（完整版）</strong></td>
+      <td class="best">26.46</td><td class="best">28.12</td><td class="best">18.54</td><td class="best">20.27</td><td class="best">23.27</td>
+    </tr>
+    <tr>
+      <td>DAPO（基线）</td>
+      <td>23.33</td><td>24.17</td><td>12.08</td><td>16.86</td><td>19.05</td>
+    </tr>
+    <tr style="background:#2a1a1a;">
+      <td>仅同侧比较（within-side only）</td>
+      <td>21.67</td><td>22.08</td><td>11.04</td><td>17.05</td><td>17.94</td>
+    </tr>
+  </tbody>
+</table>
+<div class="warning-box">
+  <p><strong>关键发现：</strong> 仅使用同侧对比（即不利用对侧质心信息）不仅无法提升，反而比 DAPO 基线还差 (-1.11 avg)。这证明了<em>跨侧对比是 DelTA 有效性的根本来源</em>，同侧内部的变化方差并不能捕捉真正的判别信息。</p>
+</div>
+
+<h3 id="ablation-token-selection">7.2 Token 选择实验</h3>
+
+<p>用 $\lambda_{i,t}$ 做硬选择（保留 top-50% token）对比 DAPO：</p>
+<ul>
+  <li>保留高 $\lambda$ 的 top-50% token：明显优于全 token DAPO</li>
+  <li>保留低 $\lambda$ 的 bottom-50% token：训练"快速崩溃"</li>
+</ul>
+<p>这说明低 $\lambda$ token 不仅仅是无信息的，它们会积极地<strong>损害</strong>训练。这与直觉一致：格式化 token 的梯度方向可能引入伪相关，混淆模型对推理正确性的判断。</p>
+
+<h3 id="ablation-components">7.3 各组件的消融分析（Table 3）</h3>
+
+<div id="chart-ablation" class="echarts-container" style="height:300px"></div>
+<p style="text-align:center; color:#6c7086; font-size:0.85em">图4：各组件消融（Qwen3-8B，4个基准平均分）</p>
+
+<script>
+(function(){
+  var chart = echarts.init(document.getElementById('chart-ablation'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '5%', right: '5%', bottom: '12%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['Full DelTA','w/o 自适应γ','w/o h(α)','w/o λ-norm','w/o range map','w/o refinement'],
+      axisLabel: { color: '#cdd6f4', rotate: 20, fontSize: 11 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: { type: 'value', min: 18, max: 25, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: 23.27, itemStyle: { color: '#a6e3a1' } },
+        { value: 21.19, itemStyle: { color: '#89b4fa' } },
+        { value: 20.93, itemStyle: { color: '#89b4fa' } },
+        { value: 21.39, itemStyle: { color: '#89b4fa' } },
+        { value: 20.78, itemStyle: { color: '#89b4fa' } },
+        { value: 19.97, itemStyle: { color: '#f38ba8' } }
+      ],
+      label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+    }]
+  });
+})();
+</script>
+
+<table>
+  <thead>
+    <tr><th>移除的组件</th><th>Avg (4 项)</th><th>降幅</th><th>解释</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>完整 DelTA</td><td class="best">23.27</td><td>—</td><td>—</td></tr>
+    <tr><td>去掉自适应温度 γ</td><td>21.19</td><td>-2.08</td><td>固定温度导致 sigmoid 饱和或过于平滑</td></tr>
+    <tr><td>去掉 h(α) 映射</td><td>20.93</td><td>-2.34</td><td>单调变换对 α 的数值稳定性有重要作用</td></tr>
+    <tr><td>去掉 λ 归一化</td><td>21.39</td><td>-1.88</td><td>步长偏移引起优化不稳定</td></tr>
+    <tr><td>去掉 range map [0.8,1.2]</td><td>20.78</td><td>-2.49</td><td>极端系数（0或1）导致梯度消失/爆炸</td></tr>
+    <tr><td><strong>去掉迭代精化</strong></td><td>19.97</td><td>-3.30</td><td><strong>最大降幅：一次性质心估计不足，迭代是核心</strong></td></tr>
+  </tbody>
+</table>
+<p>"去掉迭代精化"（仅做一次质心估计）导致最大幅度下降（-3.30），接近 DAPO 基线水平，说明<strong>迭代过程本身就是关键贡献</strong>，而非仅仅是系数重加权。</p>
+
+<h3 id="ablation-proxy">7.4 梯度代理的消融（Table 4）</h3>
+
+<table>
+  <thead>
+    <tr><th>代理方式</th><th>AIME25</th><th>AIME26</th><th>HMMT25-Nov</th><th>HMMT26-Feb</th><th>Avg</th></tr>
+  </thead>
+  <tbody>
+    <tr style="background:#1a2a1a;">
+      <td>DelTA（默认输出行向量代理）</td>
+      <td class="best">26.46</td><td class="best">28.12</td><td class="best">18.54</td><td class="best">20.27</td><td class="best">23.27</td>
+    </tr>
+    <tr>
+      <td>Top-K 隐层梯度代理</td>
+      <td>27.08</td><td>27.71</td><td>20.83</td><td>21.78</td><td>24.29</td>
+    </tr>
+    <tr style="background:#2a1a1a;">
+      <td>随机 λ（控制实验）</td>
+      <td>22.50</td><td>22.50</td><td>11.87</td><td>16.67</td><td>18.34</td>
+    </tr>
+  </tbody>
+</table>
+<p>随机系数大幅低于 DAPO（18.34 vs 19.05），进一步证实增益来自有意义的判别结构，而非单纯的正则化扰动效果。Top-K 隐层梯度代理（+1.02）显示仍有改进空间，但代价是更高的计算开销。</p>
+
+<h3 id="ablation-training-dynamics">7.5 训练动态</h3>
+<p>对比 DelTA 与 DAPO 在 Qwen3-8B-Base 上的训练曲线（论文 Figure 中展示）：</p>
+<ul>
+  <li><strong>DAPO</strong>：训练中后期奖励停止增长甚至轻微下降，响应长度缩短，token 熵上升——典型的训练退化信号。</li>
+  <li><strong>DelTA</strong>：持续改进，响应长度保持较长，token 熵更低——模型对长链推理更"自信"，训练更稳定。</li>
+</ul>
+
+<!-- ==================== 8. 核心洞见与读后评注 ==================== -->
+<h2 id="insights">8. 核心洞见与读后评注</h2>
+
+<h3 id="insight1">8.1 "判别器视角"的理论价值</h3>
+<div class="highlight-box">
+  <p>将 RLVR 更新诠释为"token 梯度空间中的线性判别"这一视角，是本文最重要的理论贡献。这个框架的价值在于：</p>
+  <ul>
+    <li>它给出了一个统一的分析语言，将 GRPO、DAPO、FIPO 等不同方法的 token 权重差异化归纳为同一框架下的不同 $\rho_{i,t}$ 选择。</li>
+    <li>它解释了为什么基于熵阈值（Forking Tokens）的方法能有效：高熵 token 往往对应梯度方向更具侧特异性的位置。</li>
+    <li>它为未来方法设计提供了明确的优化目标：最大化正负质心之间的判别距离，而非单纯追求奖励信号的均匀传播。</li>
+  </ul>
+</div>
+
+<h3 id="insight2">8.2 格式化 Token 的"双重身份"</h3>
+<p>
+  传统 RLVR 研究通常只关注"高熵 token"（模型在此处不确定），并认为这些位置是训练信号的主要来源。本文提出了一个补充视角：
+  不确定性高的 token 未必判别力强，关键是看该 token 在正负侧的梯度方向是否有系统性差异。
+</p>
+<p>
+  格式化 token 的熵可能也较高（因为格式可以有多种），但它们在两侧的分布相似，判别力为零甚至为负。
+  DelTA 通过跨侧对比精确识别出这类"高熵但低判别"的 token 并降低其权重，这是比单纯熵过滤更精细的信号。
+</p>
+
+<h3 id="insight3">8.3 迭代精化的必要性：一次性估计的偏差</h3>
+<p>
+  消融实验显示，去掉迭代精化是最大的单点伤害（-3.30 分）。这在数学上可以理解为：
+</p>
+<ul>
+  <li>第一轮质心估计 $\mu_{\pm}^{(0)}$ 受高频格式 token 污染，仍然偏向"公共方向"。</li>
+  <li>基于这个偏斜质心计算的 $\alpha_{i,t}^{(0)}$ 虽然比均匀权重好，但仍不够准确。</li>
+  <li>经过 $K$ 次迭代后，格式 token 因为在两侧分布相近（$\alpha_{i,t}$ 低），逐渐被边缘化；真正判别性 token 的 $\alpha_{i,t}$ 收敛到高值，质心被吸引向侧特异方向。</li>
+</ul>
+<p>这是一个类 EM 算法的机制——初始估计偏差大，但迭代能自我纠偏。</p>
+
+<h3 id="insight4">8.4 与 FIPO 的对比：前向 vs. 判别</h3>
+<p>
+  FIPO 用"未来 KL 影响力"来衡量 token 的重要性：影响后续 token 分布越大，该 token 越重要。这是一种<strong>序列内因果影响</strong>视角。
+  DelTA 则是一种<strong>跨序列判别对比</strong>视角：同一位置的 token，在正确响应和错误响应中的梯度方向差别越大，越重要。
+</p>
+<p>
+  两者捕捉的信息有互补性，这也解释了为什么 DelTA 在 14B 上的提升幅度（+2.62，相对 FIPO 的 37.29）小于 8B 上的提升（+3.26，相对 SAPO 的 25.14）：更大模型上 FIPO 的"未来影响"信号质量更高，边际改进空间相应缩小。
+</p>
+
+<h3 id="insight5">8.5 泛化性与局限性</h3>
+<p><strong>泛化性（实验验证）：</strong></p>
+<ul>
+  <li>代码生成（LiveCodeBench）：有效，说明不依赖数学任务的特殊结构。</li>
+  <li>不同基础模型（OlmO3-7B）：有效，说明不依赖 Qwen3 的特定权重分布。</li>
+  <li>域外基准：有效，说明改进来自更好的推理能力而非过拟合特定题型。</li>
+</ul>
+<p><strong>潜在局限：</strong></p>
+<ul>
+  <li>需要计算 token 梯度代理向量，虽然用 stop-gradient 近似降低了成本，但仍比标准 RLVR 多一次前向传播相当的开销。</li>
+  <li>超参 $[\lambda_{\min}, \lambda_{\max}]$ 和迭代次数 $K$ 的最优设置可能依赖模型和任务，需要调优。</li>
+  <li>线性判别器假设：梯度空间中的"正负类分离"可能不是线性可分的，当前方法只捕捉了线性方向，非线性判别可能进一步提升。</li>
+</ul>
+
+<h3 id="insight6">8.6 对 RLVR 研究范式的影响</h3>
+<blockquote>
+  本文提示了一个重要研究方向：<em>RLVR 的关键瓶颈可能不在奖励信号的设计（verifiable reward 已经足够好），而在于奖励信号如何被正确地"翻译"到参数更新空间中各 token 的贡献分配。</em>
+</blockquote>
+<p>
+  更广义地说，这与 credit assignment problem（信用分配问题）在时间维度（哪个时间步贡献了最终奖励）的经典研究有深层联系，但在 LLM 场景下，"时间"变成了"token 序列位置"，而"正负对比"则提供了监督信号来源。DelTA 给出了一个优雅且实用的解法。
+</p>
+
+<!-- ==================== 9. 参考文献 ==================== -->
+<h2 id="references">9. 参考文献</h2>
+<ol style="font-size:0.9em; line-height:1.9;">
+  <li>Kaiyi Zhang, Wei Wu, Yankai Lin. <em>DelTA: Discriminative Token Credit Assignment for Reinforcement Learning from Verifiable Rewards.</em> arXiv:2605.21467, 2026.</li>
+  <li>John Schulman et al. <em>Proximal Policy Optimization Algorithms.</em> arXiv:1707.06347, 2017.</li>
+  <li>Zhihong Shao et al. <em>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models.</em> arXiv:2402.03300, 2024. (GRPO)</li>
+  <li>Qiying Yu et al. <em>DAPO: An Open-Source LLM Reinforcement Learning System at Scale.</em> arXiv:2503.14476, 2025.</li>
+  <li>Amirhossein Kazemnejad et al. <em>VinePPO: Unlocking RL Potential For LLM Reasoning Through Refined Credit Assignment.</em> arXiv:2410.01679, 2025.</li>
+  <li>Huaijie Meng et al. <em>SparsePO: Controlling Preference Alignment of LLMs via Sparse Token Masks.</em> arXiv:2410.05102, 2026.</li>
+  <li>Zicheng Ma et al. <em>FIPO: Free-Index Preference Optimization Under Constraints with Application to LLMs.</em> 2026.</li>
+  <li>Jian Xie et al. <em>CAPO: Context-Aware Preference Optimization.</em> 2025.</li>
+  <li>DeepSeek-AI. <em>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning.</em> arXiv:2501.12948, 2025.</li>
+  <li>Qwen Team. <em>Qwen3 Technical Report.</em> 2026.</li>
+</ol>
+
+<hr>
+<p style="color:#6c7086; font-size:0.85em; text-align:center; margin-top:32px;">
+  报告生成日期：2026-05-29 &nbsp;|&nbsp; 论文: arXiv:2605.21467 &nbsp;|&nbsp; 作者：Kaiyi Zhang, Wei Wu, Yankai Lin &nbsp;|&nbsp;
+  代码: <a href="https://github.com/RUCBM/DelTA">github.com/RUCBM/DelTA</a>
+</p>
+
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+  hljs.highlightAll();
+
+  // 自动生成目录
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  // 滚动高亮
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tree of Thoughts 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.algo-box .kw{color:#cba6f7;font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:#94e2d5;}
+.algo-box .fn{color:#a6e3a1;}
+.algo-box .num{color:#f9e2af;}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+.diff-box{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1.2em 0;}
+.diff-card{background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Tree of Thoughts 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Deliberate Problem Solving with Large Language Models · Princeton University / Google DeepMind · NeurIPS 2023</p>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>Tree of Thoughts: Deliberate Problem Solving with Large Language Models</td></tr>
+  <tr><th>机构</th><td>Princeton University（Shunyu Yao、Thomas Griffiths、Karthik Narasimhan）/ Google DeepMind</td></tr>
+  <tr><th>核心问题</th><td>LLM 的 token 级左到右自回归机制是否足以处理需要探索、战略前瞻、回溯的复杂推理任务？</td></tr>
+  <tr><th>主要结果</th><td>Game of 24：GPT-4 + CoT 成功率 4% → ToT 74%；代码库：github.com/princeton-nlp/tree-of-thought-llm</td></tr>
+  <tr><th>发表</th><td>NeurIPS 2023</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 自回归解码的根本局限</h3>
+
+<p>LLM 推理的本质是对下一个 token 的自回归预测，形式化为：</p>
+
+<div class="math-block">
+$$p_\theta(x) = \prod_{i=1}^{n} p_\theta(x[i] \mid x[1\ldots i-1])$$
+</div>
+
+<p>这种机制在大多数任务上有效，但在以下场景根本失败：</p>
+
+<pre class="mermaid">
+flowchart LR
+    AUTO["自回归解码\ntoken 级 · 从左到右\n每步无法回头"]
+    S1["❌ 需要战略前瞻\nGame of 24：前几步决策影响全局"]
+    S2["❌ 需要探索回溯\n填字游戏：局部死路需要撤销"]
+    S3["❌ 需要全局评估\n写作计划：整体连贯性 > 局部流畅性"]
+    AUTO --> S1 & S2 & S3
+</pre>
+
+<div class="tech-card yellow">
+<strong>认知科学依据（Kahneman 双过程理论）</strong>：人类有"System 1"（快速、自动、直觉）和"System 2"（慢速、深思熟虑、有意识）两种思维模式。LLM 的 token 级生成类似 System 1——ToT 的目标是为 LLM 赋予 System 2 的规划能力。这与 Newell、Shaw、Simon 1950 年代的问题空间搜索理论直接呼应。
+</div>
+
+<h3>1.2 现有方法的局限性对比</h3>
+
+<table>
+  <tr><th>方法</th><th>中间步骤</th><th>局部探索</th><th>全局决策</th><th>回溯</th></tr>
+  <tr><td>IO 提示</td><td>无</td><td>无</td><td>无</td><td>无</td></tr>
+  <tr><td>CoT</td><td>顺序链式</td><td>无</td><td>无</td><td>无</td></tr>
+  <tr><td>CoT-SC</td><td>多条独立链</td><td>无（链内）</td><td>投票选最频结果</td><td>无</td></tr>
+  <tr><td style="color:var(--strong)"><strong>ToT</strong></td><td style="color:var(--strong)"><strong>思维树</strong></td><td style="color:var(--strong)"><strong>有（每步多分支）</strong></td><td style="color:var(--strong)"><strong>LM 自评估</strong></td><td style="color:var(--strong)"><strong>有</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 2. 背景 ═══ -->
+<h2 id="s2">2. 背景：推理方法形式化</h2>
+
+<p>论文对四种方法给出了统一的数学形式化（以 $p_\theta$ 表示预训练 LM，$x$ 为输入，$y$ 为输出，$z_i$ 为中间思维步骤）：</p>
+
+<div class="math-block">
+$$\text{IO: } y \sim p_\theta^{\text{IO}}(y \mid x)$$
+$$\text{CoT: } z_i \sim p_\theta^{\text{CoT}}(z_i \mid x, z_{1\ldots i-1}),\quad y \sim p_\theta^{\text{CoT}}(y \mid x, z_{1\ldots n})$$
+$$\text{CoT-SC: } \arg\max_y \#\{i \mid y^{(i)} = y\},\quad [z_{1\ldots n}^{(i)}, y^{(i)}] \sim p_\theta^{\text{CoT}}(z_{1\ldots n}, y \mid x)$$
+$$\text{ToT: 在状态树 } s = [x, z_{1\ldots i}] \text{ 上搜索，用 } G(p_\theta, s, k) \text{ 生成，} V(p_\theta, S) \text{ 评估}$$
+</div>
+
+<p>CoT-SC 的核心限制：链内无局部探索，且"最频繁输出"启发式仅适用于输出空间有限的情况（如多选题），不适用于需要连续决策的任务。</p>
+
+<hr>
+
+<!-- ═══ 3. ToT 框架 ═══ -->
+<h2 id="s3">3. ToT 框架：四个核心设计</h2>
+
+<pre class="mermaid">
+flowchart TD
+    DECOMP["1. 思维分解\n将问题拆分为有意义的中间步骤\n粒度由任务决定：词/等式/段落"]
+    GEN["2. 思维生成器 G(pθ, s, k)\n策略A：独立采样 k 个思维（丰富空间）\n策略B：顺序提出 k 个候选（约束空间）"]
+    EVAL["3. 状态评估器 V(pθ, S)\n策略A：独立评分（1-10 / sure/maybe/impossible）\n策略B：跨状态投票选出最优候选"]
+    SEARCH["4. 搜索算法\nBFS：按层保留 top-b 状态，适合有限步骤\nDFS：深度优先+剪枝回溯，适合约束明确任务"]
+    DECOMP --> GEN --> EVAL --> SEARCH
+</pre>
+
+<h3>3.1 思维生成策略</h3>
+
+<p>给定树状态 $s = [x, z_{1\ldots i}]$，生成 $k$ 个候选下一步思维 $z_{i+1}^{(j)}$（$j=1\ldots k$）：</p>
+
+<div class="math-block">
+$$\text{策略A（独立采样）：} z^{(j)} \sim p_\theta^{\text{CoT}}(z_{i+1} \mid s), \quad j = 1\ldots k$$
+$$\text{策略B（顺序提出）：} [z^{(1)}, \ldots, z^{(k)}] \sim p_\theta^{\text{propose}}(z_{i+1}^{(1\ldots k)} \mid s)$$
+</div>
+
+<p>策略 A 适合思维空间丰富（如段落写作）时保证多样性；策略 B 适合约束空间（如一行等式）时避免重复。</p>
+
+<h3>3.2 状态评估策略</h3>
+
+<p>给定当前搜索边界上的若干候选状态集合 $S$，评估器 $V(p_\theta, S)$ 为每个状态 $s \in S$ 赋予一个分值，指导搜索算法决定"往哪走、哪条路剪掉"。论文提出两种互补策略：</p>
+
+<div class="math-block">
+$$\text{策略A（独立评分）：} V(p_\theta, S)(s) \sim p_\theta^{\text{value}}(v \mid s), \quad \forall s \in S$$
+$$\text{策略B（跨状态投票）：} V(p_\theta, S)(s) = \mathbf{1}[s = s^*], \quad s^* \sim p_\theta^{\text{vote}}(s^* \mid S)$$
+</div>
+
+<p>两者的关键区别：策略 A 让模型<strong>独立审视每条路径</strong>，适合有客观可判断性的任务（数学、逻辑）；策略 B 让模型<strong>横向比较所有候选</strong>，适合主观性强、难以量化的任务（创意写作）。下面通过论文三个实验案例逐一展示。</p>
+
+<!-- ── 策略A：独立评分 ── -->
+<h4 id="s32a">策略 A — 独立评分（Value）</h4>
+
+<p>模型对每个状态单独打分，输出<strong>标量</strong>（如 1–10 分）或<strong>分类标签</strong>（sure / maybe / impossible）。每个状态独立送入 LLM，互不知晓其他候选的存在。</p>
+
+<div class="tech-card blue">
+<strong>案例 1：Game of 24（数学推理）</strong><br><br>
+任务：用 4 个数字（如 <code>4 9 10 13</code>）和四则运算凑出 24。每个中间状态是"已写出的部分等式 + 剩余待用数字"。<br><br>
+评估时，LLM 拿到形如下面的 <em>Value Prompt</em>，对每个中间步骤<strong>采样 3 次</strong>取众数作为最终分类：
+</div>
+
+<div class="algo-box" style="margin:1em 0">
+  <div class="algo-title" style="color:#cba6f7;font-weight:700;margin-bottom:8px">Value Prompt — Game of 24（简化版）</div>
+  <p><span class="cm">// 示例（few-shot）</span></p>
+  <p>Input: 4 4 6 8 &nbsp;&nbsp; Steps so far: 4 + 8 = 12 (left: 4 6 12) → <span class="fn">sure</span></p>
+  <p>Input: 2 9 10 12  Steps so far: 2 + 12 = 14 (left: 9 10 14) → <span class="fn">maybe</span></p>
+  <p>Input: 4 9 10 13  Steps so far: 13 - 9 = 4 (left: 4 4 10) → <span class="fn">maybe</span></p>
+  <p>Input: 1 3 5 7 &nbsp;&nbsp; Steps so far: 5 * 7 = 35 (left: 1 3 35) → <span class="fn">impossible</span></p>
+  <p><span class="cm">// 待评估状态</span></p>
+  <p>Input: 4 9 10 13  Steps so far: <span class="var">[当前候选步骤]</span></p>
+  <p>Evaluate if the numbers left can reach 24 (sure/maybe/impossible):</p>
+</div>
+
+<p>三个标签的含义与作用：</p>
+<table>
+  <tr><th>标签</th><th>含义</th><th>搜索行为</th></tr>
+  <tr><td><strong style="color:#a6e3a1">sure</strong></td><td>剩余数字几步内必能凑出 24</td><td>保留，高优先级展开</td></tr>
+  <tr><td><strong style="color:#f9e2af">maybe</strong></td><td>不确定，需继续探索</td><td>保留，与 sure 一起进入下一层</td></tr>
+  <tr><td><strong style="color:#f38ba8">impossible</strong></td><td>剩余数字太大/太小，绝无可能</td><td>剪枝，不再展开该分支</td></tr>
+</table>
+
+<p>BFS 每层只保留被评为 <em>sure</em> 或 <em>maybe</em> 的 top-$b$（$b=5$）个状态，<em>impossible</em> 状态直接丢弃。消融实验表明：将此三分类改为随机评估，成功率从 <strong>74%</strong> 暴跌至约 <strong>10%</strong>，验证了 LLM 自评估的核心作用。</p>
+
+<!-- ── 策略A：填字游戏 ── -->
+<div class="tech-card" style="border-left:3px solid #cba6f7;background:#2a2a3e;padding:14px 18px;margin:1em 0">
+<strong>案例 2：5×5 填字游戏（约束满足）</strong><br><br>
+与数学推理不同，填字游戏的评估不是打分，而是<strong>可行性验证</strong>：当前已填入的单词是否与剩余空格的字母约束相容？<br><br>
+DFS 每填一个词后，LLM 将现有填法转化为对剩余提示词的字母约束（如"第 2 行第 3 列必须是 'E'"），再判断每条剩余线索是否"可能填入"。一旦某条线索被判为 <em>impossible</em>（如约束要求某位置同时是 'A' 和 'T'），DFS 立即回溯到父节点，放弃当前子树。
+</div>
+
+<!-- ── 策略B：投票 ── -->
+<h4 id="s32b">策略 B — 跨状态投票（Vote）</h4>
+
+<p>当任务目标难以直接量化时（"这段文字好不好"无法给出客观分数），改用<strong>相对比较</strong>：把所有候选状态一起呈给 LLM，让它投票选出最优者。论文对同一批候选进行 $k$（通常 5）次独立投票，得票最多的候选胜出。</p>
+
+<div class="tech-card blue">
+<strong>案例 3：创意写作（主观评估）</strong><br><br>
+任务：给定 4 个结尾句，写出 4 段衔接连贯的段落。中间状态是"写作计划（Plan）"而非部分文本。<br><br>
+评估不问"这个计划有多少分"，而是问"在这 5 个计划里，哪个最有可能写出连贯的段落？"
+</div>
+
+<div class="algo-box" style="margin:1em 0">
+  <div class="algo-title" style="color:#cba6f7;font-weight:700;margin-bottom:8px">Vote Prompt — 创意写作（简化版）</div>
+  <p><span class="cm">// 任务说明</span></p>
+  <p>Given an instruction and several choices, decide which choice is most promising.</p>
+  <p>Analyze each choice in detail, then conclude in the last line:</p>
+  <p><span class="fn">"The best choice is {s}"</span>, where s is the integer id of the choice.</p>
+  <p></p>
+  <p><span class="cm">// 任务指令</span></p>
+  <p>Instruction: Write a coherent passage of 4 short paragraphs. The end sentence of each paragraph must be:</p>
+  <p>&nbsp;&nbsp;1. It isn't difficult to do a handstand if you just stand on your hands.</p>
+  <p>&nbsp;&nbsp;2. It caught him off guard that space smelled of seared steak.</p>
+  <p>&nbsp;&nbsp;3. When she didn't like a guy who was trying to pick her up, she started using sign language.</p>
+  <p>&nbsp;&nbsp;4. Each person who knows you has a different perception of who you are.</p>
+  <p></p>
+  <p><span class="cm">// 5 个候选计划</span></p>
+  <p>Choice 1: <span class="var">[计划内容A]</span></p>
+  <p>Choice 2: <span class="var">[计划内容B]</span></p>
+  <p>…</p>
+</div>
+
+<p>投票流程如下图所示：</p>
+
+<pre class="mermaid">
+flowchart LR
+  GEN["生成 5 个写作计划\nG(pθ, s, k=5)"] --> V1["投票第1次\n→ 选出 Choice X"]
+  GEN --> V2["投票第2次\n→ 选出 Choice Y"]
+  GEN --> V3["投票第3次\n→ 选出 Choice Z"]
+  GEN --> V4["投票第4次\n→ 选出 Choice …"]
+  GEN --> V5["投票第5次\n→ 选出 Choice …"]
+  V1 & V2 & V3 & V4 & V5 --> AGG["统计得票\n取最高票计划"]
+  AGG --> WRITE["用胜出计划\n生成最终段落"]
+</pre>
+
+<!-- ── 两种策略对比 ── -->
+<h4 id="s32c">两种策略的选用原则</h4>
+
+<table>
+  <tr>
+    <th>维度</th>
+    <th>策略 A：独立评分（Value）</th>
+    <th>策略 B：跨状态投票（Vote）</th>
+  </tr>
+  <tr>
+    <td><strong>核心问题</strong></td>
+    <td>这个状态本身有多好？</td>
+    <td>这几个状态中哪个更好？</td>
+  </tr>
+  <tr>
+    <td><strong>适用场景</strong></td>
+    <td>有客观标准可判定（数学、逻辑、约束满足）</td>
+    <td>主观性强、难以量化（创意写作、开放问答）</td>
+  </tr>
+  <tr>
+    <td><strong>LLM 调用次数</strong></td>
+    <td>每状态独立调用，共 $|S|$ 次</td>
+    <td>所有状态合并一次调用，重复 $k$ 次</td>
+  </tr>
+  <tr>
+    <td><strong>输出形式</strong></td>
+    <td>标量分数 或 sure/maybe/impossible</td>
+    <td>"The best choice is X"</td>
+  </tr>
+  <tr>
+    <td><strong>论文中使用任务</strong></td>
+    <td>Game of 24 / 5×5 填字游戏</td>
+    <td>创意写作</td>
+  </tr>
+  <tr>
+    <td><strong>可解释性</strong></td>
+    <td>高（每条路径有独立得分）</td>
+    <td>中（只知最优选项，不知绝对质量）</td>
+  </tr>
+</table>
+
+<div class="tech-card blue" style="margin-top:1em">
+<strong>LM 自评估的创新性</strong>：传统搜索启发式要么是人工编程（如 DeepBlue 的棋位评估函数），要么是从大量数据中学习（如 AlphaGo 的价值网络）。ToT 提出<strong>第三种方式</strong>——用 LM 自身的推理能力进行临时评估：既比编程规则灵活（可泛化到任意文本任务），又比学习启发式样本效率高（无需额外训练数据）。随着 LLM 推理能力的提升，这个评估器会自动变强，构成正向飞轮。
+</div>
+
+<hr>
+
+<!-- ═══ 4. 算法 ═══ -->
+<h2 id="s4">4. 算法伪代码（原文 Algorithm 1 & 2）</h2>
+
+<div class="diff-box">
+<div class="diff-card">
+<div class="algo-box" style="margin:0">
+  <div class="algo-title">Algorithm 1: ToT-BFS</div>
+  <p><span class="kw">Input:</span> <span class="var">x</span>, <span class="var">pθ</span>, <span class="fn">G</span>, <span class="fn">V</span>, step limit <span class="var">T</span>, breadth <span class="var">b</span>, candidates <span class="var">k</span></p>
+  <p><span class="var">S₀</span> ← {<span class="var">x</span>}</p>
+  <p><span class="kw">for</span> t = 1, …, T <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="var">S'ₜ</span> ← {[<span class="var">s</span>, <span class="var">z</span>] | <span class="var">s</span> ∈ <span class="var">Sₜ₋₁</span>, <span class="var">z</span> ∈ <span class="fn">G</span>(<span class="var">pθ</span>, <span class="var">s</span>, <span class="var">k</span>)}</p>
+  <p style="padding-left:1.5em"><span class="var">Vₜ</span> ← <span class="fn">V</span>(<span class="var">pθ</span>, <span class="var">S'ₜ</span>) <span class="cm">// 评估所有候选</span></p>
+  <p style="padding-left:1.5em"><span class="var">Sₜ</span> ← top-<span class="var">b</span> states in <span class="var">S'ₜ</span> by <span class="var">Vₜ</span></p>
+  <p><span class="kw">end for</span></p>
+  <p><span class="kw">return</span> <span class="fn">G</span>(<span class="var">pθ</span>, argmax<sub><span class="var">s∈Sₜ</span></sub> <span class="var">Vₜ</span>(<span class="var">s</span>), 1)</p>
+</div>
+</div>
+<div class="diff-card">
+<div class="algo-box" style="margin:0">
+  <div class="algo-title">Algorithm 2: ToT-DFS</div>
+  <p><span class="kw">Input:</span> state <span class="var">s</span>, step <span class="var">t</span>, <span class="var">pθ</span>, <span class="fn">G</span>, <span class="fn">V</span>, limit <span class="var">T</span>, threshold <span class="var">v_th</span></p>
+  <p><span class="kw">if</span> <span class="var">t</span> &gt; <span class="var">T</span> <span class="kw">then</span> record output <span class="fn">G</span>(<span class="var">pθ</span>, <span class="var">s</span>, 1)</p>
+  <p><span class="kw">end if</span></p>
+  <p><span class="kw">for</span> <span class="var">s'</span> ∈ <span class="fn">G</span>(<span class="var">pθ</span>, <span class="var">s</span>, <span class="var">k</span>) <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> <span class="fn">V</span>(<span class="var">pθ</span>, {<span class="var">s'</span>})(<span class="var">s</span>) &gt; <span class="var">v_th</span> <span class="kw">then</span></p>
+  <p style="padding-left:3em"><span class="fn">DFS</span>(<span class="var">s'</span>, <span class="var">t</span>+1) <span class="cm">// 递归深入</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end if</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 否则剪枝，回溯到父状态</span></p>
+  <p><span class="kw">end for</span></p>
+</div>
+</div>
+</div>
+
+<!-- ── BFS 具体案例 ── -->
+<h3 id="s4-bfs">4.1 BFS 具体走步演示：Game of 24（输入 4 9 10 13）</h3>
+
+<p>BFS 按<strong>层</strong>展开：每层对所有活跃节点各生成 $k$ 个候选思维，统一评估后只保留 top-$b$（论文取 $b=5$）个状态进入下一层。</p>
+
+<p><strong>问题设定</strong>：输入数字 <code>4 9 10 13</code>，目标凑出 24，每步写一个中间等式，共 3 步。</p>
+
+<div class="algo-box" style="margin:1em 0">
+  <div class="algo-title" style="color:#cba6f7;font-weight:700;margin-bottom:8px">ToT-BFS 完整走步（b=5，k=5，T=3）</div>
+
+  <p><span class="cm">━━━ 初始状态 ━━━</span></p>
+  <p>S₀ = { <span class="var">input: [4, 9, 10, 13]</span> }</p>
+
+  <p style="margin-top:10px"><span class="cm">━━━ 第 1 层：第一步等式 ━━━</span></p>
+  <p>G 为每个状态生成 5 个候选（由 propose prompt 顺序提出）：</p>
+  <p style="padding-left:1.5em"><span class="fn">z₁⁽¹⁾</span>: 13 - 9 = 4 &nbsp;&nbsp;<span class="cm">→ 剩余 [4, 4, 10]</span></p>
+  <p style="padding-left:1.5em"><span class="fn">z₁⁽²⁾</span>: 10 - 4 = 6 &nbsp;&nbsp;<span class="cm">→ 剩余 [6, 9, 13]</span></p>
+  <p style="padding-left:1.5em"><span class="fn">z₁⁽³⁾</span>: 9 + 4 = 13 &nbsp;&nbsp;<span class="cm">→ 剩余 [10, 13, 13]</span></p>
+  <p style="padding-left:1.5em"><span class="fn">z₁⁽⁴⁾</span>: 13 + 9 = 22 &nbsp;<span class="cm">→ 剩余 [4, 10, 22]</span></p>
+  <p style="padding-left:1.5em"><span class="fn">z₁⁽⁵⁾</span>: 4 * 9 = 36 &nbsp;&nbsp;<span class="cm">→ 剩余 [10, 13, 36]</span></p>
+  <p>V 独立评估（采样3次取众数）：</p>
+  <p style="padding-left:1.5em">z₁⁽¹⁾ [4,4,10] → <span class="fn" style="color:#a6e3a1">sure</span> &nbsp;&nbsp;<span class="cm">（4×(10-4)=24 显而易见）</span></p>
+  <p style="padding-left:1.5em">z₁⁽²⁾ [6,9,13] → <span class="fn" style="color:#f9e2af">maybe</span></p>
+  <p style="padding-left:1.5em">z₁⁽³⁾ [10,13,13] → <span class="fn" style="color:#f9e2af">maybe</span></p>
+  <p style="padding-left:1.5em">z₁⁽⁴⁾ [4,10,22] → <span class="fn" style="color:#f9e2af">maybe</span></p>
+  <p style="padding-left:1.5em">z₁⁽⁵⁾ [10,13,36] → <span class="fn" style="color:#f38ba8">impossible</span> &nbsp;<span class="cm">（数太大，剪枝）</span></p>
+  <p>S₁ ← 保留 top-5：<span class="var">z₁⁽¹⁾ z₁⁽²⁾ z₁⁽³⁾ z₁⁽⁴⁾</span>（impossible 直接淘汰）</p>
+
+  <p style="margin-top:10px"><span class="cm">━━━ 第 2 层：第二步等式（以 z₁⁽¹⁾ 分支为例） ━━━</span></p>
+  <p>当前状态：<span class="var">13-9=4，剩余 [4, 4, 10]</span></p>
+  <p>G 提出5个候选：</p>
+  <p style="padding-left:1.5em">4 * 4 = 16 &nbsp;&nbsp;<span class="cm">→ 剩余 [10, 16]</span> → <span class="fn" style="color:#f9e2af">maybe</span></p>
+  <p style="padding-left:1.5em">4 + 4 = 8 &nbsp;&nbsp;&nbsp;<span class="cm">→ 剩余 [8, 10]</span> &nbsp;→ <span class="fn" style="color:#a6e3a1">sure</span> &nbsp;<span class="cm">（8+10+... 不对；实为 maybe；LLM 预测）</span></p>
+  <p style="padding-left:1.5em">10 - 4 = 6 &nbsp;&nbsp;<span class="cm">→ 剩余 [4, 6]</span> &nbsp;&nbsp;→ <span class="fn" style="color:#a6e3a1">sure</span> &nbsp;<span class="cm">（4*6=24）</span></p>
+  <p style="padding-left:1.5em">10 + 4 = 14 &nbsp;<span class="cm">→ 剩余 [4, 14]</span> &nbsp;→ <span class="fn" style="color:#f38ba8">impossible</span></p>
+  <p style="padding-left:1.5em">10 * 4 = 40 &nbsp;<span class="cm">→ 剩余 [4, 40]</span> &nbsp;→ <span class="fn" style="color:#f38ba8">impossible</span></p>
+
+  <p style="margin-top:10px"><span class="cm">━━━ 第 3 层：第三步等式（以 [4, 6] 分支为例） ━━━</span></p>
+  <p>当前状态：<span class="var">…10-4=6，剩余 [4, 6]</span></p>
+  <p>G 提出候选，其中：</p>
+  <p style="padding-left:1.5em">4 * 6 = 24 → <span class="fn" style="color:#a6e3a1">sure</span> ✓ <span class="cm">→ 找到解！</span></p>
+
+  <p style="margin-top:10px"><span class="cm">━━━ 最终输出 ━━━</span></p>
+  <p>解：<span class="fn">13-9=4; 10-4=6; 4*6=24</span></p>
+</div>
+
+<p>完整 BFS 树结构示意（横向为宽度，纵向为深度）：</p>
+
+<pre class="mermaid">
+flowchart TD
+  ROOT["输入: 4 9 10 13"]
+
+  ROOT --> A1["13-9=4\n剩余[4,4,10]\n✅ sure"]
+  ROOT --> A2["10-4=6\n剩余[6,9,13]\n🟡 maybe"]
+  ROOT --> A3["9+4=13\n剩余[10,13,13]\n🟡 maybe"]
+  ROOT --> A4["13+9=22\n剩余[4,10,22]\n🟡 maybe"]
+  ROOT --> A5["4*9=36\n剩余[10,13,36]\n❌ impossible → 剪枝"]
+
+  A1 --> B1["10-4=6\n剩余[4,6]\n✅ sure"]
+  A1 --> B2["4*4=16\n剩余[10,16]\n🟡 maybe"]
+  A1 --> B3["10+4=14\n❌ 剪枝"]
+
+  B1 --> C1["4*6=24 ✓\n找到解！"]
+  B2 --> C2["10+16=26\n❌ impossible"]
+
+  style A5 fill:#45475a,color:#6c7086
+  style B3 fill:#45475a,color:#6c7086
+  style C2 fill:#45475a,color:#6c7086
+  style C1 fill:#a6e3a1,color:#1e1e2e
+</pre>
+
+<div class="tech-card blue" style="margin-top:0.5em">
+<strong>BFS 的关键特性</strong>：同一层的所有活跃节点<strong>并行展开</strong>，每层结束后统一"剪枝"，确保保留的 $b$ 个状态是全局最优而非局部贪心。适合树深度有限（≤3步）且每步候选数可控的任务。
+</div>
+
+<!-- ── DFS 具体案例 ── -->
+<h3 id="s4-dfs">4.2 DFS 具体走步演示：5×5 填字游戏</h3>
+
+<p>DFS 每次只展开<strong>一条路径</strong>，遇到死路则立刻<strong>回溯</strong>。适合深度大（最多10个词）但每步候选空间可以快速验证可行性的任务。</p>
+
+<p><strong>问题设定</strong>（简化为 3×3，保留核心逻辑）：横向提示 H1=<em>"使用 LLM 推理的框架"（TREE）</em>，H2=<em>"颜色"（RED）</em>，H3=<em>"数字"（ONE）</em>；纵向提示 V1=<em>"植物"（TRO…）</em>，V2=<em>"哺乳动物"（REE…）</em>，V3=<em>"感受"（EDN…）</em>。</p>
+
+<div class="algo-box" style="margin:1em 0">
+  <div class="algo-title" style="color:#cba6f7;font-weight:700;margin-bottom:8px">ToT-DFS 完整走步（步骤上限100，v_th = "possible"）</div>
+
+  <p><span class="cm">━━━ 初始状态：空格 3×3 ━━━</span></p>
+  <p>待填线索：H1(行1), H2(行2), H3(行3)，按置信度排序</p>
+
+  <p style="margin-top:10px"><span class="cm">━━━ Step 1：填置信度最高线索 H1 ━━━</span></p>
+  <p>Propose prompt 生成候选词（含置信度）：</p>
+  <p style="padding-left:1.5em"><span class="fn">候选A</span>: TREE (置信度 0.9) <span class="cm">→ 格子变为 T-R-E-E</span></p>
+  <p style="padding-left:1.5em"><span class="fn">候选B</span>: TRIO (置信度 0.4)</p>
+  <p style="padding-left:1.5em"><span class="fn">候选C</span>: TRUE (置信度 0.3)</p>
+  <p>DFS 优先探索置信度最高的候选A（TREE）</p>
+  <p>V 检查约束：V1[0]='T', V2[0]='R', V3[0]='E' → 各列首字母约束已确定</p>
+  <p>评估：H2 剩余约束 "R_D" 可填 RED → <span class="fn" style="color:#a6e3a1">possible</span>，继续深入</p>
+
+  <p style="margin-top:10px"><span class="cm">━━━ Step 2：填 H2（约束：行2首字母必须是R） ━━━</span></p>
+  <p style="padding-left:1.5em"><span class="fn">候选A</span>: RED (置信度 0.85) → V 检查：V1[1]='E', V2[1]='E', V3[1]='D'</p>
+  <p style="padding-left:1.5em">约束更新：V1 需要 T?E, V2 需要 RE?, V3 需要 ED?</p>
+  <p style="padding-left:1.5em">评估 H3 剩余约束 "ONE"：V1[2]='O', V2[2]='N', V3[2]='E'</p>
+  <p style="padding-left:1.5em">→ <span class="fn" style="color:#a6e3a1">possible</span>，DFS 继续</p>
+
+  <p style="margin-top:10px"><span class="cm">━━━ Step 3：填 H3（约束：行3为 O-N-E） ━━━</span></p>
+  <p style="padding-left:1.5em"><span class="fn">候选A</span>: ONE → 填入成功！</p>
+  <p style="padding-left:1.5em">V 验证纵向线索：V1=T-E-O, V2=R-E-N, V3=E-D-E</p>
+  <p style="padding-left:1.5em">所有线索均可行 → <span class="fn" style="color:#a6e3a1">输出完成</span> ✓</p>
+</div>
+
+<p>现在换一个展示<strong>回溯</strong>的案例（假设 H1 填了错误的词）：</p>
+
+<div class="algo-box" style="margin:1em 0">
+  <div class="algo-title" style="color:#f38ba8;font-weight:700;margin-bottom:8px">DFS 回溯演示</div>
+
+  <p><span class="cm">━━━ Step 1：误填 H1 = TRIO ━━━</span></p>
+  <p style="padding-left:1.5em">V1[0]='T', V2[0]='R', V3[0]='I' → V3 首字母约束为 'I'</p>
+
+  <p style="margin-top:8px"><span class="cm">━━━ Step 2：填 H2（约束：行2首字母'R'） ━━━</span></p>
+  <p style="padding-left:1.5em">尝试 RED → V3[1]='D'，V3 约束变为 "I?D"</p>
+
+  <p style="margin-top:8px"><span class="cm">━━━ Step 3：填 H3 时发现死路 ━━━</span></p>
+  <p style="padding-left:1.5em">H3 可用词需满足首字母'O'（V1约束），但 V3 约束"I_D"和H3第3格约束冲突</p>
+  <p style="padding-left:1.5em">V 判断：<span class="fn" style="color:#f38ba8">impossible</span></p>
+  <p style="padding-left:1.5em"><span class="kw">→ 剪枝：放弃当前子树，回溯到 Step 2</span></p>
+
+  <p style="margin-top:8px"><span class="cm">━━━ 回溯到 Step 2：换 H2 候选词 ━━━</span></p>
+  <p style="padding-left:1.5em">尝试 RAN → V3[1]='N'，V3 约束变为 "I_N"… 仍然与其他约束冲突</p>
+  <p style="padding-left:1.5em"><span class="fn" style="color:#f38ba8">impossible</span> → 继续回溯到 Step 1</p>
+
+  <p style="margin-top:8px"><span class="cm">━━━ 回溯到 Step 1：换 H1 候选词 TREE ━━━</span></p>
+  <p style="padding-left:1.5em">重新从正确路径出发…（最终找到解）</p>
+</div>
+
+<p>DFS 的搜索轨迹（红色虚线表示回溯路径）：</p>
+
+<pre class="mermaid">
+flowchart TD
+  ROOT["空白 3×3"]
+
+  ROOT -->|"置信度0.4"| TRIO["H1=TRIO\n❌ 子树死路"]
+  ROOT -->|"置信度0.9"| TREE["H1=TREE\n✅ V约束OK"]
+
+  TRIO --> T2A["H2=RED\n→ V3约束 I?D"]
+  T2A --> T3["H3候选\n❌ impossible → 剪枝"]
+  T2A -.->|"回溯"| TRIO
+  TRIO -.->|"所有H2失败\n回溯"| ROOT
+
+  TREE --> B2A["H2=RED\n✅ 约束OK"]
+  B2A --> B3["H3=ONE\n✅ 全部验证通过\n输出完成！"]
+
+  style TRIO fill:#45475a,color:#6c7086
+  style T2A fill:#45475a,color:#6c7086
+  style T3 fill:#45475a,color:#6c7086
+  style B3 fill:#a6e3a1,color:#1e1e2e
+  linkStyle 2 stroke:#f38ba8,stroke-dasharray:5
+  linkStyle 3 stroke:#f38ba8,stroke-dasharray:5
+  linkStyle 4 stroke:#f38ba8,stroke-dasharray:5
+</pre>
+
+<!-- ── BFS vs DFS 对比 ── -->
+<h3 id="s4-compare">4.3 BFS vs DFS：选用原则</h3>
+
+<table>
+  <tr>
+    <th>维度</th>
+    <th>BFS（宽度优先）</th>
+    <th>DFS（深度优先）</th>
+  </tr>
+  <tr>
+    <td><strong>核心思路</strong></td>
+    <td>按层展开，每层保留 top-<em>b</em></td>
+    <td>沿最优路径深入，碰壁即回溯</td>
+  </tr>
+  <tr>
+    <td><strong>适用场景</strong></td>
+    <td>树深度小（≤3步），每步候选空间大</td>
+    <td>树深度大（可达10步），有强约束可剪枝</td>
+  </tr>
+  <tr>
+    <td><strong>内存开销</strong></td>
+    <td>$O(b \times T)$，随宽度线性增长</td>
+    <td>$O(T)$，只保存当前路径</td>
+  </tr>
+  <tr>
+    <td><strong>评估时机</strong></td>
+    <td>每层统一批量评估后剪枝</td>
+    <td>每步立即评估，不过阈值即剪枝</td>
+  </tr>
+  <tr>
+    <td><strong>是否能回溯</strong></td>
+    <td>不回溯（层内平行保留多个状态）</td>
+    <td>核心机制之一</td>
+  </tr>
+  <tr>
+    <td><strong>论文任务</strong></td>
+    <td>Game of 24、创意写作</td>
+    <td>5×5 填字游戏</td>
+  </tr>
+  <tr>
+    <td><strong>LLM 调用次数</strong></td>
+    <td>约 $b \times k \times T$（每层全展开）</td>
+    <td>依赖剪枝效率，最坏 $k^T$，实际远小于此</td>
+  </tr>
+</table>
+
+<div class="tech-card blue" style="margin-top:1em">
+<strong>直觉类比</strong>：BFS 像<strong>多线并联</strong>的流水线——每层同时跑 <em>b</em> 条产线，质检后淘汰次品；DFS 像<strong>单人走迷宫</strong>——遇死路立刻退回上一个路口换方向。数学任务（有限步数、需全局最优）选 BFS；约束满足任务（步数多、局部可快速判断可行性）选 DFS。
+</div>
+
+<hr>
+
+<!-- ═══ 5. 三个实验任务 ═══ -->
+<h2 id="s5">5. 三个实验任务</h2>
+
+<h3>5.1 任务概览</h3>
+
+<table>
+  <tr><th>任务</th><th>输入</th><th>输出</th><th>思维粒度</th><th>搜索算法</th><th>ToT 配置</th></tr>
+  <tr><td><strong>Game of 24</strong></td><td>4 个数字（如 4 9 10 13）</td><td>用 +-×÷ 得到 24</td><td>3 步中间等式</td><td>BFS</td><td>b=5，每步采样3次评估</td></tr>
+  <tr><td><strong>创意写作</strong></td><td>4 个随机句子</td><td>以这4句结尾的4段文章</td><td>1 步写作计划</td><td>BFS</td><td>k=5 个计划，投票选优</td></tr>
+  <tr><td><strong>5×5 填字游戏</strong></td><td>10 个提示词</td><td>5×5 字母表格</td><td>每次填一个单词</td><td>DFS</td><td>剪枝"不可能"状态，回溯</td></tr>
+</table>
+
+<h3>5.2 Game of 24：主要实验结果</h3>
+
+<div id="chart-g24" class="echarts-box" style="height:340px"></div>
+
+<div class="tech-card orange">
+<strong>CoT 失败分析（关键洞察）</strong>：约 60% 的 CoT 样本在<strong>第一步</strong>就失败（前三个 token 就产生了错误的中间等式）。这表明 left-to-right 解码在需要前瞻的任务上根本无法应对——一步错，步步错，没有任何纠错机制。
+</div>
+
+<h3>5.3 创意写作结果</h3>
+
+<table>
+  <tr><th>方法</th><th>GPT-4 评分连贯性</th><th>人工评分</th></tr>
+  <tr><td>CoT（直接生成）</td><td>6.93 / 10</td><td>基线</td></tr>
+  <tr><td style="color:var(--strong)"><strong>ToT（先规划后写）</strong></td><td style="color:var(--strong)"><strong>7.56 / 10</strong></td><td style="color:var(--strong)"><strong>+0.63，显著提升</strong></td></tr>
+</table>
+
+<h3>5.4 5×5 填字游戏结果</h3>
+
+<table>
+  <tr><th>方法</th><th>字母级成功率</th><th>单词级成功率</th></tr>
+  <tr><td>IO Prompt</td><td>&lt; 16%</td><td>0%</td></tr>
+  <tr><td>CoT</td><td>&lt; 16%</td><td>0%</td></tr>
+  <tr><td style="color:var(--strong)"><strong>ToT（BFS）</strong></td><td style="color:var(--strong)"><strong>~60%</strong></td><td style="color:var(--strong)"><strong>~20%</strong></td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 6. 消融实验 ═══ -->
+<h2 id="s6">6. 消融实验与关键发现</h2>
+
+<h3>6.1 BFS 宽度的影响（Game of 24）</h3>
+
+<table>
+  <tr><th>ToT 宽度 b</th><th>成功率</th><th>LM 调用次数</th></tr>
+  <tr><td>b = 1</td><td>45%</td><td>~100</td></tr>
+  <tr><td><strong>b = 5</strong></td><td><strong>74%</strong></td><td><strong>~500</strong></td></tr>
+  <tr><td>IO + Refine（k=10）</td><td>27%</td><td>10（用了真实反馈信号）</td></tr>
+  <tr><td>CoT best-of-100</td><td>49%</td><td>100</td></tr>
+</table>
+
+<p>即使 b=1（只保留1个最优路径），ToT 已达到 45%，显著超过 CoT-SC（9%）。宽度 b=5 将成功率提升到 74%，代价是约 500 次 LM 调用。</p>
+
+<h3>6.2 评估策略消融</h3>
+
+<div class="tech-card purple">
+<strong>评估策略对结果至关重要</strong>：在 Game of 24 中，将"sure/maybe/impossible"三分类评估换成随机选择，成功率从 74% 降至约 10%，接近于盲目 BFS。这证明 LM 的自评估能力是 ToT 成功的核心，而非仅仅是搜索结构本身。
+</div>
+
+<hr>
+
+<!-- ═══ 7. 局限性 ═══ -->
+<h2 id="s7">7. 局限性与适用边界</h2>
+
+<ul>
+  <li><strong>计算成本高</strong>：每步需要多次 LM 调用（生成 + 评估），比 CoT 贵数倍到数十倍。b=5 的 Game of 24 需要约 500 次调用 vs CoT 的 100 次</li>
+  <li><strong>任务适用性受限</strong>：对于不需要搜索的任务（如直接问答），ToT 无优势。论文实验任务都是精心选择的难题</li>
+  <li><strong>思维分解依赖人工设计</strong>：不同任务的思维粒度（词/句/段）、评估方式（评分/投票）、搜索算法都需要人工指定</li>
+  <li><strong>外部影响风险</strong>：若在交互式环境中部署，多步搜索可能受到环境扰动（prompt injection 等）影响</li>
+  <li><strong>评估主观性</strong>：创意写作任务的"连贯性"评分由 GPT-4 完成，存在 self-serving bias 风险</li>
+</ul>
+
+<hr>
+
+<!-- ═══ 8. 核心洞见 ═══ -->
+<h2 id="s8">8. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>本质贡献：把 LLM 推理建模为搜索问题</strong><br>
+ToT 最深刻的贡献不是某个具体算法，而是提供了一个<strong>框架</strong>——将 LLM 推理从"生成问题"转化为"搜索问题"。IO/CoT/CoT-SC 都是 ToT 在特殊约束下的特例（深度1/宽度1的树）。这个统一视角为后续工作（LATS、AlphaCode、MCTS for LLM）奠定了概念基础。
+</div>
+
+<div class="tech-card blue">
+<strong>LM 自评估：一个可扩展的启发式</strong><br>
+传统搜索需要外部启发式函数（棋类游戏中的位置评估）。ToT 发现 LLM 自身可以作为启发式函数——用 prompt 让模型评估"当前状态离目标有多近"。这个技术在其他领域（代码调试、数学证明）同样适用，且随 LLM 能力提升而自动改善。
+</div>
+
+<div class="tech-card yellow">
+<strong>60% 第一步失败的深层含义</strong><br>
+Game of 24 中 CoT 60% 在第一步失败，揭示了一个深层事实：LLM 的 token 预测能力和"问题求解"能力之间存在根本鸿沟。预测"下一个最可能的 token"和"下一个最有利于达成目标的 token"是两个不同的问题。ToT 用搜索+评估弥合了这一鸿沟。
+</div>
+
+<div class="tech-card purple">
+<strong>对后续工作的影响</strong><br>
+ToT 直接启发了：LATS（Language Agent Tree Search，结合 MCTS）、AlphaProof（数学证明的树搜索）、Reasoning with Search（OpenAI o1 系列的内核思路）、RAP（Reasoning via Planning，用世界模型做前向模拟）。"让 LLM 在推理时做搜索"已成为 2024-2026 年推理模型的核心设计哲学之一。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月16日 · 基于原文 NeurIPS 2023 / arXiv:2305.10601</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  const c=echarts.init(document.getElementById('chart-g24'));
+  c.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'Game of 24 各方法成功率对比',textStyle:{color:'#89b4fa',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    xAxis:{type:'value',name:'成功率 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4',formatter:'{value}%'},max:80},
+    yAxis:{type:'category',data:['IO Prompt','CoT','CoT-SC (k=100)','IO + Refine (k=10)','CoT best-of-100','ToT (b=1)','ToT (b=5)'],axisLabel:{color:'#cdd6f4',fontSize:12}},
+    series:[{type:'bar',data:[
+      {value:7.3,itemStyle:{color:'#45475a'}},
+      {value:4.0,itemStyle:{color:'#45475a'}},
+      {value:9.0,itemStyle:{color:'#45475a'}},
+      {value:27,itemStyle:{color:'#fab387'}},
+      {value:49,itemStyle:{color:'#fab387'}},
+      {value:45,itemStyle:{color:'#89b4fa'}},
+      {value:74,itemStyle:{color:'#a6e3a1'}}
+    ],label:{show:true,position:'right',color:'#cdd6f4',formatter:'{c}%'}}],
+    grid:{left:180,right:60,bottom:40,top:50}
+  });
+});
+</script>
+</body>
+</html>

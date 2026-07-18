@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harness Handbook：让演化的 Agent Harness 可读、可导航、可编辑</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    h4 { color: var(--heading); font-size: 1.0em; margin: 1.1em 0 0.3em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.92em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    td.best, th.best { color: var(--strong); font-weight: 700; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .pill { display: inline-block; font-size: 0.78em; font-weight: 700; padding: 1px 8px; border-radius: 10px; background: var(--heading); color: #1e1e2e; margin-left: 6px; }
+    .pill.orange { background: #fab387; }
+    .pill.green  { background: #a6e3a1; }
+    .pill.purple { background: #cba6f7; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+<h1>Harness Handbook：让演化的 Agent Harness 可读、可导航、可编辑</h1>
+
+<p><strong>论文：</strong> Harness Handbook: Making Evolving Agent Harnesses Readable, Navigable, and Editable &nbsp;|&nbsp; arXiv: <a href="https://arxiv.org/abs/2607.13285">2607.13285</a> &nbsp;|&nbsp; HuggingFace 2026-W29 周报 upvote 第 1（169 upvotes）</p>
+
+<table>
+  <tr><th>标题</th><td>Harness Handbook: Making Evolving Agent Harnesses Readable, Navigable, and Editable</td></tr>
+  <tr><th>核心问题</th><td>现代 AI agent 的能力高度依赖 harness（构造 prompt、管理状态、调用工具、协调执行）。当模型/API/环境/需求演化时，开发者要先定位实现目标行为的所有代码位置，而“行为→代码”映射难以手工恢复——<strong>行为定位（behavior localization）</strong>是 harness 演化的核心瓶颈。</td></tr>
+  <tr><th>核心方法</th><td>提出<strong> Harness Handbook</strong>（行为为中心的表示，静态分析 + LLM 辅助结构化自动生成）与 <strong>Behavior-Guided Progressive Disclosure (BGPD)</strong> 工作流，并支持非空 diff 后的自动再同步（resynchronization）。</td></tr>
+  <tr><th>关键结果</th><td>在 Codex 与 Terminus-2 两个开源 harness 上，Handbook-Assisted 规划的总体胜率分别 +10.0 / +18.9 个百分点，planner token 用量下降 12.7% / 8.6%；弱 planner 在 24 项 Recall/Precision/F1 指标上全部超过无 handbook 的基线，F1 提升 5.0–18.8 个百分点。</td></tr>
+  <tr><th>作者 / 机构</th><td>Ruhan Wang, Yucheng Shi, Zongxia Li, Zhongzhi Li, Yue Yu, Junyao Yang, Kishan Panaganti, Haitao Mi, Dongruo Zhou, Leoweiliang。Tencent HY LLM Frontier、Indiana University、University of Maryland、University of Georgia、National University of Singapore。</td></tr>
+  <tr><th>开源地址</th><td>项目主页：<a href="https://ruhan-wang.github.io/Harness-Handbook/">https://ruhan-wang.github.io/Harness-Handbook/</a></td></tr>
+</table>
+
+<blockquote>
+<strong>一句话总结：</strong> 不要问“编辑怎么写”，先问“编辑落在哪”。Harness Handbook 把仓库知识围绕<strong>运行时行为</strong>而非文件/函数重组，把每个行为链接到其分散的源代码实现，让弱 planner 借助 handbook 就能在行为定位上逼近更强模型，且更省 token。
+</blockquote>
+
+<h2 id="section-0">1. 概述</h2>
+
+<p>现代 AI agent 的能力并不只取决于 foundation model，还取决于它的 <strong>harness</strong>——一个负责构造 prompt、管理状态、调用工具、协调跨组件执行的软件层。当模型、API、执行环境与应用需求持续演化时，harness 必须不断被修改以新增能力或适配既有行为。无论是人类开发者还是 coding agent，在做改动之前都面临同一个前置问题：<strong>定位实现目标行为的所有代码位置</strong>。这在生产级 harness 中非常困难，因为它们往往庞大、紧耦合，且行为分散在文件、函数、执行阶段与状态迁移之中，而修改请求只描述“系统应该做什么”，仓库却是按文件/函数/模块组织的。</p>
+
+<p>已有的代码搜索、仓库索引、长上下文处理方法能让代码更易查看，但仍把“行为↔实现”的映射留给开发者自己恢复。论文将这一前置挑战命名为 <strong>behavior localization（行为定位）</strong>，并提出 <strong>Harness Handbook</strong>：一种行为为中心的表示，通过静态程序分析与 LLM 辅助行为结构化自动从代码库合成，把实现知识围绕系统行为组织，并把每个行为链接到对应源码。配套的 <strong>BGPD（Behavior-Guided Progressive Disclosure）</strong> 引导 coding agent 从高层行为描述逐级下钻到相关实现细节，并对照当前源码验证候选位置。每次非空 diff 还会触发 handbook 的自动再同步。</p>
+
+<p>在两个开源 agent harness（<strong>Terminus-2</strong>，Python 终端 agent，function-as-leaf；<strong>Codex</strong>，Rust 单体仓库，file-as-leaf）的 60 个行为驱动修改请求上评测，Handbook-Assisted 规划同时<strong>提升计划质量、降低 planner token 用量</strong>。最大收益出现在涉及分散实现点、稀有执行路径与跨模块交互的改动上。论文由此给出关键论断：<em>演化复杂 agentic 系统，不仅取决于能否生成编辑，更取决于能否确定编辑应落在何处。</em></p>
+
+<h2 id="section-1">2. 研究背景与动机</h2>
+
+<h3 id="section-2">2.1 Agent Harness 与演化瓶颈</h3>
+
+<p>LLM 的进展催生了大量 agentic 系统，这些系统通过与工具、API、复杂执行环境的交互扩展模型能力，而这些交互由 <strong>harness</strong> 协调。harness 决定了“模型能力如何被翻译为系统行为”。<strong>Code as Agent Harness</strong>[15] 把 harness 形式化为一个可执行、有状态的软件层，支持 reasoning、acting、feedback 与 coordination；综述与工程实践[21,22]进一步把 harness 刻画为负责 prompt 构造、状态管理、工具调用、控制流与外部交互的运行时基础设施。AutoGen[23]、OpenHands[13] 等框架与 Claude Code、Codex[25] 等工业系统都把 harness 设计视为构建可靠长时 coding agent 的关键因素。但这些工作主要关注 <strong>harness 的构造与系统设计</strong>，而非理解和演化既有的生产级 harness。</p>
+
+<p>随着 coding agent 能力增强，软件工程正从“手工实现功能”转向“自动演化底层 harness”[7,13]。近期工作开始研究 harness engineering、自适应 harness 优化与自动 harness 修复[8,10,14,26-28]。本文处理的是一个<strong>互补的前置问题</strong>：在直接修改 harness 实现之前，先解决行为定位。在大型、结构复杂的 harness 仓库中，人类开发者要花大量时间建立系统心智模型、跨文件跨阶段追踪行为；coding agent 还受限于输入上下文，只能迭代探索仓库，仍可能漏掉分散或稀有路径[16,17]。</p>
+
+<h3 id="section-3">2.2 与既有仓库表示工作的区别</h3>
+
+<p>仓库地图、代码搜索、代码摘要、仓库记忆、长上下文编辑[16-20,29,30] 都让代码库更易探索，但它们<strong>仍以实现为中心</strong>，按源码、仓库结构或执行基础设施组织信息，而非按行为组织。它们可能定位到个别相关代码片段，却不展示这些片段如何协同产生行为、也不保证所有受影响位置都被找到。下表对比 Harness Handbook 与这些方向的关键区别：</p>
+
+<table>
+  <tr><th>方向 / 代表工作</th><th>组织维度</th><th>是否连接“行为↔实现”</th><th>是否保证覆盖所有受影响位点</th><th>是否随仓库演化自动同步</th></tr>
+  <tr><td>结构化仓库表示 / 仓库图 [18,29]</td><td>源码、仓库结构</td><td>否</td><td>否</td><td>否</td></tr>
+  <tr><td>仓库索引 / 代码搜索 [19,36]</td><td>检索索引</td><td>否</td><td>否</td><td>否</td></tr>
+  <tr><td>仓库记忆 / 长上下文编辑 [19,20]</td><td>缓存 / 上下文窗口</td><td>否</td><td>否</td><td>否</td></tr>
+  <tr><td>harness 构造与演化 [8,10,13,26-28]</td><td>实现 / 运行时</td><td>部分</td><td>否</td><td>—</td></tr>
+  <tr><td class="best">Harness Handbook（本文）</td><td class="best">运行时行为（L1–L3 + 状态寄存器）</td><td class="best">是，行为链接到源码 locator</td><td class="best">是，BGPD 跨阶段状态耦合展开</td><td class="best">是，非空 diff 触发 Resync</td></tr>
+</table>
+
+<blockquote>
+<strong>动机小结：</strong> 已有方法让代码“更容易看”，但没解决“一个行为分散在多处、要全部找到”的问题。Harness Handbook 引入<strong>显式的操作性行为表示</strong>，在仓库探索之前就建立行为到实现的桥接，把“找全位置”从隐式的人工/agent 推理变成可导航的结构化索引。
+</blockquote>
+
+<h2 id="section-4">3. 核心方法</h2>
+
+<p>Harness Handbook 由三部分组成：（1）围绕运行时行为组织的<strong>表示</strong>（3.1）；（2）从仓库自动构建该表示的<strong>构造流水线</strong>（3.2）；（3）用 handbook 引导代码改动并在每次非空 diff 后自动再同步的<strong>修改工作流</strong>（3.3）。方法总览如下：</p>
+
+<pre class="mermaid">
+flowchart LR
+  subgraph A["Phase I 静态事实抽取（确定性，无 LLM）"]
+    A1["语言适配器解析仓库 R"]
+    A2["构建程序图 G：函数/边界节点 + 已解析调用边"]
+  end
+  subgraph B["Phase II 行为组织"]
+    B1{"叶模式 g"}
+    B1 -->|"function-as-leaf"| B2["从 seed skeleton S0 出发，函数→阶段分配 + 审阅"]
+    B1 -->|"file-as-leaf"| B3["先写文件卡，再推断阶段骨架 S"]
+  end
+  subgraph C["Phase III 层级合成与打包"]
+    C1["合成 L1–L3 文档树 D + 状态寄存器视图 Z"]
+    C2["locator 对照 R 校验，失败则冻结"]
+    C3["打包为 handbook H"]
+  end
+  A1 --> A2 --> B1
+  B2 --> C1
+  B3 --> C1
+  C1 --> C2 --> C3
+  C3 --> D1["BGPD 行为定位"]
+  D1 --> D2["Plan 生成编辑计划 P + 声明 Γ"]
+  D2 --> D3["Execute 应用到 R → R'"]
+  D3 --> D4{"Diff Δ 非空?"}
+  D4 -->|"是"| D5["Resync_g 局部再同步 → H'"]
+  D4 -->|"否"| D6["H' = H"]
+</pre>
+
+<h3 id="section-5">3.1 Harness Handbook 表示</h3>
+
+<p>源码仓库展示“代码存在哪”，却不直接展示“运行时行为如何展开”。一个行为可能跨越多个文件、执行阶段与共享状态。Handbook 把这些信息围绕<strong>行为</strong>重组，同时保留到源码的链接。它由一个 <strong>L1–L3 文档树 D</strong> 与一个互补的<strong>状态寄存器视图 Z</strong> 组成：</p>
+
+<pre class="mermaid">
+graph TD
+  L1["L1 系统概览：架构 / 执行模型 / 主要阶段 / 全局数据流"] --> L2a["L2 组件概览（阶段 2.1 初始化）"]
+  L1 --> L2b["L2 组件概览（阶段 2.4 主循环）"]
+  L1 --> L2c["L2 组件概览（阶段 4.x 组件）"]
+  L2a --> L3a["L3 单元深挖：源码 locator（函数/区域 或 文件）"]
+  L2b --> L3b["L3：_run_agent_loop, _step, _should_exit"]
+  L2c --> L3c["L3：4.1 Prompting / 4.2 Memory / 4.3 Tools / 4.4 Main Loop"]
+  Z["状态寄存器视图 Z：跨阶段状态读写位点"] -.->|"跨阶段耦合"| L2a
+  Z -.-> L2b
+  Z -.-> L2c
+</pre>
+
+<p>读者通常从 <strong>L1（系统概览）</strong>开始，了解架构、执行模型、主要阶段与全局数据流；再到 <strong>L2（组件概览）</strong>查看某个阶段的责任、输入/输出、依赖与局部状态；最后到 <strong>L3（单元深挖）</strong>，把该阶段链接到源码锚定的实现条目。互补视图 <strong>Z</strong> 记录跨阶段边界的状态关系（如某状态在一个阶段写入、若干阶段后才被消费）。</p>
+
+<p>两条规则保持表示有用：</p>
+<ul>
+  <li><strong>渐进式披露（Progressive disclosure）</strong>：读者仅在任务需要更多细节时才从 L1 下钻到 L3。</li>
+  <li><strong>行为–实现对齐（Behavior–implementation alignment）</strong>：每个 active 的 L3 locator 必须仍能解析到当前仓库。若无法重新校验，该条目被<strong>冻结</strong>并从定位中排除，直到刷新。仓库始终是实现细节的权威来源。</li>
+</ul>
+
+<h3 id="section-6">3.2 Harness Handbook 构造</h3>
+
+<p>构造从仓库 <code>R</code> 构建 handbook。叶子模式 <code>g ∈ {function, file}</code> 在 handbook 生命周期内固定不变，决定 L3 条目粒度：<strong>function-as-leaf</strong> 下每个 L3 条目覆盖一个完整函数或若干连续区域；<strong>file-as-leaf</strong> 下每个 L3 条目代表一个文件。</p>
+
+<p>两种模式在<strong>阶段骨架如何获得</strong>上不同：function-as-leaf 从含阶段与状态寄存器定义的 seed skeleton <code>S0</code> 出发（当有可信 seed 且函数级 L3 在预算内时使用）；file-as-leaf 则不依赖 seed，<strong>先描述每个文件再推断骨架</strong>（当无 seed 或函数级组织会超预算时使用）。选定 <code>g</code> 后，构造分三阶段进行：</p>
+
+<h4>Phase I — 静态事实抽取（共享，确定性，无 LLM）</h4>
+<p>语言特定适配器解析 <code>R</code>，抽取函数、命名外部边界、源码位置、签名与调用边。程序图 <code>G</code> 只保留能解析到内部函数或命名边界的调用；未解析调用写入审计日志而非猜测目标。内部函数节点记录限定名、源文件、签名、行范围、所属类与观测到的状态访问；边界节点代表命名外部目标（如库函数）。这一阶段完全确定性，后续所有组织步骤都建立在这些源码锚定事实上。</p>
+
+<h4>Phase II — 行为组织</h4>
+<p>把 <code>G</code> 中的源单元围绕执行行为组织，产出当前阶段骨架 <code>S</code> 与模式特定组织状态 <code>U_g</code>。</p>
+<ul>
+  <li><strong>Function-as-leaf</strong>：用源码与调用图上下文提出函数→阶段分配，通过迭代审阅精炼。一个函数可整体或按连续区域分配到一个或多个阶段。每轮先检查阶段是否应增删/合并/分裂（结构变更仅在层级合法且所有状态寄存器声明仍指向存在阶段时才接受），再对受影响函数重新分类，最后做全局审计与区域边界修复。变更须经模型审阅才能应用；轮次在骨架与分配稳定且无函数待重审时停止，否则停在组织预算处。</li>
+  <li><strong>File-as-leaf</strong>（<code>S0 = ∅</code>）：Step 1 为每个扫描文件建一张卡（含目的、仓库角色、执行生命周期位置；deep 模式还含函数清单、签名、源范围、已解析调用——模型可解释但不可改）；Step 2 按目录分组并结合图派生入口点与调用，起草有序阶段骨架，把每个文件分配到一个主阶段（横切文件如日志/协议/类型/配置工具可另命名 1–2 个次阶段）；Step 3 用文件调用图给出 caller-before-callee 序，再用文件卡精炼为主题分组与可读序列。组织变体（<code>oneshot</code> / <code>doctor</code> / <code>agent</code>）决定是否精炼。</li>
+</ul>
+
+<h4>Phase III — 层级合成与打包</h4>
+<p>把 <code>(S, U_g)</code> 转为文档树 <code>D</code> 与状态寄存器视图 <code>Z</code>，可复用生成输出存入缓存 <code>B</code>，并对照仓库校验后打包。两模式合成方向相反：function-as-leaf <strong>自顶向下</strong>（已知骨架提供大纲，L1→L2→L3，每个 L1/L2/L3 节点用有界 generate–review–revise 循环）；file-as-leaf <strong>自底向上</strong>（已验证文件卡即 L3 内容，逐层 rollup 生成 L2 与 L1）。渲染前对 <code>D</code> 中每个 L3 locator 解析校验，无法校验者标记 frozen 并从定位排除。最终打包视图 <code>V</code> 与 <code>D, Z, g</code> 及机器可读再同步状态 <code>K_g</code> 为 handbook <code>H</code>。</p>
+
+<p>下表给出 Algorithm 2 的完整伪代码，覆盖共享流程与模式特定分支：</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 2: Harness Handbook Construction</div>
+  <p><span class="kw">Require:</span> 仓库 <span class="var">R</span>；叶模式 <span class="var">g</span> ∈ {function, file}；构造配置 <span class="var">Θ</span>；若 <span class="var">g</span> = function 则有 seed skeleton <span class="var">S0</span>，否则 <span class="var">S0</span> = ∅</p>
+  <p><span class="kw">Ensure:</span> handbook <span class="var">H</span>，含渲染视图 <span class="var">V</span>、文档树 <span class="var">D</span>、寄存器视图 <span class="var">Z</span>、固定叶模式 <span class="var">g</span>、同步状态 <span class="var">K<sub>g</sub></span></p>
+  <p style="margin-top:8px"><span class="cm">// Phase I: 共享静态事实</span></p>
+  <p style="padding-left:1.5em"><span class="num">1:</span> <span class="var">G</span> ← <span class="fn">BuildGraph</span>(<span class="var">R</span>) &nbsp;<span class="cm"># 确定性；无 LLM</span></p>
+  <p style="margin-top:8px"><span class="cm">// Phase II: 模式特定行为组织</span></p>
+  <p style="padding-left:1.5em"><span class="num">2:</span> <span class="kw">if</span> <span class="var">g</span> = function <span class="kw">then</span></p>
+  <p style="padding-left:3.0em"><span class="num">3:</span> (<span class="var">S</span>, <span class="var">U<sub>g</sub></span>) ← <span class="fn">OrganizeFunctions</span>(<span class="var">R</span>, <span class="var">G</span>, <span class="var">S0</span>, <span class="var">Θ</span>) &nbsp;<span class="cm"># 预算内的阶段与成员审阅</span></p>
+  <p style="padding-left:3.0em"><span class="num">4:</span> <span class="var">U<sub>g</sub></span> ← <span class="fn">FinalizeFunctions</span>(<span class="var">R</span>, <span class="var">G</span>, <span class="var">S</span>, <span class="var">U<sub>g</sub></span>) &nbsp;<span class="cm"># 区域、排序与未映射函数</span></p>
+  <p style="padding-left:1.5em"><span class="num">5:</span> <span class="kw">else</span> &nbsp;<span class="cm"># g = file</span></p>
+  <p style="padding-left:3.0em"><span class="num">6:</span> (<span class="var">S</span>, <span class="var">U<sub>g</sub></span>) ← <span class="fn">OrganizeFiles</span>(<span class="var">R</span>, <span class="var">G</span>, <span class="var">Θ</span>) &nbsp;<span class="cm"># 文件卡、阶段推断与分配</span></p>
+  <p style="padding-left:3.0em"><span class="num">7:</span> <span class="kw">if</span> <span class="fn">RefinementEnabled</span>(<span class="var">Θ</span>) <span class="kw">then</span></p>
+  <p style="padding-left:4.5em"><span class="num">8:</span> (<span class="var">S</span>, <span class="var">U<sub>g</sub></span>) ← <span class="fn">RefineFileOrganization</span>(<span class="var">R</span>, <span class="var">G</span>, <span class="var">S</span>, <span class="var">U<sub>g</sub></span>, <span class="var">Θ</span>)</p>
+  <p style="padding-left:3.0em"><span class="num">9:</span> <span class="kw">end if</span></p>
+  <p style="padding-left:3.0em"><span class="num">10:</span> <span class="var">U<sub>g</sub></span> ← <span class="fn">FinalizeFiles</span>(<span class="var">G</span>, <span class="var">S</span>, <span class="var">U<sub>g</sub></span>) &nbsp;<span class="cm"># 阶段内排序与覆盖</span></p>
+  <p style="padding-left:1.5em"><span class="num">11:</span> <span class="kw">end if</span></p>
+  <p style="margin-top:8px"><span class="cm">// Phase III: 合成、grounding 与打包</span></p>
+  <p style="padding-left:1.5em"><span class="num">12:</span> (<span class="var">D</span>, <span class="var">Z</span>, <span class="var">B</span>) ← <span class="fn">Synthesize</span>(<span class="var">g</span>, <span class="var">R</span>, <span class="var">G</span>, <span class="var">S</span>, <span class="var">U<sub>g</sub></span>, <span class="var">Θ</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">13:</span> <span class="var">Z</span> ← <span class="fn">ValidateRegisterRefs</span>(<span class="var">Z</span>, <span class="var">S</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">14:</span> <span class="var">D</span> ← <span class="fn">ValidateAndFreezeLocators</span>(<span class="var">D</span>, <span class="var">R</span>, <span class="var">g</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">15:</span> <span class="var">K<sub>g</sub></span> ← <span class="fn">Archive</span>(<span class="var">g</span>, <span class="var">G</span>, <span class="var">S0</span>, <span class="var">S</span>, <span class="var">U<sub>g</sub></span>, <span class="var">B</span>, <span class="var">Θ</span>) &nbsp;<span class="cm"># S0 仅 function 模式保存</span></p>
+  <p style="padding-left:1.5em"><span class="num">16:</span> <span class="var">H</span> ← <span class="fn">RenderAndPackage</span>(<span class="var">D</span>, <span class="var">Z</span>, <span class="var">g</span>, <span class="var">K<sub>g</sub></span>)</p>
+  <p style="padding-left:1.5em"><span class="num">17:</span> <span class="kw">return</span> <span class="var">H</span></p>
+</div>
+
+<h3 id="section-7">3.3 Handbook 引导的修改与再同步</h3>
+
+<p>构造完成后，handbook 作为行为导向的修改向导。给定请求 <code>q</code>，工作流使用 handbook <code>H</code> 与对应仓库 <code>R</code>，叶模式 <code>g</code> 全程不变。工作流分四步（Algorithm 1）：<strong>BGPD</strong> 定位 → <strong>Plan</strong> 生成编辑计划 <code>P</code> 与动作声明 <code>Γ</code> → <strong>Execute</strong> 应用到仓库 → 若 diff <code>Δ</code> 非空则触发 <strong>Resync</strong> 再同步。完整伪代码如下：</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: Handbook-Guided Modification with Automatic Resynchronization</div>
+  <p><span class="kw">Require:</span> 请求 <span class="var">q</span>、handbook 包 <span class="var">H</span>、对应仓库快照 <span class="var">R</span></p>
+  <p><span class="kw">Ensure:</span> 计划 <span class="var">P</span> 与声明 <span class="var">Γ</span>；更新后仓库 <span class="var">R'</span>、diff <span class="var">Δ</span>、handbook 包 <span class="var">H'</span></p>
+  <p style="padding-left:1.5em"><span class="num">1:</span> <span class="var">g</span> ← <span class="fn">LeafMode</span>(<span class="var">H</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">2:</span> <span class="var">Eq</span> ← <span class="fn">BGPD</span>(<span class="var">q</span>, <span class="var">H</span>, <span class="var">R</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">3:</span> (<span class="var">P</span>, <span class="var">Γ</span>) ← <span class="fn">Plan</span>(<span class="var">q</span>, <span class="var">Eq</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">4:</span> <span class="var">R'</span> ← <span class="fn">Execute</span>(<span class="var">R</span>, <span class="var">P</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">5:</span> <span class="var">Δ</span> ← <span class="fn">Diff</span>(<span class="var">R</span>, <span class="var">R'</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">6:</span> <span class="kw">if</span> <span class="var">Δ</span> ≠ ∅ <span class="kw">then</span></p>
+  <p style="padding-left:3.0em"><span class="num">7:</span> <span class="var">H'</span> ← <span class="fn">Resync<sub>g</sub></span>(<span class="var">H</span>, <span class="var">R</span>, <span class="var">R'</span>, <span class="var">Δ</span>, <span class="var">Γ</span>)</p>
+  <p style="padding-left:1.5em"><span class="num">8:</span> <span class="kw">else</span></p>
+  <p style="padding-left:3.0em"><span class="num">9:</span> <span class="var">H'</span> ← <span class="var">H</span></p>
+  <p style="padding-left:1.5em"><span class="num">10:</span> <span class="kw">end if</span></p>
+  <p style="padding-left:1.5em"><span class="num">11:</span> <span class="kw">return</span> (<span class="var">P</span>, <span class="var">Γ</span>, <span class="var">R'</span>, <span class="var">Δ</span>, <span class="var">H'</span>)</p>
+</div>
+
+<h4>3.3.1 BGPD 行为定位</h4>
+<p>BGPD 不把所有源位置同等对待，而是用 handbook 从粗到细识别候选位点，再对照当前仓库验证。其流程为：</p>
+
+<pre class="mermaid">
+flowchart TD
+  S1["阶段选择：读 L1/L2 选相关执行阶段"] --> S2["沿 Z 加入经共享状态耦合的阶段（结构远但互相依赖）"]
+  S2 --> S3["条目选择：在选定阶段内选最相关 L3，取其源码 locator"]
+  S3 --> S4["调用关系扩展：沿 G 扩展候选集（function-call 图 或 file-call 图）"]
+  S4 --> S5["源码验证：打开 R，解析每个 locator，仅保留与 q 相关的位点"]
+  S5 --> S6["产出验证后证据 Eq：文件路径 + 可选函数/区域锚 + 当前源码片段"]
+</pre>
+
+<ul>
+  <li><strong>阶段选择</strong>：从 <code>D</code> 的 L1/L2 选与 <code>q</code> 匹配的执行阶段，再沿 <code>Z</code> 加入经共享状态耦合的阶段——这恢复了结构上遥远但互相依赖的行为（如某值在一阶段写入、若干阶段后才被消费）。</li>
+  <li><strong>条目选择</strong>：在选定阶段内打开 stage 页面，选最相关 L3 条目；每条目暴露摘要与源码 locator，正文仅在需要时披露以限制不必要上下文。</li>
+  <li><strong>调用关系扩展</strong>：在程序图 <code>G</code> 上沿调用关系扩展候选集（function 模式用函数调用图，file 模式用诱导的文件调用图）。命名外部边界节点提供上下文但<strong>绝不作为编辑位点返回</strong>。</li>
+  <li><strong>源码验证</strong>：以上步骤都在 handbook 上操作；随后打开当前仓库 <code>R</code>，解析每个候选 locator，仅保留仍与 <code>q</code> 相关的位点，得到验证后证据 <code>Eq</code>。每条记录含文件路径、可选函数/区域锚与当前源码片段。<strong>handbook 引导搜索，仓库仍是编辑计划的权威。</strong></li>
+</ul>
+
+<h4>3.3.2 编辑计划与执行</h4>
+<p>planner 把 <code>Eq</code> 转为编辑计划 <code>P</code>，每个 edit block 指定改动位置、支撑源码证据与意图变更，记录目标文件、可选函数/区域锚、当前源码片段与意图改动（实现中以 verbatim old/new 对表达）。每个 edit 还产出动作声明，含目标文件、可选锚与三种动作类型之一：<code>modify</code> / <code>add</code> / <code>remove</code>，收集为 <code>Γ = (Γ<sub>modify</sub>, Γ<sub>add</sub>, Γ<sub>remove</sub>)</code>；重命名表示为一次 removal + 一次 addition。executor 应用 <code>P</code> 到 <code>R</code> 产出 <code>R'</code>，diff <code>Δ = Diff(R, R')</code> 驱动 handbook 失效；<code>Γ</code> 仅用于检查执行是否遵循计划。</p>
+
+<h4>3.3.3 自动再同步</h4>
+<p>每个非空 <code>Δ</code> 触发 <code>Resync<sub>g</sub></code>，<strong>只更新受影响部分而非重建整个 handbook</strong>：</p>
+<ol>
+  <li><strong>版本对齐</strong>：重新解析 <code>R'</code>、刷新程序图为 <code>G'</code>，对照 <code>Δ</code> 识别增/删/改单元。function 模式用<strong>不依赖行号的 body fingerprint</strong> 匹配函数（仅移动的函数视为未变，locator 按行偏移 roll-forward；重命名按签名行以下的 body 匹配）；file 模式用文件集差异与内容哈希（路径重命名表现为一删一增）。</li>
+  <li><strong>范围更新</strong>：若阶段骨架 <code>S</code> 仍能容纳变更，则 <code>S' = S</code>，仅更新受影响的 <code>U<sub>g</sub></code> 部分（function 模式：删成员、继承匹配函数、重分类新增/变更函数、刷新区域锚与哈希与阶段内排序；file 模式：删过时卡与分配、刷新变更文件卡、分配新文件、重组受影响阶段、更新覆盖记录 <code>Y</code>）。随后重生成受影响 L3 条目及其 L2/L1 祖先与依赖状态寄存器，未受影响生成输出从 <code>B</code> 复用。若 <code>S</code> 已无法容纳，则以同 <code>g</code> 与 <code>Θ</code> 在 <code>R'</code> 上重跑 Algorithm 2。</li>
+  <li><strong>保守处理</strong>：无法解析或分类的源码不猜测——locator 或源哈希无法重校验的 L3 条目标记 frozen 并从定位排除；无法映射的新/变更函数显式记为 unmapped；无有效卡/分配的文件留在覆盖记录 <code>Y'</code> 中。</li>
+</ol>
+<p>再同步中模型调用仅限四种语义步骤：<strong>classification、file assignment、within-stage organization、description revision</strong>，其余操作均确定性。完成后 <code>(R', H')</code> 成为下一请求的起始状态。</p>
+
+<blockquote>
+<strong>设计要点：</strong> 整个流程把 <em>静态可确定的事实（路径、签名、源范围、已解析调用、文件指纹、内容哈希）</em> 与 <em>需要语义判断的描述（行为组织、阶段分配、文字说明）</em> 严格分离——前者由静态分析锁定、模型不可覆盖；后者由 LLM 生成但须经审阅与对照源码校验。这使得 handbook 既可读又可追溯到源码，且能在 diff 后低成本地保持同步。
+</blockquote>
+
+<h2 id="section-8">4. 实验结果与分析</h2>
+
+<h3 id="section-9">4.1 实验设置</h3>
+
+<p><strong>评测对象</strong>：在两个开源 agent harness 上评测行为定位与编辑计划质量——<strong>Terminus-2</strong>（Harbor 框架的 Python 终端 agent，通过 tmux 会话在 observe–decide–act 循环中驱动真实终端，紧凑 6 文件但行为丰富）与 <strong>Codex</strong>（Rust 单体仓库，跨 CLI/TUI/app-server/配置/沙箱等多 crate，数千文件、深调用图）。按 3.2 的选择规则，Terminus-2 用 function-as-leaf（有可信 seed 且函数级条目在预算内），Codex 用 file-as-leaf（在仓库规模上推断层级）。两仓库在文件/函数/调用边上相差约两个数量级，恰好各自实例化一种叶模式。</p>
+
+<table>
+  <tr><th>设置</th><th>Terminus-2</th><th>Codex</th></tr>
+  <tr><th>语言 / 叶模式</th><td>Python / function-as-leaf</td><td>Rust / file-as-leaf</td></tr>
+  <tr><th>源文件数</th><td>6</td><td>2,267</td></tr>
+  <tr><th>内部函数节点数</th><td>103</td><td>34,363</td></tr>
+  <tr><th>边界节点数</th><td>41</td><td>4,016</td></tr>
+  <tr><th>已解析调用边数</th><td>257</td><td>159,960</td></tr>
+  <tr><th>阶段数 (L2)</th><td>20</td><td>140</td></tr>
+  <tr><th>L3 条目数</th><td>106</td><td>2,267</td></tr>
+  <tr><th>状态寄存器数</th><td>10</td><td>62</td></tr>
+</table>
+<p><em>表：Phase I 静态事实与构建出的 handbook 结构（对应论文 Table 2）。</em></p>
+
+<p><strong>修改请求</strong>：每个 harness 贡献 30 个行为驱动修改请求，均分三类——<strong>Query (Q)</strong>（修改既有行为，如触发条件/时机/控制流决策，但不透露目标位置）、<strong>Cross-file (CF)</strong>（新增跨文件/模式/管道/接口的端到端能力）、<strong>Search-Hostile (SH)</strong>（把相关实现放在镜像实现、fallback 分支或冷路径，关键词搜索难以恢复）。另按定位难度标注 Easy/Medium/Hard。</p>
+
+<p><strong>评测臂</strong>：planner 为基于 NexAU[31] 构建、底层 LLM 为 <strong>DeepSeek-V4-Pro</strong> 的只读 agent。两臂除 handbook 访问与导航策略外完全一致（请求、模型、仓库、工具权限、解码设置相同）。Baseline 直接探索仓库；Handbook-Assisted 在 BGPD 一致导航策略下定位。计划质量由 <strong>GPT-5.5、Opus 4.8、DeepSeek-V4-Pro</strong> 三模型独立评分。</p>
+
+<p><strong>评测指标</strong>：（1）<em>计划质量</em>：三 judge 在 Localization / Scope Control / Reasoning 三维上打分（0–5，步长 0.5），加权得分</p>
+<p>$$ S = 0.5\,S_\mathrm{Loc} + 0.25\,S_\mathrm{Scope} + 0.25\,S_\mathrm{Reason} $$</p>
+<p>换算到 0–100 尺度；当两臂得分差至少 <code>δ = 3</code> 分时宣布胜者，否则平局。胜率 = 该切片胜数 / 有效 judge–请求比较数。（2）<em>定位准确率</em>：对照 Opus 4.8 与 GPT-5.5 独立参考计划，报告 file 与 symbol 粒度的 Recall / Precision / F1 / Wrong（Wrong 为零重叠占比，越低越好）。（3）<em>计划成本</em>：每请求平均 planner token 数（含 handbook 与源码上下文）。</p>
+
+<h3 id="section-10">4.2 更好计划、更低 token 成本（RQ1）</h3>
+
+<p>Handbook-Assisted 在两 harness 上总体胜率均更高：<strong>Codex 38.3% vs 28.3%（+10.0）</strong>、<strong>Terminus-2 45.6% vs 26.7%（+18.9）</strong>。三 judge 方向一致：Codex 上每个 judge 恰好 +10.0；Terminus-2 上差距从 +13.3 到 +26.7。同时 planner token 用量下降：Codex 0.102M→0.089M（<strong>-12.7%</strong>），Terminus-2 0.058M→0.053M（<strong>-8.6%</strong>）。胜率升与 token 降同时出现，说明改进<strong>不是因为更大的计划 token 预算</strong>。</p>
+
+<table>
+  <tr><th>指标</th><th>Codex Baseline</th><th>Codex Handbook</th><th>Gap</th><th>Terminus-2 Baseline</th><th>Terminus-2 Handbook</th><th>Gap</th></tr>
+  <tr><td>总体胜率 (%)</td><td>28.3</td><td class="best">38.3</td><td class="best">+10.0</td><td>26.7</td><td class="best">45.6</td><td class="best">+18.9</td></tr>
+  <tr><td>planner tokens/请求 (M)</td><td>0.102</td><td class="best">0.089</td><td class="best">-12.7%</td><td>0.058</td><td class="best">0.053</td><td class="best">-8.6%</td></tr>
+</table>
+<p><em>表：总体胜率与每请求 planner token 用量（数据来自 Figure 3）。</em></p>
+
+<h4>按维度分解（Figure 4）</h4>
+<p>三 judge 平均后，Handbook-Assisted 在 Localization / Scope Control / Reasoning 三维上均更高：</p>
+<table>
+  <tr><th>维度增益（百分点，三 judge 平均）</th><th>Codex</th><th>Terminus-2</th></tr>
+  <tr><td>Localization</td><td class="best">+2.2</td><td class="best">+12.2</td></tr>
+  <tr><td>Scope Control</td><td class="best">+1.1</td><td class="best">+6.7</td></tr>
+  <tr><td>Reasoning</td><td class="best">+3.3</td><td class="best">+4.5</td></tr>
+</table>
+<p>可见定位维度增益最大（Terminus-2 +12.2），与论文“行为定位是核心瓶颈”的论断一致。</p>
+
+<h3 id="section-11">4.3 弱 planner 逼近更强模型（RQ2）</h3>
+
+<p>将弱 planner（DeepSeek-V4-Pro）预测的编辑位点与 Opus 4.8 / GPT-5.5 的独立参考计划对照（Table 1）。跨两 harness、两参考模型、两粒度，<strong>全部 24 项 Recall / Precision / F1 比较均更高</strong>，F1 提升范围 <strong>5.0–18.8 个百分点</strong>；Recall 与 Precision 同升，说明改进不是靠多返回候选位点换取的。<strong>Wrong（零重叠占比）从不增加，最多下降 25.9 个百分点</strong>——增益包含更少的彻底定位失败，而不只是已有合理计划间更好的重叠。</p>
+
+<table>
+  <tr><th>Harness</th><th>粒度</th><th>参考</th><th>Recall Baseline / HB / Gap</th><th>Precision Baseline / HB / Gap</th><th>F1 Baseline / HB / Gap</th><th>Wrong↓ Baseline / HB / Gap</th></tr>
+  <tr><td rowspan="4">Codex</td><td rowspan="2">File</td><td>Opus 4.8</td><td>55.4 / 69.7 / +14.3</td><td>46.1 / 60.2 / +14.1</td><td>46.6 / 61.8 / <strong class="best">+15.2</strong></td><td>37.0 / 14.8 / -22.2</td></tr>
+  <tr><td>GPT-5.5</td><td>49.4 / 49.8 / +0.4</td><td>53.0 / 62.2 / +9.2</td><td>47.3 / 52.3 / <strong class="best">+5.0</strong></td><td>21.4 / 21.4 / 0.0</td></tr>
+  <tr><td rowspan="2">Symbol</td><td>Opus 4.8</td><td>47.1 / 65.4 / +18.3</td><td>38.0 / 55.3 / +17.3</td><td>38.3 / 57.1 / <strong class="best">+18.8</strong></td><td>44.4 / 18.5 / -25.9</td></tr>
+  <tr><td>GPT-5.5</td><td>46.4 / 49.1 / +2.7</td><td>48.4 / 60.4 / +12.0</td><td>43.8 / 51.2 / <strong class="best">+7.4</strong></td><td>28.6 / 21.4 / -7.2</td></tr>
+  <tr><td rowspan="4">Terminus-2</td><td rowspan="2">File</td><td>Opus 4.8</td><td>74.7 / 83.9 / +9.2</td><td>74.1 / 86.2 / +12.1</td><td>74.1 / 84.7 / <strong class="best">+10.6</strong></td><td>24.1 / 13.8 / -10.3</td></tr>
+  <tr><td>GPT-5.5</td><td>76.1 / 87.5 / +11.4</td><td>78.3 / <strong class="best">93.3</strong> / +15.0</td><td>76.5 / <strong class="best">89.3</strong> / +12.8</td><td>20.0 / 6.7 / -13.3</td></tr>
+  <tr><td rowspan="2">Symbol</td><td>Opus 4.8</td><td>64.7 / 76.3 / +11.6</td><td>65.1 / 78.4 / +13.3</td><td>64.8 / 77.1 / <strong class="best">+12.3</strong></td><td>24.1 / 13.8 / -10.3</td></tr>
+  <tr><td>GPT-5.5</td><td>73.0 / 87.5 / +14.5</td><td>73.9 / <strong class="best">93.3</strong> / +19.4</td><td>73.0 / <strong class="best">89.3</strong> / +16.3</td><td>20.0 / 6.7 / -13.3</td></tr>
+</table>
+<p><em>表：参考计划定位指标（%，对应 Table 1）。F1 全部 24 项均升；Terminus-2 上 file-level F1 达 84.7%（vs Opus）/ 89.3%（vs GPT），symbol-level 达 77.1% / 89.3%，Precision 对 GPT-5.5 在两粒度均达 93.3%。</em></p>
+
+<div id="chart-f1" class="echarts-container" style="height:340px"></div>
+<p><em>图：F1 在 Baseline 与 Handbook-Assisted 间的对比（按 harness × 粒度 × 参考模型）。所有柱对均右移提升。</em></p>
+
+<h3 id="section-12">4.4 跨请求类型与难度的稳定增益（RQ3）</h3>
+
+<p>按请求类型分（Figure 5a），六个 harness×类型对比全部偏向 Handbook-Assisted，增益范围 16.3–33.3 个百分点：Codex 在 Query 上提升最大（+26.7），Terminus-2 在 Search-Hostile 上提升最大（+33.3），Cross-file 分别 +16.3 / +20.0。增益覆盖既有行为变更、跨文件能力与关键词搜索难定位的请求。按定位难度分（Figure 5b），六个 harness×难度对比亦全部为正，范围 3.7–33.3；Codex 在 Easy 上提升最大（+33.3），Terminus-2 在 Medium 上提升最大（+18.0）。因增益对标注难度并非单调，难度标签本身不能解释增益变化。</p>
+
+<div id="chart-type" class="echarts-container" style="height:340px"></div>
+<p><em>图：按修改请求类型的胜率增益（Figure 5a；论文正文将六项增益范围概述为 16.3–33.3 个百分点）。</em></p>
+
+<div id="chart-diff" class="echarts-container" style="height:340px"></div>
+<p><em>图：按定位难度的胜率增益（Figure 5b，范围 3.7–33.3 个百分点）。</em></p>
+
+<h3 id="section-13">4.5 一个真实的 Handbook-Assisted 走查（Appendix E）</h3>
+
+<p>以 Terminus-2 上一个真实 run（case Q1，DeepSeek-V4-Pro planner）为例。请求为 Query 类：<em>“要求模型连续标记 task_complete 三次才真正评分，前两次只重显终端状态并询问是否确认。”</em> 请求未点名任何文件/函数，故首要任务就是定位。BGPD 两步：</p>
+<p><strong>Phase 1 路由 handbook</strong>：SKILL.md → overview.md → index.md，定位拥有逐迭代继续与终止的阶段；读 <code>stages/stage-4.8.md</code>（Completion Gate）与 <code>stage-4.7.md</code>（Command Execute），确认握手在 gate；读 <code>registers.md</code>，发现 gate 由状态寄存器 <code>reg-pending-completion</code> 支撑，其读写位点跨主循环、初始化与逐 run 重置。由此推出：改动局限于单阶段单寄存器，且寄存器写位点揭示初始化与逐 run 重置必须与循环一起改，而不仅是显而易见的 return 分支。</p>
+<p><strong>Phase 2 对照活源码验证</strong>：在 <code>terminus_2.py</code> 中 <code>search_file_content</code> <code>_pending_completion</code> 得 7 处，均在同一文件。阅读后确认是一个 Boolean flag：首次完成标记置位、第二次返回前测试、任何非完成回合与每次 run 开始时清零。最终定位三处：<code>Terminus2.__init__</code>（~L292，初始化）、<code>Terminus2._reset_per_run_state</code>（~L1574，逐 run 清零）、<code>Terminus2._run_agent_loop</code>（~L1427–1440, L1552–1559，读写的观察分支与完成 gate）。计划把 Boolean <code>_pending_completion</code> 换成整数计数器 <code>_completion_confirmations</code>：循环在每次完成标记时自增、非完成回合重置、仅在第三次连续标记时返回评分。改动集为 4 个 modify 动作，均在 <code>terminus_2.py</code>。核心编辑前后对照：</p>
+
+<pre><code class="language-python"># Before — 两次标记的 Boolean 握手
+if is_task_complete:
+    if was_pending_completion:
+        # second task_complete: confirmed, grade now
+        return
+    else:
+        # first attempt: ask to confirm, continue
+        prompt = observation
+        continue
+
+# After — 三次标记的计数器
+if is_task_complete:
+    if was_completion_confirmations &gt;= 2:
+        # third consecutive task_complete: confirmed, grade now
+        return
+    else:
+        # first or second attempt: ask to confirm, continue
+        prompt = observation
+        continue</code></pre>
+
+<p>该走查典型地体现了 BGPD 的两个核心动作：<strong>先经 handbook 路由确定哪些代码位点在 scope 内，再对照活源码逐一验证后写出计划</strong>。尤其值得注意的是，<code>registers.md</code> 揭示的“初始化 + 逐 run 重置必须随循环一起改”这一结论，是自顶向下读代码很容易漏掉的——这正对应论文强调的“分散、稀有路径与跨模块交互”场景的最大收益来源。</p>
+
+<h2 id="section-14">5. 总结与启发</h2>
+
+<h3 id="section-15">5.1 局限性</h3>
+
+<p>论文未单设 Limitations 节，但通读全文可归纳出若干边界条件与潜在局限（以下为基于原文的合理归纳，论文未逐一明示）：</p>
+<ul>
+  <li><strong>依赖可信 seed skeleton（function-as-leaf）</strong>：Terminus-2 选用 function 模式的前提是“有可靠 seed skeleton 且函数级条目在预算内”。对缺乏可信 seed 的 harness，只能退回 file-as-leaf 推断骨架，组织质量受文件卡描述质量制约。</li>
+  <li><strong>静态分析的语言覆盖面</strong>：Phase I 由语言特定适配器完成，只解析能静态识别的函数/边界/调用。未解析调用只能进审计日志而非猜测——对大量动态分派、反射、跨语言 FFI 的 harness，程序图可能不完整，BGPD 的调用关系扩展会受影响。</li>
+  <li><strong>评测规模与范围</strong>：仅两个 harness、各 30 个请求；planner 仅 DeepSeek-V4-Pro 一种；judge 三模型但均来自同一代前沿模型族。结论（尤其“弱 planner 逼近强模型”）是否外推到更多 harness、更多 planner 仍待验证。</li>
+  <li><strong>只评计划、不评执行结果</strong>：评测直接打分 edit plan <code>P</code>，明确不评最终 diff 或执行正确性（executor 跨臂共享、out of scope）。handbook 对“执行后是否真的跑通”的增益未在本文度量。</li>
+  <li><strong>handbook 构建与再同步的 LLM 成本未单独报告</strong>：论文强调 planner 侧 token 下降，但 handbook 构造与 resync 中四类语义步骤的模型调用成本（classification/file assignment/within-stage organization/description revision）未在主表中量化，仅以“预算”<code>Θ</code>约束。</li>
+  <li><strong>保守处理可能冻结有效条目</strong>：无法重校验的 locator 会被冻结并从定位排除，直至刷新。在频繁重构（大规模重命名/格式化）的仓库中，可能出现大量 frozen 条目，需要额外的刷新流程。</li>
+</ul>
+
+<h3 id="section-16">5.2 核心洞见与读后评注</h3>
+
+<ol>
+  <li><strong>“在哪改”先于“怎么改”。</strong> 论文最核心的论点是：在 harness 演化中，<em>确定编辑应落在何处</em>是与<em>生成编辑本身</em>并列、甚至更前置的瓶颈。Handbook-Assisted 同时提升质量与降低 token，直接驳斥了“给 agent 更大上下文/更多 token 就能解决定位”的朴素假设——问题不在上下文大小，而在<strong>缺少行为到实现的结构化映射</strong>。</li>
+  <li><strong>表示层的范式转换：从“实现为中心”到“行为为中心”。</strong> 现有 repo map / 代码搜索 / 仓库记忆都按文件/函数/模块组织，与“修改请求描述行为”的语义层级不匹配。Handbook 用 L1–L3 行为树 + 跨阶段状态寄存器视图，把“一个行为分散在多处”显式化，使“找全位点”从隐式推理变成可导航索引。这是把<strong>可读性工程</strong>引入 agent 自演化的一次尝试。</li>
+  <li><strong>静态分析 + LLM 的分工是可信度的关键。</strong> 模型只能写行为描述、不能改路径/签名/源范围/已解析调用；所有 locator 必须对照当前仓库重校验，失败即冻结。这种“事实由静态锁定、语义由 LLM 生成、二者分离并交叉校验”的设计，是 handbook 既可读又可追溯、且能低成本 resync 的工程基石。它也给“用 LLM 理解代码库”一类工作提供了一个降低幻觉的范本。</li>
+  <li><strong>状态寄存器视图 Z 是“分散位点”的最大杀手。</strong> 走查案例中，<code>registers.md</code> 揭示“初始化 + 逐 run 重置 + 循环”必须一起改——这正是自顶向下读代码易漏、关键词搜索难命中的场景。论文报告 Search-Hostile 与 Cross-file 请求上增益最大（Terminus SH +33.3，CF +20.0/+16.3），与该机制直接对应：状态读写的<strong>跨阶段耦合</strong>天然把分散位点显式化。</li>
+  <li><strong>渐进式披露 = 用更少 token 做更准定位。</strong> BGPD 先在 handbook 上粗到细导航（L1→L2→L3 + Z + 调用图扩展），再打开仓库只验证候选位点。这把“全仓库扫描”压缩为“定向验证”，token 用量不增反降（-12.7% / -8.6%）。这对<strong>上下文受限的 coding agent</strong> 有直接工程价值：不是塞更多上下文，而是先用行为索引裁剪 scope。</li>
+  <li><strong>“弱 planner + 好 map” 逼近 “强 planner”。</strong> 借 handbook，DeepSeek-V4-Pro 在 Terminus-2 上 file-level F1 达 89.3%、Precision 达 93.3%（对 GPT-5.5 参考），逼近甚至匹配更强模型的定位。这暗示<strong>定位能力可在相当程度上从模型能力中“外化”到表示层</strong>——对成本敏感的工业部署是重要信号。</li>
+  <li><strong>diff 驱动的局部再同步是“活文档”的关键。</strong> 非空 diff 只更新受影响部分（函数指纹/内容哈希做版本对齐、<code>S</code> 失效才全量重建），模型调用仅限四类语义步骤。这让 handbook 不会在仓库演化后迅速过期，是区别于一次性文档生成的核心。论文展望的<strong>harness 自演化</strong>（以 handbook 为共享行为记忆，agent 自主闭环定位→规划→执行→再同步）顺理成章，是该路线的自然下一步。</li>
+  <li><strong>评注与展望。</strong> 本文把一个被广泛忽视的前置问题（行为定位）形式化并给出可工程化方案，立场鲜明、实验设计干净（两臂仅 handbook 访问不同、三 judge 独立、参考计划来自两独立模型）。可质疑处在于：增益在 Codex（大仓库、file-as-leaf）上明显小于 Terminus-2（小仓库、function-as-leaf）——file 模式下 L3 条目即整文件，粒度更粗，handbook 行为组织优势可能被稀释；这提示<strong>handbook 的收益与叶模式/仓库结构强相关</strong>。若能补上 handbook 构建成本、resync 频次与冻结率、以及对执行后正确性的端到端影响，论证会更完整。</li>
+</ol>
+
+<h2 id="section-17">6. 参考文献</h2>
+
+<ol>
+  <li>Xuying Ning, Katherine Tieu, et al. <em>Code as Agent Harness.</em> arXiv:2605.18747, 2026.</li>
+  <li>John Yang, Carlos Jimenez, et al. <em>SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering.</em> NeurIPS, 37:50528–50652, 2024.</li>
+  <li>Xingyao Wang, Boxuan Li, et al. <em>OpenHands: An Open Platform for AI Software Developers as Generalist Agents.</em> ICLR, 2025.</li>
+  <li>OpenAI. <em>Introducing Codex.</em> OpenAI Research Preview, May 2025.</li>
+  <li>Jiahang Lin, Shichun Liu, et al. <em>Agentic Harness Engineering: Observability-Driven Automatic Evolution of Coding-Agent Harnesses.</em> arXiv:2604.25850, 2026.</li>
+  <li>Hailin Zhong, Shengxin Zhu. <em>AI Harness Engineering: A Runtime Substrate for Foundation-Model Software Agents.</em> arXiv:2605.13357, 2026.</li>
+  <li>Shaoqiu Zhang, et al. <em>SWE-Explore: Benchmarking How Coding Agents Explore Repositories.</em> arXiv:2606.07297, 2026.</li>
+  <li>Hovhannes Tamoyan, et al. <em>Sherloc: Structured Diagnostic Localization for Code Repair Agents.</em> arXiv:2606.24820, 2026.</li>
+  <li>Ishaan Bhola, et al. <em>Code Isn't Memory: A Structural Codebase Index Inside a Coding Agent.</em> arXiv:2606.22417, 2026.</li>
+  <li>Boshi Wang, et al. <em>Improving Code Localization with Repository Memory.</em> arXiv:2510.01003, 2025.</li>
+  <li>Weili Cao, et al. <em>Coding Agents Are Effective Long-Context Processors.</em> arXiv:2603.20432, 2026.</li>
+  <li>Mike A. Merrill, Alexander G. Shaw, et al. <em>Terminal-Bench: Benchmarking Agents on Hard, Realistic Tasks in Command Line Interfaces.</em> ICLR, 2026.</li>
+  <li>Nex-AGI Team, et al. <em>Nex-N1: Agentic Models Trained via a Unified Ecosystem for Large-Scale Environment Construction.</em> arXiv:2512.04987, 2025.</li>
+  <li>Qingyun Wu, et al. <em>AutoGen: Enabling Next-Gen LLM Applications via Multi-Agent Conversation.</em> arXiv:2308.08155, 2023.</li>
+  <li>Shunyu Yao, et al. <em>ReAct: Synergizing Reasoning and Acting in Language Models.</em> arXiv:2210.03629, 2022.</li>
+</ol>
+
+<hr>
+<p style="color:#6c7086;font-size:0.85em">本报告基于论文 arXiv:2607.13285 原文（pdfminer 提取文本）撰写，所有数值与结论均来自原文 Abstract / Introduction / Section 3–4 / Appendix A–E。涉及归纳的局限性分析已在 5.1 标注。</p>
+
+<script>
+  var palette = { base: '#313244', text: '#cdd6f4', heading: '#89b4fa', orange: '#fab387', green: '#a6e3a1', purple: '#cba6f7', border: '#45475a' };
+  function mkBar(title, cats, series, yName, fmt) {
+    return {
+      backgroundColor: palette.base,
+      title: { text: title, textStyle: { color: palette.heading, fontSize: 14 } },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, textStyle: { color: palette.text } },
+      legend: { data: series.map(function(s){return s.name;}), textStyle: { color: palette.text } },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: { type: 'category', data: cats, axisLabel: { color: palette.text, fontSize: 11 }, axisLine: { lineStyle: { color: palette.border } } },
+      yAxis: { type: 'value', name: yName, nameTextStyle: { color: palette.text }, axisLabel: { color: palette.text, formatter: fmt }, axisLine: { lineStyle: { color: palette.border } }, splitLine: { lineStyle: { color: palette.border } } },
+      series: series
+    };
+  }
+  function barSeries(name, data, color) {
+    return { name: name, type: 'bar', data: data, itemStyle: { color: color }, label: { show: true, position: 'top', color: palette.text, fontSize: 10, formatter: function(p){ return p.value; } } };
+  }
+
+  // F1: Baseline vs Handbook-Assisted across 8 (harness x level x ref) combos
+  echarts.init(document.getElementById('chart-f1')).setOption(mkBar(
+    'F1 (%)：Baseline vs Handbook-Assisted',
+    ['Codex File\n(Opus ref)', 'Codex File\n(GPT ref)', 'Codex Sym\n(Opus ref)', 'Codex Sym\n(GPT ref)', 'Terminus File\n(Opus ref)', 'Terminus File\n(GPT ref)', 'Terminus Sym\n(Opus ref)', 'Terminus Sym\n(GPT ref)'],
+    [
+      barSeries('Baseline', [46.6, 47.3, 38.3, 43.8, 74.1, 76.5, 64.8, 73.0], palette.orange),
+      barSeries('Handbook-Assisted', [61.8, 52.3, 57.1, 51.2, 84.7, 89.3, 77.1, 89.3], palette.green)
+    ],
+    'F1 (%)',
+    '{value}'
+  ));
+
+  // Win-rate gain by request type (Figure 5a)
+  echarts.init(document.getElementById('chart-type')).setOption(mkBar(
+    '胜率增益按修改请求类型（百分点，Figure 5a）',
+    ['Query (Q)', 'Cross-file (CF)', 'Search-Hostile (SH)'],
+    [
+      barSeries('Codex', [26.7, 16.3, 16.7], palette.heading),
+      barSeries('Terminus-2', [23.3, 20.0, 33.3], palette.purple)
+    ],
+    '增益 (百分点)',
+    '{value}'
+  ));
+
+  // Win-rate gain by difficulty (Figure 5b)
+  echarts.init(document.getElementById('chart-diff')).setOption(mkBar(
+    '胜率增益按定位难度（百分点，Figure 5b）',
+    ['Easy', 'Medium', 'Hard'],
+    [
+      barSeries('Codex', [33.3, 5.4, 11.2], palette.heading),
+      barSeries('Terminus-2', [6.5, 18.0, 3.7], palette.purple)
+    ],
+    '增益 (百分点)',
+    '{value}'
+  ));
+</script>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

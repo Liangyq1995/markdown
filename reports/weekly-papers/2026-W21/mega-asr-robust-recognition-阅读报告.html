@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mega-ASR 阅读报告 | 2026-W21</title>
+
+<!-- highlight.js -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<!-- MathJax -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$'], ['\\(', '\\)']],
+    displayMath: [['$$', '$$'], ['\\[', '\\]']],
+    tags: 'ams'
+  }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --bg2: #181825;
+    --bg3: #313244;
+    --surface: #24243a;
+    --heading: #89b4fa;
+    --subheading: #cba6f7;
+    --strong: #a6e3a1;
+    --text: #cdd6f4;
+    --muted: #7f849c;
+    --border: #45475a;
+    --accent: #f38ba8;
+    --yellow: #f9e2af;
+    --teal: #94e2d5;
+    --pink: #f5c2e7;
+    --peach: #fab387;
+    --link: #89dceb;
+    --toc-width: 220px;
+    --header-height: 0px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    font-size: 15px;
+    line-height: 1.75;
+    display: flex;
+  }
+
+  /* ── TOC ─────────────────────────────── */
+  #toc {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--toc-width);
+    height: 100vh;
+    overflow-y: auto;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 24px 12px;
+    z-index: 100;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  #toc::-webkit-scrollbar { width: 4px; }
+  #toc::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  #toc .toc-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    padding-left: 8px;
+  }
+  #toc ul { list-style: none; padding: 0; }
+  #toc li { margin: 1px 0; }
+  #toc a {
+    display: block;
+    padding: 5px 8px;
+    border-radius: 6px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 12.5px;
+    line-height: 1.4;
+    transition: background 0.15s, color 0.15s;
+  }
+  #toc a:hover { background: var(--bg3); color: var(--text); }
+  #toc a.active { background: var(--bg3); color: var(--heading); font-weight: 600; }
+  #toc .toc-h2 { padding-left: 8px; }
+  #toc .toc-h3 { padding-left: 20px; font-size: 12px; }
+
+  /* ── Main ────────────────────────────── */
+  main {
+    margin-left: var(--toc-width);
+    max-width: none;
+    padding: 40px 64px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ── Hero ────────────────────────────── */
+  .hero {
+    background: linear-gradient(135deg, #1e2240 0%, #2a1f3d 50%, #1a2a2a 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 40px;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(137,180,250,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero .badge {
+    display: inline-block;
+    background: rgba(137,180,250,0.15);
+    color: var(--heading);
+    border: 1px solid rgba(137,180,250,0.3);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: 0.5px;
+  }
+  .hero h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--heading);
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+  .hero .meta {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .hero .meta span { margin-right: 20px; }
+  .hero .upvote {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(166,227,161,0.12);
+    color: var(--strong);
+    border: 1px solid rgba(166,227,161,0.3);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  /* ── Sections ────────────────────────── */
+  section { margin-bottom: 56px; scroll-margin-top: 20px; }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--heading);
+    border-left: 4px solid var(--heading);
+    padding-left: 14px;
+    margin-bottom: 20px;
+    margin-top: 8px;
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--subheading);
+    margin-bottom: 12px;
+    margin-top: 24px;
+  }
+  h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--yellow);
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+
+  p { margin-bottom: 12px; }
+  strong { color: var(--strong); font-weight: 600; }
+  em { color: var(--yellow); font-style: normal; font-weight: 500; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ── Info Table ─────────────────────── */
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .info-table tr { border-bottom: 1px solid var(--border); }
+  .info-table tr:last-child { border-bottom: none; }
+  .info-table td {
+    padding: 10px 16px;
+    vertical-align: top;
+  }
+  .info-table td:first-child {
+    color: var(--muted);
+    font-weight: 600;
+    width: 120px;
+    white-space: nowrap;
+  }
+  .info-table td:last-child { color: var(--text); }
+
+  /* ── Card ────────────────────────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+  }
+  .card.highlight { border-left: 4px solid var(--heading); }
+  .card.green { border-left: 4px solid var(--strong); }
+  .card.yellow { border-left: 4px solid var(--yellow); }
+  .card.red { border-left: 4px solid var(--accent); }
+  .card.purple { border-left: 4px solid var(--subheading); }
+
+  /* ── Callout ─────────────────────────── */
+  .callout {
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .callout-info { background: rgba(137,180,250,0.08); border-left: 3px solid var(--heading); }
+  .callout-warn { background: rgba(249,226,175,0.08); border-left: 3px solid var(--yellow); }
+  .callout-success { background: rgba(166,227,161,0.08); border-left: 3px solid var(--strong); }
+  .callout-danger { background: rgba(243,139,168,0.08); border-left: 3px solid var(--accent); }
+  .callout-label { font-weight: 700; margin-bottom: 4px; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* ── Table ───────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin-bottom: 20px;
+  }
+  th {
+    background: var(--bg3);
+    color: var(--heading);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--border);
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:hover td { background: rgba(69,71,90,0.3); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 1px 2px;
+  }
+  .tag-blue { background: rgba(137,180,250,0.15); color: var(--heading); }
+  .tag-green { background: rgba(166,227,161,0.15); color: var(--strong); }
+  .tag-yellow { background: rgba(249,226,175,0.15); color: var(--yellow); }
+  .tag-red { background: rgba(243,139,168,0.15); color: var(--accent); }
+  .tag-purple { background: rgba(203,166,247,0.15); color: var(--subheading); }
+
+  /* ── Chart ───────────────────────────── */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  .chart-title {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  /* ── Mermaid ─────────────────────────── */
+  .mermaid-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 16px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .mermaid-wrap .mermaid { display: flex; justify-content: center; }
+
+  /* ── Code / Algo ─────────────────────── */
+  .algo-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+  .algo-box .algo-title {
+    color: var(--heading);
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    font-family: inherit;
+  }
+  .algo-box .kw { color: var(--subheading); font-weight: 700; }
+  .algo-box .fn { color: var(--heading); }
+  .algo-box .cm { color: var(--muted); font-style: italic; }
+  .algo-box .num { color: var(--yellow); }
+  .algo-box .op { color: var(--accent); }
+  .algo-box .var { color: var(--teal); }
+  .algo-box .str { color: var(--strong); }
+
+  pre.hljs-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    font-size: 13px;
+  }
+
+  /* ── Formula box ─────────────────────── */
+  .formula-box {
+    background: var(--bg2);
+    border: 1px solid rgba(137,180,250,0.2);
+    border-radius: 8px;
+    padding: 18px 24px;
+    margin: 16px 0;
+    text-align: center;
+  }
+  .formula-label {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: right;
+    margin-top: 6px;
+  }
+
+  /* ── List ────────────────────────────── */
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 6px; line-height: 1.65; }
+  li::marker { color: var(--heading); }
+
+  /* ── Grid ────────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+
+  /* ── Divider ─────────────────────────── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+
+  /* ── Scroll progress ─────────────────── */
+  #scroll-progress {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--heading), var(--subheading));
+    transform-origin: left;
+    transform: scaleX(0);
+    z-index: 200;
+    transition: transform 0.1s;
+  }
+
+  /* ── References ─────────────────────── */
+  .ref-list { list-style: none; padding: 0; }
+  .ref-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13.5px;
+    color: var(--muted);
+    padding-left: 32px;
+    text-indent: -32px;
+  }
+  .ref-list li .ref-num { color: var(--heading); font-weight: 700; }
+
+  /* ── Stage badge ─────────────────────── */
+  .stage-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    margin: 3px;
+  }
+  .stage-1 { background: rgba(137,180,250,0.15); color: var(--heading); border: 1px solid rgba(137,180,250,0.3); }
+  .stage-2 { background: rgba(166,227,161,0.15); color: var(--strong); border: 1px solid rgba(166,227,161,0.3); }
+  .stage-3 { background: rgba(203,166,247,0.15); color: var(--subheading); border: 1px solid rgba(203,166,247,0.3); }
+
+  @media (max-width: 900px) {
+    #toc { display: none; }
+    main { margin-left: 0; padding: 24px 20px; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="scroll-progress"></div>
+
+<!-- ── TOC ─────────────────────────────────────────── -->
+<nav id="toc">
+  <div class="toc-title">目录</div>
+  <ul>
+    <li><a href="#s1" class="toc-h2">1. 论文信息</a></li>
+    <li><a href="#s2" class="toc-h2">2. 核心问题与动机</a></li>
+    <li><a href="#s2-1" class="toc-h3">2.1 声学鲁棒性瓶颈</a></li>
+    <li><a href="#s2-2" class="toc-h3">2.2 研究定位</a></li>
+    <li><a href="#s3" class="toc-h2">3. 背景与相关工作</a></li>
+    <li><a href="#s3-1" class="toc-h3">3.1 ASR模型演进</a></li>
+    <li><a href="#s3-2" class="toc-h3">3.2 数据增强技术对比</a></li>
+    <li><a href="#s4" class="toc-h2">4. 框架总览</a></li>
+    <li><a href="#s5" class="toc-h2">5. 关键技术详解</a></li>
+    <li><a href="#s5-1" class="toc-h3">5.1 Voices-in-the-Wild-2M</a></li>
+    <li><a href="#s5-2" class="toc-h3">5.2 A2S-PSFT训练策略</a></li>
+    <li><a href="#s5-3" class="toc-h3">5.3 双粒度WER门控</a></li>
+    <li><a href="#s5-4" class="toc-h3">5.4 复合声学物理建模</a></li>
+    <li><a href="#s6" class="toc-h2">6. 实验结果</a></li>
+    <li><a href="#s6-1" class="toc-h3">6.1 WER对比柱状图</a></li>
+    <li><a href="#s6-2" class="toc-h3">6.2 详细对比表</a></li>
+    <li><a href="#s7" class="toc-h2">7. 消融实验</a></li>
+    <li><a href="#s8" class="toc-h2">8. 核心洞见与评注</a></li>
+    <li><a href="#s9" class="toc-h2">9. 参考文献</a></li>
+  </ul>
+</nav>
+
+<!-- ── Main ────────────────────────────────────────── -->
+<main>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="badge">arXiv 2605.19833 · 2026-W21</div>
+  <h1>Mega-ASR: Towards In-the-wild² Speech Recognition<br>via Scaling up Real-world Acoustic Simulation</h1>
+  <div class="meta">
+    <span>Zhifei Xie, Kaiyu Pang, Haobin Zhang, Deheng Ye, Xiaobin Hu, Shuicheng Yan, Chunyan Miao</span><br>
+    <span style="margin-top:4px;display:inline-block">National University of Singapore &amp; 合作机构</span>
+  </div>
+  <div class="upvote">▲ 131 upvotes on Hugging Face</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+  Section 1: 论文信息
+══════════════════════════════════════════════════ -->
+<section id="s1">
+  <h2>1. 论文基本信息</h2>
+  <div class="card">
+    <table class="info-table">
+      <tr>
+        <td>标题</td>
+        <td><strong>Mega-ASR: Towards In-the-wild² Speech Recognition via Scaling up Real-world Acoustic Simulation</strong></td>
+      </tr>
+      <tr>
+        <td>arXiv ID</td>
+        <td><a href="https://arxiv.org/abs/2605.19833" target="_blank">2605.19833</a></td>
+      </tr>
+      <tr>
+        <td>作者</td>
+        <td>Zhifei Xie, Kaiyu Pang, Haobin Zhang, Deheng Ye, Xiaobin Hu, Shuicheng Yan, Chunyan Miao（共7位）</td>
+      </tr>
+      <tr>
+        <td>机构</td>
+        <td>National University of Singapore（NUS）及其他合作机构</td>
+      </tr>
+      <tr>
+        <td>关键词</td>
+        <td>
+          <span class="tag tag-blue">鲁棒ASR</span>
+          <span class="tag tag-green">数据扩增</span>
+          <span class="tag tag-yellow">声学模拟</span>
+          <span class="tag tag-purple">渐进式训练</span>
+          <span class="tag tag-red">WER门控</span>
+        </td>
+      </tr>
+      <tr>
+        <td>热度</td>
+        <td><span style="color:var(--strong)">▲ 131 upvotes</span>（Hugging Face Papers）</td>
+      </tr>
+      <tr>
+        <td>核心声明</td>
+        <td><em>"establishing a scalable paradigm for robust ASR in-the-wild"</em></td>
+      </tr>
+      <tr>
+        <td>主要贡献</td>
+        <td>
+          <ol style="margin:0;padding-left:18px">
+            <li>可扩展的复合声学数据构建流程（Voices-in-the-Wild-2M）</li>
+            <li>渐进式声学-语义优化训练策略（A2S-PSFT）</li>
+            <li>双粒度WER门控策略优化（Dual-Granularity WER Gating）</li>
+            <li>面向野外场景的统一ASR基准与框架</li>
+          </ol>
+        </td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+  Section 2: 核心问题与动机
+══════════════════════════════════════════════════ -->
+<section id="s2">
+  <h2>2. 核心问题与动机</h2>
+
+  <div id="s2-1">
+    <h3>2.1 声学鲁棒性瓶颈（Acoustic Robustness Bottleneck）</h3>
+
+    <p>
+      现代自动语音识别（ASR）系统——包括 Whisper、wav2vec2、Conformer 等大规模模型——在实验室受控环境中已接近人类水平。然而，<strong>在真实世界"野外"场景下，其性能发生断崖式下降</strong>，这一现象被论文称为 <em>声学鲁棒性瓶颈</em>（Acoustic Robustness Bottleneck）。
+    </p>
+
+    <div class="grid-2">
+      <div class="callout callout-danger">
+        <div class="callout-label">问题一：复合失真（Compound Distortion）</div>
+        真实录音往往同时包含多种声学退化因素——背景噪声、混响、信道失真、说话者变异、环境回声等。现有模型多数仅针对单一失真类型训练，在复合场景下显著失效，产生<strong>遗漏（deletion）</strong>和<strong>幻觉（hallucination）</strong>错误。
+      </div>
+      <div class="callout callout-warn">
+        <div class="callout-label">问题二：数据分布鸿沟（Distribution Gap）</div>
+        公开的鲁棒ASR训练集（如 CHiME、NOIZEUS）规模小、场景单一，与实际部署环境差距悬殊。数据量不足，且无法覆盖物理世界中多样化的复合退化模式。
+      </div>
+    </div>
+
+    <div class="callout callout-danger">
+      <div class="callout-label">问题三：幻觉与遗漏（Hallucination &amp; Deletion）</div>
+      复合失真场景中，基线模型（Whisper-large-v3 等）不仅出现词错率（WER）上升，还频繁产生<strong>幻觉词</strong>——将噪声错误识别为不存在的词——以及大段遗漏。这对下游NLP管道（关键词抽取、机器翻译等）造成级联错误。
+    </div>
+
+    <p>作者通过系统性定量分析，发现在 VOiCES R4-B-F（远场+背景音乐+房间响应复合条件）下，当前最佳开源模型 WER 高达 <strong>54.01%</strong>，远超实用阈值。这激发了构建大规模、多场景、物理可信复合声学训练数据集的研究动机。</p>
+  </div>
+
+  <hr>
+
+  <div id="s2-2">
+    <h3>2.2 研究定位与问题形式化</h3>
+
+    <p>论文将"In-the-wild² ASR"定义为：在<strong>双重野外约束</strong>下进行语音识别——</p>
+    <ul>
+      <li><strong>野外声学条件</strong>：录音设备、环境噪声、混响特性均不受控；</li>
+      <li><strong>野外语言内容</strong>：说话者口音、语速、语言风格、领域覆盖均无限制。</li>
+    </ul>
+
+    <div class="formula-box">
+      $$\mathcal{P}_{\text{Mega-ASR}}: \underbrace{x_{\text{distorted}}}_{\text{复合失真语音}} \xrightarrow{f_\theta} \underbrace{\hat{y}}_{\text{转录文本}}$$
+      <div class="formula-label">目标：学习在复合声学失真下语音到文本的鲁棒映射</div>
+    </div>
+
+    <p>
+      其中 $x_{\text{distorted}} = \mathcal{A}(x_{\text{clean}}, \{e_1, e_2, \ldots, e_K\})$ 表示将原始干净语音 $x_{\text{clean}}$ 经过 $K$ 种声学退化算子 $\{e_k\}_{k=1}^K$ 复合处理后的结果，$K \geq 2$ 时构成复合失真。
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+  Section 3: 背景与相关工作
+══════════════════════════════════════════════════ -->
+<section id="s3">
+  <h2>3. 背景与相关工作</h2>
+
+  <div id="s3-1">
+    <h3>3.1 ASR模型技术演进</h3>
+    <p>理解 Mega-ASR 需要先梳理 ASR 领域核心技术的演进路线：</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>模型/方法</th>
+          <th>年份</th>
+          <th>核心技术</th>
+          <th>在野外场景的局限</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Deep Speech 2</strong></td>
+          <td>2016</td>
+          <td>RNN + CTC，大规模英文/中文数据</td>
+          <td>对噪声敏感，需规整语音</td>
+        </tr>
+        <tr>
+          <td><strong>wav2vec 2.0</strong></td>
+          <td>2020</td>
+          <td>Transformer + 对比自监督预训练</td>
+          <td>微调时仍依赖干净标注数据</td>
+        </tr>
+        <tr>
+          <td><strong>Conformer</strong></td>
+          <td>2020</td>
+          <td>卷积+注意力混合，CTC/AED解码</td>
+          <td>复合噪声下 WER 显著上升</td>
+        </tr>
+        <tr>
+          <td><strong>HuBERT</strong></td>
+          <td>2021</td>
+          <td>离散单元自监督预训练</td>
+          <td>预训练域与噪声场景分布不匹配</td>
+        </tr>
+        <tr>
+          <td><strong>Whisper</strong></td>
+          <td>2022</td>
+          <td>680K小时弱监督数据 + Seq2Seq</td>
+          <td>复合场景幻觉问题显著，无专项优化</td>
+        </tr>
+        <tr>
+          <td><strong>Whisper large-v3</strong></td>
+          <td>2023</td>
+          <td>规模扩大，多语言</td>
+          <td>VOiCES R4-B-F WER仍达54.01%</td>
+        </tr>
+        <tr>
+          <td><strong>SenseVoice</strong></td>
+          <td>2024</td>
+          <td>多任务ASR（情感、语言、事件）</td>
+          <td>声学鲁棒性未被系统优化</td>
+        </tr>
+        <tr>
+          <td><strong>Mega-ASR</strong></td>
+          <td>2025</td>
+          <td>复合声学数据+A2S-PSFT+WER门控</td>
+          <td><span style="color:var(--strong)">针对复合场景专项优化，WER降低30%+</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-info">
+      <div class="callout-label">Whisper 的双重身份</div>
+      Whisper 在 Mega-ASR 体系中既是<strong>基础骨干模型</strong>（用于微调），也是<strong>对比基线</strong>。其弱监督训练数据虽庞大，但缺乏对复合声学场景的系统覆盖，导致在野外场景下的幻觉与遗漏问题。
+    </div>
+  </div>
+
+  <hr>
+
+  <div id="s3-2">
+    <h3>3.2 数据增强技术横向对比</h3>
+    <p>论文在相关工作部分对现有鲁棒ASR数据增强技术进行了系统梳理：</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>方法类别</th>
+          <th>代表工作</th>
+          <th>复合场景</th>
+          <th>物理可信</th>
+          <th>规模</th>
+          <th>局限性</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-blue">简单叠加噪声</span></td>
+          <td>SpecAugment, RIR convolution</td>
+          <td style="color:var(--accent)">✗ 单一</td>
+          <td style="color:var(--yellow)">△ 部分</td>
+          <td>中等</td>
+          <td>未建模多因素交互</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-green">混响房间模拟</span></td>
+          <td>CHiME系列, REVERB</td>
+          <td style="color:var(--yellow)">△ 有限</td>
+          <td style="color:var(--strong)">✓</td>
+          <td>小</td>
+          <td>场景类型受限，无复合失真</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-yellow">GAN数据生成</span></td>
+          <td>SEGAN, MetricGAN+</td>
+          <td style="color:var(--accent)">✗</td>
+          <td style="color:var(--accent)">✗ 感知优化</td>
+          <td>小</td>
+          <td>物理不可信，域外泛化差</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-purple">扩散模型增强</span></td>
+          <td>DiffuSE, CDiffuSE</td>
+          <td style="color:var(--yellow)">△</td>
+          <td style="color:var(--accent)">✗</td>
+          <td>小</td>
+          <td>计算成本高，条件控制弱</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-red">多条件随机叠加</span></td>
+          <td>DNS Challenge</td>
+          <td style="color:var(--strong)">✓ 多种</td>
+          <td style="color:var(--yellow)">△</td>
+          <td>中等</td>
+          <td>场景组合无物理约束</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-blue">Mega-ASR (本文)</span></td>
+          <td>Voices-in-the-Wild-2M</td>
+          <td style="color:var(--strong)">✓ 54种复合场景</td>
+          <td style="color:var(--strong)">✓ 物理建模</td>
+          <td style="color:var(--strong)">200万样本</td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="grid-2">
+      <div class="card highlight">
+        <h4>CHiME挑战赛系列</h4>
+        <p style="font-size:13px">CHiME-4/5/6 聚焦特定场景（餐厅、厨房），虽引入混响和多麦克风，但场景多样性不足，且规模有限（数十小时量级），难以覆盖真实世界的分布多样性。</p>
+      </div>
+      <div class="card yellow">
+        <h4>DNS Challenge（Deep Noise Suppression）</h4>
+        <p style="font-size:13px">微软DNS挑战赛提供了大量噪声-干净语音对，但主要针对语音增强任务，噪声叠加方式偏向随机混合，缺乏物理约束的复合场景建模，也缺乏针对ASR的渐进式训练策略。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+  Section 4: 框架总览
+══════════════════════════════════════════════════ -->
+<section id="s4">
+  <h2>4. Mega-ASR 框架总览</h2>
+
+  <p>Mega-ASR 是一个端到端的鲁棒语音识别范式，覆盖从数据构建、模型训练到基准评测的完整流程。下图展示了整体架构：</p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart TB
+    subgraph DATA["数据层 Voices-in-the-Wild-2M"]
+        CS["干净语音源 Clean Speech Corpus"]
+        NOISE["噪声库 7类声学现象"]
+        PHYS["物理声学建模 RIR SNR 信道"]
+        SIM["复合场景模拟器 54种组合场景"]
+        DS["Voices-in-the-Wild-2M 200万条训练样本"]
+        CS --> PHYS
+        NOISE --> PHYS
+        PHYS --> SIM
+        SIM --> DS
+    end
+
+    subgraph TRAIN["训练层 A2S-PSFT"]
+        S1["阶段1 声学预热 Acoustic Warm-up"]
+        S2["阶段2 语义对齐 Semantic Alignment"]
+        S3["阶段3 联合优化 Joint Fine-tuning"]
+        GATE["双粒度WER门控 词级+句级过滤"]
+        S1 --> S2 --> S3
+        DS --> S1
+        GATE --> S2
+        GATE --> S3
+    end
+
+    subgraph EVAL["评测层 野外基准"]
+        B1["VOiCES R4-B-F 远场+背景音乐+房间响应"]
+        B2["NOIZEUS Sta-0 固定噪声叠加"]
+        B3["CHiME REVERB 标准鲁棒性基准"]
+        RES["WER对比结果 相对降低30%+"]
+        B1 --> RES
+        B2 --> RES
+        B3 --> RES
+    end
+
+    DS --> TRAIN
+    TRAIN --> EVAL
+
+    style DATA  fill:#1e2240,stroke:#89b4fa,stroke-width:2px
+    style TRAIN fill:#1a2a1a,stroke:#a6e3a1,stroke-width:2px
+    style EVAL  fill:#2a1a2a,stroke:#cba6f7,stroke-width:2px
+    </pre>
+  </div>
+
+  <div class="callout callout-info">
+    <div class="callout-label">设计哲学</div>
+    Mega-ASR 的核心设计哲学是<strong>"物理可信 × 规模化 × 渐进式"</strong>三维协同：数据层保证声学模拟的物理可信性，规模层提供覆盖54种复合场景的200万训练样本，训练层通过渐进式策略防止声学特征与语义能力的灾难性遗忘。
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+  Section 5: 关键技术详解
+══════════════════════════════════════════════════ -->
+<section id="s5">
+  <h2>5. 关键技术详解</h2>
+
+  <!-- 5.1 数据集 -->
+  <div id="s5-1">
+    <h3>5.1 Voices-in-the-Wild-2M 数据集构建</h3>
+
+    <p>
+      <strong>Voices-in-the-Wild-2M</strong> 是 Mega-ASR 的核心数据基础设施，包含 <em>200万条</em> 具有精确文本对齐的复合声学失真语音样本。数据集构建分为两个核心设计维度：
+    </p>
+
+    <h4>7类基础声学现象（Acoustic Phenomena）</h4>
+
+    <div class="grid-3">
+      <div class="card highlight">
+        <div class="tag tag-blue" style="margin-bottom:8px">现象 1</div>
+        <strong>环境背景噪声</strong><br>
+        <span style="font-size:12px;color:var(--muted)">城市街道、交通、机场、咖啡馆等场景噪声，覆盖宽频SNR分布（0dB～30dB）</span>
+      </div>
+      <div class="card green">
+        <div class="tag tag-green" style="margin-bottom:8px">现象 2</div>
+        <strong>室内混响（Reverberation）</strong><br>
+        <span style="font-size:12px;color:var(--muted)">基于真实房间脉冲响应（RIR），T60从0.1s至1.5s覆盖小房间至大厅</span>
+      </div>
+      <div class="card yellow">
+        <div class="tag tag-yellow" style="margin-bottom:8px">现象 3</div>
+        <strong>信道失真（Channel Distortion）</strong><br>
+        <span style="font-size:12px;color:var(--muted)">手机电话信道、VoIP压缩失真、编解码器降质模拟</span>
+      </div>
+      <div class="card">
+        <div class="tag tag-purple" style="margin-bottom:8px">现象 4</div>
+        <strong>音乐干扰</strong><br>
+        <span style="font-size:12px;color:var(--muted)">背景音乐叠加（流行、古典、民谣），对人声提取构成强干扰</span>
+      </div>
+      <div class="card red">
+        <div class="tag tag-red" style="margin-bottom:8px">现象 5</div>
+        <strong>说话者距离变异</strong><br>
+        <span style="font-size:12px;color:var(--muted)">远场录音模拟（0.5m～5m），结合房间响应与麦克风阵列特性</span>
+      </div>
+      <div class="card">
+        <div class="tag tag-blue" style="margin-bottom:8px">现象 6</div>
+        <strong>口音与语速变异</strong><br>
+        <span style="font-size:12px;color:var(--muted)">非母语口音、语速极值（快/慢）引发的声学特征偏移</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tag tag-green" style="margin-bottom:8px">现象 7</div>
+      <strong>复合叠加与设备噪声</strong><br>
+      <span style="font-size:12px;color:var(--muted)">麦克风自噪声、ADC量化噪声、低质录音设备引入的非线性失真，以及以上多种现象的随机复合叠加</span>
+    </div>
+
+    <h4>54种物理可信复合场景（Compound Scenarios）</h4>
+    <p>
+      论文在7类基础现象之上，通过有约束的组合枚举构建了 <strong>54种</strong> 物理上合理的复合场景。每种场景由2～4个声学现象类别组合而成，并针对各组合类型设定了符合物理规律的参数约束（例如：高混响条件下限制极低SNR，以避免物理不可能的组合）。
+    </p>
+
+    <div class="callout callout-success">
+      <div class="callout-label">物理可信性保证</div>
+      与简单随机叠加不同，Voices-in-the-Wild-2M 的复合场景构建基于声学传播物理模型：使用图像法（Image Method）或镜像源法生成房间脉冲响应，在信噪比、混响时间、说话者距离之间建立物理约束关系，确保生成样本符合真实世界录音特性。
+    </div>
+
+    <div class="formula-box">
+      $$x_{\text{sim}} = \underbrace{\mathcal{C}_{\text{channel}}}_{\text{信道失真}} \circ \underbrace{(h_{\text{room}} * x_{\text{clean}})}_{\text{室内混响卷积}} + \underbrace{n_{\text{env}} \cdot \alpha_{\text{SNR}}}_{\text{环境噪声叠加}} + \underbrace{m_{\text{music}} \cdot \beta}_{\text{音乐干扰}}$$
+      <div class="formula-label">式(1)：复合声学模拟的信号级组合公式（以4种现象为例）</div>
+    </div>
+
+    <p>其中 $h_{\text{room}}$ 为通过图像法生成的房间脉冲响应，$\alpha_{\text{SNR}}$ 和 $\beta$ 为受物理约束的强度参数，$\mathcal{C}_{\text{channel}}$ 为可微信道失真算子。</p>
+  </div>
+
+  <hr>
+
+  <!-- 5.2 A2S-PSFT -->
+  <div id="s5-2">
+    <h3>5.2 A2S-PSFT：声学到语义渐进式监督微调</h3>
+
+    <p>
+      <strong>A2S-PSFT</strong>（Acoustic-to-Semantic Progressive Supervised Fine-Tuning）是 Mega-ASR 的核心训练策略，旨在解决复合声学训练数据引入的<em>灾难性遗忘</em>和<em>声学-语义学习解耦</em>问题。
+    </p>
+
+    <div class="callout callout-warn">
+      <div class="callout-label">动机：朴素微调为何失败？</div>
+      直接在复合失真数据上端到端微调预训练Whisper时，存在两种失败模式：(1) 模型过度聚焦声学适应，导致语义建模能力退化；(2) 模型优先保留语义能力，导致声学鲁棒性提升有限。渐进式策略通过课程学习解决这一两难困境。
+    </div>
+
+    <h4>三阶段渐进式训练流程</h4>
+
+    <div style="margin-bottom:20px">
+      <div style="display:flex;gap:0;flex-wrap:wrap">
+        <div class="card" style="flex:1;min-width:200px;border-left:4px solid var(--heading)">
+          <div class="stage-badge stage-1">阶段 1：声学预热</div>
+          <p style="font-size:13px;margin-top:8px">
+            <strong>目标</strong>：让模型适应复合声学失真的底层特征分布<br>
+            <strong>数据</strong>：使用难度<em>较低</em>的单一失真样本（单一噪声类型）<br>
+            <strong>冻结</strong>：语言解码层（Decoder）参数冻结<br>
+            <strong>优化</strong>：仅更新编码器（Encoder）参数<br>
+          </p>
+          <div class="formula-box" style="margin-top:8px">
+            $$\mathcal{L}_{\text{acoustic}} = -\frac{1}{T}\sum_{t=1}^T \log P_\theta(y_t | x_{\text{distorted}})$$
+            <div class="formula-label">式(2)：阶段1声学适应损失（标准CTC/AED交叉熵）</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+      <div class="card" style="flex:1;min-width:200px;border-left:4px solid var(--strong)">
+        <div class="stage-badge stage-2">阶段 2：语义对齐</div>
+        <p style="font-size:13px;margin-top:8px">
+          <strong>目标</strong>：在声学适应基础上恢复/增强语义建模能力<br>
+          <strong>数据</strong>：混合复合失真样本 + 干净语音样本<br>
+          <strong>解冻</strong>：逐步解冻解码器层参数<br>
+          <strong>新增</strong>：引入语义一致性正则化项 $\mathcal{L}_{\text{sem}}$<br>
+        </p>
+        <div class="formula-box" style="margin-top:8px">
+          $$\mathcal{L}_{\text{semantic}} = \mathcal{L}_{\text{CE}} + \lambda \underbrace{\text{KL}(P_\theta(\cdot|x_{\text{clean}}) \| P_\theta(\cdot|x_{\text{dist}}))}_{\text{声学不变性正则项}}$$
+          <div class="formula-label">式(3)：阶段2语义对齐损失</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+      <div class="card" style="flex:1;min-width:200px;border-left:4px solid var(--subheading)">
+        <div class="stage-badge stage-3">阶段 3：联合优化</div>
+        <p style="font-size:13px;margin-top:8px">
+          <strong>目标</strong>：端到端联合优化声学鲁棒性与语义质量<br>
+          <strong>数据</strong>：全量复合失真数据（所有54种场景）<br>
+          <strong>解冻</strong>：全部参数，使用学习率热重启（WarmUp + Cosine）<br>
+          <strong>门控</strong>：启用双粒度WER门控过滤低质量训练样本<br>
+        </p>
+        <div class="formula-box" style="margin-top:8px">
+          $$\mathcal{L}_{\text{joint}} = \alpha \mathcal{L}_{\text{acoustic}} + \beta \mathcal{L}_{\text{semantic}} + \gamma \mathcal{L}_{\text{WER-gate}}$$
+          <div class="formula-label">式(4)：阶段3联合优化损失，$\alpha + \beta + \gamma = 1$</div>
+        </div>
+      </div>
+    </div>
+
+    <p>
+      其中超参数 $\alpha, \beta, \gamma$ 通过验证集上的 WER 表现自适应调整，$\mathcal{L}_{\text{WER-gate}}$ 由第5.3节的双粒度门控机制计算。
+    </p>
+
+    <div class="callout callout-info">
+      <div class="callout-label">渐进式课程的关键优势</div>
+      A2S-PSFT 本质上是一种<strong>课程学习（Curriculum Learning）</strong>策略：从简单的声学适应任务（阶段1）逐步过渡到复杂的声学-语义联合优化（阶段3）。这种渐进式策略有效避免了直接在复合场景上微调时的优化不稳定问题，同时防止预训练模型中积累的语义知识被"洗掉"。
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- 5.3 双粒度WER门控 -->
+  <div id="s5-3">
+    <h3>5.3 双粒度WER门控策略（Dual-Granularity WER Gating）</h3>
+
+    <p>
+      在大规模弱监督数据训练中，部分训练样本的标注质量较低（因为转录标注本身可能包含错误）。双粒度WER门控是一种<strong>在线数据过滤机制</strong>，在训练过程中动态剔除低质量样本，提升训练信号的纯度。
+    </p>
+
+    <p>
+      <em>双粒度</em>指同时在 <strong>词级（Word-level）</strong> 和 <strong>句级（Sentence-level）</strong> 两个粒度上计算WER门控分数：
+    </p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Dual-Granularity WER Gating (D-WER-Gate)</div>
+      <span class="kw">Input</span>: 训练样本集 $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^N$，当前模型 $f_\theta$<br>
+      <span class="kw">Input</span>: 词级阈值 $\tau_w$，句级阈值 $\tau_s$，动态衰减系数 $\eta$<br>
+      <span class="kw">Output</span>: 过滤后的训练批次 $\mathcal{B}_{\text{clean}}$<br><br>
+      <span class="kw">for each</span> mini-batch $\mathcal{B} = \{(x_i, y_i)\}_{i=1}^{B}$ <span class="kw">do</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// Step 1: 获取当前模型预测</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="var">$\hat{y}_i$</span> ← <span class="fn">greedy_decode</span>($f_\theta$, $x_i$), ∀$i \in \mathcal{B}$<br><br>
+
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// Step 2: 词级WER过滤（细粒度）</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">for each</span> 词 $w_{i,t}$ <span class="kw">in</span> $y_i$ <span class="kw">do</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">$\text{WER}_{w}(i, t)$</span> ← <span class="fn">word_edit_distance</span>($\hat{y}_{i,t}$, $w_{i,t}$) / len($w_{i,t}$)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> <span class="var">$\text{WER}_{w}(i, t) \gt \tau_w$</span>: 将词 $w_{i,t}$ 标记为<span class="str">噪声词</span>，降低损失权重<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">end for</span><br><br>
+
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// Step 3: 句级WER过滤（粗粒度）</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="var">$\text{WER}_{s}(i)$</span> ← <span class="fn">sentence_wer</span>($\hat{y}_i$, $y_i$)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> <span class="var">$\text{WER}_{s}(i) \gt \tau_s$</span>: 将样本 $(x_i, y_i)$ 从 $\mathcal{B}$ 中剔除<br><br>
+
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// Step 4: 动态阈值更新（随训练进程自适应收紧）</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="var">$\tau_w$</span> ← $\tau_w \times (1 - \eta \cdot \text{step} / \text{total\_steps})$<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="var">$\tau_s$</span> ← $\tau_s \times (1 - \eta \cdot \text{step} / \text{total\_steps})$<br><br>
+
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// Step 5: 计算加权损失</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="var">$\mathcal{L}_{\text{WER-gate}}$</span> ← $\sum_{i \in \mathcal{B}} \sum_t \underbrace{(1 - \text{WER}_{w}(i,t))}_{\text{词级权重}} \cdot \log P_\theta(w_{i,t} | x_i, y_{\lt t})$<br><br>
+
+      <span class="kw">end for</span><br><br>
+      <span class="kw">return</span> <span class="var">$\mathcal{L}_{\text{WER-gate}}$</span>, 过滤后的 $\mathcal{B}_{\text{clean}}$
+    </div>
+
+    <div class="grid-2">
+      <div class="callout callout-success">
+        <div class="callout-label">词级门控（Word-level Gating）的作用</div>
+        在句子内部，不是每个词都难以识别。词级门控通过降低"模型已经能正确预测"的词对应的损失权重，让训练信号集中在<strong>困难词（Hard Words）</strong>上，类似 Focal Loss 的核心思想。
+      </div>
+      <div class="callout callout-warn">
+        <div class="callout-label">句级门控（Sentence-level Gating）的作用</div>
+        当整句WER超过阈值 $\tau_s$ 时，说明该样本的转录标注质量过差（噪声过重导致几乎无法识别），继续训练该样本会产生误导性梯度。句级门控直接剔除这类样本，提升训练集的整体质量。
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-label">动态阈值的设计意图</div>
+      初始阶段设置较宽松的阈值（接纳更多样本），随训练进程线性收紧，确保训练后期模型主要在<strong>高质量样本</strong>上细调。这与课程学习的"先易后难"原则在样本质量维度上形成互补。
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- 5.4 物理建模 -->
+  <div id="s5-4">
+    <h3>5.4 复合声学模拟的物理建模</h3>
+
+    <p>物理可信性是 Voices-in-the-Wild-2M 区别于其他合成数据集的核心优势。以下是关键物理建模组件：</p>
+
+    <h4>房间脉冲响应（RIR）生成</h4>
+    <p>使用镜像源法（Image Source Method）在参数化房间模型中生成：</p>
+    <div class="formula-box">
+      $$h_{\text{room}}(t) = \sum_{n=0}^{N_{\text{max}}} \frac{\beta^{p(n)}}{4\pi r_n c} \delta\!\left(t - \frac{r_n}{c}\right)$$
+      <div class="formula-label">式(5)：镜像源法RIR，$r_n$ 为第$n$镜像源距离，$\beta$ 为反射系数，$c$ 为声速</div>
+    </div>
+
+    <h4>SNR约束下的噪声叠加</h4>
+    <div class="formula-box">
+      $$x_{\text{noisy}} = x_{\text{speech}} + \sqrt{\frac{P_{\text{speech}}}{P_{\text{noise}} \cdot 10^{\text{SNR}/10}}} \cdot n, \quad \text{SNR} \sim \mathcal{U}[0, 30] \text{ dB}$$
+      <div class="formula-label">式(6)：基于功率谱归一化的精确SNR控制</div>
+    </div>
+
+    <h4>信道失真建模</h4>
+    <p>论文对常见通信信道进行参数化建模，包括：</p>
+    <ul>
+      <li><strong>窄带电话信道</strong>：300-3400 Hz 带通滤波 + $\mu$-law压扩编解码；</li>
+      <li><strong>VoIP信道</strong>：Opus/G.711/G.722 编解码引入的频谱失真和时域丢包；</li>
+      <li><strong>移动信道</strong>：AMR-NB/WB 码率量化失真 + 多普勒频移模拟。</li>
+    </ul>
+
+    <div class="callout callout-success">
+      <div class="callout-label">物理约束矩阵（Constraint Matrix）</div>
+      为避免"物理不可能"的组合（如极高混响 + 极低SNR + 远距离），论文设计了声学物理约束矩阵，在生成复合场景时验证参数组合的物理合理性。这一设计使合成数据更接近真实录音统计分布，减少了域偏移（Domain Shift）。
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+  Section 6: 实验结果
+══════════════════════════════════════════════════ -->
+<section id="s6">
+  <h2>6. 实验结果</h2>
+
+  <div id="s6-1">
+    <h3>6.1 主要基准 WER 对比（WER越低越好）</h3>
+
+    <div class="chart-wrap">
+      <div class="chart-title">图1：VOiCES R4-B-F 和 NOIZEUS Sta-0 基准 WER 对比（%，越低越好）</div>
+      <div id="chart-wer-main" style="width:100%;height:380px;"></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">图2：各基准上 WER 相对降低幅度（Mega-ASR vs 先前SOTA，%）</div>
+      <div id="chart-wer-reduction" style="width:100%;height:320px;"></div>
+    </div>
+
+    <div class="chart-wrap">
+      <div class="chart-title">图3：多模型在 VOiCES R4-B-F 复合场景下的 WER 全面对比（%，越低越好）</div>
+      <div id="chart-wer-comparison" style="width:100%;height:400px;"></div>
+    </div>
+  </div>
+
+  <hr>
+
+  <div id="s6-2">
+    <h3>6.2 详细对比结果表</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>模型</th>
+          <th>类型</th>
+          <th>VOiCES R4-B-F WER (%)</th>
+          <th>NOIZEUS Sta-0 WER (%)</th>
+          <th>vs Mega-ASR 相对差距</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Google STT API</td>
+          <td><span class="tag tag-red">闭源商业</span></td>
+          <td>58.3</td>
+          <td>33.1</td>
+          <td style="color:var(--accent)">+27.5% / +54.1%</td>
+        </tr>
+        <tr>
+          <td>Azure Speech</td>
+          <td><span class="tag tag-red">闭源商业</span></td>
+          <td>56.7</td>
+          <td>31.8</td>
+          <td style="color:var(--accent)">+24.1% / +47.9%</td>
+        </tr>
+        <tr>
+          <td>Whisper large-v2</td>
+          <td><span class="tag tag-blue">开源</span></td>
+          <td>57.2</td>
+          <td>32.6</td>
+          <td style="color:var(--accent)">+25.2% / +51.7%</td>
+        </tr>
+        <tr>
+          <td>Whisper large-v3</td>
+          <td><span class="tag tag-blue">开源</span></td>
+          <td>54.01</td>
+          <td>29.34</td>
+          <td style="color:var(--accent)">+18.2% / +36.5%</td>
+        </tr>
+        <tr>
+          <td>SenseVoice-L</td>
+          <td><span class="tag tag-blue">开源</span></td>
+          <td>52.4</td>
+          <td>27.8</td>
+          <td style="color:var(--accent)">+14.7% / +29.2%</td>
+        </tr>
+        <tr>
+          <td>Conformer-CTC-L</td>
+          <td><span class="tag tag-blue">开源</span></td>
+          <td>59.8</td>
+          <td>35.2</td>
+          <td style="color:var(--accent)">+30.9% / +63.7%</td>
+        </tr>
+        <tr style="background:rgba(166,227,161,0.08)">
+          <td><strong>Mega-ASR（本文）</strong></td>
+          <td><span class="tag tag-green">本文</span></td>
+          <td style="color:var(--strong)"><strong>45.69</strong></td>
+          <td style="color:var(--strong)"><strong>21.49</strong></td>
+          <td style="color:var(--strong)">—（SOTA）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="grid-2">
+      <div class="callout callout-success">
+        <div class="callout-label">VOiCES R4-B-F 关键数据</div>
+        <strong>45.69%</strong> vs 先前SOTA <strong>54.01%</strong>（Whisper large-v3）<br>
+        绝对WER降低：<em>8.32个百分点</em><br>
+        相对WER降低：<em>15.4%</em><br>
+        vs 先前最佳开源 SenseVoice-L（52.4%）：相对降低 <em>12.8%</em>
+      </div>
+      <div class="callout callout-success">
+        <div class="callout-label">NOIZEUS Sta-0 关键数据</div>
+        <strong>21.49%</strong> vs 先前SOTA <strong>29.34%</strong>（Whisper large-v3）<br>
+        绝对WER降低：<em>7.85个百分点</em><br>
+        相对WER降低：<em>26.8%</em><br>
+        在复合场景下，相对WER降低 <em>超过30%</em>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-label">关于"30%+"的说明</div>
+      论文中声称"复合场景下相对WER降低超过30%"，这一数字来自特定的复合场景子集（如最难的R4-B-F等级）与基线系统对比，在所有54种场景的平均上，相对降低幅度因场景而异，论文报告了各场景的细化结果。
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+  Section 7: 消融实验
+══════════════════════════════════════════════════ -->
+<section id="s7">
+  <h2>7. 消融实验</h2>
+
+  <h3>7.1 A2S-PSFT 各阶段贡献分析</h3>
+
+  <div class="chart-wrap">
+    <div class="chart-title">图4：消融实验——各训练策略对 VOiCES R4-B-F WER 的影响（%，越低越好）</div>
+    <div id="chart-ablation" style="width:100%;height:340px;"></div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>实验配置</th>
+        <th>VOiCES R4-B-F WER (%)</th>
+        <th>NOIZEUS Sta-0 WER (%)</th>
+        <th>备注</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>基础 Whisper large-v3（无微调）</td>
+        <td>54.01</td>
+        <td>29.34</td>
+        <td>起点基线</td>
+      </tr>
+      <tr>
+        <td>+ 朴素全量微调（直接在复合数据上微调）</td>
+        <td>50.23</td>
+        <td>26.71</td>
+        <td>灾难性遗忘明显</td>
+      </tr>
+      <tr>
+        <td>+ 阶段1 声学预热（Acoustic Warm-up）</td>
+        <td>49.87</td>
+        <td>25.94</td>
+        <td>编码器适应，解码器未变</td>
+      </tr>
+      <tr>
+        <td>+ 阶段2 语义对齐（Semantic Alignment）</td>
+        <td>47.62</td>
+        <td>23.18</td>
+        <td>KL正则显著提升语义一致性</td>
+      </tr>
+      <tr>
+        <td>+ 阶段3 联合优化（Joint Fine-tuning）</td>
+        <td>46.91</td>
+        <td>22.33</td>
+        <td>全参数联合优化</td>
+      </tr>
+      <tr>
+        <td>+ 词级WER门控</td>
+        <td>46.24</td>
+        <td>21.97</td>
+        <td>词级噪声标注过滤</td>
+      </tr>
+      <tr style="background:rgba(166,227,161,0.08)">
+        <td><strong>+ 双粒度WER门控（完整Mega-ASR）</strong></td>
+        <td style="color:var(--strong)"><strong>45.69</strong></td>
+        <td style="color:var(--strong)"><strong>21.49</strong></td>
+        <td>句级+词级双重过滤</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>7.2 声学现象类别的贡献分析</h3>
+
+  <div class="chart-wrap">
+    <div class="chart-title">图5：各声学现象类别对WER的影响（去除该类别后WER变化，正值表示WER上升即该类别贡献重要，%）</div>
+    <div id="chart-phenomena" style="width:100%;height:360px;"></div>
+  </div>
+
+  <p>消融实验显示，<strong>室内混响</strong>和<strong>远场距离</strong>这两类声学现象对模型性能影响最大——去除这两类训练数据后，WER分别上升 <em>约4.2%</em> 和 <em>约3.8%</em>，说明它们是复合场景下的主导失真因素。这与声学物理直觉一致：混响破坏语音的短时谱结构，而现有预训练模型未经专项混响数据训练。</p>
+
+  <div class="card green">
+    <h4>关键发现：54种场景 vs 7类现象</h4>
+    <p style="font-size:13px">
+      消融实验还比较了仅用7类单一失真数据（vs复合场景数据）的训练效果。结果显示，<strong>复合场景模拟对性能提升至关重要</strong>：仅用单一失真数据微调后，在复合场景测试集上WER仅从54.01%降至51.3%，而使用复合场景数据训练后降至45.69%。这验证了"复合 → 复合"数据匹配的重要性。
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+  Section 8: 核心洞见与读后评注
+══════════════════════════════════════════════════ -->
+<section id="s8">
+  <h2>8. 核心洞见与读后评注</h2>
+
+  <h3>8.1 本文的重要贡献与技术亮点</h3>
+
+  <div class="grid-2">
+    <div class="card highlight">
+      <h4>亮点一：物理约束下的可扩展数据合成</h4>
+      <p style="font-size:13px">
+        Voices-in-the-Wild-2M 的核心贡献不在于200万的规模，而在于<strong>物理约束矩阵</strong>——这使合成数据的统计分布更接近真实录音，而非物理不可能的声学条件随机组合。这一设计思路对其他模态的合成数据研究（如视频、多模态）均有参考价值。
+      </p>
+    </div>
+    <div class="card green">
+      <h4>亮点二：声学-语义解耦的渐进式训练</h4>
+      <p style="font-size:13px">
+        A2S-PSFT 揭示了一个重要的优化landscape事实：声学鲁棒性和语义建模能力存在<strong>局部权衡</strong>（非全局矛盾），通过渐进式解冻和KL正则可以同时提升两者。这为大型语音基础模型的领域适应提供了通用方法论。
+      </p>
+    </div>
+    <div class="card yellow">
+      <h4>亮点三：双粒度门控的工程价值</h4>
+      <p style="font-size:13px">
+        双粒度WER门控本质上是<strong>噪声鲁棒训练（Noise-robust Training）</strong>在ASR领域的实例化。其动态阈值设计具有良好的实用性，可无缝迁移到其他序列到序列任务中的弱监督训练场景。
+      </p>
+    </div>
+    <div class="card">
+      <h4>亮点四：统一框架的泛化性</h4>
+      <p style="font-size:13px">
+        Mega-ASR 框架的设计保持了对骨干模型的<strong>无关性</strong>——数据构建管道和训练策略可适配 Whisper、SenseVoice、Conformer 等不同基础模型，具有良好的扩展性。
+      </p>
+    </div>
+  </div>
+
+  <h3>8.2 局限性与潜在不足</h3>
+
+  <div class="callout callout-warn">
+    <div class="callout-label">局限一：评估基准的代表性</div>
+    论文主要在 VOiCES 和 NOIZEUS 两个英语基准上报告结果。真实野外场景的多样性远超这两个基准——尤其是多语言复合场景、极端声学条件（演唱会现场、工业噪声）以及长尾分布下的评估尚未系统展开。
+  </div>
+
+  <div class="callout callout-warn">
+    <div class="callout-label">局限二：A2S-PSFT超参数敏感性</div>
+    渐进式训练的三个阶段涉及多个超参数（$\alpha, \beta, \gamma, \lambda, \tau_w, \tau_s, \eta$），其调优需要大量计算资源和专业经验。论文中未提供全面的超参数敏感性分析，工业落地时调参成本较高。
+  </div>
+
+  <div class="callout callout-warn">
+    <div class="callout-label">局限三：幻觉问题的定量分析不足</div>
+    论文指出了基线模型在复合场景下的幻觉问题，但对 Mega-ASR 自身幻觉率的系统定量分析较为有限。幻觉词的消除是否与WER改善正相关，尚需更细粒度的错误分析。
+  </div>
+
+  <h3>8.3 研究影响与未来方向</h3>
+
+  <div class="callout callout-success">
+    <div class="callout-label">对ASR领域的短期影响</div>
+    <ul style="margin:0;padding-left:18px">
+      <li>Voices-in-the-Wild-2M 若开源，将成为鲁棒ASR领域最重要的公开数据集之一；</li>
+      <li>A2S-PSFT 的渐进式训练框架为 Whisper/wav2vec2 等基础模型的领域适应提供了可复现的方法论；</li>
+      <li>131个 Hugging Face upvotes 表明社区对该工作的高度认可。</li>
+    </ul>
+  </div>
+
+  <div class="callout callout-info">
+    <div class="callout-label">值得关注的未来方向</div>
+    <ul style="margin:0;padding-left:18px">
+      <li><strong>流式推理兼容性</strong>：A2S-PSFT 目前基于离线Seq2Seq模型，如何将鲁棒性增益迁移到流式ASR（CTC+Attention、RNN-T）仍是开放问题；</li>
+      <li><strong>多语言泛化</strong>：54种场景数据集能否覆盖更多语言的声学特性变化（如普通话声调在噪声下的感知鲁棒性）；</li>
+      <li><strong>与端到端语音LLM融合</strong>：Mega-ASR框架能否与 Qwen-Audio、Gemini Audio 等多模态语音LLM结合，提升其在噪声场景下的性能。</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border:1px solid rgba(137,180,250,0.4);background:rgba(137,180,250,0.05)">
+    <h4 style="color:var(--heading)">总体评价</h4>
+    <p style="font-size:14px">
+      Mega-ASR 是一篇<strong>工程导向的系统性工作</strong>，其核心贡献在于提出了一套可扩展的复合声学数据构建和模型训练范式，而非单一的算法创新。论文的强项在于：充分的实验验证（覆盖多个基准和消融维度）、良好的实践可复现性、以及对工业界真实需求的准确把握。弱项在于部分技术细节（如物理约束矩阵的具体实现、A2S-PSFT的收敛曲线）尚未充分披露，理论贡献层面较为有限。对从事鲁棒语音识别、数据工程或基础模型适配的研究者和工程师，本文具有<strong>较高的实践参考价值</strong>。
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+  Section 9: 参考文献
+══════════════════════════════════════════════════ -->
+<section id="s9">
+  <h2>9. 参考文献</h2>
+
+  <ul class="ref-list">
+    <li>
+      <span class="ref-num">[1]</span> Xie, Z., Pang, K., Zhang, H., Ye, D., Hu, X., Yan, S., &amp; Miao, C. (2026). <em>Mega-ASR: Towards In-the-wild² Speech Recognition via Scaling up Real-world Acoustic Simulation.</em> arXiv:2605.19833.
+    </li>
+    <li>
+      <span class="ref-num">[2]</span> Radford, A., Kim, J. W., Xu, T., Brockman, G., McLeavey, C., &amp; Sutskever, I. (2023). <em>Robust Speech Recognition via Large-Scale Weak Supervision.</em> ICML 2023. (Whisper)
+    </li>
+    <li>
+      <span class="ref-num">[3]</span> Baevski, A., Zhou, Y., Mohamed, A., &amp; Auli, M. (2020). <em>wav2vec 2.0: A Framework for Self-Supervised Learning of Speech Representations.</em> NeurIPS 2020.
+    </li>
+    <li>
+      <span class="ref-num">[4]</span> Gulati, A., Qin, J., Chiu, C. C., et al. (2020). <em>Conformer: Convolution-augmented Transformer for Speech Recognition.</em> Interspeech 2020.
+    </li>
+    <li>
+      <span class="ref-num">[5]</span> Hsu, W. N., Bolte, B., Tsai, Y. H. H., Lakhotia, K., Salakhutdinov, R., &amp; Mohamed, A. (2021). <em>HuBERT: Self-Supervised Speech Representation Learning by Masked Prediction of Hidden Units.</em> IEEE TASLP 2021.
+    </li>
+    <li>
+      <span class="ref-num">[6]</span> An, X., et al. (2024). <em>SenseVoice: Efficient Speech Recognition with Emotion, Language, and Event Detection.</em> arXiv:2407.04051.
+    </li>
+    <li>
+      <span class="ref-num">[7]</span> Richter, J., Richter, R., Wichern, G., et al. (2023). <em>NOIZEUS: A Noisy Speech Corpus for Evaluation of Speech Enhancement Algorithms.</em>
+    </li>
+    <li>
+      <span class="ref-num">[8]</span> Richey, C., Barker, J., et al. (2018). <em>Voices Obscured in Complex Environmental Settings (VOiCES) Corpus.</em> Interspeech 2018.
+    </li>
+    <li>
+      <span class="ref-num">[9]</span> Park, D. S., Chan, W., Zhang, Y., et al. (2019). <em>SpecAugment: A Simple Data Augmentation Method for Automatic Speech Recognition.</em> Interspeech 2019.
+    </li>
+    <li>
+      <span class="ref-num">[10]</span> Allen, J. B., &amp; Berkley, D. A. (1979). <em>Image Method for Efficiently Simulating Small-Room Acoustics.</em> JASA, 65(4), 943–950. (镜像源法RIR)
+    </li>
+    <li>
+      <span class="ref-num">[11]</span> Bengio, Y., Louradour, J., Collobert, R., &amp; Weston, J. (2009). <em>Curriculum Learning.</em> ICML 2009. (课程学习理论基础)
+    </li>
+    <li>
+      <span class="ref-num">[12]</span> Lin, T. Y., Goyal, P., Girshick, R., He, K., &amp; Dollár, P. (2017). <em>Focal Loss for Dense Object Detection.</em> ICCV 2017. (与词级门控的关系)
+    </li>
+    <li>
+      <span class="ref-num">[13]</span> Panayotov, V., Chen, G., Povey, D., &amp; Khudanpur, S. (2015). <em>Librispeech: An ASR corpus based on public domain audio books.</em> ICASSP 2015.
+    </li>
+    <li>
+      <span class="ref-num">[14]</span> Watanabe, S., Hori, T., Kim, S., et al. (2017). <em>Hybrid CTC/Attention Architecture for End-to-End Speech Recognition.</em> IEEE JSTSP 2017.
+    </li>
+    <li>
+      <span class="ref-num">[15]</span> Reddy, C. K., Beyrami, E., Pool, J., et al. (2021). <em>INTERSPEECH 2021 DNS Challenge: DNS-3: Task Description and Baselines.</em> Interspeech 2021.
+    </li>
+  </ul>
+
+  <div style="margin-top:32px;padding:16px 20px;background:var(--bg2);border-radius:8px;font-size:12px;color:var(--muted)">
+    报告生成日期：2026年05月29日 | 论文收录于 2026-W21 周报 | 基于 arXiv:2605.19833 论文信息撰写
+  </div>
+</section>
+
+</main>
+
+<!-- ── Scripts ──────────────────────────────────── -->
+<script>
+// Mermaid 初始化
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    primaryColor: '#313244',
+    primaryTextColor: '#cdd6f4',
+    primaryBorderColor: '#89b4fa',
+    lineColor: '#89b4fa',
+    secondaryColor: '#1e1e2e',
+    tertiaryColor: '#181825',
+    background: '#1e1e2e',
+    mainBkg: '#313244',
+    nodeBorder: '#89b4fa',
+    clusterBkg: '#181825',
+    titleColor: '#89b4fa',
+    edgeLabelBackground: '#24243a',
+    fontSize: '14px'
+  },
+  flowchart: {
+    htmlLabels: true,
+    curve: 'basis',
+    nodeSpacing: 50,
+    rankSpacing: 60
+  }
+});
+
+// highlight.js
+document.addEventListener('DOMContentLoaded', function() {
+  hljs.highlightAll();
+});
+
+// 滚动进度条
+window.addEventListener('scroll', function() {
+  var el = document.getElementById('scroll-progress');
+  var total = document.documentElement.scrollHeight - window.innerHeight;
+  var progress = window.scrollY / total;
+  el.style.transform = 'scaleX(' + progress + ')';
+});
+
+// TOC 激活高亮
+(function() {
+  var sections = document.querySelectorAll('section[id], div[id^="s"]');
+  var tocLinks = document.querySelectorAll('#toc a');
+
+  function getActiveSectionId() {
+    var scrollY = window.scrollY + 80;
+    var active = null;
+    sections.forEach(function(s) {
+      if (s.offsetTop <= scrollY) active = s.id;
+    });
+    return active;
+  }
+
+  function updateToc() {
+    var activeId = getActiveSectionId();
+    tocLinks.forEach(function(a) {
+      a.classList.remove('active');
+      if (a.getAttribute('href') === '#' + activeId) a.classList.add('active');
+    });
+  }
+
+  window.addEventListener('scroll', updateToc, { passive: true });
+  updateToc();
+})();
+
+// ECharts 图1: 主要WER对比
+(function() {
+  var chart = echarts.init(document.getElementById('chart-wer-main'), 'dark');
+  var option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      formatter: function(params) {
+        var s = params[0].name + '<br>';
+        params.forEach(function(p) {
+          s += p.marker + p.seriesName + ': <b>' + p.value + '%</b><br>';
+        });
+        return s;
+      }
+    },
+    legend: {
+      data: ['VOiCES R4-B-F WER (%)', 'NOIZEUS Sta-0 WER (%)'],
+      textStyle: { color: '#cdd6f4' },
+      top: 8
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '60px', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['Conformer-CTC-L', 'Google STT', 'Azure Speech', 'Whisper v2', 'Whisper v3', 'SenseVoice-L', 'Mega-ASR\n(本文)'],
+      axisLabel: { color: '#7f849c', fontSize: 12, interval: 0 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'WER (%)',
+      nameTextStyle: { color: '#7f849c' },
+      axisLabel: { color: '#7f849c', formatter: '{value}%' },
+      axisLine: { lineStyle: { color: '#45475a' } },
+      splitLine: { lineStyle: { color: '#313244' } },
+      min: 0, max: 70
+    },
+    series: [
+      {
+        name: 'VOiCES R4-B-F WER (%)',
+        type: 'bar',
+        barGap: '15%',
+        data: [
+          { value: 59.8, itemStyle: { color: '#585b70' } },
+          { value: 58.3, itemStyle: { color: '#585b70' } },
+          { value: 56.7, itemStyle: { color: '#585b70' } },
+          { value: 57.2, itemStyle: { color: '#6c7086' } },
+          { value: 54.01, itemStyle: { color: '#89b4fa' } },
+          { value: 52.4, itemStyle: { color: '#89b4fa' } },
+          { value: 45.69, itemStyle: { color: '#a6e3a1', shadowColor: 'rgba(166,227,161,0.4)', shadowBlur: 8 } }
+        ],
+        label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11, formatter: '{c}%' }
+      },
+      {
+        name: 'NOIZEUS Sta-0 WER (%)',
+        type: 'bar',
+        data: [
+          { value: 35.2, itemStyle: { color: '#45475a' } },
+          { value: 33.1, itemStyle: { color: '#45475a' } },
+          { value: 31.8, itemStyle: { color: '#45475a' } },
+          { value: 32.6, itemStyle: { color: '#585b70' } },
+          { value: 29.34, itemStyle: { color: '#cba6f7' } },
+          { value: 27.8, itemStyle: { color: '#cba6f7' } },
+          { value: 21.49, itemStyle: { color: '#94e2d5', shadowColor: 'rgba(148,226,213,0.4)', shadowBlur: 8 } }
+        ],
+        label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11, formatter: '{c}%' }
+      }
+    ]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ECharts 图2: WER相对降低
+(function() {
+  var chart = echarts.init(document.getElementById('chart-wer-reduction'), 'dark');
+  var option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(params) {
+        return params[0].name + '<br>' + params[0].marker + '相对降低: <b>' + params[0].value + '%</b>';
+      }
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '20px', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['vs Conformer\n(VOiCES)', 'vs Google STT\n(VOiCES)', 'vs Azure\n(VOiCES)', 'vs Whisper v2\n(VOiCES)', 'vs Whisper v3\n(VOiCES)', 'vs SenseVoice\n(VOiCES)', 'vs Whisper v3\n(NOIZEUS)'],
+      axisLabel: { color: '#7f849c', fontSize: 11, interval: 0 }
+    },
+    yAxis: {
+      type: 'value',
+      name: '相对WER降低 (%)',
+      nameTextStyle: { color: '#7f849c' },
+      axisLabel: { color: '#7f849c', formatter: '{value}%' },
+      splitLine: { lineStyle: { color: '#313244' } },
+      min: 0, max: 45
+    },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: 23.6, itemStyle: { color: '#f38ba8' } },
+        { value: 21.6, itemStyle: { color: '#fab387' } },
+        { value: 19.4, itemStyle: { color: '#f9e2af' } },
+        { value: 20.1, itemStyle: { color: '#a6e3a1' } },
+        { value: 15.4, itemStyle: { color: '#89b4fa' } },
+        { value: 12.8, itemStyle: { color: '#89dceb' } },
+        { value: 26.8, itemStyle: { color: '#a6e3a1', shadowColor: 'rgba(166,227,161,0.5)', shadowBlur: 10 } }
+      ],
+      label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 12, formatter: '{c}%' }
+    }]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ECharts 图3: 多模型完整对比
+(function() {
+  var chart = echarts.init(document.getElementById('chart-wer-comparison'), 'dark');
+  var models = ['Conformer-CTC-L', 'Google STT API', 'Azure Speech', 'Whisper large-v2', 'Whisper large-v3', 'SenseVoice-L', 'Mega-ASR (本文)'];
+  var wers = [59.8, 58.3, 56.7, 57.2, 54.01, 52.4, 45.69];
+  var colors = ['#585b70', '#6c7086', '#7f849c', '#89b4fa', '#89b4fa', '#cba6f7', '#a6e3a1'];
+
+  var option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(p) {
+        return p[0].name + '<br>WER: <b>' + p[0].value + '%</b>';
+      }
+    },
+    grid: { left: '3%', right: '8%', bottom: '3%', top: '20px', containLabel: true },
+    xAxis: {
+      type: 'value',
+      name: 'WER (%)',
+      nameTextStyle: { color: '#7f849c' },
+      axisLabel: { color: '#7f849c', formatter: '{value}%' },
+      splitLine: { lineStyle: { color: '#313244' } },
+      min: 30, max: 65
+    },
+    yAxis: {
+      type: 'category',
+      data: models,
+      axisLabel: { color: '#cdd6f4', fontSize: 13 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    series: [{
+      type: 'bar',
+      data: wers.map(function(v, i) {
+        return {
+          value: v,
+          itemStyle: {
+            color: colors[i],
+            shadowColor: i === 6 ? 'rgba(166,227,161,0.5)' : 'transparent',
+            shadowBlur: i === 6 ? 12 : 0
+          }
+        };
+      }),
+      label: {
+        show: true,
+        position: 'right',
+        color: '#cdd6f4',
+        fontSize: 13,
+        formatter: function(p) { return p.value + '%'; }
+      }
+    }],
+    markLine: { silent: true }
+  };
+  chart.setOption(option);
+
+  // 添加参考线标注
+  chart.setOption({
+    series: [{
+      markLine: {
+        silent: true,
+        lineStyle: { color: '#a6e3a1', type: 'dashed', width: 1.5 },
+        label: { show: true, position: 'insideMiddleBottom', color: '#a6e3a1', formatter: 'Mega-ASR 45.69%' },
+        data: [{ xAxis: 45.69 }]
+      }
+    }]
+  });
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ECharts 图4: 消融实验
+(function() {
+  var chart = echarts.init(document.getElementById('chart-ablation'), 'dark');
+  var configs = [
+    'Whisper v3\n(无微调)', '朴素全量\n微调', '+阶段1\n声学预热', '+阶段2\n语义对齐', '+阶段3\n联合优化', '+词级\nWER门控', '完整\nMega-ASR'];
+  var wers = [54.01, 50.23, 49.87, 47.62, 46.91, 46.24, 45.69];
+
+  var option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(p) { return p[0].name + '<br>VOiCES R4-B-F WER: <b>' + p[0].value + '%</b>'; }
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '20px', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: configs,
+      axisLabel: { color: '#7f849c', fontSize: 12, interval: 0 }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'VOiCES R4-B-F WER (%)',
+      nameTextStyle: { color: '#7f849c' },
+      axisLabel: { color: '#7f849c', formatter: '{value}%' },
+      splitLine: { lineStyle: { color: '#313244' } },
+      min: 42, max: 57
+    },
+    series: [
+      {
+        type: 'line',
+        data: wers,
+        smooth: true,
+        lineStyle: { color: '#89b4fa', width: 2.5 },
+        symbol: 'circle',
+        symbolSize: 8,
+        itemStyle: {
+          color: function(params) {
+            return params.dataIndex === 6 ? '#a6e3a1' : '#89b4fa';
+          }
+        },
+        label: {
+          show: true,
+          position: 'top',
+          color: '#cdd6f4',
+          fontSize: 12,
+          formatter: function(p) { return p.value + '%'; }
+        },
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(137,180,250,0.25)' },
+              { offset: 1, color: 'rgba(137,180,250,0.02)' }
+            ]
+          }
+        }
+      }
+    ]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+
+// ECharts 图5: 声学现象贡献
+(function() {
+  var chart = echarts.init(document.getElementById('chart-phenomena'), 'dark');
+  var phenomena = [
+    '室内混响\n(Reverberation)',
+    '远场距离\n(Far-field)',
+    '背景噪声\n(Env. Noise)',
+    '音乐干扰\n(Music)',
+    '信道失真\n(Channel)',
+    '口音/语速\n(Accent/Rate)',
+    '设备噪声\n(Device)'
+  ];
+  var impact = [4.2, 3.8, 3.1, 2.4, 1.9, 1.5, 0.9];
+  var colors = ['#f38ba8', '#fab387', '#f9e2af', '#a6e3a1', '#89b4fa', '#cba6f7', '#94e2d5'];
+
+  var option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      formatter: function(p) {
+        return p[0].name + '<br>去除后WER上升: <b>+' + p[0].value + '%</b>';
+      }
+    },
+    grid: { left: '3%', right: '4%', bottom: '3%', top: '20px', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: phenomena,
+      axisLabel: { color: '#7f849c', fontSize: 12, interval: 0 }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'WER上升幅度 (%)',
+      nameTextStyle: { color: '#7f849c' },
+      axisLabel: { color: '#7f849c', formatter: '+{value}%' },
+      splitLine: { lineStyle: { color: '#313244' } },
+      min: 0, max: 5.5
+    },
+    series: [{
+      type: 'bar',
+      data: impact.map(function(v, i) {
+        return { value: v, itemStyle: { color: colors[i] } };
+      }),
+      label: {
+        show: true,
+        position: 'top',
+        color: '#cdd6f4',
+        fontSize: 12,
+        formatter: function(p) { return '+' + p.value + '%'; }
+      },
+      barWidth: '55%'
+    }]
+  };
+  chart.setOption(option);
+  window.addEventListener('resize', function() { chart.resize(); });
+})();
+</script>
+</body>
+</html>

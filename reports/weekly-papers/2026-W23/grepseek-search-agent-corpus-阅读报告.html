@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GrepSeek: Training Search Agents for Direct Corpus Interaction — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    .badge { display: inline-block; background: #2a2a3e; border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.82em; margin: 2px; color: var(--heading); }
+    .info-table td:first-child { color: var(--heading); font-weight: 600; width: 130px; }
+    .highlight-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 16px 20px; margin: 1em 0; }
+    .highlight-box h4 { color: var(--strong); margin-bottom: 8px; font-size: 1em; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ===== 1. 标题 + 论文信息 ===== -->
+    <h1>GrepSeek: Training Search Agents for Direct Corpus Interaction</h1>
+    <p>
+      <span class="badge">arXiv: 2605.29307</span>
+      <span class="badge">2026-05-28</span>
+      <span class="badge">UMass Amherst</span>
+      <span class="badge">Upvotes: 101</span>
+    </p>
+
+    <table class="info-table" style="margin-top:1.2em;">
+      <tbody>
+        <tr><td>论文标题</td><td>GrepSeek: Training Search Agents for Direct Corpus Interaction</td></tr>
+        <tr><td>arXiv ID</td><td><a href="https://arxiv.org/abs/2605.29307" target="_blank">2605.29307</a></td></tr>
+        <tr><td>作者</td><td>Alireza Salemi, Chang Zeng, Atharva Nijasure, Jui-Hui Chung, Razieh Rahimi, Fernando Diaz, Hamed Zamani</td></tr>
+        <tr><td>机构</td><td>University of Massachusetts Amherst</td></tr>
+        <tr><td>代码仓库</td><td><a href="https://github.com/alirezasalemi7/grepseek" target="_blank">github.com/alirezasalemi7/grepseek</a></td></tr>
+        <tr><td>基础模型</td><td>Qwen3.5-9B（策略模型）；Qwen3.5-27B（Tutor/Planner）</td></tr>
+        <tr><td>评测基准</td><td>NQ, TriviaQA, PopQA, HotpotQA, 2WikiMultihopQA, MuSiQue, Bamboogle（共 7 个）</td></tr>
+        <tr><td>核心指标</td><td>Token-level F₁ / Exact Match (EM)</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 2. 概述 ===== -->
+    <h2 id="overview">概述</h2>
+    <p>
+      GrepSeek 提出了一种全新的信息检索范式——<strong>直接语料交互（Direct Corpus Interaction，DCI）</strong>：让 LLM 搜索智能体直接向原始文本语料库发出可执行的 Unix Shell 命令（如 <code>rg</code>、<code>grep</code>、<code>wc -l</code> 等），而非依赖预先构建的倒排索引或向量数据库。这一范式彻底消除了离线索引阶段，将检索变成一种"即时、可编程的语料库探索"。
+    </p>
+    <p>
+      为了训练稳定且高效的 DCI 策略，论文设计了<strong>两阶段训练流水线</strong>：第一阶段通过 Tutor-Planner 协作生成高质量冷启动轨迹（SFT），第二阶段通过 GRPO 强化学习在真实语料库交互中精调策略。同时，论文提出<strong>分片并行执行引擎</strong>，将 Shell 命令在多个语料库分片上并行执行，实现最高 7.6× 的加速，同时保证字节精确的等价性。在 7 个开放域 QA 基准上，GrepSeek 取得了最优的整体 Token-level F₁ 和 Exact Match 分数，证明了 DCI 范式的可行性与竞争力。
+    </p>
+
+    <!-- ===== 3. 研究背景 ===== -->
+    <h2 id="background">研究背景</h2>
+    <p>
+      信息检索（IR）是自然语言处理中最基础的任务之一，其历史演进折射出整个 NLP 领域的发展轨迹。理解 GrepSeek 的动机，需要先梳理传统检索方法的局限，以及近年来 LLM 驱动的检索增强生成（RAG）范式的兴起与瓶颈。
+    </p>
+
+    <h3>传统检索：稀疏与密集索引</h3>
+    <p>
+      经典信息检索以<strong>倒排索引</strong>为核心，代表方法是 BM25。给定查询 $q$，BM25 对文档 $d$ 的得分为：
+    </p>
+    <p>$$\text{BM25}(q, d) = \sum_{t \in q} \text{IDF}(t) \cdot \frac{f(t,d) \cdot (k_1 + 1)}{f(t,d) + k_1 \cdot (1 - b + b \cdot \frac{|d|}{\text{avgdl}})}$$</p>
+    <p>
+      其中 $f(t,d)$ 为词项 $t$ 在文档 $d$ 中的频次，$k_1$ 和 $b$ 为超参数，$\text{avgdl}$ 为平均文档长度。BM25 速度快、无需 GPU，但完全依赖词面匹配（lexical matching），对同义词、上位词等语义变体无能为力。
+    </p>
+    <p>
+      密集检索（Dense Retrieval）通过预训练编码器（如 DPR、E5）将查询和文档映射到同一向量空间，用近似最近邻（ANN）搜索（如 FAISS）替代倒排索引。密集检索大幅提升了语义泛化能力，但代价高昂：以 Wikipedia 21M 段落语料为例，E5 模型构建索引需要 <strong>3.2 A100 GPU 小时</strong>，索引文件占用 <strong>70 GB 内存</strong>；而 Qwen3-4B 级别的检索模型甚至需要 <strong>62.4 A100 GPU 小时</strong>和 <strong>221 GB 内存</strong>。
+    </p>
+
+    <h3>RAG 范式的兴起与局限</h3>
+    <p>
+      检索增强生成（RAG）将检索器与生成模型解耦：检索器负责从语料库中召回相关段落，生成模型负责基于召回内容生成答案。RAG 已成为知识密集型 NLP 任务的标准范式，但其局限同样明显：
+    </p>
+    <ul>
+      <li><strong>静态索引假设</strong>：检索器依赖预先构建的索引，当语料库更新时需要重建，无法做到实时。</li>
+      <li><strong>单轮召回瓶颈</strong>：标准 RAG 一次性召回 Top-K 文档，对多跳推理（multi-hop reasoning）力不从心。</li>
+      <li><strong>召回与生成解耦</strong>：检索器与生成模型之间的接口是固定的"排名列表"，生成模型无法主动引导检索策略。</li>
+      <li><strong>索引开销</strong>：大规模语料库的索引构建与维护成本极高（见上节数据）。</li>
+    </ul>
+
+    <h3>交互式检索的探索</h3>
+    <p>
+      为克服单轮召回的局限，研究者提出了多种交互式检索方法：IRCoT 在思维链推理中交替执行检索步骤；Search-R1 / Search-O1 使用 GRPO/MCTS 训练 LLM 自主发出搜索查询。然而，这些方法仍然依赖预建索引，本质上是"多轮 RAG"而非真正的语料库直接交互。
+    </p>
+    <p>
+      GrepSeek 的核心洞察是：<strong>Unix Shell 命令本身就是一种强大的、图灵完备的文本检索语言</strong>。<code>grep</code>/<code>rg</code> 支持正则表达式、管道过滤、计数统计等操作，完全可以替代索引检索，同时将"如何搜索"的决策权完全交给 LLM 智能体。
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>方法类别</th>
+          <th>代表方法</th>
+          <th>索引依赖</th>
+          <th>语义理解</th>
+          <th>多跳能力</th>
+          <th>索引成本</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>稀疏检索</td><td>BM25</td><td>倒排索引</td><td>弱（词面）</td><td>需多轮</td><td>低</td></tr>
+        <tr><td>密集检索</td><td>DPR, E5</td><td>向量索引</td><td>强</td><td>需多轮</td><td><strong>极高</strong></td></tr>
+        <tr><td>多轮 RAG</td><td>IRCoT, Search-R1</td><td>预建索引</td><td>中等</td><td>较好</td><td>高</td></tr>
+        <tr><td><strong>DCI（本文）</strong></td><td><strong>GrepSeek</strong></td><td><strong>无索引</strong></td><td>精确词面</td><td><strong>原生支持</strong></td><td><strong>极低</strong></td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 4. 核心范式 DCI ===== -->
+    <h2 id="dci">核心范式 — Direct Corpus Interaction (DCI)</h2>
+    <p>
+      直接语料交互（DCI）将文本语料库视为一个可交互的<strong>环境</strong>，搜索智能体通过发出 Shell 命令与之交互，而非通过固定 API 查询预建索引。这一范式的核心哲学是：<em>把检索变成编程</em>。
+    </p>
+
+    <h3>DCI 的形式化定义</h3>
+    <p>
+      给定一个问题 $q$ 和一个文本语料库 $\mathcal{C}$（存储为磁盘上的文件），DCI 智能体生成一条搜索轨迹 $\tau = (r_1, c_1, o_1, r_2, c_2, o_2, \ldots, r_T, c_T, o_T, \hat{y})$，其中：
+    </p>
+    <ul>
+      <li>$r_t$：第 $t$ 步的推理文本（Chain-of-Thought）</li>
+      <li>$c_t$：第 $t$ 步发出的 Shell 命令</li>
+      <li>$o_t$：Shell 命令的执行输出（来自真实语料库）</li>
+      <li>$\hat{y}$：最终生成的答案</li>
+    </ul>
+    <p>
+      最大交互轮数 $T = 6$，上下文窗口为 16,384 tokens。整个交互过程在真实的 Wikipedia 2018 语料库上执行（21M 段落，约 14 GB）。
+    </p>
+
+    <h3>Shell 命令工具集</h3>
+    <p>
+      GrepSeek 智能体主要使用以下 Shell 命令与语料库交互：
+    </p>
+    <pre><code class="language-bash"># 基础全文搜索（固定字符串匹配，-F 禁用正则以提速）
+rg -F "Alan Turing" corpus.txt | head -n 20
+
+# 级联过滤：先找包含 A 的行，再从中找包含 B 的行
+rg -F "Turing" corpus.txt | rg -F "computer" | head -n 10
+
+# 大小写不敏感搜索
+rg -iF "machine learning" corpus.txt | head -n 5
+
+# 统计匹配行数
+rg -F "Nobel Prize" corpus.txt | wc -l
+
+# 多关键词 OR 匹配（正则）
+rg "Einstein|Curie|Bohr" corpus.txt | head -n 15
+
+# 上下文行（前后 2 行）
+rg -F "ENIAC" -C 2 corpus.txt | head -n 30</code></pre>
+
+    <p>
+      实验分析表明，GrepSeek 学会的命令模式高度一致：
+    </p>
+    <ul>
+      <li><strong>几乎所有命令</strong>都使用 <code>| head</code> 截断输出，防止上下文溢出。</li>
+      <li><strong>几乎所有命令</strong>都使用 <code>-F</code>（固定字符串）而非正则，速度更快且更稳定。</li>
+      <li><strong>约 70% 的命令</strong>使用级联过滤（<code>rg … | rg …</code>），逐步精炼结果。</li>
+      <li>多跳问题平均发出 2.6–3.4 条命令，单跳问题平均 2.0–2.4 条。</li>
+    </ul>
+
+    <h3>DCI 与传统 RAG 的本质区别</h3>
+    <div class="highlight-box">
+      <h4>关键对比</h4>
+      <p><strong>传统 RAG</strong>：查询 → 检索器（预建索引）→ Top-K 段落 → 生成模型。检索策略固定，生成模型被动接受召回结果。</p>
+      <p><strong>DCI（GrepSeek）</strong>：问题 → LLM 规划 Shell 命令 → 直接执行于原始语料 → 观察输出 → 迭代精炼 → 生成答案。检索策略由 LLM 主动决策，形成闭环。</p>
+    </div>
+    <p>
+      DCI 的另一个重要特性是<strong>互补性</strong>：论文实验表明，将 DCI 与密集检索结合（DCI + E5）可以进一步提升性能，说明两种方法捕获了不同类型的相关信息。
+    </p>
+
+    <!-- ===== 5. 两阶段训练 ===== -->
+    <h2 id="training">两阶段训练流水线</h2>
+    <p>
+      直接在大型语料库上进行强化学习面临严重的<strong>冷启动不稳定性</strong>问题：初始策略模型不知道如何构造有效的 Shell 命令，导致大量轨迹无效，奖励信号极度稀疏，训练无法收敛。GrepSeek 设计了两阶段训练流水线来解决这一问题。
+    </p>
+
+    <pre class="mermaid">flowchart TD
+    A["问题 q + 答案 y\n（训练集）"] --> B
+
+    subgraph Stage1["第一阶段：冷启动 SFT（Tutor-Planner 协作）"]
+      direction TB
+      B["Tutor（知道答案 y）\n逆向分解：y → 子查询链"] --> C["生成 N 条 Shell 命令\n（答案泄露预防：掩码目标实体）"]
+      C --> D["前向验证：执行命令\n检查 F₁(ŷ, y) > 0"]
+      D --> E["Planner（不知道答案）\n生成推理链 r₁…rₙ"]
+      E --> F["Tutor 对齐：\n将推理链与验证命令绑定"]
+      F --> G["因果一致性过滤\n→ 高质量轨迹 τ*"]
+    end
+
+    G --> H["SFT 训练\n（10k 样本，NQ + HotpotQA）"]
+    H --> I["冷启动策略模型 π_cold"]
+
+    subgraph Stage2["第二阶段：GRPO 强化学习精调"]
+      direction TB
+      I --> J["从真实语料库\n采样 n=5 条轨迹"]
+      J --> K["计算奖励 R(τ)\n= φ(τ) · R_ans(τ)"]
+      K --> L["GRPO 优势估计\nA⁽ⁱ⁾ = (R⁽ⁱ⁾ - mean) / std"]
+      L --> M["策略梯度更新\n+ KL 散度约束"]
+      M --> N{"收敛？\n200 steps"}
+      N -- 否 --> J
+      N -- 是 --> O["GrepSeek 最终策略 π*"]
+    end
+</pre>
+
+    <h3>第一阶段：Tutor-Planner 冷启动数据生成</h3>
+    <p>
+      冷启动的核心挑战是：如何在没有任何先验搜索经验的情况下，生成<strong>有效且因果一致</strong>的搜索轨迹？论文设计了 Tutor-Planner 双角色协作机制：
+    </p>
+
+    <h3>逆向阶段（Backward Phase）</h3>
+    <p>
+      <strong>Tutor</strong>（Qwen3.5-27B，知道正确答案 $y$）从答案出发，逆向构造搜索链。具体步骤：
+    </p>
+    <ol>
+      <li>将问题 $q$ 和答案 $y$ 分解为 $N$ 个子查询，每个子查询对应一条 Shell 命令 $c_i$。</li>
+      <li><strong>答案泄露预防</strong>：在生成命令时，目标实体（即答案 $y$ 中的关键词）被掩码，防止命令直接搜索答案字符串（这会导致"作弊"轨迹）。</li>
+      <li>逆向执行验证：从命令 $c_N$ 开始向前执行，确保每条命令的输出确实包含下一步推理所需的信息。</li>
+    </ol>
+
+    <h3>前向阶段（Forward Phase）</h3>
+    <p>
+      <strong>Planner</strong>（同样是 Qwen3.5-27B，但<strong>不知道</strong>答案 $y$）在不知道答案的情况下，根据问题 $q$ 生成推理链 $r_1, r_2, \ldots, r_N$。然后 Tutor 将 Planner 的推理链与已验证的命令序列对齐，生成完整轨迹。
+    </p>
+
+    <h3>质量过滤</h3>
+    <p>
+      最终轨迹 $\tau^*$ 需通过两个过滤条件：
+    </p>
+    <ul>
+      <li><strong>答案质量</strong>：$F_1(\hat{y}, y) \gt 0$，即生成的答案与正确答案有词面重叠。</li>
+      <li><strong>因果一致性</strong>：命令序列中的每一步都因果地依赖前一步的输出，不存在逻辑跳跃。</li>
+    </ul>
+    <p>
+      最终从 NQ 和 HotpotQA 的训练集中生成 <strong>10,000 条</strong>高质量轨迹用于 SFT。消融实验表明，仅用 2,500 条轨迹就能显著超越基础模型，增益在 5,000 条后趋于饱和。
+    </p>
+
+    <h3>第二阶段：GRPO 强化学习精调</h3>
+    <p>
+      冷启动模型 $\pi_{\text{cold}}$ 已具备基本的 Shell 命令生成能力，但仍需在真实语料库交互中精调。第二阶段使用 GRPO 算法，让策略模型与真实的 Wikipedia 语料库进行在线交互，通过答案质量奖励信号优化搜索策略。详细的 GRPO 公式推导见下节。
+    </p>
+
+    <!-- ===== 6. GRPO 强化学习 ===== -->
+    <h2 id="grpo">GRPO 强化学习</h2>
+    <p>
+      Group Relative Policy Optimization（GRPO）是由 DeepSeekMath（Shao et al., 2024）提出的一种无需独立 Critic 网络的策略优化算法。GrepSeek 将其应用于搜索轨迹的强化学习，是目前将 GRPO 应用于大规模语料库直接交互的首次尝试。
+    </p>
+
+    <h3>奖励函数设计</h3>
+    <p>
+      GrepSeek 的奖励函数设计兼顾了<strong>结构有效性</strong>和<strong>答案质量</strong>两个维度：
+    </p>
+    <p>$$R(\tau^{(i)}) = \phi(\tau^{(i)}) \cdot R_{\text{ans}}(\tau^{(i)})$$</p>
+    <p>
+      其中：
+    </p>
+    <ul>
+      <li>$\phi(\tau^{(i)}) \in \{0, 1\}$：<strong>结构有效性指示函数</strong>。当且仅当轨迹 $\tau^{(i)}$ 中所有 Shell 命令均能成功执行（无语法错误、无执行异常）时为 1，否则为 0。这一设计确保只有结构上合法的轨迹才能获得奖励信号，避免模型学习到无效命令。</li>
+      <li>$R_{\text{ans}}(\tau^{(i)})$：<strong>答案质量奖励</strong>，使用 Token-level F₁ 分数衡量生成答案 $\hat{y}$ 与正确答案 $y$ 之间的词面重叠：</li>
+    </ul>
+    <p>$$R_{\text{ans}}(\tau^{(i)}) = F_1(\hat{y}^{(i)}, y) = \frac{2 \cdot |\hat{y}^{(i)} \cap y|}{|\hat{y}^{(i)}| + |y|}$$</p>
+    <p>
+      其中 $|\hat{y}^{(i)} \cap y|$ 表示预测答案与正确答案的词元交集大小。
+    </p>
+
+    <h3>GRPO 优势估计</h3>
+    <p>
+      GRPO 的核心思想是：对同一问题 $q$，从当前策略 $\pi_\theta$ 中采样 $n$ 条轨迹 $\{\tau^{(1)}, \tau^{(2)}, \ldots, \tau^{(n)}\}$，通过组内相对比较估计每条轨迹的优势值，无需独立的 Critic 网络。
+    </p>
+    <p>
+      优势估计公式：
+    </p>
+    <p>$$A^{(i)} = \frac{R(\tau^{(i)}) - \mu_R}{\sigma_R + \epsilon}$$</p>
+    <p>
+      其中 $\mu_R = \frac{1}{n}\sum_{j=1}^{n} R(\tau^{(j)})$ 为组内平均奖励，$\sigma_R$ 为组内奖励标准差，$\epsilon$ 为数值稳定性常数（通常取 $10^{-8}$）。
+    </p>
+    <p>
+      GrepSeek 中 $n = 5$（每个问题采样 5 条轨迹），训练总步数为 200 步。
+    </p>
+
+    <h3>策略梯度目标函数</h3>
+    <p>
+      GRPO 的策略梯度目标函数（PPO-Clip 变体）为：
+    </p>
+    <p>$$\mathcal{L}_{\text{GRPO}}(\theta) = -\mathbb{E}_{q, \{\tau^{(i)}\}} \left[ \frac{1}{n} \sum_{i=1}^{n} \frac{1}{|\tau^{(i)}|} \sum_{t=1}^{|\tau^{(i)}|} \min\left( \rho_t^{(i)} A^{(i)},\ \text{clip}(\rho_t^{(i)}, 1-\varepsilon, 1+\varepsilon) A^{(i)} \right) \right]$$</p>
+    <p>
+      其中 $\rho_t^{(i)} = \frac{\pi_\theta(a_t^{(i)} | s_t^{(i)})}{\pi_{\text{old}}(a_t^{(i)} | s_t^{(i)})}$ 为重要性采样比，$\varepsilon$ 为 PPO 截断系数，$|\tau^{(i)}|$ 为轨迹长度（token 数）。
+    </p>
+
+    <h3>KL 散度约束</h3>
+    <p>
+      为防止策略偏离参考模型过远，GRPO 加入 KL 散度惩罚项：
+    </p>
+    <p>$$\mathcal{L}_{\text{total}}(\theta) = \mathcal{L}_{\text{GRPO}}(\theta) + \beta \cdot \mathbb{E}\left[ D_{\text{KL}}\left(\pi_\theta(\cdot | s) \| \pi_{\text{ref}}(\cdot | s)\right) \right]$$</p>
+    <p>
+      其中 $\pi_{\text{ref}}$ 为参考策略（冷启动 SFT 模型），$\beta$ 为 KL 惩罚系数。这一约束确保 RL 精调不会破坏 SFT 阶段学到的基础命令生成能力。
+    </p>
+
+    <h3>训练动态分析</h3>
+    <p>
+      论文对 RL 训练过程中的策略行为变化进行了深入分析，得到了一些反直觉的发现：
+    </p>
+    <ul>
+      <li><strong>命令数量减少</strong>：RL 训练后平均命令数从 3.06 降至 2.56，说明策略学会了更高效的搜索路径，而非盲目增加搜索次数。</li>
+      <li><strong>推理 token 增加</strong>：推理文本从平均 4,251 tokens 增至 6,409 tokens，表明策略在"想得更多、搜得更少"。</li>
+      <li><strong>结构原语稳定</strong>：管道深度、<code>-F</code> 匹配等结构性命令模式在 RL 阶段基本不变，说明这些模式在 SFT 阶段已被牢固建立。</li>
+      <li><strong><code>head -n</code> 行数增加</strong>：从约 5 行增至约 10 行，策略学会在单次命令中获取更多上下文。</li>
+    </ul>
+
+    <!-- ===== 7. 分片并行执行引擎 ===== -->
+    <h2 id="engine">分片并行执行引擎</h2>
+    <p>
+      DCI 范式的最大性能瓶颈是：对 14 GB 的 Wikipedia 语料库执行 <code>rg</code> 命令，单线程延迟约为 5.39 秒，在 RL 训练中每步采样 5 条轨迹、每条轨迹最多 6 次命令，总等待时间不可接受。GrepSeek 设计了<strong>分片并行执行引擎</strong>，在保证语义等价性的前提下，将延迟降至 0.71 秒（7.6× 加速）。
+    </p>
+
+    <h3>分片策略</h3>
+    <p>
+      将语料库 $\mathcal{C}$ 均匀切分为 $S$ 个分片 $\mathcal{C}_1, \mathcal{C}_2, \ldots, \mathcal{C}_S$（实验中 $S = 32$）。对于一条 Shell 命令 $c$，并行在所有分片上执行：
+    </p>
+    <pre><code class="language-bash"># 原始命令（单文件，慢）
+rg -F "Alan Turing" corpus.txt | head -n 20
+
+# 分片并行执行（伪代码）
+results = parallel_map(lambda shard: run_cmd(c, shard), [C_1, C_2, ..., C_S])
+final_output = merge_strategy(results, c)</code></pre>
+
+    <h3>五种归约策略（字节精确等价）</h3>
+    <p>
+      不同类型的 Shell 命令需要不同的归约策略，以保证与单文件执行的<strong>字节精确等价性</strong>：
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>命令类型</th>
+          <th>示例</th>
+          <th>归约策略</th>
+          <th>等价性保证</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>无状态过滤</td>
+          <td><code>rg -F "x" | rg -F "y"</code></td>
+          <td>直接拼接各分片输出</td>
+          <td>完全等价（行顺序按分片顺序）</td>
+        </tr>
+        <tr>
+          <td>截断过滤</td>
+          <td><code>rg -F "x" | head -n K</code></td>
+          <td>各分片本地 <code>head -n K</code>，再全局 <code>head -n K</code></td>
+          <td>等价（取前 K 行）</td>
+        </tr>
+        <tr>
+          <td>计数统计</td>
+          <td><code>rg -F "x" | wc -l</code></td>
+          <td>各分片计数求和</td>
+          <td>精确等价（标量加法）</td>
+        </tr>
+        <tr>
+          <td>去重排序截断</td>
+          <td><code>sort | uniq | head -n K</code></td>
+          <td>K 路归并排序后 <code>head -n K</code></td>
+          <td>等价（全局有序去重）</td>
+        </tr>
+        <tr>
+          <td>其他复杂命令</td>
+          <td>含状态操作等</td>
+          <td>顺序回退（Sequential Fallback）</td>
+          <td>完全等价（保守策略）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>加速效果</h3>
+    <p>
+      分片并行执行引擎的加速效果如下：
+    </p>
+
+    <div id="chart-engine" class="echarts-container" style="height:320px;"></div>
+    <script>
+      (function() {
+        var dom = document.getElementById('chart-engine');
+        var myChart = echarts.init(dom);
+        myChart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: '分片并行执行引擎加速效果', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          xAxis: {
+            type: 'category',
+            data: ['S=1\n（基准）', 'S=2', 'S=4', 'S=8', 'S=16', 'S=32'],
+            axisLabel: { color: '#cdd6f4' },
+            axisLine: { lineStyle: { color: '#45475a' } }
+          },
+          yAxis: [
+            {
+              type: 'value',
+              name: '延迟 (秒)',
+              nameTextStyle: { color: '#89b4fa' },
+              axisLabel: { color: '#cdd6f4' },
+              axisLine: { lineStyle: { color: '#45475a' } },
+              splitLine: { lineStyle: { color: '#313244' } }
+            },
+            {
+              type: 'value',
+              name: '加速比',
+              nameTextStyle: { color: '#a6e3a1' },
+              axisLabel: { color: '#cdd6f4' },
+              axisLine: { lineStyle: { color: '#45475a' } },
+              splitLine: { show: false }
+            }
+          ],
+          series: [
+            {
+              name: '延迟 (秒)',
+              type: 'bar',
+              data: [5.39, 3.10, 1.98, 1.32, 0.95, 0.71],
+              itemStyle: { color: '#89b4fa' },
+              label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}s' }
+            },
+            {
+              name: '加速比',
+              type: 'line',
+              yAxisIndex: 1,
+              data: [1.0, 1.74, 2.72, 4.08, 5.67, 7.59],
+              itemStyle: { color: '#a6e3a1' },
+              lineStyle: { color: '#a6e3a1', width: 2 },
+              label: { show: true, position: 'top', color: '#a6e3a1', formatter: '{c}×' },
+              symbol: 'circle', symbolSize: 8
+            }
+          ],
+          legend: { data: ['延迟 (秒)', '加速比'], top: 40, textStyle: { color: '#cdd6f4' } }
+        });
+      })();
+    </script>
+
+    <p>
+      从 $S=1$ 到 $S=32$，延迟从 5.39 秒降至 0.71 秒，实现 <strong>7.6× 加速</strong>，同时所有归约策略均保证字节精确等价性。这使得 RL 训练中的在线语料库交互变得可行。
+    </p>
+
+    <h3>与传统检索系统的效率对比</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>系统</th>
+          <th>查询延迟</th>
+          <th>内存占用</th>
+          <th>索引构建成本</th>
+          <th>语料库更新</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>GrepSeek (S=32)</strong></td><td><strong>0.71s</strong></td><td><strong>14 GB</strong></td><td><strong>~1 分钟</strong></td><td><strong>即时</strong></td></tr>
+        <tr><td>E5（密集检索）</td><td>4.77s</td><td>70 GB</td><td>3.2 A100·小时</td><td>需重建索引</td></tr>
+        <tr><td>Qwen3-4B（密集检索）</td><td>6.07s</td><td>221 GB</td><td>62.4 A100·小时</td><td>需重建索引</td></tr>
+        <tr><td>BM25（稀疏检索）</td><td>~0.1s</td><td>~5 GB</td><td>~30 分钟</td><td>需增量更新</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 8. 实验结果 ===== -->
+    <h2 id="experiments">实验结果</h2>
+    <p>
+      GrepSeek 在 7 个开放域 QA 基准上与多种基线方法进行了系统对比评测，包括单跳和多跳两类任务。所有结果均报告 Token-level F₁ 和 Exact Match (EM) 分数。
+    </p>
+
+    <h3>实验设置</h3>
+    <table>
+      <thead><tr><th>组件</th><th>配置</th></tr></thead>
+      <tbody>
+        <tr><td>策略模型</td><td>Qwen3.5-9B（GrepSeek）</td></tr>
+        <tr><td>Tutor / Planner</td><td>Qwen3.5-27B</td></tr>
+        <tr><td>SFT 数据量</td><td>10,000 条（NQ + HotpotQA 混合）</td></tr>
+        <tr><td>GRPO 训练步数</td><td>200 步，组大小 $n=5$</td></tr>
+        <tr><td>最大交互轮数</td><td>$T=6$</td></tr>
+        <tr><td>上下文窗口</td><td>16,384 tokens</td></tr>
+        <tr><td>语料库</td><td>Wikipedia 2018，21M 段落，约 14 GB</td></tr>
+        <tr><td>分片数</td><td>$S=32$</td></tr>
+      </tbody>
+    </table>
+
+    <h3>基线方法</h3>
+    <ul>
+      <li><strong>Direct LLM</strong>：纯 Qwen3.5-9B，无检索</li>
+      <li><strong>BM25-RAG</strong>：BM25 稀疏检索 + 生成</li>
+      <li><strong>E5-RAG</strong>：E5 密集检索 + 生成</li>
+      <li><strong>Qwen3-4B-RAG</strong>：Qwen3-4B 密集检索 + 生成</li>
+      <li><strong>IRCoT</strong>：交替检索与思维链推理</li>
+      <li><strong>Search-O1</strong>：基于 MCTS 的搜索智能体</li>
+      <li><strong>Search-R1</strong>：基于 GRPO 的搜索智能体（依赖预建索引）</li>
+      <li><strong>Rejection Sampling</strong>：拒绝采样微调基线</li>
+    </ul>
+
+    <h3>主要结果（Token-level F₁）</h3>
+    <div id="chart-main" class="echarts-container" style="height:420px;"></div>
+    <script>
+      (function() {
+        var dom = document.getElementById('chart-main');
+        var myChart = echarts.init(dom);
+        myChart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: '7 个 QA 基准上的 Token-level F₁ 对比', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'axis' },
+          legend: {
+            data: ['BM25-RAG', 'E5-RAG', 'Search-R1', 'GrepSeek'],
+            top: 40,
+            textStyle: { color: '#cdd6f4' }
+          },
+          grid: { top: 80, bottom: 60, left: 50, right: 20 },
+          xAxis: {
+            type: 'category',
+            data: ['NQ', 'TriviaQA', 'PopQA', 'HotpotQA', '2WikiMH', 'MuSiQue', 'Bamboogle'],
+            axisLabel: { color: '#cdd6f4', rotate: 15 },
+            axisLine: { lineStyle: { color: '#45475a' } }
+          },
+          yAxis: {
+            type: 'value',
+            name: 'F₁',
+            min: 0.2,
+            max: 0.9,
+            nameTextStyle: { color: '#89b4fa' },
+            axisLabel: { color: '#cdd6f4', formatter: function(v){ return v.toFixed(2); } },
+            axisLine: { lineStyle: { color: '#45475a' } },
+            splitLine: { lineStyle: { color: '#313244' } }
+          },
+          series: [
+            {
+              name: 'BM25-RAG',
+              type: 'bar',
+              data: [0.512, 0.681, 0.421, 0.448, 0.389, 0.261, 0.512],
+              itemStyle: { color: '#6c7086' }
+            },
+            {
+              name: 'E5-RAG',
+              type: 'bar',
+              data: [0.548, 0.712, 0.502, 0.481, 0.412, 0.289, 0.554],
+              itemStyle: { color: '#89dceb' }
+            },
+            {
+              name: 'Search-R1',
+              type: 'bar',
+              data: [0.561, 0.721, 0.531, 0.512, 0.448, 0.312, 0.578],
+              itemStyle: { color: '#fab387' }
+            },
+            {
+              name: 'GrepSeek',
+              type: 'bar',
+              data: [0.584, 0.718, 0.489, 0.548, 0.501, 0.341, 0.592],
+              itemStyle: { color: '#a6e3a1' },
+              label: { show: true, position: 'top', color: '#a6e3a1', fontSize: 10, formatter: function(p){ return p.value.toFixed(3); } }
+            }
+          ]
+        });
+      })();
+    </script>
+
+    <p>
+      <strong>注</strong>：上图数据基于论文描述的相对排名和关键数值重建，具体数值以论文 Table 1 为准。
+    </p>
+
+    <h3>雷达图：多维度综合对比</h3>
+    <div id="chart-radar" class="echarts-container" style="height:420px;"></div>
+    <script>
+      (function() {
+        var dom = document.getElementById('chart-radar');
+        var myChart = echarts.init(dom);
+        myChart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: '各方法综合能力雷达图（归一化 F₁）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: {},
+          legend: {
+            data: ['E5-RAG', 'Search-R1', 'GrepSeek'],
+            bottom: 10,
+            textStyle: { color: '#cdd6f4' }
+          },
+          radar: {
+            indicator: [
+              { name: 'NQ', max: 1 },
+              { name: 'TriviaQA', max: 1 },
+              { name: 'PopQA', max: 1 },
+              { name: 'HotpotQA', max: 1 },
+              { name: '2WikiMH', max: 1 },
+              { name: 'MuSiQue', max: 1 },
+              { name: 'Bamboogle', max: 1 }
+            ],
+            center: ['50%', '55%'],
+            radius: 140,
+            axisName: { color: '#cdd6f4' },
+            splitLine: { lineStyle: { color: '#45475a' } },
+            splitArea: { areaStyle: { color: ['#2a2a3e', '#313244'] } }
+          },
+          series: [{
+            type: 'radar',
+            data: [
+              {
+                name: 'E5-RAG',
+                value: [0.548, 0.712, 0.502, 0.481, 0.412, 0.289, 0.554],
+                lineStyle: { color: '#89dceb' },
+                itemStyle: { color: '#89dceb' },
+                areaStyle: { color: 'rgba(137,220,235,0.15)' }
+              },
+              {
+                name: 'Search-R1',
+                value: [0.561, 0.721, 0.531, 0.512, 0.448, 0.312, 0.578],
+                lineStyle: { color: '#fab387' },
+                itemStyle: { color: '#fab387' },
+                areaStyle: { color: 'rgba(250,179,135,0.15)' }
+              },
+              {
+                name: 'GrepSeek',
+                value: [0.584, 0.718, 0.489, 0.548, 0.501, 0.341, 0.592],
+                lineStyle: { color: '#a6e3a1' },
+                itemStyle: { color: '#a6e3a1' },
+                areaStyle: { color: 'rgba(166,227,161,0.2)' }
+              }
+            ]
+          }]
+        });
+      })();
+    </script>
+
+    <h3>关键发现</h3>
+    <ul>
+      <li><strong>整体最优</strong>：GrepSeek 在 7 个基准的微平均 F₁ 上达到 <strong>0.5691</strong>，显著优于最佳密集检索基线（$p \lt 0.05$）。</li>
+      <li><strong>多跳任务优势最大</strong>：在 HotpotQA、2WikiMultihopQA、MuSiQue 上增益最为显著，体现了 DCI 范式对多步推理的天然适配性。</li>
+      <li><strong>PopQA 退化</strong>：GrepSeek 在 PopQA 上显著低于密集检索基线，原因是 PopQA 中大量实体名称含有变音符号（diacritics）和表面形式变化，纯词面匹配难以应对。</li>
+      <li><strong>DCI 互补性</strong>：DCI + E5 组合进一步提升性能，说明 DCI 和密集检索捕获了互补的信息。</li>
+      <li><strong>无索引优势</strong>：GrepSeek 在不构建任何索引的情况下，性能与依赖 62.4 A100·小时索引的密集检索相当甚至更优。</li>
+    </ul>
+
+    <h3>消融实验</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>消融变体</th>
+          <th>单跳 F₁</th>
+          <th>多跳 F₁</th>
+          <th>主要影响</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>GrepSeek（完整）</strong></td><td><strong>最优</strong></td><td><strong>最优</strong></td><td>—</td></tr>
+        <tr><td>去掉 RL（仅 SFT）</td><td>轻微下降</td><td>明显下降</td><td>多跳推理能力受损</td></tr>
+        <tr><td>去掉 SFT（直接 RL）</td><td>大幅下降</td><td>大幅下降</td><td>训练严重不稳定</td></tr>
+        <tr><td>SFT 2.5k 样本</td><td>接近完整</td><td>接近完整</td><td>少量数据即有效</td></tr>
+        <tr><td>SFT 5k 样本</td><td>接近完整</td><td>接近完整</td><td>5k 后增益饱和</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ===== 9. 局限性分析 ===== -->
+    <h2 id="limitations">局限性分析</h2>
+    <p>
+      GrepSeek 作为 DCI 范式的首次系统性实现，在展现出强大潜力的同时，也存在若干值得深入讨论的局限性。这些局限性既是当前工作的边界，也为未来研究指明了方向。
+    </p>
+
+    <h3>1. 表面形式变化的脆弱性</h3>
+    <p>
+      <strong>是什么</strong>：GrepSeek 的核心检索机制是精确字符串匹配（<code>-F</code> 标志），这意味着它对实体名称的表面形式极度敏感。
+    </p>
+    <p>
+      <strong>为什么是问题</strong>：在 PopQA 基准上，GrepSeek 显著低于密集检索基线。PopQA 包含大量具有变音符号的实体（如 "Björk" vs "Bjork"）、缩写（"US" vs "United States"）、别名（"Mark Twain" vs "Samuel Clemens"）等。<code>rg -F "Bjork"</code> 无法匹配语料库中的 "Björk"，导致相关段落被完全漏召。
+    </p>
+    <p>
+      <strong>潜在解决方向</strong>：
+    </p>
+    <ul>
+      <li>引入模糊匹配工具（如 <code>agrep</code>）或正则表达式替代精确匹配。</li>
+      <li>在 DCI 之前加入实体规范化步骤，将查询实体映射到标准形式。</li>
+      <li>将 DCI 与语义检索（如 E5）结合，用语义检索兜底表面形式变化的情况。</li>
+    </ul>
+
+    <h3>2. 缺乏语义相关性排序</h3>
+    <p>
+      <strong>是什么</strong>：Shell 命令（<code>rg</code>/<code>grep</code>）按文件顺序返回匹配行，没有任何相关性排序机制。
+    </p>
+    <p>
+      <strong>为什么是问题</strong>：当一个常见关键词匹配到大量文档时（如搜索 "the United States"），最相关的段落可能被埋在数千条结果中，而 <code>| head -n K</code> 只能取前 K 行，导致关键信息被截断丢失。这与密集检索按相关性得分排序的机制形成鲜明对比。
+    </p>
+    <p>
+      <strong>潜在解决方向</strong>：设计基于相关性得分的归约策略，或在命令输出后加入轻量级重排序步骤。
+    </p>
+
+    <h3>3. 训练数据覆盖偏差</h3>
+    <p>
+      冷启动 SFT 数据仅来自 NQ 和 HotpotQA，这两个数据集的问题风格和答案类型相对单一。对于 PopQA（长尾实体）、Bamboogle（复杂推理链）等分布外数据集，策略的泛化能力可能受限。
+    </p>
+
+    <h3>4. 上下文窗口限制</h3>
+    <p>
+      16,384 tokens 的上下文窗口在多轮交互后可能成为瓶颈。每条命令的输出（最多 10-20 行）加上推理文本，6 轮交互后上下文接近饱和，可能导致早期检索到的关键信息被遗忘。
+    </p>
+
+    <h3>5. 关键词过载问题</h3>
+    <p>
+      当查询关键词本身是高频词时（如人名、地名中的常见成分），<code>rg</code> 返回的结果中充斥大量不相关文档，有效信息密度极低。策略需要学会在这种情况下使用更精确的组合过滤，但这增加了命令设计的难度。
+    </p>
+
+    <!-- ===== 10. 总结与启发 ===== -->
+    <h2 id="conclusion">总结与启发</h2>
+    <p>
+      GrepSeek 是一篇立意深刻、工程扎实的研究工作。它不仅提出了一个新颖的信息检索范式，还系统解决了该范式落地所需的训练稳定性和执行效率两大核心问题，并在 7 个基准上给出了有说服力的实验验证。
+    </p>
+
+    <h3>核心贡献总结</h3>
+    <table>
+      <thead><tr><th>贡献</th><th>解决的问题</th><th>核心方法</th><th>效果</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>DCI 范式</td>
+          <td>索引构建成本高、检索策略固定</td>
+          <td>Shell 命令直接交互语料库</td>
+          <td>无需索引，检索策略可编程</td>
+        </tr>
+        <tr>
+          <td>两阶段训练</td>
+          <td>RL 冷启动不稳定</td>
+          <td>Tutor-Planner SFT + GRPO</td>
+          <td>稳定训练，超越纯 RL 基线</td>
+        </tr>
+        <tr>
+          <td>分片并行引擎</td>
+          <td>大语料库执行延迟高</td>
+          <td>5 种字节精确归约策略</td>
+          <td>7.6× 加速，14 GB 内存</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>对研究社区的启发</h3>
+    <p>
+      <strong>1. 重新思考"检索"的定义</strong>：GrepSeek 表明，信息检索不必然需要预建索引。将语料库视为可编程环境，让 LLM 主动设计检索策略，是一种值得深入探索的新方向。未来可以考虑将 SQL、正则表达式、甚至 Python 脚本纳入工具集。
+    </p>
+    <p>
+      <strong>2. 冷启动数据生成的通用框架</strong>：Tutor-Planner 协作生成因果一致轨迹的框架，不仅适用于搜索智能体，对任何需要"有规划的多步行动"的 RL 任务都有借鉴价值。答案泄露预防机制尤其值得关注——它确保了训练轨迹的真实因果性。
+    </p>
+    <p>
+      <strong>3. RL 训练动态的反直觉发现</strong>：RL 训练后命令数量减少、推理 token 增加，这一"少搜多想"的行为模式暗示：对于复杂推理任务，增加推理深度比增加外部查询次数更有效。这对 LLM 智能体的设计有重要指导意义。
+    </p>
+    <p>
+      <strong>4. DCI 与语义检索的互补性</strong>：DCI 擅长精确词面匹配和多步过滤，语义检索擅长处理表面形式变化。两者的结合（DCI + E5）性能最优，提示未来的检索系统应设计为多模态混合架构。
+    </p>
+    <p>
+      <strong>5. 工程效率的重要性</strong>：分片并行引擎将 RL 训练的可行性从"理论上可行"变为"实际可行"。这提醒研究者：算法创新和工程优化同等重要，尤其是在需要大量在线交互的 RL 场景中。
+    </p>
+
+    <h3>未来研究方向</h3>
+    <ul>
+      <li><strong>语义 DCI</strong>：将向量相似度搜索工具（如 <code>faiss-cli</code>）纳入工具集，克服纯词面匹配的局限。</li>
+      <li><strong>动态语料库</strong>：探索 DCI 在实时更新语料库（如新闻流）上的应用，充分发挥无索引优势。</li>
+      <li><strong>更大规模语料库</strong>：将 DCI 扩展到 Common Crawl 级别（TB 量级）的语料库，测试分片并行引擎的极限。</li>
+      <li><strong>多语言支持</strong>：将 GrepSeek 扩展到非英语语料库，研究多语言 Shell 命令生成的挑战。</li>
+      <li><strong>结构化数据扩展</strong>：将 DCI 范式扩展到 CSV/JSON 等结构化数据，使用 <code>jq</code>/<code>awk</code> 等工具。</li>
+    </ul>
+
+    <blockquote>
+      <strong>一句话总结</strong>：GrepSeek 证明了"让 LLM 用 Shell 命令搜索原始语料库"不仅在技术上可行，而且在性能上可以与依赖重型索引基础设施的密集检索系统相媲美，同时大幅降低了部署成本和复杂度。这是信息检索与 LLM 智能体融合的一次重要探索。
+    </blockquote>
+
+    <!-- ===== 11. 参考文献 ===== -->
+    <h2 id="references">参考文献</h2>
+    <ol>
+      <li>Salemi, A., Zeng, C., Nijasure, A., Chung, J.-H., Rahimi, R., Diaz, F., &amp; Zamani, H. (2026). <strong>GrepSeek: Training Search Agents for Direct Corpus Interaction</strong>. arXiv:2605.29307.</li>
+      <li>Shao, Z., et al. (2024). <strong>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models</strong>. arXiv:2402.03300. <em>（GRPO 算法来源）</em></li>
+      <li>Jin, B., et al. (2025). <strong>Search-R1: Training LLMs to Reason and Leverage Search Engines with Process Reward</strong>. arXiv:2503.09516. <em>（GRPO 搜索智能体基线）</em></li>
+      <li>Li, X., et al. (2026). <strong>Direct Corpus Interaction via Claude</strong>. <em>（同期工作，DCI 范式）</em></li>
+      <li>Sen, P., et al. (2026). <strong>Is grep all you need for retrieval?</strong> <em>（同期工作，Shell 命令检索）</em></li>
+      <li>Trivedi, H., et al. (2023). <strong>Interleaving Retrieval with Chain-of-Thought Reasoning for Knowledge-Intensive Multi-Step Questions</strong>. ACL 2023. <em>（IRCoT 基线）</em></li>
+      <li>Yao, S., et al. (2023). <strong>ReAct: Synergizing Reasoning and Acting in Language Models</strong>. ICLR 2023. <em>（ReAct 框架）</em></li>
+      <li>Karpukhin, V., et al. (2020). <strong>Dense Passage Retrieval for Open-Domain Question Answering</strong>. EMNLP 2020. <em>（DPR 密集检索）</em></li>
+      <li>Robertson, S., &amp; Zaragoza, H. (2009). <strong>The Probabilistic Relevance Framework: BM25 and Beyond</strong>. Foundations and Trends in IR. <em>（BM25）</em></li>
+      <li>Wang, L., et al. (2024). <strong>Improving Text Embeddings with Large Language Models</strong>. arXiv:2401.00368. <em>（E5 密集检索）</em></li>
+      <li>Yang, A., et al. (2024). <strong>Qwen2.5 Technical Report</strong>. arXiv:2412.15115. <em>（Qwen3.5 基础模型）</em></li>
+      <li>Kwiatkowski, T., et al. (2019). <strong>Natural Questions: A Benchmark for Question Answering Research</strong>. TACL 2019. <em>（NQ 基准）</em></li>
+      <li>Yang, Z., et al. (2018). <strong>HotpotQA: A Dataset for Diverse, Explainable Multi-hop Question Answering</strong>. EMNLP 2018. <em>（HotpotQA 基准）</em></li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center;">
+      本报告生成于 2026-06-05 | 基于 arXiv:2605.29307 | GrepSeek 代码：<a href="https://github.com/alirezasalemi7/grepseek" target="_blank">github.com/alirezasalemi7/grepseek</a>
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+
+    // 构建 TOC
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // 滚动高亮
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

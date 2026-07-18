@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoSearch 深度阅读报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--bg-card:#24243e;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;--teal:#94e2d5;--orange:#fab387;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,'PingFang SC',sans-serif;line-height:1.85;font-size:15px;}
+#toc{position:fixed;top:0;left:0;width:240px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:12.5px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:4px 8px;border-radius:4px;margin-bottom:1px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:18px;font-size:11.5px;opacity:.8;border-left:2px solid var(--border);margin-left:6px;}
+main{margin-left:260px;padding:40px 64px 80px;}
+h1{color:var(--heading);font-size:2em;margin-bottom:10px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.3em;margin:2.2em 0 .7em;border-bottom:1px solid var(--border);padding-bottom:7px;display:flex;align-items:center;gap:8px;}
+h2::before{content:'';display:inline-block;width:4px;height:1em;background:var(--heading);border-radius:2px;flex-shrink:0;}
+h3{color:var(--purple);font-size:1.05em;margin:1.5em 0 .5em;padding-left:10px;border-left:3px solid var(--purple);}
+p{margin:.65em 0;}ul,ol{margin:.5em 0 .5em 1.4em;}li{margin:.3em 0;}
+a{color:var(--link);}strong{color:var(--strong);}
+blockquote{border-left:3px solid var(--quote-bar);padding:10px 18px;margin:1.2em 0;background:var(--bg-card);border-radius:0 6px 6px 0;color:#bac2de;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.92em;}
+th{background:var(--bg-card);color:var(--heading);padding:9px 14px;text-align:left;border:1px solid var(--border);}
+td{padding:8px 14px;border:1px solid var(--border);vertical-align:top;}
+tr:hover td{background:var(--bg-card);}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.87em;line-height:1.6;}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 6px;border-radius:3px;font-size:.87em;color:var(--teal);}
+.mermaid{background:var(--bg-card);border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{margin:1em 0;padding:18px 24px;background:#2a2a3e;border:1px solid var(--border);border-left:3px solid var(--heading);border-radius:0 6px 6px 0;overflow-x:auto;font-size:1em;line-height:2.1;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] > *{text-align:left!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:18px 22px;margin:1.2em 0;}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.orange{border-left:4px solid var(--orange);}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9;}
+.algo-box .algo-title{color:var(--heading);font-weight:700;border-bottom:1px solid var(--border);padding-bottom:6px;margin-bottom:10px;}
+.algo-box .kw{color:#cba6f7;font-weight:700;}
+.algo-box .cm{color:#6c7086;font-style:italic;}
+.algo-box .var{color:#94e2d5;}
+.algo-box .fn{color:#a6e3a1;}
+.algo-box .num{color:#f9e2af;}
+.echarts-box{border-radius:6px;overflow:hidden;margin:1em 0;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},chtml:{displayAlign:'left',displayIndent:'0'}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>AutoSearch 深度阅读报告</h1>
+<p style="color:#6c7086;margin-bottom:1.4em">Adaptive Search Depth for Efficient Agentic RAG via Reinforcement Learning · 中科院自动化所 / 美团 · 2026-04</p>
+
+<table>
+  <tr><th style="width:120px">标题</th><td>AutoSearch: Adaptive Search Depth for Efficient Agentic RAG via Reinforcement Learning</td></tr>
+  <tr><th>机构</th><td>中科院自动化所 SKL-MAIS / 中国科学院大学 / 美团（Jingbo Sun, Wenyue Chong, Qichao Zhang, Dongbin Zhao 等）</td></tr>
+  <tr><th>核心问题</th><td>Agentic RAG 系统的多步检索存在大量冗余搜索，如何让 Agent 根据问题复杂度和自身能力<strong>自适应决定最小充分搜索深度</strong>？</td></tr>
+  <tr><th>代码</th><td>github.com/bofusun/AutoSearch</td></tr>
+  <tr><th>关键结果</th><td>6 个 QA 基准上同时提升 EM 准确率与搜索效率，Over-Searching Ratio 降至接近 0%</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 1. 核心问题 ═══ -->
+<h2 id="s1">1. 核心问题与动机</h2>
+
+<h3>1.1 Agentic RAG 的过搜索困境</h3>
+
+<pre class="mermaid">
+flowchart TD
+    PROB["Agentic RAG 的效率瓶颈"]
+    P1["搜索步骤过多（Over-Searching）\n简单单跳问题也执行多次检索\n产生大量冗余计算与延迟"]
+    P2["现有缓解方案的副作用\n固定步数上限 → 复杂问题探索不足\n惩罚搜索深度 → 牺牲复杂问题的准确率"]
+    P3["根本原因\n忽视了最优搜索深度由问题复杂度\n和 Agent 能力共同决定这一事实"]
+    PROB --> P1 & P2 --> P3
+    P3 --> SOL["AutoSearch\n自适应识别最小充分搜索深度\n准确率与效率同时优化"]
+</pre>
+
+<div class="tech-card yellow">
+<strong>核心研究问题</strong>：Agent 能否在保持答案准确率的同时，自适应调整到<strong>最小充分搜索步数</strong>？论文通过实验证明，这个最优深度由问题复杂度（单跳 vs 多跳）和 Agent 能力（3B/7B/14B）共同决定，不是固定值。
+</div>
+
+<h3>1.2 搜索深度的实验分析</h3>
+
+<p>论文首先在 Qwen2.5-14B-Instruct 上固定搜索步数，测量 EM 和过搜索率：</p>
+
+<table>
+  <tr><th>维度</th><th>数据集/模型</th><th>观察结果</th><th>最优搜索深度</th></tr>
+  <tr><td rowspan="2"><strong>问题复杂度</strong></td><td>NQ（单跳）</td><td>搜索 1 步接近最优 EM，更多步骤几乎无收益</td><td>≈ 1</td></tr>
+  <tr><td>Bamboogle（多跳）</td><td>搜索 3 步才达到峰值，超过后性能下降</td><td>≈ 3</td></tr>
+  <tr><td rowspan="3"><strong>Agent 能力</strong><br><small>（Bamboogle）</small></td><td>Qwen-3B</td><td>随步数持续提升，在测试范围内未达到峰值</td><td>= 最大步数</td></tr>
+  <tr><td>Qwen-7B</td><td>第 2 步达到峰值，之后下降</td><td>≈ 2</td></tr>
+  <tr><td>Qwen-14B</td><td>第 3 步达到峰值，更强模型过搜索退化更明显</td><td>≈ 3</td></tr>
+</table>
+
+<p><strong>核心结论</strong>：最小充分搜索深度 $t_c$ 由<strong>问题复杂度</strong>（数据集难度）和<strong>Agent 能力</strong>（模型规模）共同决定。</p>
+
+<hr>
+
+<!-- ═══ 2. 背景 ═══ -->
+<h2 id="s2">2. 背景与相关工作</h2>
+
+<table>
+  <tr><th>方法类别</th><th>代表工作</th><th>核心思路</th><th>局限</th></tr>
+  <tr><td>结果奖励 RL</td><td>Search-R1, R1-Searcher</td><td>最终答案正确性作为奖励，推动多步推理+检索</td><td>稀疏奖励；不控制搜索深度，过搜索严重</td></tr>
+  <tr><td>过程奖励 RL</td><td>StepSearch, Atom-Searcher</td><td>步骤级信息增益奖励，鼓励有效检索</td><td>仍忽视过搜索问题</td></tr>
+  <tr><td>深度惩罚</td><td>R1-Searcher++, Wang et al.</td><td>直接惩罚搜索步数或工具调用次数</td><td>简单惩罚导致复杂问题探索不足</td></tr>
+  <tr><td>置信度/外部判断</td><td>Search Wisely, HIPRAG</td><td>模型置信度阈值或外部 LLM 判断是否需要搜索</td><td>依赖外部资源；未考虑深度与复杂度的关系</td></tr>
+  <tr><td style="color:var(--strong)"><strong>AutoSearch（本文）</strong></td><td style="color:var(--strong)">—</td><td style="color:var(--strong)">中间答案自评估，识别能力感知最优深度，三类奖励协同</td><td style="color:var(--strong)">当前仅验证较小最大搜索步数范围</td></tr>
+</table>
+
+<hr>
+
+<!-- ═══ 3. 方法 ═══ -->
+<h2 id="s3">3. AutoSearch 方法</h2>
+
+<h3>3.1 整体框架</h3>
+
+<pre class="mermaid">
+flowchart TD
+    Q["问题 q_i"] --> LOOP
+    subgraph LOOP["多步检索 + 自答循环"]
+        SEARCH["Step t：生成搜索查询\n调用检索引擎获取文档"]
+        INTER["生成中间答案\n基于累积轨迹自评估"]
+        JUDGE{"中间答案 EM = 1\n且达到最优深度 tc?"}
+        OVER["继续搜索\n过搜索惩罚"]
+        STOP["停止搜索\n输出最终答案"]
+        SEARCH --> INTER --> JUDGE
+        JUDGE -->|否，继续| OVER --> SEARCH
+        JUDGE -->|是| STOP
+    end
+    STOP --> REWARD["三类奖励信号\n基础奖励 + 搜索效率奖励 + 搜索质量奖励"]
+    REWARD --> PPO["PPO 策略更新"]
+</pre>
+
+<h3>3.2 中间答案生成与能力感知最优深度</h3>
+
+<p>每次检索后，Agent 基于累积轨迹 $x_{i,t}$ 生成中间答案：</p>
+
+<div class="math-block">
+$$x_{i,t} = \{q_i,\, s_{i,0},\, o_{i,0},\, \ldots,\, s_{i,t},\, o_{i,t}\}$$
+$$a^{\mathrm{inter}}_{i,t} = \pi_\theta(x_{i,t})$$
+</div>
+
+<p><strong>能力感知最优深度</strong> $t_c$（Capability-aware Optimal Search Depth）：</p>
+
+<div class="math-block">
+$$t_c = \min\bigl\{t \mid \mathrm{EM}(a^{\mathrm{inter}}_{i,t},\; a^{\mathrm{gold}}_i) = 1\bigr\}$$
+</div>
+
+<p>若 Agent 始终无法正确回答，则 $t_c = -1$（欠搜索）。</p>
+
+<h3>3.3 三类奖励设计（完整公式）</h3>
+
+<h4>① 基础奖励（Base Reward）</h4>
+
+<p><strong>格式奖励</strong>（逐步评估，鼓励结构化行动）：</p>
+
+<div class="math-block">
+$$r^{\mathrm{format}}_{i,t} = \begin{cases}
+0 & \mathrm{valid}_{i,t}=1,\; t \lt T \\
+-0.05 & \mathrm{valid}_{i,t}=0,\; t \lt T \\
++0.1 & \mathrm{valid}_{i,t}=1,\; t = T \\
+-0.5 & \mathrm{valid}_{i,t}=0,\; t = T
+\end{cases}$$
+</div>
+
+<p><strong>结果奖励</strong>（仅终止步）：</p>
+
+<div class="math-block">
+$$r^{\mathrm{result}}_{i,t} = \begin{cases} \mathrm{EM}(a^{\mathrm{pred}}_i,\; a^{\mathrm{gold}}_i) & t = T \\ 0 & t \lt T \end{cases}$$
+</div>
+
+<div class="math-block">
+$$r^{\mathrm{base}}_{i,t} = r^{\mathrm{format}}_{i,t} + r^{\mathrm{result}}_{i,t}$$
+</div>
+
+<h4>② 搜索效率奖励（Search Efficiency Reward）</h4>
+
+<p>将每步分为三类，差异化奖励：</p>
+
+<div class="math-block">
+$$r^{\mathrm{efficient}}_{i,t} = \begin{cases}
++0.025 & t_c \lt 0 \quad \text{（欠搜索，鼓励继续）} \\[4pt]
+\dfrac{0.4}{t_c + \epsilon} - 0.05 & 0 \lt t \leq t_c \lt T-1 \quad \text{（有效搜索，深度越小奖励越高）} \\[4pt]
+-0.1 & 0 \lt t_c \lt t \lt T-1 \quad \text{（过搜索，惩罚）}
+\end{cases}$$
+</div>
+
+<div class="tech-card blue">
+<strong>效率奖励的设计直觉</strong>：$\frac{0.4}{t_c+\epsilon}$ 确保同样是有效搜索，步数越少奖励越高（如 $t_c=1$ 时奖励 ≈0.35，$t_c=3$ 时 ≈0.1）。这驱动 Agent 在能够回答时尽早停止，而不是简单地惩罚搜索次数——对复杂问题不会过度压制探索。
+</div>
+
+<h4>③ 搜索质量奖励（Search Quality Reward）</h4>
+
+<p>用 F1 分数衡量中间答案质量，奖励<strong>相对前序步骤的增量提升</strong>：</p>
+
+<div class="math-block">
+$$\mathrm{F1}(a^{\mathrm{inter}}_{i,t},\; a^{\mathrm{gold}}_i) = \frac{2 \cdot I^N}{P^N + R^N}$$
+</div>
+
+<div class="math-block">
+$$r^{\mathrm{quality}}_{i,t} = \mathrm{F1}(a^{\mathrm{inter}}_{i,t},\; a^{\mathrm{gold}}_i) - \max_{t' \lt t}\, \mathrm{F1}(a^{\mathrm{inter}}_{i,t'},\; a^{\mathrm{gold}}_i)$$
+</div>
+
+<p>只有当该步检索带来 F1 提升时才给正奖励，明确量化了每步检索的边际贡献。</p>
+
+<h4>综合奖励</h4>
+
+<div class="math-block">
+$$r^{\mathrm{overall}}_{i,t} = r^{\mathrm{base}}_{i,t} + r^{\mathrm{efficient}}_{i,t} + r^{\mathrm{quality}}_{i,t}$$
+</div>
+
+<h3>3.4 PPO 训练目标（屏蔽检索 token）</h3>
+
+<div class="math-block">
+$$J_{\mathrm{PPO}}(\theta) = \mathbb{E}_{\substack{(q,a)\sim D \\ o\sim\pi_{\mathrm{old}}(\cdot|q)}} \left[\frac{1}{\sum_{t=1}^{|o|} I(o_t)} \sum_{t=1}^{|o_i|} I(o_t) \cdot L_t\right]$$
+</div>
+
+<div class="math-block">
+$$L_t = \min\!\left(r_t \hat{A}_t,\; \mathrm{clip}(r_t, 1-\varepsilon, 1+\varepsilon)\hat{A}_t\right)$$
+</div>
+
+<p>$I(o_t)$ 为掩码，将外部检索文档排除在训练损失外，梯度只流过 Agent 生成的推理和查询 token。</p>
+
+<h3>3.5 算法流程</h3>
+
+<div class="algo-box">
+  <div class="algo-title">AutoSearch 训练流程</div>
+  <p><span class="kw">Input:</span> 训练集 <span class="var">D</span>（NQ+HotpotQA 合并），检索引擎（Wiki 2018 + E5），策略 <span class="var">π_θ</span></p>
+  <p><span class="kw">for each</span> 训练批次 (q_i, a^gold_i) ∈ D <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 1. 多步搜索 Rollout</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> t = 1, …, T <span class="kw">do</span></p>
+  <p style="padding-left:3em">生成搜索查询 <span class="var">s_{i,t}</span>，调用检索器获取 <span class="var">o_{i,t}</span></p>
+  <p style="padding-left:3em">生成中间答案 <span class="var">a^inter_{i,t}</span> ← <span class="fn">PromptPolicy</span>(<span class="var">x_{i,t}</span>)</p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 2. 计算能力感知最优深度</span></p>
+  <p style="padding-left:1.5em"><span class="var">t_c</span> ← min{t | EM(<span class="var">a^inter_{i,t}</span>, <span class="var">a^gold_i</span>) = 1}，若无则 t_c = -1</p>
+  <p style="padding-left:1.5em"><span class="cm">// 3. 逐步计算三类奖励</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> t = 1, …, T <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="var">r_t</span> ← <span class="var">r^base_t</span> + <span class="var">r^efficient_t</span>(<span class="var">t_c</span>) + <span class="var">r^quality_t</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 4. PPO 策略更新（掩码检索 token）</span></p>
+  <p style="padding-left:1.5em">更新 <span class="var">π_θ</span> 最大化 <span class="var">J_PPO(θ)</span></p>
+  <p><span class="kw">end for</span></p>
+</div>
+
+<hr>
+
+<!-- ═══ 4. 实验 ═══ -->
+<h2 id="s4">4. 实验结果</h2>
+
+<h3>4.1 主要结果：Qwen2.5-3B</h3>
+
+<div id="chart-3b" class="echarts-box" style="height:340px"></div>
+
+<table>
+  <tr><th>方法</th><th>NQ EM</th><th>TriviaQA EM</th><th>HotpotQA EM</th><th>Bamboogle EM</th><th>Avg EM</th><th>Avg SD↓</th><th>Avg SE↑</th></tr>
+  <tr><td>Search-R1-base</td><td>36.0</td><td>51.3</td><td>27.9</td><td>16.1</td><td>32.9</td><td>1.52</td><td>23.1</td></tr>
+  <tr><td>StepSearch-base</td><td>30.0</td><td>47.3</td><td>32.1</td><td>33.0</td><td>35.3</td><td>3.09</td><td>11.5</td></tr>
+  <tr><td>HIPRAG-base</td><td>11.0</td><td>23.4</td><td>10.3</td><td>10.5</td><td>13.1</td><td>1.66</td><td>7.93</td></tr>
+  <tr><td>HIPRAG-instruct</td><td>3.20</td><td>14.5</td><td>10.1</td><td>4.00</td><td>7.85</td><td>1.49</td><td>5.35</td></tr>
+  <tr><td style="color:var(--strong)"><strong>AutoSearch</strong></td><td style="color:var(--strong)"><strong>43.7</strong></td><td style="color:var(--strong)"><strong>61.7</strong></td><td style="color:var(--strong)"><strong>39.4</strong></td><td style="color:var(--strong)"><strong>33.1</strong></td><td style="color:var(--strong)"><strong>44.3</strong></td><td style="color:var(--strong)"><strong>1.36</strong></td><td style="color:var(--strong)"><strong>35.6</strong></td></tr>
+</table>
+
+<h3>4.2 过搜索率对比（OSR% ↓）</h3>
+
+<table>
+  <tr><th>方法</th><th>NQ</th><th>TriviaQA</th><th>PopQA</th><th>HotpotQA</th><th>2Wiki</th><th>Bamboogle</th></tr>
+  <tr><td>Search-R1-base</td><td>3.5</td><td>5.6</td><td>2.1</td><td>9.2</td><td>11.1</td><td>6.5</td></tr>
+  <tr><td>StepSearch-base</td><td>25.2</td><td>27.7</td><td>12.2</td><td>33.9</td><td>32.4</td><td>37.1</td></tr>
+  <tr><td>HIPRAG-instruct</td><td>0.70</td><td>1.80</td><td>0.80</td><td>1.70</td><td>1.40</td><td>3.20</td></tr>
+  <tr><td style="color:var(--strong)"><strong>AutoSearch</strong></td><td style="color:var(--strong)"><strong>0.00</strong></td><td style="color:var(--strong)"><strong>0.00</strong></td><td style="color:var(--strong)"><strong>0.10</strong></td><td style="color:var(--strong)"><strong>0.90</strong></td><td style="color:var(--strong)"><strong>2.60</strong></td><td style="color:var(--strong)"><strong>2.40</strong></td></tr>
+</table>
+
+<div class="tech-card green">
+<strong>关键结论</strong>：AutoSearch 在单跳数据集（NQ、TriviaQA）过搜索率降至 <strong>0%</strong>，而 StepSearch 高达 25-28%。多跳数据集上 AutoSearch 也显著优于 Search-R1 和 StepSearch，同时维持了最高的 EM 准确率——这说明搜索深度压缩来自真正的能力提升，而非牺牲准确率。
+</div>
+
+<hr>
+
+<!-- ═══ 5. 消融 ═══ -->
+<h2 id="s5">5. 消融实验</h2>
+
+<h3>5.1 三类奖励组件的贡献（Qwen2.5-3B）</h3>
+
+<table>
+  <tr><th>配置</th><th>Avg EM↑</th><th>Avg SD↓</th><th>影响分析</th></tr>
+  <tr><td style="color:var(--strong)"><strong>完整 AutoSearch</strong></td><td style="color:var(--strong)"><strong>44.3</strong></td><td style="color:var(--strong)"><strong>1.36</strong></td><td>最优</td></tr>
+  <tr><td>去掉基础奖励</td><td>40.8</td><td>1.66</td><td>准确率下降，搜索深度略增；基础奖励稳定搜索格式和答案质量</td></tr>
+  <tr><td>去掉搜索效率奖励</td><td>43.3</td><td>3.28</td><td>准确率略降但<strong>搜索深度急剧增至 3.28×</strong>；效率奖励是控制过搜索的核心</td></tr>
+  <tr><td>去掉搜索质量奖励</td><td>40.3</td><td>1.10</td><td>准确率明显下降且深度过度压缩；质量奖励鼓励有意义的检索步骤</td></tr>
+</table>
+
+<h3>5.2 PPO vs GRPO</h3>
+
+<p>将 AutoSearch 的累积奖励作为结果奖励，使用 GRPO 替代 PPO 训练，结果与 PPO 性能相当——说明 AutoSearch 的奖励设计对 RL 算法选择具有鲁棒性，方法的泛化性强。</p>
+
+<hr>
+
+<!-- ═══ 6. 训练动态 ═══ -->
+<h2 id="s6">6. 训练动态分析</h2>
+
+<table>
+  <tr><th>指标</th><th>Search-R1</th><th>StepSearch</th><th>AutoSearch</th></tr>
+  <tr><td>搜索时间</td><td>早期下降后稳定在较高值</td><td>早期下降后稳定在较高值</td><td><strong>持续稳定下降</strong>，最终推理延迟最低</td></tr>
+  <tr><td>有效动作率</td><td>收敛慢</td><td>后期不稳定</td><td><strong>收敛最快</strong>，始终维持高有效率</td></tr>
+  <tr><td>搜索深度</td><td>前期浅后期深度大幅增加</td><td>前期浅后期大幅增加</td><td><strong>短暂深度探索后收敛到低稳定深度</strong></td></tr>
+  <tr><td>Token 长度</td><td>随搜索深度增加而升高</td><td>随搜索深度增加而升高</td><td><strong>逐步减少</strong>，资源消耗最低</td></tr>
+</table>
+
+<div class="tech-card purple">
+<strong>训练动态的核心模式</strong>：AutoSearch 在训练初期允许 Agent 短暂探索更深的搜索（获取足够经验判断何时停止），然后效率奖励驱动 Agent 学会在 $t_c$ 处停止——这与课程学习的思路一致：先学会完成任务，再学会高效完成任务。
+</div>
+
+<hr>
+
+<!-- ═══ 7. 局限性 ═══ -->
+<h2 id="s7">7. 局限性</h2>
+
+<ul>
+  <li><strong>最大搜索步数范围有限</strong>：当前实验在较小的最大搜索深度下验证，更大深度范围下的准确率-效率权衡仍有待探索</li>
+  <li><strong>中间答案的计算开销</strong>：每步生成中间答案增加了每个 Rollout 的前向计算次数（虽然训练期间的成本，推理时不需要）</li>
+  <li><strong>单一检索器依赖</strong>：实验使用 E5 + Wikipedia，不同检索器质量对 $t_c$ 估计的影响未充分研究</li>
+  <li><strong>任务领域局限</strong>：仅在 QA 任务验证，代码生成、数学推理等需要不同形式外部信息的 Agent 任务有待验证</li>
+</ul>
+
+<hr>
+
+<!-- ═══ 8. 核心洞见 ═══ -->
+<h2 id="s8">8. 核心洞见与读后评注</h2>
+
+<div class="tech-card green">
+<strong>"最小充分深度"是 Agentic RAG 的正确优化目标</strong><br>
+现有方法要么追求"搜索越少越好"（导致欠搜索），要么追求"答案越准越好"（导致过搜索）。AutoSearch 的核心贡献是提出了 $t_c$——既不是最小搜索步数，也不是最大准确率，而是"能正确回答所需的最少步数"。这个目标在概念上是正确的：评估标准是<strong>效率</strong>（单位搜索步获得的信息价值），而非绝对数量。
+</div>
+
+<div class="tech-card blue">
+<strong>自评估信号比外部评判更高效</strong><br>
+HIPRAG 用外部 LLM 判断每步是否需要继续搜索，引入了额外的大模型依赖。AutoSearch 用 Agent 自身生成中间答案作为自评估信号——这更符合"测试时 Scaling"的精神：在推理时分配计算资源给"思考是否需要继续"，而非依赖外部监督。中间答案的 EM 判断（是否已能正确回答）是一个干净、可靠的二值信号。
+</div>
+
+<div class="tech-card yellow">
+<strong>与 FIPO 的对比：两种密集信用分配路径</strong><br>
+FIPO 通过 Future-KL 在生成 token 层面做密集信用分配；AutoSearch 通过中间答案在搜索步骤层面做密集信用分配。两者都解决了稀疏奖励问题，但针对不同的行动粒度——FIPO 面向生成模型内部推理，AutoSearch 面向外部工具调用序列。这预示了一个方向：将两种思路结合，实现从 token 级到工具调用级的全链路密集信用分配。
+</div>
+
+<div class="tech-card orange">
+<strong>搜索质量奖励的反直觉价值</strong><br>
+消融实验中，去掉搜索质量奖励后，模型反而过度减少了搜索（SD 从 1.36 降到 1.10），但准确率也大幅下降（44.3→40.3）。这揭示：纯效率奖励会让 Agent 学会"赌博式"的单次搜索——有时碰巧对，但整体不稳定。质量奖励（F1 增量）迫使 Agent 在每次搜索后验证信息是否真的有用，避免了低质量的"最小步数"策略。
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.88em">报告生成日期：2026年5月18日 · 基于原文 arXiv:2504.17373 / 中科院自动化所 & 美团 2026-04</p>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark',themeVariables:{fontSize:'13px'}});
+document.addEventListener('DOMContentLoaded',()=>{
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach(h=>{
+    if(!h.id)return;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent.replace(/\s+/g,' ').trim();
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(entries=>entries.forEach(e=>{
+    const a=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(a)a.classList.toggle('active',e.isIntersecting);
+  }),{threshold:.3});
+  document.querySelectorAll('main h2,main h3').forEach(h=>h.id&&obs.observe(h));
+});
+window.addEventListener('load',()=>{
+  const c=echarts.init(document.getElementById('chart-3b'));
+  c.setOption({
+    backgroundColor:'#24243e',
+    title:{text:'Qwen2.5-3B 各方法 EM 准确率 vs 平均搜索深度',textStyle:{color:'#89b4fa',fontSize:13}},
+    tooltip:{trigger:'item',formatter:p=>`${p.name}<br>EM: ${p.value[1]}%<br>搜索深度: ${p.value[0]}`},
+    legend:{data:['Search-R1','StepSearch','HIPRAG','AutoSearch'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'value',name:'平均搜索深度 (SD↓)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:1,max:3.5},
+    yAxis:{type:'value',name:'平均 EM (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},min:5,max:50},
+    series:[
+      {name:'Search-R1',type:'scatter',data:[[1.52,32.9]],symbolSize:14,itemStyle:{color:'#45475a'}},
+      {name:'StepSearch',type:'scatter',data:[[3.09,35.3]],symbolSize:14,itemStyle:{color:'#fab387'}},
+      {name:'HIPRAG',type:'scatter',data:[[1.49,7.85]],symbolSize:14,itemStyle:{color:'#f38ba8'}},
+      {name:'AutoSearch',type:'scatter',data:[[1.36,44.3]],symbolSize:20,
+       itemStyle:{color:'#a6e3a1'},
+       label:{show:true,formatter:'AutoSearch',color:'#a6e3a1',position:'right',fontSize:12}}
+    ],
+    grid:{left:70,right:80,bottom:50,top:70}
+  });
+});
+</script>
+</body>
+</html>

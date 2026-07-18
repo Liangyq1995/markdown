@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>训练全流程：Rollout · Reward · 参数更新 · TensorBoard 指标</title>
+<style>
+  :root {
+    --bg: #f8f9fb;
+    --surface: #ffffff;
+    --border: #e1e4e8;
+    --text: #24292e;
+    --text-secondary: #586069;
+    --code-bg: #f6f8fa;
+    --accent: #0366d6;
+    --green: #28a745;
+    --orange: #e36209;
+    --red: #d73a49;
+    --purple: #6f42c1;
+    --teal: #0e7490;
+    --yellow: #f59e0b;
+    --pink: #ec4899;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; font-size: 15px; }
+  html, body { width: 100%; }
+  .layout { display: flex; min-height: 100vh; width: 100%; }
+  .sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar h2 { font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--text-secondary); margin-bottom: 10px; }
+  .sidebar ol { list-style: decimal; padding-left: 16px; }
+  .sidebar li { margin-bottom: 5px; }
+  .sidebar a { font-size: .82rem; color: var(--text); text-decoration: none; line-height: 1.4; }
+  .sidebar a:hover { color: var(--accent); }
+  .main { flex: 1; min-width: 0; padding: 36px 40px; }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: var(--text-secondary); font-size: .95rem; margin-bottom: 40px; }
+
+  section { margin-bottom: 56px; }
+  h2 { font-size: 1.45rem; font-weight: 700; border-bottom: 2px solid var(--border); padding-bottom: 8px; margin-bottom: 20px; }
+  h3 { font-size: 1.08rem; font-weight: 600; margin: 28px 0 12px; color: #1a1a1a; }
+  h4 { font-size: .95rem; font-weight: 600; margin: 20px 0 8px; color: #333; }
+  p { margin-bottom: 12px; color: #444; }
+
+  code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-family: "SFMono-Regular", Consolas, monospace; font-size: .87em; }
+  pre { background: #1e2329; color: #e6edf3; border-radius: var(--radius); padding: 20px 24px; font-size: .84rem; overflow-x: auto; line-height: 1.7; margin: 14px 0; }
+  pre .cm   { color: #8b949e; }
+  pre .kw   { color: #ff7b72; }
+  pre .str  { color: #a5d6ff; }
+  pre .num  { color: #79c0ff; }
+  pre .fn   { color: #d2a8ff; }
+  pre .dec  { color: #ffa657; }
+
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 24px; font-size: .88rem; }
+  th { background: var(--code-bg); border: 1px solid var(--border); padding: 9px 14px; text-align: left; font-weight: 600; font-size: .82rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .04em; }
+  td { border: 1px solid var(--border); padding: 9px 14px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fbfcfd; }
+
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 20px; font-size: .74rem; font-weight: 600; }
+  .tag.green  { background: #d1fae5; color: #065f46; }
+  .tag.blue   { background: #dbeafe; color: #1e40af; }
+  .tag.red    { background: #fee2e2; color: #991b1b; }
+  .tag.orange { background: #ffedd5; color: #9a3412; }
+  .tag.purple { background: #ede9fe; color: #5b21b6; }
+  .tag.gray   { background: #f3f4f6; color: #374151; }
+  .tag.yellow { background: #fef3c7; color: #92400e; }
+
+  .flow-box { background: #1e2329; color: #e6edf3; border-radius: var(--radius); padding: 20px 24px; font-family: "SFMono-Regular", Consolas, monospace; font-size: .84rem; line-height: 1.9; margin: 14px 0; overflow-x: auto; white-space: pre; }
+  .flow-box .arrow { color: #58a6ff; }
+  .flow-box .label { color: #ffa657; font-weight: 600; }
+  .flow-box .file  { color: #a5d6ff; font-style: italic; }
+  .flow-box .dim   { color: #8b949e; }
+
+  .info-box { display: flex; gap: 14px; border-radius: var(--radius); padding: 14px 18px; margin: 16px 0; border-left: 4px solid; }
+  .info-box.blue   { background: #eff6ff; border-color: #3b82f6; }
+  .info-box.green  { background: #f0fdf4; border-color: #22c55e; }
+  .info-box.yellow { background: #fffbeb; border-color: #f59e0b; }
+  .info-box.red    { background: #fef2f2; border-color: #ef4444; }
+  .info-icon { font-size: 1.1rem; flex-shrink: 0; }
+  .info-box strong { display: block; margin-bottom: 4px; }
+
+  .metric-group { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+  .metric-group-header { background: var(--code-bg); padding: 10px 16px; font-weight: 700; font-size: .9rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .metric-group table { margin: 0; }
+  .metric-group th, .metric-group td { border-left: none; border-right: none; }
+  .metric-group tr:last-child td { border-bottom: none; }
+
+  .pill-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .pill { background: var(--code-bg); border: 1px solid var(--border); border-radius: 20px; padding: 3px 12px; font-family: monospace; font-size: .83rem; color: #333; }
+
+  .step-list { counter-reset: steps; list-style: none; padding: 0; }
+  .step-list li { counter-increment: steps; display: flex; gap: 16px; margin-bottom: 16px; }
+  .step-list li::before { content: counter(steps); background: var(--accent); color: #fff; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; font-size: .85rem; margin-top: 2px; }
+  .step-body { flex: 1; }
+  .step-body strong { display: block; font-size: .95rem; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+<!-- ─── 侧边栏 ─── -->
+<nav class="sidebar">
+  <h2>📋 目录</h2>
+  <ol>
+    <li><a href="#overview">总体架构</a></li>
+    <li><a href="#rollout">Rollout 流程</a></li>
+    <li><a href="#reward">Reward 计算</a></li>
+    <li><a href="#update">参数更新（GRPO + GSPO）</a></li>
+    <li><a href="#ppo-comparison">若换成 PPO 的流程差异</a></li>
+    <li><a href="#metrics-overview">TensorBoard 指标总览</a></li>
+    <li><a href="#critic-metrics">Critic 指标详解</a></li>
+    <li><a href="#actor-metrics">Actor 指标详解</a></li>
+    <li><a href="#reward-metrics">Reward 子分指标</a></li>
+    <li><a href="#agent-loop-metrics">Agent Loop 指标</a></li>
+    <li><a href="#timing-metrics">性能 &amp; 时间指标</a></li>
+  </ol>
+</nav>
+
+<!-- ─── 主体 ─── -->
+<div class="main">
+
+<h1>训练全流程技术文档</h1>
+<p class="subtitle">Rollout · Reward · 参数更新 · TensorBoard 指标 — 基于 Qwen3.5-35B-A3B 实际配置</p>
+
+<!-- ─── 0. 总体架构 ─── -->
+<section id="overview">
+  <h2>0. 总体架构</h2>
+
+  <div class="flow-box">
+<span class="dim">┌──────────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│                     Fully Async RL Training                          │</span>
+<span class="dim">│  Rollouter Node(s)                   Trainer Node(s)                 │</span>
+<span class="dim">│  ─────────────────                   ──────────────                  │</span>
+<span class="label">│  sglang async engine</span>  <span class="arrow">──batch──▶</span>  <span class="label">Megatron actor</span>                     │
+<span class="label">│  rl_factory_agent_loop</span> <span class="arrow">──batch──▶</span>  <span class="label">GRPO advantage</span>                    │
+<span class="label">│  HTTP tool calls</span>       <span class="arrow">──batch──▶</span>  <span class="label">GSPO actor update</span>                 │
+<span class="label">│  judge API reward</span>      <span class="arrow">──batch──▶</span>  <span class="label">weight sync back to rollouter</span>     │
+<span class="dim">└──────────────────────────────────────────────────────────────────────┘</span>
+
+<span class="dim">关键特性：</span>
+  adv_estimator = <span class="str">grpo</span>        <span class="dim"># 无 critic 模型，不需要价值函数</span>
+  loss_mode     = <span class="str">gspo</span>        <span class="dim"># 双边裁剪策略梯度</span>
+  rollout_mode  = <span class="str">async</span>       <span class="dim"># 异步多轮工具调用</span>
+  use_kl_in_reward = <span class="str">False</span>    <span class="dim"># KL 作为 loss term，不加入 reward</span>
+  use_kl_loss   = <span class="str">True</span>        <span class="dim"># kl_loss_coef = 0.02</span>
+  staleness_threshold = <span class="num">0.5</span>   <span class="dim"># 允许最多半版本参数延迟</span></div>
+
+  <div class="info-box blue">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      <strong>无 Critic 模型</strong>
+      本项目使用 GRPO（Group Relative Policy Optimization）而非 PPO，<strong>没有独立的 critic value network</strong>。
+      优势估计通过同一 prompt 的多个响应组内归一化得到，不需要 V(s) 估计。
+      TensorBoard 中 <code>critic/</code> 前缀的指标仅是代码命名惯例，指 score/reward/advantage 统计，并非 critic 模型输出。
+    </div>
+  </div>
+
+  <h3>训练步骤顺序</h3>
+  <div class="flow-box">
+<span class="fn">fit_step</span>():
+  <span class="num">1</span>. <span class="label">_fit_generate</span>         <span class="dim"># 从 rollouter queue 取 rollout batch</span>
+  <span class="num">2</span>. <span class="label">_fit_compute_reward</span>    <span class="dim"># 提取 reward_tensor（judge API 已在 rollout 阶段完成）</span>
+  <span class="num">3</span>. <span class="label">_fit_compute_log_prob</span>  <span class="dim"># 计算 old_log_probs（decoupled mode）</span>
+  <span class="num">4</span>. <span class="label">_fit_compute_ref_log_prob</span> <span class="dim"># ref policy log_probs（KL loss 用）</span>
+  <span class="num">5</span>. <span class="label">_fit_compute_critic</span>    <span class="dim"># GRPO 模式：空操作（use_critic=False）</span>
+  <span class="num">6</span>. <span class="label">_fit_compute_advantage</span> <span class="dim"># GRPO 组内归一化，得到 advantages &amp; returns</span>
+  <span class="num">7</span>. <span class="label">_fit_update_critic</span>     <span class="dim"># GRPO 模式：空操作（use_critic=False）</span>
+  <span class="num">8</span>. <span class="label">_fit_update_actor</span>      <span class="dim"># GSPO loss + KL loss → 梯度更新</span>
+  <span class="num">9</span>. <span class="label">_fit_update_weights</span>    <span class="dim"># trigger_parameter_sync_step=4 时同步到 rollouter</span>
+  <span class="num">10</span>. <span class="label">_fit_collect_metrics</span>   <span class="dim"># compute_data_metrics + compute_timing_metrics → TensorBoard</span></div>
+</section>
+
+<!-- ─── 1. Rollout ─── -->
+<section id="rollout">
+  <h2>1. Rollout 流程</h2>
+
+  <h3>1.1 数据加载</h3>
+  <div class="flow-box">
+<span class="file">data/train_template.parquet</span>
+  └─ <span class="label">prompt</span> 列：List[Dict]（system + user 两条消息）
+     system: 角色设定 + 工具 schema + <span class="str">{available_skills}</span> 占位符
+     user:   用户地址、时间上下文、实际查询
+  └─ <span class="label">extra_info</span> 列：{default_tool_kwargs: {lat, lng, userId, …}, reward_model: {ground_truth}}
+
+<span class="fn">RLHFDataset.__getitem__</span>()
+  → row_dict[<span class="str">"raw_prompt"</span>] = messages（直接取 prompt 列，不改文本内容）
+
+<span class="fn">rl_factory_agent_loop.run</span>()
+  → messages = list(kwargs[<span class="str">"raw_prompt"</span>])
+  <span class="dim"># {available_skills} 占位符替换</span>
+  → system.content.replace(<span class="str">"{available_skills}"</span>, SkillRegistry.build_available_skills_text())
+  <span class="dim"># 8 个 enabled_skills：coupon_finder, item-search, reservation-skill, …</span></div>
+
+  <h3>1.2 Agent Loop 状态机（多轮工具调用）</h3>
+
+  <div class="flow-box">
+<span class="label">PENDING</span>  <span class="arrow">──▶</span>  <span class="label">GENERATING</span>  <span class="arrow">──▶</span>  <span class="label">PROCESSING_TOOLS</span>  <span class="arrow">──▶</span>  <span class="label">TERMINATED</span>
+   ↑                                        │
+   └─────────────────────────────────────────┘
+              (max_turns = 6 轮循环)
+
+<span class="label">PENDING</span>
+  apply_chat_template(messages, tools=tool_schemas)
+  sglang 生成序列
+
+<span class="label">GENERATING</span>
+  FunctionCallParser 解析输出：
+    &lt;think&gt;…&lt;/think&gt;   → response_mask = 1（计入 loss）
+    &lt;tool_call&gt;…       → response_mask = 1（计入 loss）
+    &lt;answer&gt;…          → response_mask = 1，终止
+  参数类型校验（array/object）→ RolloutFormatError 不中断
+
+<span class="label">PROCESSING_TOOLS</span>
+  HTTPTool.call() → HTTP POST → 工具服务 http://10.195.94.19:8080
+  tool response token → response_mask = 0（不计入 loss）
+  空结果重试最多 3 次，超过追加 [[TOOL_EMPTY_EXHAUSTED]] 标记
+
+<span class="label">TERMINATED</span>
+  收集完整 token 序列 + response_mask + tool_call_counts 等</div>
+
+  <h3>1.3 response_mask 机制</h3>
+  <table>
+    <thead><tr><th>Token 类型</th><th>response_mask</th><th>计入梯度</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>LLM thinking token</td><td>1</td><td>✓</td><td>&lt;think&gt;内容</td></tr>
+      <tr><td>LLM tool_call token</td><td>1</td><td>✓</td><td>&lt;tool_call&gt;内容</td></tr>
+      <tr><td>LLM answer token</td><td>1</td><td>✓</td><td>&lt;answer&gt;内容</td></tr>
+      <tr><td>工具返回 token</td><td>0</td><td>✗</td><td>env.step() 返回内容注入</td></tr>
+      <tr><td>空结果重试 token</td><td>0</td><td>✗</td><td>[[TOOL_EMPTY_EXHAUSTED]]</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.4 异步 Rollout 特性</h3>
+  <table>
+    <thead><tr><th>参数</th><th>值</th><th>含义</th></tr></thead>
+    <tbody>
+      <tr><td><code>rollout_mode</code></td><td><code>async</code></td><td>rollouter 与 trainer 并行执行，不相互阻塞</td></tr>
+      <tr><td><code>staleness_threshold</code></td><td>0.5</td><td>rollout 数据允许最多落后当前参数版本 0.5 步</td></tr>
+      <tr><td><code>trigger_parameter_sync_step</code></td><td>4</td><td>每 4 次梯度步后同步一次权重到 rollouter</td></tr>
+      <tr><td><code>n_resp_per_prompt</code></td><td>8</td><td>每个 prompt 生成 8 个响应（GRPO 组大小）</td></tr>
+      <tr><td><code>max_turns</code></td><td>6</td><td>每个响应最多 6 轮工具调用</td></tr>
+      <tr><td><code>partial_rollout</code></td><td>True</td><td>允许部分 rollout 返回（不等待全部完成）</td></tr>
+      <tr><td><code>filter_groups_metric</code></td><td>response_filter</td><td>按 response_filter 指标过滤低质量组</td></tr>
+      <tr><td><code>max_num_gen_batches</code></td><td>10</td><td>每次最多采样 10 个批次用于过滤</td></tr>
+    </tbody>
+  </table>
+
+  <h3>1.5 工具配置（v2）</h3>
+  <div class="pill-list">
+    <span class="pill">load_skill</span>
+    <span class="pill">meituan_search_mix_v2</span>
+    <span class="pill">meituan_search_poi</span>
+    <span class="pill">content_search_plus_v2</span>
+    <span class="pill">id_detail_pro_v2</span>
+  </div>
+  <p>通过 <code>load_skill(skill_id="xxx")</code> 动态解锁技能工具，8 个 enabled skill 在系统 prompt 中以 <code>{available_skills}</code> 占位符列出。</p>
+</section>
+
+<!-- ─── 2. Reward ─── -->
+<section id="reward">
+  <h2>2. Reward 计算</h2>
+
+  <h3>2.1 Reward 流程概览</h3>
+  <div class="flow-box">
+<span class="label">rollout 结束后</span>（每条 trajectory 独立异步）
+
+  <span class="fn">compute_score_server</span>(solution_str, ground_truth, extra_info)
+  └─ 构造 reward_messages：完整多轮对话（含 tool_calls/tool 消息）
+  └─ HTTP POST → <span class="str">https://xiaotuan.hfe.test.sankuai.com/reward-server/v1/reward</span>
+     judge model: <span class="str">QWQ-32B-1</span>
+     reward_config_name: <span class="str">omni_0609</span>
+     max_retry: 3，retry_interval_base: 3s
+  └─ response_dict["reward"] → sub_scores, gate_results
+  └─ 返回 dict_score：{<span class="str">score</span>, <span class="str">rewardext_*</span>, <span class="str">error</span>, <span class="str">error_reason</span>}
+
+<span class="label">trainer 侧</span>
+  extract_reward(batch)
+  → reward_tensor: shape (bs, response_length)
+    只有最后一个 response token 位置有值，其余为 0
+  → reward_extra_infos_dict: {<span class="str">rewardext_*</span>}
+  → batch.batch[<span class="str">"token_level_scores"</span>] = reward_tensor</div>
+
+  <h3>2.2 奖励组成（omni_0609 config）</h3>
+  <table>
+    <thead><tr><th>字段</th><th>含义</th><th>来源</th></tr></thead>
+    <tbody>
+      <tr><td><code>score</code> (total)</td><td>总奖励分，作为训练信号</td><td><code>score_dict["total"]</code></td></tr>
+      <tr><td><code>rewardext_format_score</code></td><td>格式规范分</td><td><code>score_dict["format_score"]</code></td></tr>
+      <tr><td><code>rewardext_rule_score</code></td><td>规则分（加权格式子分）</td><td><code>sub_scores["format"]</code></td></tr>
+      <tr><td><code>rewardext_relevance</code></td><td>回答相关性</td><td><code>sub_scores["relevance"]</code></td></tr>
+      <tr><td><code>rewardext_top1_relevance</code></td><td>Top-1 结果相关性</td><td><code>sub_scores["final_response_top1_relevance"]</code></td></tr>
+      <tr><td><code>rewardext_final_response_quality</code></td><td>最终回答质量</td><td><code>sub_scores["final_response_quality"]</code></td></tr>
+      <tr><td><code>rewardext_tool_call_hallucination</code></td><td>工具调用幻觉率</td><td><code>sub_scores["tool_call_hallucination"]</code></td></tr>
+      <tr><td><code>rewardext_rejection_hallu</code></td><td>拒绝回答幻觉</td><td><code>sub_scores["response_rejection_hallucination"]</code></td></tr>
+      <tr><td><code>rewardext_fact_verification</code></td><td>事实核查得分</td><td><code>sub_scores["fact_verification"]</code></td></tr>
+      <tr><td><code>rewardext_search_acc_intent</code></td><td>搜索意图准确率</td><td><code>sub_scores["search_acc_intent"]</code></td></tr>
+      <tr><td><code>rewardext_safety</code></td><td>安全性得分</td><td><code>sub_scores["safety"]</code></td></tr>
+      <tr><td><code>rewardext_supply_insufficiency</code></td><td>信息供给不足</td><td><code>sub_scores["supply_information_insufficiency"]</code></td></tr>
+      <tr><td><code>rewardext_reflection_outdated</code></td><td>反思过时供给</td><td><code>sub_scores["reflection_outdated_supply"]</code></td></tr>
+      <tr><td><code>rewardext_supply_timeliness</code></td><td>供给时效性</td><td><code>sub_scores["supply_timeliness"]</code></td></tr>
+      <tr><td><code>rewardext_skill_rationality</code></td><td>技能选择合理性</td><td><code>sub_scores["skill_rationality"]</code></td></tr>
+      <tr><td><code>rewardext_cot_tokens</code></td><td>思维链 token 数</td><td><code>score_dict["cot_tokens"]</code></td></tr>
+      <tr><td><code>rewardext_cot_penalty</code></td><td>思维链过长惩罚</td><td><code>score_dict["cot_penalty"]</code></td></tr>
+    </tbody>
+  </table>
+
+  <h3>2.3 KL 惩罚配置</h3>
+  <div class="info-box yellow">
+    <span class="info-icon">⚠️</span>
+    <div>
+      <strong>KL 不加入 Reward，作为 Loss 项</strong>
+      <code>use_kl_in_reward=False</code>，所以 <code>token_level_rewards = token_level_scores</code>（不扣 KL）。
+      KL 散度通过 <code>use_kl_loss=True</code>（kl_loss_coef=0.02）加入 actor loss，在参数更新阶段约束策略漂移。
+    </div>
+  </div>
+</section>
+
+<!-- ─── 3. 参数更新 ─── -->
+<section id="update">
+  <h2>3. 参数更新（GRPO + GSPO）</h2>
+
+  <h3>3.1 优势估计：GRPO（无 Critic）</h3>
+  <div class="flow-box">
+<span class="dim"># 每个 prompt 采样 n=8 个响应，构成一个 group</span>
+scores = token_level_rewards.sum(dim=-1)  <span class="dim"># shape (bs,)</span>
+
+<span class="kw">for</span> prompt_idx in group:
+    group_mean = mean(scores[group])
+    group_std  = std(scores[group])
+    <span class="kw">if</span> norm_adv_by_std_in_grpo:
+        advantage_i = (score_i - group_mean) / (group_std + ε)  <span class="dim"># 标准 GRPO</span>
+    <span class="kw">else</span>:
+        advantage_i = score_i - group_mean                        <span class="dim"># Dr.GRPO</span>
+
+<span class="dim"># advantage 广播到 response_mask=1 的所有 token</span>
+advantages = advantage_i.unsqueeze(-1) * response_mask  <span class="dim"># shape (bs, seq_len)</span>
+returns = advantages  <span class="dim"># GRPO: returns == advantages（无 bootstrapped value）</span></div>
+
+  <div class="info-box green">
+    <span class="info-icon">✅</span>
+    <div>
+      <strong>GRPO 核心思想</strong>
+      高于组均值的响应获得正优势（被强化），低于均值的获得负优势（被抑制）。
+      不需要 critic 模型估计 V(s)，完全由 reward 信号驱动。
+      组内归一化天然控制了 reward scale，比 PPO 更稳定。
+    </div>
+  </div>
+
+  <h3>3.2 策略损失：GSPO（双边裁剪）</h3>
+  <div class="flow-box">
+<span class="dim"># loss_mode = "gspo"</span>
+<span class="dim"># clip_ratio_low = 0.2, clip_ratio_high = 0.28, clip_ratio_c = 10.0</span>
+
+ratio = exp(log_prob_new - log_prob_old)  <span class="dim"># 重要性权重 π_θ / π_old</span>
+
+<span class="dim"># GSPO：双边不对称裁剪</span>
+<span class="kw">if</span> advantage > 0:
+    clipped = clip(ratio, 1 - clip_ratio_low, 1 + clip_ratio_high)
+<span class="kw">else</span>:
+    clipped = clip(ratio, 1 - clip_ratio_high, 1 + clip_ratio_low)
+
+pg_loss = -min(ratio * adv, clipped * adv)  <span class="dim"># 取悲观估计</span>
+pg_loss = agg_loss(pg_loss, response_mask, loss_agg_mode=<span class="str">"seq-mean-token-mean"</span>)
+
+<span class="dim"># KL loss（约束策略与 ref policy 之间的散度）</span>
+kl_loss = kl_penalty(log_prob_new, ref_log_prob) * response_mask
+kl_loss = agg_loss(kl_loss, response_mask)
+
+total_loss = pg_loss + kl_loss_coef * kl_loss  <span class="dim"># kl_loss_coef = 0.02</span></div>
+
+  <h3>3.3 优化器配置</h3>
+  <table>
+    <thead><tr><th>参数</th><th>值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>optimizer</code></td><td>AdamW</td><td>标准 Adam + weight decay</td></tr>
+      <tr><td><code>lr</code></td><td>5e-7</td><td>学习率</td></tr>
+      <tr><td><code>lr_warmup_steps</code></td><td>10</td><td>warmup 步数</td></tr>
+      <tr><td><code>lr_decay_steps</code></td><td>7680 (total_rollout_steps)</td><td>cosine decay 总步数</td></tr>
+      <tr><td><code>weight_decay</code></td><td>0.1</td><td>权重衰减</td></tr>
+      <tr><td><code>clip_grad</code></td><td>1.0</td><td>梯度范数裁剪</td></tr>
+      <tr><td><code>ppo_mini_batch_size</code></td><td>16</td><td>每次梯度更新 mini-batch 大小</td></tr>
+      <tr><td><code>ppo_micro_batch_size_per_gpu</code></td><td>2</td><td>每 GPU micro-batch 大小</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.4 模型并行配置（Megatron）</h3>
+  <table>
+    <thead><tr><th>并行策略</th><th>值</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td>Tensor Parallel (TP)</td><td>8</td><td>每个 transformer 层水平切分</td></tr>
+      <tr><td>Pipeline Parallel (PP)</td><td>2</td><td>模型层垂直流水</td></tr>
+      <tr><td>Expert Parallel (EP)</td><td>8</td><td>MoE expert 分布</td></tr>
+      <tr><td>Context Parallel (CP)</td><td>1</td><td>序列并行（未启用）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3.5 MTP（Multi-Token Prediction）</h3>
+  <div class="info-box blue">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      <strong>MTP 加速 Rollout</strong>
+      启用 <code>mtp.enable=True</code>，训练侧同时启用 <code>mtp.enable_train=True</code>。
+      Rollout 侧使用 NEXTN speculative algorithm，<code>speculative_num_steps=3</code>，
+      每步 draft 4 个 token，理论上 rollout 速度提升约 2-3×。
+      MTP loss 系数：<code>mtp_loss_scaling_factor=0.1</code>。
+    </div>
+  </div>
+</section>
+
+<!-- ─── PPO 对比 ─── -->
+<section id="ppo-comparison">
+  <h2>3b. 若换成 PPO：当前项目的流程差异</h2>
+
+  <p>本节说明：若把 <code>adv_estimator=grpo</code> 改为 <code>adv_estimator=gae</code>，训练流程中哪些环节会发生变化。</p>
+
+  <h3>3b.1 fit_step 步骤对比</h3>
+  <table>
+    <thead><tr><th>步骤</th><th>当前（GRPO）</th><th>换成 PPO</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>_fit_compute_critic</code></td>
+        <td><span class="tag gray">空操作</span> use_critic=False</td>
+        <td><span class="tag green">实际运行</span> <code>critic_wg.compute_values(batch)</code><br>→ 对每个 response token 前向推理，得到 <code>V(s_t)</code></td>
+      </tr>
+      <tr>
+        <td><code>_fit_compute_advantage</code></td>
+        <td>GRPO 组内归一化<br>同一轨迹所有 token = 同一标量</td>
+        <td>GAE 逐 token 递推<br>每个 token 有独立的 <code>A_t</code></td>
+      </tr>
+      <tr>
+        <td><code>_fit_update_critic</code></td>
+        <td><span class="tag gray">空操作</span></td>
+        <td><span class="tag green">实际运行</span> <code>critic_wg.update_critic(batch)</code><br>→ 用 returns 训练价值网络</td>
+      </tr>
+      <tr>
+        <td><code>_fit_update_actor</code></td>
+        <td>GSPO loss + KL loss</td>
+        <td>PPO clip loss + KL loss（逻辑相同，数值不同）</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3b.2 GAE 优势计算（逐 token）</h3>
+  <p>代码入口：<code>compute_gae_advantage_return()</code>，<code>core_algos.py:215</code></p>
+
+  <div class="flow-box">
+<span class="dim"># Step 1：critic_wg.compute_values(batch)</span>
+<span class="dim"># critic 模型对每个 token 位置做前向推理，输出 V(s_t)</span>
+values: shape (bs, response_length)  <span class="dim"># 每个 response token 有独立 V(s_t)</span>
+values = values * response_mask       <span class="dim"># tool response token 位置置 0</span>
+
+<span class="dim"># Step 2：GAE 逆向递推（从最后一个 token 往前）</span>
+nextvalues = 0
+lastgaelam = 0
+<span class="kw">for</span> t in reversed(range(response_length)):
+    <span class="dim"># TD-error：当前 reward + 折扣下一步价值 - 当前价值</span>
+    delta = token_level_rewards[:, t] + gamma * nextvalues - values[:, t]
+
+    <span class="dim"># GAE 递推（指数加权 TD-error 序列）</span>
+    lastgaelam = delta + gamma * lam * lastgaelam
+
+    <span class="dim"># tool response token 不参与 GAE 递推（mask=0 保持上一步值）</span>
+    nextvalues = values[:, t] * response_mask[:, t] + (1 - response_mask[:, t]) * nextvalues
+    lastgaelam = lastgaelam * response_mask[:, t] + (1 - response_mask[:, t]) * lastgaelam
+
+advantages = stack(reversed(advantages_reversed))  <span class="dim"># shape (bs, response_length)</span>
+returns    = advantages + values                    <span class="dim"># critic 训练目标</span>
+advantages = masked_whiten(advantages, response_mask)  <span class="dim"># 全局白化归一化</span></div>
+
+  <div class="info-box blue">
+    <span class="info-icon">ℹ️</span>
+    <div>
+      <strong>GAE 与 GRPO 的核心区别</strong>
+      GAE 中 <code>A_t</code> 通过逐步 TD-error 加权得到，序列中<strong>每个 token 的 advantage 不同</strong>，前期 token 受后续多个 TD-error 影响。
+      gamma（折扣因子）和 lam（GAE λ）控制远近 reward 的权重。
+      GRPO 中没有这两个概念——它直接把 outcome reward 标量广播给整条轨迹。
+    </div>
+  </div>
+
+  <h3>3b.3 Critic 更新（Value Function Training）</h3>
+  <div class="flow-box">
+<span class="dim"># critic_wg.update_critic(batch)  →  dp_critic.update_critic()  →  core_algos.compute_value_loss()</span>
+
+<span class="kw">for</span> epoch in ppo_epochs:
+    <span class="kw">for</span> mini_batch in mini_batches:
+        vpreds = critic_model.forward(input_ids)   <span class="dim"># 重新前向推理得到当前 V(s_t)</span>
+
+        <span class="dim"># value loss with clipping（防止 critic 更新过猛）</span>
+        vpred_clipped = clip(vpreds, values - cliprange_value, values + cliprange_value)
+        vf_loss1 = (vpreds        - returns) ** 2  <span class="dim"># 原始 MSE</span>
+        vf_loss2 = (vpred_clipped - returns) ** 2  <span class="dim"># 裁剪后 MSE</span>
+        vf_loss  = 0.5 * mean(max(vf_loss1, vf_loss2), response_mask)  <span class="dim"># 取悲观估计</span>
+
+        <span class="dim"># 记录指标（会写入 TensorBoard）</span>
+        metrics[<span class="str">"critic/vf_loss"</span>]     += vf_loss
+        metrics[<span class="str">"critic/vf_clipfrac"</span>] = fraction(vf_loss2 &gt; vf_loss1)
+        metrics[<span class="str">"critic/vpred_mean"</span>]  = masked_mean(vpreds, response_mask)
+
+        vf_loss.backward()
+        grad_norm = clip_grad_norm_(critic_params, max_norm=grad_clip)
+        metrics[<span class="str">"critic/grad_norm"</span>]   = grad_norm</div>
+
+  <h3>3b.4 PPO 模式下新增的 TensorBoard Critic 指标</h3>
+  <p>以下指标在 GRPO 模式下<strong>不输出</strong>，切换到 PPO (<code>adv_estimator=gae</code>) 后才会出现：</p>
+  <table>
+    <thead><tr><th>指标名</th><th>来源</th><th>含义及解读</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>critic/values/mean</code><br><code>critic/values/max</code><br><code>critic/values/min</code></td>
+        <td><code>compute_data_metrics()</code><br>batch["values"]</td>
+        <td>critic 网络预测的状态价值 V(s_t) 的统计。<br>正常训练时 mean 应与 returns/mean 接近；若偏差大说明 critic 欠拟合</td>
+      </tr>
+      <tr>
+        <td><code>critic/vf_explained_var</code></td>
+        <td><code>compute_data_metrics()</code><br>1 - Var(returns-values) / Var(returns)</td>
+        <td>价值函数解释方差。越接近 1 说明 critic 预测越准，越接近 0 甚至负数说明 critic 几乎无用。是 PPO 训练质量的核心指标</td>
+      </tr>
+      <tr>
+        <td><code>critic/vf_loss</code></td>
+        <td><code>dp_critic.update_critic()</code><br>core_algos.py:2082</td>
+        <td>Critic value loss（裁剪后 MSE）。期望稳步下降；若不降说明 critic 学不动，会导致 advantage 估计失准</td>
+      </tr>
+      <tr>
+        <td><code>critic/vf_clipfrac</code></td>
+        <td><code>dp_critic.update_critic()</code></td>
+        <td>value prediction 被裁剪的比例（类比 actor 的 pg_clipfrac）。过高说明 critic 更新步长太大或 cliprange_value 太小</td>
+      </tr>
+      <tr>
+        <td><code>critic/vpred_mean</code></td>
+        <td><code>dp_critic.update_critic()</code></td>
+        <td>critic 预测的平均价值。可与 critic/returns/mean 对比；两者接近说明 critic 收敛良好</td>
+      </tr>
+      <tr>
+        <td><code>critic/grad_norm</code></td>
+        <td><code>dp_critic._optimizer_step()</code></td>
+        <td>critic 梯度范数。过大说明 critic 学习不稳定；受 grad_clip 约束</td>
+      </tr>
+      <tr>
+        <td><code>critic/lr</code></td>
+        <td><code>fsdp_workers.py:1685</code></td>
+        <td>critic 当前学习率（独立于 actor lr scheduler）</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>3b.5 GAE 参数配置（需在 yaml 中补充）</h3>
+  <table>
+    <thead><tr><th>配置项</th><th>作用</th><th>典型值</th></tr></thead>
+    <tbody>
+      <tr><td><code>algorithm.adv_estimator</code></td><td>切换为 GAE</td><td><code>gae</code></td></tr>
+      <tr><td><code>algorithm.gamma</code></td><td>折扣因子，控制远期 reward 权重</td><td>1.0（无折扣，episode 级任务常用）</td></tr>
+      <tr><td><code>algorithm.lam</code></td><td>GAE λ，控制 bias-variance tradeoff</td><td>0.95（lam=1 退化为 MC，lam=0 退化为 TD(0)）</td></tr>
+      <tr><td><code>critic.optim.lr</code></td><td>critic 学习率</td><td>1e-5 ~ 1e-6</td></tr>
+      <tr><td><code>critic.cliprange_value</code></td><td>value clipping 范围</td><td>0.5</td></tr>
+      <tr><td><code>critic.ppo_epochs</code></td><td>critic 每批数据更新轮数</td><td>1</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box yellow">
+    <span class="info-icon">⚠️</span>
+    <div>
+      <strong>PPO 的额外资源开销</strong>
+      PPO 需要额外维护一个 critic 模型（通常与 actor 同尺寸或更小），
+      每步需要额外进行 critic forward（compute_values）和 critic backward（update_critic）。
+      对于 Qwen3.5-35B-A3B 这样的大模型，critic 会显著增加显存和计算量。
+      这是 GRPO 相比 PPO 的核心优势之一——无需 critic，训练资源减半。
+    </div>
+  </div>
+</section>
+
+<!-- ─── 4. 指标总览 ─── -->
+<section id="metrics-overview">
+  <h2>4. TensorBoard 指标总览</h2>
+
+  <p>指标通过 <code>self.logger.log(data=metrics, step=self.global_steps)</code> 写入 TensorBoard，
+  每个训练步（global_step）记录一次。写入点在 <code>_fit_postprocess_step()</code> 中。</p>
+
+  <table>
+    <thead><tr><th>前缀</th><th>指标数量</th><th>来源</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>critic/</code></td>
+        <td>12 个</td>
+        <td><code>metric_utils.compute_data_metrics()</code></td>
+        <td>奖励、优势、回报统计（GRPO 无 value，无 vf_* 指标）</td>
+      </tr>
+      <tr>
+        <td><code>actor/</code></td>
+        <td>6 个</td>
+        <td><code>dp_actor.update_policy()</code> + <code>fsdp_workers</code></td>
+        <td>策略损失、KL loss、梯度、学习率</td>
+      </tr>
+      <tr>
+        <td><code>reward_extra/</code></td>
+        <td>~16 个</td>
+        <td><code>agent_loop_metrics()</code> ← <code>rewardext_*</code></td>
+        <td>judge API 各子分</td>
+      </tr>
+      <tr>
+        <td><code>error/</code></td>
+        <td>N+1 个</td>
+        <td><code>agent_loop_metrics()</code></td>
+        <td>工具调用错误率</td>
+      </tr>
+      <tr>
+        <td><code>tool_stats/</code></td>
+        <td>3×工具数</td>
+        <td><code>agent_loop_metrics()</code></td>
+        <td>每个工具的调用次数和失败率</td>
+      </tr>
+      <tr>
+        <td><code>response_length/</code></td>
+        <td>~20 个</td>
+        <td><code>agent_loop_metrics()</code> + <code>compute_data_metrics()</code></td>
+        <td>多轮 rollout/tool/think 长度统计</td>
+      </tr>
+      <tr>
+        <td><code>timing_s/</code></td>
+        <td>~8 个</td>
+        <td><code>compute_timing_metrics()</code></td>
+        <td>各阶段耗时（秒）</td>
+      </tr>
+      <tr>
+        <td><code>timing_per_token_ms/</code></td>
+        <td>~5 个</td>
+        <td><code>compute_timing_metrics()</code></td>
+        <td>每 token 耗时（毫秒）</td>
+      </tr>
+      <tr>
+        <td><code>perf/</code></td>
+        <td>~5 个</td>
+        <td><code>fsdp_workers</code> + <code>compute_throughout_metrics()</code></td>
+        <td>MFU、显存、吞吐量</td>
+      </tr>
+      <tr>
+        <td><code>fully_async/</code></td>
+        <td>2 个</td>
+        <td><code>_collect_metrics_from_samples()</code></td>
+        <td>异步训练特有：stale 轨迹数、参数版本</td>
+      </tr>
+      <tr>
+        <td><code>training/</code></td>
+        <td>2 个</td>
+        <td><code>fit_step()</code> 初始化</td>
+        <td>global_step、epoch</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── 5. Critic 指标 ─── -->
+<section id="critic-metrics">
+  <h2>5. Critic 指标详解</h2>
+
+  <div class="info-box red">
+    <span class="info-icon">⚠️</span>
+    <div>
+      <strong>重要：本项目无 Critic 模型（GRPO 算法）</strong>
+      <code>critic/</code> 前缀是 verl 框架的统一命名惯例，并非指 critic 网络的输出。
+      本项目 <code>use_critic=False</code>，以下带 <span class="tag red">无 Critic 不输出</span> 标记的指标不会出现在 TensorBoard 中。
+    </div>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag blue">compute_data_metrics()</span>
+      奖励分（Reward Score）— <code>metric_utils.py:81</code>
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th><th>计算方式</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>critic/score/mean</code></td>
+          <td>batch 内序列奖励均值</td>
+          <td><code>token_level_scores.sum(-1)</code>（排除 aborted 样本）的均值</td>
+        </tr>
+        <tr>
+          <td><code>critic/score/max</code></td>
+          <td>batch 内最高序列奖励</td>
+          <td>同上，max</td>
+        </tr>
+        <tr>
+          <td><code>critic/score/min</code></td>
+          <td>batch 内最低序列奖励</td>
+          <td>同上，min</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag blue">compute_data_metrics()</span>
+      Token 级奖励（Token-Level Rewards）
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>critic/rewards/mean</code></td>
+          <td>序列奖励均值</td>
+          <td>本项目 <code>use_kl_in_reward=False</code>，所以 rewards == scores（相同数值）</td>
+        </tr>
+        <tr>
+          <td><code>critic/rewards/max</code></td>
+          <td>序列奖励最大值</td>
+          <td>同上</td>
+        </tr>
+        <tr>
+          <td><code>critic/rewards/min</code></td>
+          <td>序列奖励最小值</td>
+          <td>同上；若 use_kl_in_reward=True 则 rewards &lt; scores（扣了 KL 惩罚）</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag blue">compute_data_metrics()</span>
+      优势（Advantages）— GRPO 组内归一化结果
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>critic/advantages/mean</code></td>
+          <td>有效 token 位置的优势均值</td>
+          <td>GRPO 归一化后，理论上接近 0（组内均值被减去）</td>
+        </tr>
+        <tr>
+          <td><code>critic/advantages/max</code></td>
+          <td>最大优势值</td>
+          <td>正值 = 高于组均值的响应</td>
+        </tr>
+        <tr>
+          <td><code>critic/advantages/min</code></td>
+          <td>最小优势值</td>
+          <td>负值 = 低于组均值的响应，绝对值越大学习信号越强</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag blue">compute_data_metrics()</span>
+      回报（Returns）— GRPO 中与 advantages 相同
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>critic/returns/mean</code></td>
+          <td>回报均值</td>
+          <td>GRPO 中 returns = advantages（无 bootstrapped value function）</td>
+        </tr>
+        <tr>
+          <td><code>critic/returns/max</code></td>
+          <td>回报最大值</td>
+          <td>与 advantages/max 相同</td>
+        </tr>
+        <tr>
+          <td><code>critic/returns/min</code></td>
+          <td>回报最小值</td>
+          <td>与 advantages/min 相同</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag red">无 Critic 不输出</span>
+      以下指标仅在 use_critic=True（PPO）时出现
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>PPO 中的含义</th><th>本项目状态</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>critic/values/mean|max|min</code></td>
+          <td>critic 网络输出的状态价值估计</td>
+          <td><span class="tag gray">不输出</span> — GRPO 无 critic</td>
+        </tr>
+        <tr>
+          <td><code>critic/vf_explained_var</code></td>
+          <td>价值函数解释方差：1 - Var(returns - values) / Var(returns)</td>
+          <td><span class="tag gray">不输出</span> — 越接近 1 说明 critic 预测越准</td>
+        </tr>
+        <tr>
+          <td><code>critic/vf_loss</code></td>
+          <td>critic 价值函数 loss（PPO value clip loss）</td>
+          <td><span class="tag gray">不输出</span></td>
+        </tr>
+        <tr>
+          <td><code>critic/vf_clipfrac</code></td>
+          <td>value prediction 被裁剪的比例</td>
+          <td><span class="tag gray">不输出</span></td>
+        </tr>
+        <tr>
+          <td><code>critic/vpred_mean</code></td>
+          <td>critic 网络预测的平均价值</td>
+          <td><span class="tag gray">不输出</span></td>
+        </tr>
+        <tr>
+          <td><code>critic/grad_norm</code></td>
+          <td>critic 优化器梯度范数</td>
+          <td><span class="tag gray">不输出</span></td>
+        </tr>
+        <tr>
+          <td><code>critic/lr</code></td>
+          <td>critic 学习率</td>
+          <td><span class="tag gray">不输出</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Critic 指标如何解读（实际输出的 12 个）</h3>
+  <table>
+    <thead><tr><th>问题</th><th>看哪个指标</th><th>期望趋势</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>模型总体效果是否在提升？</td>
+        <td><code>critic/score/mean</code></td>
+        <td>稳步上升（奖励增加）</td>
+      </tr>
+      <tr>
+        <td>模型是否在区分好坏响应？</td>
+        <td><code>critic/advantages/max - critic/advantages/min</code></td>
+        <td>差值适中；过小说明组内无差异（学习信号弱）</td>
+      </tr>
+      <tr>
+        <td>KL 惩罚是否有效（use_kl_in_reward=True 场景）？</td>
+        <td><code>critic/rewards vs critic/score</code></td>
+        <td>本项目两者相同；若开 KL，rewards 应低于 score</td>
+      </tr>
+      <tr>
+        <td>训练是否稳定，没有 reward hacking？</td>
+        <td><code>critic/score/max</code></td>
+        <td>不应出现爆炸式增长</td>
+      </tr>
+      <tr>
+        <td>响应长度是否合理？</td>
+        <td><code>response_length/*</code> + <code>critic/score/mean</code></td>
+        <td>CoT 长度增加不应带来 score 等比例增加</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── 6. Actor 指标 ─── -->
+<section id="actor-metrics">
+  <h2>6. Actor 指标详解</h2>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag purple">dp_actor.update_policy()</span>
+      策略损失 — <code>dp_actor.py:553</code>
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th><th>期望趋势</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>actor/pg_loss</code></td>
+          <td>GSPO 策略梯度损失（含裁剪）</td>
+          <td>前期下降，趋于平稳；突然升高可能是 reward 信号异常</td>
+        </tr>
+        <tr>
+          <td><code>actor/kl_loss</code></td>
+          <td>KL 散度损失（新策略 vs ref policy）</td>
+          <td>保持较低水平（kl_loss_coef=0.02 约束）；若持续升高说明策略偏移过快</td>
+        </tr>
+        <tr>
+          <td><code>actor/entropy</code></td>
+          <td>策略熵（输出的多样性）</td>
+          <td>不应过快下降（收敛过早），保持一定探索能力</td>
+        </tr>
+        <tr>
+          <td><code>actor/kl_coef</code></td>
+          <td>KL loss 系数（固定 0.02）</td>
+          <td>固定值，监测配置是否生效</td>
+        </tr>
+        <tr>
+          <td><code>actor/grad_norm</code></td>
+          <td>梯度范数（裁剪前）</td>
+          <td>正常 &lt; 1.0（clip_grad=1.0）；若长期 &gt; 1.0 说明频繁裁剪</td>
+        </tr>
+        <tr>
+          <td><code>actor/lr</code></td>
+          <td>当前学习率</td>
+          <td>warmup→peak（5e-7）→ cosine decay</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag purple">_fit_compute_log_prob()</span>
+      KL 惩罚（若 use_kl_in_reward=True 时额外输出）
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th><th>本项目状态</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>actor/reward_kl_penalty</code></td>
+          <td>每步平均 KL 散度（用于 reward 惩罚）</td>
+          <td><span class="tag gray">不输出</span> — use_kl_in_reward=False</td>
+        </tr>
+        <tr>
+          <td><code>actor/reward_kl_penalty_coeff</code></td>
+          <td>自适应 KL 系数 β</td>
+          <td><span class="tag gray">不输出</span> — use_kl_in_reward=False</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── 7. Reward 子分 ─── -->
+<section id="reward-metrics">
+  <h2>7. Reward 子分指标</h2>
+  <p>所有 <code>rewardext_*</code> 字段从 <code>non_tensor_batch</code> 提取，
+  在 <code>agent_loop_metrics()</code> 中取非 NaN 均值写入 TensorBoard，
+  前缀变为 <code>reward_extra/</code>。</p>
+
+  <table>
+    <thead><tr><th>TensorBoard 指标</th><th>对应 rewardext 字段</th><th>含义</th></tr></thead>
+    <tbody>
+      <tr><td><code>reward_extra/format_score</code></td><td><code>rewardext_format_score</code></td><td>输出格式规范得分</td></tr>
+      <tr><td><code>reward_extra/rule_score</code></td><td><code>rewardext_rule_score</code></td><td>规则遵从得分</td></tr>
+      <tr><td><code>reward_extra/relevance</code></td><td><code>rewardext_relevance</code></td><td>回答与用户意图的相关性</td></tr>
+      <tr><td><code>reward_extra/top1_relevance</code></td><td><code>rewardext_top1_relevance</code></td><td>Top-1 搜索结果相关性</td></tr>
+      <tr><td><code>reward_extra/final_response_quality</code></td><td><code>rewardext_final_response_quality</code></td><td>最终回答综合质量</td></tr>
+      <tr><td><code>reward_extra/tool_call_hallucination</code></td><td><code>rewardext_tool_call_hallucination</code></td><td>工具调用幻觉（0=无幻觉，越低越好）</td></tr>
+      <tr><td><code>reward_extra/rejection_hallu</code></td><td><code>rewardext_rejection_hallu</code></td><td>拒绝回答中的幻觉</td></tr>
+      <tr><td><code>reward_extra/fact_verification</code></td><td><code>rewardext_fact_verification</code></td><td>事实核查通过率</td></tr>
+      <tr><td><code>reward_extra/search_acc_intent</code></td><td><code>rewardext_search_acc_intent</code></td><td>搜索意图识别准确率</td></tr>
+      <tr><td><code>reward_extra/safety</code></td><td><code>rewardext_safety</code></td><td>安全性得分</td></tr>
+      <tr><td><code>reward_extra/supply_insufficiency</code></td><td><code>rewardext_supply_insufficiency</code></td><td>信息供给不足惩罚</td></tr>
+      <tr><td><code>reward_extra/reflection_outdated</code></td><td><code>rewardext_reflection_outdated</code></td><td>反思过时信息惩罚</td></tr>
+      <tr><td><code>reward_extra/supply_timeliness</code></td><td><code>rewardext_supply_timeliness</code></td><td>信息时效性得分</td></tr>
+      <tr><td><code>reward_extra/skill_rationality</code></td><td><code>rewardext_skill_rationality</code></td><td>技能选择合理性</td></tr>
+      <tr><td><code>reward_extra/cot_tokens</code></td><td><code>rewardext_cot_tokens</code></td><td>思维链平均 token 数</td></tr>
+      <tr><td><code>reward_extra/cot_penalty</code></td><td><code>rewardext_cot_penalty</code></td><td>思维链过长惩罚</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── 8. Agent Loop 指标 ─── -->
+<section id="agent-loop-metrics">
+  <h2>8. Agent Loop 指标</h2>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag orange">agent_loop_metrics()</span>
+      错误率统计 — <code>agent_loop.py:143</code>
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>error/error_rate</code></td><td>全部错误类型占比（1 - Success 率）</td></tr>
+        <tr><td><code>error/RewardCallFail_rate</code></td><td>reward 服务调用失败率</td></tr>
+        <tr><td><code>error/ToolCallFail_rate</code></td><td>工具调用失败率</td></tr>
+        <tr><td><code>error/MaxTurnExceed_rate</code></td><td>超过 max_turns 而终止率</td></tr>
+        <tr><td><code>error/{err.name}_rate</code></td><td>各 AgentError 类型错误率</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag orange">agent_loop_metrics()</span>
+      工具调用统计 — <code>agent_loop.py:182</code>
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>tool_stats/{tool}/total_calls</code></td><td>该工具在 batch 中被调用总次数</td></tr>
+        <tr><td><code>tool_stats/{tool}/calls_per_sample</code></td><td>平均每个样本调用该工具次数</td></tr>
+        <tr><td><code>tool_stats/{tool}/fail_rate</code></td><td>该工具调用失败比例</td></tr>
+      </tbody>
+    </table>
+    <p style="padding: 8px 16px; font-size: .85rem; color: #666;">
+      tool 名称来自实际调用的工具：meituan_search_mix_v2、meituan_search_poi、content_search_plus_v2、id_detail_pro_v2、load_skill 等
+    </p>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag orange">agent_loop_metrics()</span>
+      响应长度统计（多轮分解）
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>response_length/rollout_lengths_single_turn/{mean|max|min}</code></td><td>单轮 LLM 生成长度（不含工具响应）</td></tr>
+        <tr><td><code>response_length/rollout_lengths_multi_turns/{mean|max|min}</code></td><td>多轮 LLM 生成总长度</td></tr>
+        <tr><td><code>response_length/tool_lengths_single_turn/{mean|max|min}</code></td><td>单轮工具响应 token 数</td></tr>
+        <tr><td><code>response_length/tool_lengths_multi_turns/{mean|max|min}</code></td><td>多轮工具响应总 token 数</td></tr>
+        <tr><td><code>response_length/think_length_single_turn/{mean|max|min}</code></td><td>单轮 &lt;think&gt; 内容长度</td></tr>
+        <tr><td><code>response_length/think_length_multi_turns/{mean|max|min}</code></td><td>多轮 think 总长度</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag blue">compute_data_metrics()</span>
+      序列长度统计
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>response_length/{mean|max|min|clip_ratio}</code></td><td>padding 后 response 总长度；clip_ratio 为被截断样本比例</td></tr>
+        <tr><td><code>response_length_non_aborted/{mean|max|min|clip_ratio}</code></td><td>排除 response_length=0 的 aborted 样本后统计</td></tr>
+        <tr><td><code>response/aborted_ratio</code></td><td>response_length=0 的样本占比</td></tr>
+        <tr><td><code>prompt_length/{mean|max|min|clip_ratio}</code></td><td>prompt 长度统计</td></tr>
+        <tr><td><code>num_turns/{mean|max|min}</code></td><td>每个样本实际对话轮数</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ─── 9. 时间指标 ─── -->
+<section id="timing-metrics">
+  <h2>9. 性能 &amp; 时间指标</h2>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag teal" style="background:#ccfbf1;color:#115e59;">compute_timing_metrics()</span>
+      各阶段耗时
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th><th>token 归一化分母</th></tr></thead>
+      <tbody>
+        <tr><td><code>timing_s/gen</code></td><td>Rollout 生成耗时（秒）</td><td>response tokens</td></tr>
+        <tr><td><code>timing_s/ref</code></td><td>ref policy 推理耗时</td><td>all tokens</td></tr>
+        <tr><td><code>timing_s/values</code></td><td>critic value 计算耗时</td><td>all tokens（本项目为 0）</td></tr>
+        <tr><td><code>timing_s/adv</code></td><td>advantage 计算耗时</td><td>all tokens</td></tr>
+        <tr><td><code>timing_s/update_critic</code></td><td>critic 更新耗时</td><td>all tokens（本项目为 0）</td></tr>
+        <tr><td><code>timing_s/update_actor</code></td><td>actor 参数更新耗时</td><td>all tokens</td></tr>
+        <tr><td><code>timing_s/step</code></td><td>整个 fit_step 总耗时</td><td>—</td></tr>
+        <tr><td><code>timing_s/param_sync</code></td><td>权重同步到 rollouter 耗时</td><td>—</td></tr>
+        <tr><td><code>timing_per_token_ms/{name}</code></td><td>对应阶段每 token 耗时（毫秒）</td><td>同上</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag teal" style="background:#ccfbf1;color:#115e59;">fsdp_workers + compute_throughout_metrics()</span>
+      性能指标
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>perf/total_num_tokens</code></td><td>本步处理的总 token 数</td></tr>
+        <tr><td><code>perf/time_per_step</code></td><td>每步平均耗时</td></tr>
+        <tr><td><code>perf/mfu/actor</code></td><td>actor 训练阶段模型算力利用率（Model FLOPs Utilization）</td></tr>
+        <tr><td><code>perf/max_memory_allocated_gb</code></td><td>训练侧 GPU 峰值显存（已分配，GB）</td></tr>
+        <tr><td><code>perf/max_memory_reserved_gb</code></td><td>训练侧 GPU 峰值显存（已预留，GB）</td></tr>
+        <tr><td><code>perf/cpu_memory_used_gb</code></td><td>CPU 内存使用量（GB）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="metric-group">
+    <div class="metric-group-header">
+      <span class="tag yellow">fully_async 专有指标</span>
+    </div>
+    <table>
+      <thead><tr><th>指标名</th><th>含义</th></tr></thead>
+      <tbody>
+        <tr><td><code>fully_async/count/stale_trajectory_processed</code></td><td>本步处理的 stale（过期）轨迹数量</td></tr>
+        <tr><td><code>fully_async/count/current_param_version</code></td><td>当前 rollouter 使用的参数版本号</td></tr>
+        <tr><td><code>training/global_step</code></td><td>全局训练步数</td></tr>
+        <tr><td><code>training/epoch</code></td><td>当前 epoch</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>指标来源追溯（调用链）</h3>
+  <div class="flow-box">
+<span class="dim">TensorBoard 写入点</span>
+  <span class="fn">_fit_postprocess_step</span>()                    <span class="file">ray_trainer.py:760</span>
+    self.logger.log(data=<span class="label">metrics</span>, step=global_steps)
+
+<span class="dim">metrics 的组成来源：</span>
+  <span class="label">critic/* 指标</span>  ← <span class="fn">compute_data_metrics</span>(batch)        <span class="file">metric_utils.py:81</span>
+  <span class="label">actor/* 指标</span>  ← <span class="fn">update_actor</span>() → meta_info[<span class="str">"metrics"</span>]   <span class="file">dp_actor.py:509</span>
+                 ← <span class="fn">update_actor</span>() → lr, perf/mfu    <span class="file">fsdp_workers.py:1018</span>
+  <span class="label">reward_extra/*</span> ← <span class="fn">agent_loop_metrics</span>(batch)           <span class="file">agent_loop.py:133</span>
+  <span class="label">error/*</span>        ← <span class="fn">agent_loop_metrics</span>(batch)           <span class="file">agent_loop.py:143</span>
+  <span class="label">tool_stats/*</span>   ← <span class="fn">agent_loop_metrics</span>(batch)           <span class="file">agent_loop.py:182</span>
+  <span class="label">response_length/*</span> ← <span class="fn">agent_loop_metrics</span>() + <span class="fn">compute_data_metrics</span>()
+  <span class="label">timing_s/*</span>     ← <span class="fn">compute_timing_metrics</span>(batch, timing_raw) <span class="file">metric_utils.py:222</span>
+  <span class="label">perf/*</span>         ← <span class="fn">compute_throughout_metrics</span>()         <span class="file">metric_utils.py:264</span>
+  <span class="label">fully_async/*</span>  ← <span class="fn">_collect_metrics_from_samples</span>(batch)  <span class="file">fully_async_trainer.py</span>
+  <span class="label">kl_metrics</span>    ← <span class="fn">apply_kl_penalty</span>()（use_kl_in_reward=True 时）</div>
+</section>
+
+</div><!-- /main -->
+</div><!-- /layout -->
+
+<div style="text-align:center; color: #8b949e; font-size: .8rem; padding: 24px;">
+  生成于 2026-07-01 · 基于 verl/experimental/fully_async_policy/ + rlfactory_35b_16-16_sh_reward_server_http.sh 实际配置
+</div>
+
+</body>
+</html>

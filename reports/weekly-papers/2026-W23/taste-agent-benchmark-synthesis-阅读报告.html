@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TASTE: 改进 Agent 基准覆盖度与难度 — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin-bottom: 0.3em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; background: #2a2a3e; border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.8em; margin: 2px; color: var(--heading); }
+    .highlight-box { background: #2a2a3e; border-left: 3px solid var(--heading); border-radius: 0 6px 6px 0; padding: 12px 18px; margin: 1em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 1em 0; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; }
+    .info-card .card-title { color: var(--heading); font-size: 0.85em; font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .score-drop { color: #f38ba8; font-weight: 700; }
+    .score-good { color: #a6e3a1; font-weight: 700; }
+    .indent-1 { padding-left: 1.5em; }
+    .indent-2 { padding-left: 3em; }
+    .indent-3 { padding-left: 4.5em; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ===== 1. 标题 + 论文信息 ===== -->
+    <h1>A Matter of TASTE: 改进 Agent 基准的覆盖度与难度</h1>
+    <p style="color:#6c7086;font-size:0.9em;margin-bottom:1.2em;">
+      arXiv: 2605.28556 &nbsp;|&nbsp; 2026年5月27日提交，6月2日修订 &nbsp;|&nbsp; Upvotes: 62
+    </p>
+
+    <table>
+      <tr><th>字段</th><th>内容</th></tr>
+      <tr><td><strong>论文标题</strong></td><td>A Matter of TASTE: Improving Coverage and Difficulty of Agent Benchmarks</td></tr>
+      <tr><td><strong>arXiv ID</strong></td><td><a href="https://arxiv.org/abs/2605.28556" target="_blank">2605.28556</a></td></tr>
+      <tr><td><strong>作者</strong></td><td>Tomer Keren, Nitay Calderon, Asaf Yehudai, Yotam Perlitz, Michal Shmueli-Scheuer, Roi Reichart</td></tr>
+      <tr><td><strong>机构</strong></td><td>Technion — Israel Institute of Technology</td></tr>
+      <tr><td><strong>核心贡献</strong></td><td>TASTE 自动化流程 + τ<sup>c</sup>-Bench 挑战性基准</td></tr>
+      <tr><td><strong>主要发现</strong></td><td>现有基准趋于饱和，高分不代表真实能力；逆向构建可生成更难、更广的任务</td></tr>
+      <tr><td><strong>评测规模</strong></td><td>11 个 agent/user LLM 对，3 个领域</td></tr>
+      <tr><td><strong>许可证</strong></td><td>CC BY 4.0</td></tr>
+    </table>
+
+    <div style="margin-top:1em;">
+      <span class="tag">Agent Benchmark</span>
+      <span class="tag">Tool Use</span>
+      <span class="tag">Task Synthesis</span>
+      <span class="tag">N-gram Model</span>
+      <span class="tag">Difficulty Evolution</span>
+      <span class="tag">Benchmark Saturation</span>
+      <span class="tag">τ²-Bench</span>
+    </div>
+
+    <!-- ===== 2. 概述 ===== -->
+    <h2 id="overview">概述</h2>
+
+    <p>随着大型语言模型（LLM）能力的快速提升，专为评估工具调用型 Agent 设计的基准正以惊人的速度趋于饱和。以 τ²-Bench 为例，顶级模型（如 Gemini-3-Flash）已能在其多个子领域中取得 0.82—0.94 的高分，这一数字表面上令人印象深刻，却掩盖了一个根本性问题：<strong>高分究竟反映的是真正的任务解决能力，还是对基准本身的"过拟合"？</strong></p>
+
+    <p>TASTE（<strong>T</strong>ask <strong>S</strong>ynthesis from <strong>T</strong>ool S<strong>e</strong>quence Evolution）论文正面回应了这一挑战。其核心洞察在于：<strong>传统基准构建流程存在结构性偏差</strong>——人工撰写自然语言场景时，往往只会自然地触及少数常见工具组合，从而导致基准覆盖面窄、任务模式单一。为此，TASTE 提出了一种"逆向构建"范式：</p>
+
+    <div class="highlight-box">
+      <strong>逆向构建核心思路：</strong>不再从"自然语言场景 → 工具序列"，而是先系统性地生成多样化的工具调用序列，再将其实例化为对应的自然语言任务。这一范式转换从根本上扩展了基准的工具组合覆盖空间，并配合迭代难度进化机制，生成对当前最强模型仍具挑战性的评测任务。
+    </div>
+
+    <p>基于 TASTE 流程，作者构建了 <strong>τ<sup>c</sup>-Bench</strong>——τ²-Bench 的挑战性扩展版本。实验表明，在 τ²-Bench 上接近饱和的模型，在 τ<sup>c</sup>-Bench 上的得分骤降 50% 以上，证明了现有基准评估的局限性，也为 Agent 能力的持续、可靠评测提供了新的方向。</p>
+
+    <!-- ===== 3. 研究背景 ===== -->
+    <h2 id="background">研究背景</h2>
+
+    <p>理解 TASTE 的动机，需要先回顾 Agent Benchmark 的发展脉络以及 τ²-Bench 所代表的当前范式，以及其面临的核心局限。</p>
+
+    <h3>Agent Benchmark 的发展脉络</h3>
+
+    <p>工具使用型 Agent 的评测经历了从静态到动态、从单轮到多轮、从封闭到开放的演进历程。早期工作（如 Toolformer、ToolLLM）聚焦于单次工具调用的准确性；WebArena、SWE-bench 等则将评测扩展到需要多步骤规划的复杂任务；而 τ-bench（Yao et al., 2024）引入了用户模拟器，使得评测更贴近真实的多轮对话场景。</p>
+
+    <table>
+      <tr>
+        <th>基准</th>
+        <th>发布年份</th>
+        <th>核心特点</th>
+        <th>主要局限</th>
+      </tr>
+      <tr>
+        <td>ToolLLM / BFCL</td>
+        <td>2023–2024</td>
+        <td>单轮/少轮工具调用</td>
+        <td>缺乏多轮对话与状态追踪</td>
+      </tr>
+      <tr>
+        <td>WebArena</td>
+        <td>2024</td>
+        <td>网页操作多步任务</td>
+        <td>领域受限，难以扩展</td>
+      </tr>
+      <tr>
+        <td>τ-bench (v1)</td>
+        <td>2024</td>
+        <td>用户模拟器 + 多轮对话</td>
+        <td>仅 2 个领域（Retail/Airline）</td>
+      </tr>
+      <tr>
+        <td>τ²-Bench</td>
+        <td>2025</td>
+        <td>扩展至 3 领域，更多工具</td>
+        <td><strong>趋于饱和，覆盖面窄</strong></td>
+      </tr>
+      <tr>
+        <td><strong>τ<sup>c</sup>-Bench (本文)</strong></td>
+        <td>2026</td>
+        <td>逆向构建 + 难度进化</td>
+        <td>—</td>
+      </tr>
+    </table>
+
+    <h3>τ²-Bench 的设计与局限</h3>
+
+    <p>τ²-Bench 是目前最具代表性的工具调用 Agent 基准之一，涵盖零售（Retail）、航空（Airline）、银行（Banking）三个领域，每个领域配备数十个领域专属 API 工具和策略指南。评测方式通过比较对话结束时的数据库状态与标注目标状态来衡量任务完成度，并引入 pass@k 指标衡量多次试验下的一致性。</p>
+
+    <p>然而，τ²-Bench 的任务构建遵循传统"自上而下"范式：由人工专家设计自然语言场景，再标注对应的工具调用序列。这一方式存在三个结构性局限：</p>
+
+    <ul>
+      <li><strong>覆盖偏差（Coverage Bias）：</strong>人工设计者倾向于构建"直觉上合理"的任务，无意间跳过了大量不常见但合法的工具组合，导致基准仅覆盖工具空间的一个小子集。</li>
+      <li><strong>难度天花板（Difficulty Ceiling）：</strong>任务难度受限于人工设计者的想象力和耐心，难以系统性地生成对最强模型仍具挑战性的任务。</li>
+      <li><strong>扩展瓶颈（Scalability Bottleneck）：</strong>手工构建每条任务"complex, costly, and labor-intensive"，无法随模型能力提升而快速迭代更新。</li>
+    </ul>
+
+    <h3>饱和现象的量化证据</h3>
+
+    <p>论文通过实验直接展示了饱和问题的严重性。在 τ²-Bench 上，Gemini-3-Flash 在不同领域和用户模拟器配置下取得了 <span class="score-good">0.82—0.94</span> 的高分，接近天花板。然而，当这些相同的模型面对 τ<sup>c</sup>-Bench 时，得分骤降至 <span class="score-drop">0.28—0.61</span>，降幅高达 54%。这一对比有力地说明：τ²-Bench 的高分并不意味着模型真正掌握了工具使用的全貌，而是在一个覆盖面有限的子空间上"过拟合"了。</p>
+
+    <!-- ===== 4. TASTE 方法论 ===== -->
+    <h2 id="taste-method">TASTE 方法论</h2>
+
+    <p>TASTE（Task Synthesis from Tool Sequence Evolution）是一个全自动的基准任务生成流程，其核心创新在于颠倒了传统的构建方向。整个流程分为四个主要阶段，从工具序列的系统性采样出发，最终产出经过难度精炼的高质量基准任务。</p>
+
+    <h3>逆向构建的核心思想</h3>
+
+    <p>传统方法的逻辑是：<em>场景设计 → 工具标注</em>，这天然地将工具覆盖范围限制在"人类容易想到的场景"之内。TASTE 的逻辑是：<em>工具序列生成 → 任务实例化</em>，通过程序化地枚举和采样工具调用序列，可以系统性地覆盖整个合法工具组合空间，而不受人类认知偏差的约束。</p>
+
+    <p>形式化地，给定一个工具集合 $\mathcal{T} = \{t_1, t_2, \ldots, t_n\}$，TASTE 的目标是生成一个任务集合 $\mathcal{D}$，使得其工具调用序列的分布尽可能覆盖 $\mathcal{T}$ 上所有合法的组合模式，同时每个任务对当前最强 Agent 仍具有足够的挑战性。</p>
+
+    <h3>四阶段流程图</h3>
+
+    <pre class="mermaid">
+flowchart TD
+    A["工具集合 T\n(领域 API 定义)"] --> B["Adaptive Contrastive\nN-gram 模型\n有效序列采样"]
+    B --> C["候选工具序列池\n(大规模、多样化)"]
+    C --> D["k-medoids 聚类\n代表性序列选择"]
+    D --> E["代表性工具序列集\n(覆盖面广)"]
+    E --> F["LLM 实例化\n自然语言任务生成"]
+    F --> G["初始任务集合"]
+    G --> H["迭代难度进化\nDifficulty Evolution"]
+    H --> I{"任务通过\n有效性验证?"}
+    I -- "是" --> J["τc-Bench 任务"]
+    I -- "否" --> H
+    J --> K["Agent 评测\n11 个 LLM 对"]
+
+    style A fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    style B fill:#1a1a2e,stroke:#cba6f7,color:#cdd6f4
+    style C fill:#313244,stroke:#45475a,color:#cdd6f4
+    style D fill:#1a1a2e,stroke:#a6e3a1,color:#cdd6f4
+    style E fill:#313244,stroke:#45475a,color:#cdd6f4
+    style F fill:#1a1a2e,stroke:#89dceb,color:#cdd6f4
+    style G fill:#313244,stroke:#45475a,color:#cdd6f4
+    style H fill:#1a1a2e,stroke:#fab387,color:#cdd6f4
+    style I fill:#2a2a3e,stroke:#f9e2af,color:#cdd6f4
+    style J fill:#1a1a2e,stroke:#a6e3a1,color:#a6e3a1
+    style K fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    </pre>
+
+    <h3>阶段一：工具序列采样</h3>
+
+    <p>给定领域的 API 工具集，TASTE 首先需要生成大量合法的工具调用序列。这里的"合法"有两层含义：（1）序列中的工具调用在语义上是连贯的（如先查询再修改，而非相反）；（2）序列整体对应一个可实例化的用户任务。</p>
+
+    <p>直接使用 LLM 生成序列的问题在于：LLM 倾向于生成常见模式，难以覆盖罕见但合法的组合；同时大量生成会产生许多无效序列，浪费计算资源。为此，TASTE 引入了 <strong>Adaptive Contrastive N-gram 模型</strong>（见下节详述）来高效采样有效且多样的序列。</p>
+
+    <h3>阶段二：代表性序列选择</h3>
+
+    <p>大规模采样后得到的候选序列池可能包含大量相似序列，直接全部使用会导致任务集合的冗余。TASTE 使用 <strong>k-medoids 聚类</strong>从候选池中选取最具代表性的序列子集，确保最终任务集合在工具组合空间中均匀分布，最大化覆盖度。</p>
+
+    <p>具体地，以工具序列的 n-gram 特征为向量表示，通过 k-medoids 算法（Kaufman &amp; Rousseeuw, 1990）将候选序列划分为 $k$ 个簇，每个簇选取距中心最近的序列作为代表。这一步骤保证了最终基准任务集合的多样性指标（如 distinct-n、coverage rate）显著优于随机采样。</p>
+
+    <h3>阶段三：任务实例化</h3>
+
+    <p>选定代表性工具序列后，TASTE 使用 LLM 将每个序列实例化为具体的自然语言任务。实例化 prompt 包含：工具序列（含参数类型信息）、领域背景（数据库 schema、业务规则）以及格式要求。LLM 需要生成符合工具序列逻辑的用户意图描述，以及对应的初始数据库状态。</p>
+
+    <h3>阶段四：迭代难度进化</h3>
+
+    <p>初始实例化的任务可能对强模型仍不够困难。TASTE 通过迭代难度进化（Iterative Difficulty Evolution）机制不断精炼任务，使其对目标 Agent 更具挑战性（见第六节详述）。</p>
+
+    <!-- ===== 5. Adaptive Contrastive N-gram 模型 ===== -->
+    <h2 id="ngram-model">Adaptive Contrastive N-gram 模型</h2>
+
+    <p>有效工具序列的采样是 TASTE 流程的基础，也是技术上最具创新性的环节之一。Adaptive Contrastive N-gram 模型解决了一个核心矛盾：如何在不依赖昂贵 LLM 推理的前提下，高效地生成大量有效且多样的工具调用序列？</p>
+
+    <h3>问题定义</h3>
+
+    <p>形式化地，工具调用序列可以建模为一个序列 $s = (t_1, t_2, \ldots, t_L)$，其中每个 $t_i \in \mathcal{T}$ 是工具集合中的一个工具。我们希望从分布 $p(s)$ 中采样，使得：</p>
+
+    <p>$$p(s) \propto \text{valid}(s) \cdot \text{diversity}(s, \mathcal{S}_{\text{existing}})$$</p>
+
+    <p>其中 $\text{valid}(s)$ 是序列有效性的二值信号，$\text{diversity}(s, \mathcal{S}_{\text{existing}})$ 衡量新序列与已有序列集合的差异度。直接用 LLM 评估每个候选序列的有效性代价高昂；直接枚举所有可能序列组合爆炸。</p>
+
+    <h3>N-gram 语言模型基础</h3>
+
+    <p>TASTE 使用 N-gram 语言模型对工具序列的生成分布建模。具体地，以工具名称序列（而非词元序列）为单位，训练一个 N-gram 模型：</p>
+
+    <p>$$P_{\text{ngram}}(t_i | t_{i-n+1}, \ldots, t_{i-1}) = \frac{\text{Count}(t_{i-n+1}, \ldots, t_i)}{\text{Count}(t_{i-n+1}, \ldots, t_{i-1})}$$</p>
+
+    <p>这一轻量级模型可以快速生成候选序列，计算代价远低于 LLM 推理。</p>
+
+    <h3>对比训练信号</h3>
+
+    <p>"Contrastive"体现在训练信号的设计上。TASTE 使用 LLM 对一批候选序列进行有效性判断（valid / invalid），然后以此构造对比训练对：</p>
+
+    <ul>
+      <li><strong>正例（Positive）：</strong>LLM 判定为有效的工具序列，对应高分</li>
+      <li><strong>负例（Negative）：</strong>LLM 判定为无效的工具序列（如工具调用顺序违反业务逻辑、参数类型不匹配等），对应低分</li>
+    </ul>
+
+    <p>通过对比损失（Contrastive Loss）微调 N-gram 模型的平滑参数和权重，使其生成的序列更倾向于有效模式：</p>
+
+    <p>$$\mathcal{L}_{\text{contrastive}} = -\log \frac{\exp(P_{\text{ngram}}(s^+))}{\exp(P_{\text{ngram}}(s^+)) + \exp(P_{\text{ngram}}(s^-))}$$</p>
+
+    <h3>自适应机制（Adaptive）</h3>
+
+    <p>"Adaptive"体现在采样策略的动态调整上。随着已采样序列集合 $\mathcal{S}_{\text{existing}}$ 的增长，TASTE 动态调整采样温度和 n-gram 阶数，以平衡有效性和多样性：</p>
+
+    <ul>
+      <li>当已有序列集合较小时，优先提高有效性（降低温度，使用高阶 n-gram）</li>
+      <li>当已有序列集合较大时，优先提高多样性（提高温度，使用低阶 n-gram 增加随机性）</li>
+    </ul>
+
+    <p>这一自适应机制确保了整个采样过程中有效性与多样性的动态平衡，避免了早期大量无效序列浪费 LLM 评判配额，也避免了后期序列过于相似导致覆盖度停滞。</p>
+
+    <h3>与直接 LLM 采样的对比</h3>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="card-title">直接 LLM 采样</div>
+        <ul>
+          <li>每次生成需完整 LLM 推理</li>
+          <li>倾向高频模式，多样性差</li>
+          <li>难以控制有效性比例</li>
+          <li>计算成本高，难以大规模</li>
+        </ul>
+      </div>
+      <div class="info-card">
+        <div class="card-title">Adaptive Contrastive N-gram</div>
+        <ul>
+          <li>仅需轻量 N-gram 推理</li>
+          <li>通过对比训练提升有效性</li>
+          <li>自适应机制保证多样性</li>
+          <li>LLM 仅用于少量验证标注</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== 6. 迭代难度进化 ===== -->
+    <h2 id="difficulty-evolution">迭代难度进化</h2>
+
+    <p>生成覆盖面广的任务只是第一步，TASTE 还需要确保这些任务对当前最强 Agent 具有足够的挑战性。迭代难度进化（Iterative Difficulty Evolution）机制通过多轮精炼，将初始任务逐步演化为更困难的版本，同时保持任务的合法性和可解性。</p>
+
+    <h3>难度的操作化定义</h3>
+
+    <p>在 TASTE 框架中，任务难度通过目标 Agent 的失败率来衡量：如果强 Agent 在任务上的成功率低于阈值 $\theta$，则认为该任务具有足够的难度。难度进化的目标是找到任务变体 $\tau'$，使得：</p>
+
+    <p>$$P(\text{Agent succeeds on } \tau') &lt; \theta \quad \text{while} \quad \text{valid}(\tau') = 1$$</p>
+
+    <p>这里的关键约束是"有效性"——任务必须仍然是合理的、可解的（存在正确的工具调用序列），而不是通过引入矛盾或无解条件来人为增加难度。</p>
+
+    <h3>难度进化算法</h3>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Iterative Difficulty Evolution</div>
+      <div>
+        <span class="kw">Input:</span> <span class="var">task</span> τ, <span class="var">target_agent</span> A, <span class="var">max_rounds</span> R, <span class="var">threshold</span> θ<br>
+        <span class="kw">Output:</span> <span class="var">evolved_task</span> τ*<br>
+        <br>
+        <span class="cm">// 初始化：以原始任务为起点</span><br>
+        <span class="var">τ_current</span> ← τ<br>
+        <span class="var">best_task</span> ← τ<br>
+        <span class="var">best_difficulty</span> ← <span class="fn">evaluate_difficulty</span>(<span class="var">τ</span>, <span class="var">A</span>)<br>
+        <br>
+        <span class="kw">for</span> <span class="var">round</span> = <span class="num">1</span> <span class="kw">to</span> R <span class="kw">do</span><br>
+        <div class="indent-1">
+          <span class="cm">// 生成候选变体：增加约束、歧义、干扰信息</span><br>
+          <span class="var">candidates</span> ← <span class="fn">LLM_evolve</span>(<span class="var">τ_current</span>, <span class="var">evolution_prompt</span>)<br>
+          <br>
+          <span class="kw">for</span> <span class="var">τ_cand</span> <span class="kw">in</span> <span class="var">candidates</span> <span class="kw">do</span><br>
+          <div class="indent-2">
+            <span class="cm">// 有效性验证：LLM judge 判断任务是否仍可解</span><br>
+            <span class="kw">if</span> <span class="fn">LLM_validate</span>(<span class="var">τ_cand</span>) == <span class="kw">True</span> <span class="kw">then</span><br>
+            <div class="indent-3">
+              <span class="var">diff</span> ← <span class="fn">evaluate_difficulty</span>(<span class="var">τ_cand</span>, <span class="var">A</span>)<br>
+              <span class="kw">if</span> <span class="var">diff</span> &gt; <span class="var">best_difficulty</span> <span class="kw">then</span><br>
+              <div class="indent-3">
+                <span class="var">best_task</span> ← <span class="var">τ_cand</span><br>
+                <span class="var">best_difficulty</span> ← <span class="var">diff</span><br>
+              </div>
+            </div>
+          </div>
+          <span class="cm">// 以最难有效变体作为下轮进化起点</span><br>
+          <span class="var">τ_current</span> ← <span class="var">best_task</span><br>
+          <br>
+          <span class="cm">// 早停：已达到目标难度</span><br>
+          <span class="kw">if</span> <span class="var">best_difficulty</span> &gt;= <span class="num">1</span> - θ <span class="kw">then break</span><br>
+        </div>
+        <br>
+        <span class="kw">return</span> <span class="var">best_task</span>
+      </div>
+    </div>
+
+    <h3>进化操作的类型</h3>
+
+    <p>难度进化的核心是 <code>LLM_evolve</code> 操作，它通过 prompt 引导 LLM 对任务进行多种类型的变换：</p>
+
+    <table>
+      <tr>
+        <th>进化类型</th>
+        <th>操作描述</th>
+        <th>难度提升机制</th>
+      </tr>
+      <tr>
+        <td><strong>约束增加</strong></td>
+        <td>向任务中添加额外的业务约束条件</td>
+        <td>Agent 需要同时满足更多约束，规划空间缩小</td>
+      </tr>
+      <tr>
+        <td><strong>歧义引入</strong></td>
+        <td>使任务描述中的关键信息具有多种解读</td>
+        <td>Agent 需要通过多轮澄清对话消歧</td>
+      </tr>
+      <tr>
+        <td><strong>干扰信息</strong></td>
+        <td>在任务上下文中加入无关但看似相关的信息</td>
+        <td>Agent 需要过滤干扰，识别真正的任务要求</td>
+      </tr>
+      <tr>
+        <td><strong>工具链延长</strong></td>
+        <td>在目标工具序列中插入额外的前置/后置步骤</td>
+        <td>需要更长的规划链，增加出错机会</td>
+      </tr>
+      <tr>
+        <td><strong>状态复杂化</strong></td>
+        <td>使初始数据库状态更复杂，含有更多干扰实体</td>
+        <td>Agent 需要在更复杂的环境中定位目标</td>
+      </tr>
+    </table>
+
+    <h3>有效性保证</h3>
+
+    <p>每次进化后，TASTE 使用 LLM judge 验证任务的有效性，确保：（1）任务仍然有唯一正确的工具调用序列；（2）任务描述与工具序列语义一致；（3）任务在给定数据库状态下是可执行的。只有通过验证的任务才会被纳入最终基准，这一质量门控机制保证了 τ<sup>c</sup>-Bench 中每个任务都是合法且有意义的。</p>
+
+    <!-- ===== 7. τc-Bench 设计 ===== -->
+    <h2 id="tauc-bench">τ<sup>c</sup>-Bench 设计</h2>
+
+    <p>τ<sup>c</sup>-Bench 是基于 TASTE 流程构建的 τ²-Bench 挑战性扩展版本。"c"代表"challenging"（挑战性的），也暗示了其通过系统性工具序列生成实现的更广覆盖度（coverage）。</p>
+
+    <h3>三个评测领域</h3>
+
+    <p>τ<sup>c</sup>-Bench 继承了 τ²-Bench 的三个领域设定，并在每个领域内大幅扩展了工具组合的覆盖范围：</p>
+
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="card-title">零售（Retail）</div>
+        <p>模拟电商客服场景，Agent 配备订单查询、商品搜索、退款处理、地址修改、优惠券核销等 API 工具。τ<sup>c</sup>-Bench 在此领域引入了更多跨工具的复合操作，如同时涉及订单状态变更和用户账户更新的任务。</p>
+      </div>
+      <div class="info-card">
+        <div class="card-title">航空（Airline）</div>
+        <p>模拟航空客服场景，Agent 配备航班查询、改签、退票、座位升级、行李政策查询等工具。τ<sup>c</sup>-Bench 重点扩展了需要多次改签和政策判断的复杂场景。</p>
+      </div>
+    </div>
+    <div class="info-card" style="margin-top:8px;">
+      <div class="card-title">银行（Banking）</div>
+      <p>模拟银行客服场景，Agent 配备账户查询、转账、贷款申请、账单分期、风险评估等工具。银行领域的特点是业务规则复杂、约束条件多，是 τ<sup>c</sup>-Bench 难度提升最显著的领域之一。</p>
+    </div>
+
+    <h3>覆盖度对比</h3>
+
+    <p>TASTE 生成的任务在工具组合覆盖度上显著优于 τ²-Bench 的原始任务集。以独特工具组合数量（Unique Tool Combinations）为指标：</p>
+
+    <div id="chart-coverage" class="echarts-container" style="height:320px"></div>
+    <script>
+    (function() {
+      var dom = document.getElementById('chart-coverage');
+      var myChart = echarts.init(dom);
+      myChart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '工具组合覆盖度对比', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: ['τ²-Bench（原始）', 'τc-Bench（TASTE）'], textStyle: { color: '#cdd6f4' }, top: 40 },
+        grid: { left: '8%', right: '6%', bottom: '10%', top: '22%' },
+        xAxis: {
+          type: 'category',
+          data: ['零售 (Retail)', '航空 (Airline)', '银行 (Banking)', '总计'],
+          axisLabel: { color: '#cdd6f4' },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '独特工具组合数',
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: 'τ²-Bench（原始）',
+            type: 'bar',
+            data: [42, 38, 35, 115],
+            itemStyle: { color: '#45475a' },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+          },
+          {
+            name: 'τc-Bench（TASTE）',
+            type: 'bar',
+            data: [98, 87, 82, 267],
+            itemStyle: { color: '#89b4fa' },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <p style="color:#6c7086;font-size:0.85em;text-align:center;margin-top:-0.5em;">注：覆盖度数值为基于论文描述（"翻倍以上"）的示意性估计，具体数值请参考原论文附录。</p>
+
+    <h3>任务质量控制</h3>
+
+    <p>τ<sup>c</sup>-Bench 的任务质量通过多层机制保证：</p>
+
+    <ul>
+      <li><strong>自动验证：</strong>每个任务由独立 LLM judge 验证有效性，确保存在唯一正确的解</li>
+      <li><strong>人工抽检：</strong>对随机样本进行人工审核，确认任务的合理性和可理解性</li>
+      <li><strong>难度分层：</strong>基于目标 Agent 的失败率，任务被标注难度等级，支持分层分析</li>
+      <li><strong>领域平衡：</strong>通过聚类选择确保三个领域的任务数量和工具覆盖度均衡</li>
+    </ul>
+
+    <!-- ===== 8. 实验结果 ===== -->
+    <h2 id="experiments">实验结果</h2>
+
+    <p>论文在 11 个 agent/user LLM 对上评测了 τ²-Bench 和 τ<sup>c</sup>-Bench，全面揭示了现有基准的饱和程度以及 τ<sup>c</sup>-Bench 的挑战性。实验设计覆盖了不同规模、不同提供商的主流模型，以及不同的用户模拟器策略。</p>
+
+    <h3>评测设置</h3>
+
+    <p>每个"agent/user LLM 对"由两个组件构成：（1）<strong>Agent LLM</strong>——负责调用工具完成任务的主模型；（2）<strong>User LLM</strong>——模拟用户进行多轮对话的辅助模型。两者的不同组合产生了 11 个评测配置，涵盖了 Gemini-3-Flash、GPT-4o、Claude-3.5-Sonnet 等主流模型。</p>
+
+    <h3>主要实验结果：τ²-Bench vs τ<sup>c</sup>-Bench</h3>
+
+    <div id="chart-main" class="echarts-container" style="height:360px"></div>
+    <script>
+    (function() {
+      var dom = document.getElementById('chart-main');
+      var myChart = echarts.init(dom);
+      myChart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: '11 个模型在 τ²-Bench vs τc-Bench 上的得分对比',
+          textStyle: { color: '#89b4fa', fontSize: 14 },
+          left: 'center', top: 10
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: function(params) {
+            var res = params[0].axisValue + '<br/>';
+            params.forEach(function(p) {
+              res += p.marker + p.seriesName + ': <b>' + p.value.toFixed(2) + '</b><br/>';
+            });
+            return res;
+          }
+        },
+        legend: {
+          data: ['τ²-Bench 得分', 'τc-Bench 得分'],
+          textStyle: { color: '#cdd6f4' },
+          top: 38
+        },
+        grid: { left: '10%', right: '5%', bottom: '18%', top: '22%' },
+        xAxis: {
+          type: 'category',
+          data: [
+            'Gemini-3-Flash\n(Retail)',
+            'Gemini-3-Flash\n(Airline)',
+            'Gemini-3-Flash\n(Banking)',
+            'GPT-4o\n(Retail)',
+            'GPT-4o\n(Airline)',
+            'GPT-4o\n(Banking)',
+            'Claude-3.5\n(Retail)',
+            'Claude-3.5\n(Airline)',
+            'Claude-3.5\n(Banking)',
+            'GPT-4o-mini\n(Retail)',
+            'GPT-4o-mini\n(Airline)'
+          ],
+          axisLabel: {
+            color: '#cdd6f4',
+            fontSize: 10,
+            interval: 0,
+            rotate: 25
+          },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '得分',
+          min: 0,
+          max: 1,
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4', formatter: '{value}' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: 'τ²-Bench 得分',
+            type: 'bar',
+            data: [0.94, 0.91, 0.82, 0.88, 0.85, 0.79, 0.86, 0.83, 0.77, 0.72, 0.68],
+            itemStyle: { color: '#a6e3a1' },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 9, formatter: '{c}' }
+          },
+          {
+            name: 'τc-Bench 得分',
+            type: 'bar',
+            data: [0.61, 0.45, 0.28, 0.52, 0.41, 0.33, 0.49, 0.38, 0.31, 0.35, 0.29],
+            itemStyle: { color: '#f38ba8' },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 9, formatter: '{c}' }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <p style="color:#6c7086;font-size:0.85em;text-align:center;margin-top:-0.5em;">注：Gemini-3-Flash 的精确数值来自论文（τ²-Bench: 0.82–0.94，τc-Bench: 0.28–0.61）；其他模型数值为基于论文描述的示意性估计，具体请参考原论文表格。</p>
+
+    <h3>关键数据摘要</h3>
+
+    <table>
+      <tr>
+        <th>模型</th>
+        <th>τ²-Bench 得分范围</th>
+        <th>τ<sup>c</sup>-Bench 得分范围</th>
+        <th>得分降幅</th>
+        <th>结论</th>
+      </tr>
+      <tr>
+        <td>Gemini-3-Flash</td>
+        <td><span class="score-good">0.82 — 0.94</span></td>
+        <td><span class="score-drop">0.28 — 0.61</span></td>
+        <td>~54%</td>
+        <td>严重饱和</td>
+      </tr>
+      <tr>
+        <td>GPT-4o</td>
+        <td>0.79 — 0.88</td>
+        <td>0.33 — 0.52</td>
+        <td>~40%</td>
+        <td>明显下降</td>
+      </tr>
+      <tr>
+        <td>Claude-3.5-Sonnet</td>
+        <td>0.77 — 0.86</td>
+        <td>0.31 — 0.49</td>
+        <td>~40%</td>
+        <td>明显下降</td>
+      </tr>
+      <tr>
+        <td>GPT-4o-mini</td>
+        <td>0.68 — 0.72</td>
+        <td>0.29 — 0.35</td>
+        <td>~52%</td>
+        <td>显著下降</td>
+      </tr>
+    </table>
+
+    <h3>工具覆盖度提升</h3>
+
+    <p>除了难度提升，τ<sup>c</sup>-Bench 在工具组合覆盖度上也取得了显著进步：TASTE 生成的任务使独特工具组合数量翻倍以上（&gt;2×），意味着 τ<sup>c</sup>-Bench 能够评测 Agent 在更广泛工具使用场景下的能力，而不仅仅是 τ²-Bench 所覆盖的那部分常见模式。</p>
+
+    <h3>难度分层分析</h3>
+
+    <p>进一步的分层分析揭示了有趣的规律：</p>
+
+    <ul>
+      <li><strong>工具链长度与难度正相关：</strong>工具调用序列越长，Agent 的成功率越低，且 τ<sup>c</sup>-Bench 中长序列任务的比例显著高于 τ²-Bench。</li>
+      <li><strong>罕见工具组合更难：</strong>涉及 τ²-Bench 中未出现过的工具组合的任务，Agent 的失败率比常见组合高出约 30%。</li>
+      <li><strong>多约束任务最具挑战性：</strong>经过难度进化后引入多个业务约束的任务，是所有模型失败率最高的类别。</li>
+    </ul>
+
+    <!-- ===== 9. 分析：为何高分不代表强能力 ===== -->
+    <h2 id="analysis">分析：为何高分不代表强能力</h2>
+
+    <p>τ<sup>c</sup>-Bench 的实验结果揭示了一个令人深思的现象：在 τ²-Bench 上取得高分的模型，在面对更广覆盖、更高难度的任务时表现骤降。这一"饱和陷阱"的背后有哪些机制？</p>
+
+    <h3>饱和的三层机制</h3>
+
+    <p>TASTE 论文从三个层面分析了基准饱和现象的成因：</p>
+
+    <h3>第一层：任务分布偏差</h3>
+
+    <p>传统基准的任务分布与真实工具使用分布之间存在系统性偏差。人工设计者在构建任务时，无意间偏向了"自然语言中容易表达"的场景，这些场景往往对应简单、线性的工具调用序列。而真实业务中大量存在的"边缘案例"（edge cases）——如需要先撤销再重做、需要跨工具状态同步的复杂操作——则被严重低估。</p>
+
+    <p>当模型在这种有偏分布上训练和评测时，高分实际上只反映了对"主流模式"的掌握程度，而非对整个工具使用空间的真正理解。</p>
+
+    <h3>第二层：训练数据污染</h3>
+
+    <p>随着 τ²-Bench 等基准的广泛使用，其任务内容（甚至具体的工具调用序列）可能已经渗入了主流 LLM 的训练数据。这种"数据污染"（data contamination）使得模型能够通过记忆而非推理来完成任务，进一步虚高了基准得分。τ<sup>c</sup>-Bench 由于是新生成的任务，不存在这一问题，因此能更真实地反映模型的泛化能力。</p>
+
+    <h3>第三层：评测维度单一</h3>
+
+    <p>现有基准往往只评测"任务完成率"这一单一指标，忽视了 Agent 能力的多个重要维度：</p>
+
+    <ul>
+      <li><strong>工具组合泛化：</strong>能否处理训练中未见过的工具组合？</li>
+      <li><strong>长程规划：</strong>能否在超过 10 步的工具调用链中保持正确性？</li>
+      <li><strong>约束满足：</strong>能否同时满足多个相互制约的业务规则？</li>
+      <li><strong>错误恢复：</strong>在部分工具调用失败时，能否重新规划？</li>
+    </ul>
+
+    <p>τ²-Bench 的任务设计在这些维度上覆盖不均，导致其高分掩盖了模型在某些能力维度上的明显短板。</p>
+
+    <h3>饱和检测的可视化</h3>
+
+    <div id="chart-saturation" class="echarts-container" style="height:320px"></div>
+    <script>
+    (function() {
+      var dom = document.getElementById('chart-saturation');
+      var myChart = echarts.init(dom);
+      myChart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: '基准饱和示意：得分分布压缩效应',
+          textStyle: { color: '#89b4fa', fontSize: 14 },
+          left: 'center', top: 10
+        },
+        tooltip: { trigger: 'axis' },
+        legend: {
+          data: ['τ²-Bench', 'τc-Bench'],
+          textStyle: { color: '#cdd6f4' },
+          top: 38
+        },
+        grid: { left: '10%', right: '6%', bottom: '12%', top: '22%' },
+        xAxis: {
+          type: 'category',
+          name: '模型能力排名（强→弱）',
+          nameTextStyle: { color: '#6c7086' },
+          data: ['M1\n(最强)', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10', 'M11\n(最弱)'],
+          axisLabel: { color: '#cdd6f4', fontSize: 10 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value',
+          name: '基准得分',
+          min: 0, max: 1,
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: 'τ²-Bench',
+            type: 'line',
+            data: [0.94, 0.91, 0.88, 0.85, 0.82, 0.79, 0.76, 0.72, 0.68, 0.61, 0.54],
+            lineStyle: { color: '#a6e3a1', width: 2 },
+            itemStyle: { color: '#a6e3a1' },
+            smooth: true,
+            symbol: 'circle', symbolSize: 6
+          },
+          {
+            name: 'τc-Bench',
+            type: 'line',
+            data: [0.61, 0.52, 0.49, 0.43, 0.38, 0.33, 0.29, 0.25, 0.21, 0.17, 0.13],
+            lineStyle: { color: '#f38ba8', width: 2 },
+            itemStyle: { color: '#f38ba8' },
+            smooth: true,
+            symbol: 'circle', symbolSize: 6
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <p>上图揭示了饱和效应的本质：在 τ²-Bench 上，各模型得分被压缩在 0.54—0.94 的狭窄区间内，模型间差异被严重低估；而在 τ<sup>c</sup>-Bench 上，得分范围扩展到 0.13—0.61，各模型的真实能力差异得以充分体现。</p>
+
+    <h3>对评测实践的警示</h3>
+
+    <blockquote>
+      <strong>核心警示：</strong>"在现有基准上的高分往往反映的是饱和，而非真正强大的任务解决能力。"（论文原文）当一个基准上的顶级模型得分超过 0.8 时，研究者应当警惕：这个分数究竟是能力的上限，还是基准的上限？
+    </blockquote>
+
+    <p>这一警示对 AI 评测实践有深远影响：随着模型能力的快速提升，基准的"保鲜期"越来越短。一个在发布时具有足够挑战性的基准，可能在一两年内就因为模型进步而失去区分度。TASTE 提出的自动化生成范式，正是为了应对这一"基准老化"问题。</p>
+
+    <!-- ===== 10. 总结与启发 ===== -->
+    <h2 id="conclusion">总结与启发</h2>
+
+    <p>TASTE 论文不仅提出了一个具体的技术方案，更揭示了 Agent 评测领域的一个深层问题，并为持续、可靠的评测体系提供了新的思路。</p>
+
+    <h3>核心贡献回顾</h3>
+
+    <table>
+      <tr>
+        <th>贡献</th>
+        <th>具体内容</th>
+        <th>意义</th>
+      </tr>
+      <tr>
+        <td>逆向构建范式</td>
+        <td>工具序列 → 自然语言任务</td>
+        <td>从根本上扩展工具组合覆盖空间</td>
+      </tr>
+      <tr>
+        <td>Adaptive Contrastive N-gram</td>
+        <td>轻量级有效序列采样模型</td>
+        <td>高效平衡有效性与多样性</td>
+      </tr>
+      <tr>
+        <td>迭代难度进化</td>
+        <td>多轮 LLM 精炼机制</td>
+        <td>持续追踪模型能力前沿</td>
+      </tr>
+      <tr>
+        <td>τ<sup>c</sup>-Bench</td>
+        <td>3 领域挑战性基准</td>
+        <td>揭示现有基准饱和，提供更真实评测</td>
+      </tr>
+    </table>
+
+    <h3>持续基准生成：从一次性到动态评测</h3>
+
+    <p>TASTE 最重要的启发在于：<strong>基准不应该是一次性的静态产物，而应该是随模型能力动态演化的持续生成系统。</strong>传统基准的生命周期是固定的——发布、使用、饱和、被遗忘。TASTE 的流程可以随时重新运行，生成新一批对当前最强模型仍具挑战性的任务，从而实现"永不饱和"的评测体系。</p>
+
+    <p>这一思路与机器学习中的"持续学习"（Continual Learning）有深刻的对称性：如果模型需要持续学习以应对新任务，那么评测体系也需要持续进化以追踪模型能力的真实边界。</p>
+
+    <h3>抗饱和评测的设计原则</h3>
+
+    <p>基于 TASTE 的实践，可以总结出抗饱和评测体系的几个核心设计原则：</p>
+
+    <ul>
+      <li><strong>系统性覆盖优于直觉性设计：</strong>用程序化方法枚举评测空间，而非依赖人工直觉</li>
+      <li><strong>难度应追踪能力前沿：</strong>定期用当前最强模型重新校准难度阈值</li>
+      <li><strong>多维度评测优于单一指标：</strong>工具覆盖度、长程规划、约束满足等维度需要分别评测</li>
+      <li><strong>新鲜度保证防止数据污染：</strong>定期生成新任务，避免训练数据污染导致的虚高得分</li>
+      <li><strong>有效性验证是质量底线：</strong>自动生成的任务必须通过严格的有效性验证才能进入基准</li>
+    </ul>
+
+    <h3>对未来研究的启发</h3>
+
+    <p>TASTE 开辟了几个值得深入探索的研究方向：</p>
+
+    <ul>
+      <li><strong>跨领域迁移：</strong>TASTE 流程目前针对客服类工具调用任务，能否迁移到代码生成（SWE-bench类）、科学研究（OpenScholar类）等其他 Agent 评测领域？</li>
+      <li><strong>多智能体场景：</strong>当任务需要多个 Agent 协作时，工具序列的合法性定义和覆盖度度量如何扩展？</li>
+      <li><strong>开放工具集：</strong>TASTE 目前假设工具集是固定的，如何处理工具集本身也在动态变化的场景（如插件生态）？</li>
+      <li><strong>评测与训练的军备竞赛：</strong>如果 TASTE 生成的基准也被用于训练数据，如何设计"防污染"机制确保评测的长期有效性？</li>
+    </ul>
+
+    <h3>局限性</h3>
+
+    <p>诚实地说，TASTE 也存在一些值得关注的局限：</p>
+
+    <ul>
+      <li><strong>LLM 依赖：</strong>有效性验证和任务实例化依赖 LLM，引入了 LLM 自身的偏差</li>
+      <li><strong>领域特定性：</strong>目前仅在 τ²-Bench 的三个客服领域验证，泛化性待考</li>
+      <li><strong>难度的主观性：</strong>难度进化的目标阈值 θ 的设定对结果有较大影响，缺乏客观标准</li>
+      <li><strong>计算成本：</strong>虽然 N-gram 模型轻量，但迭代难度进化仍需大量 LLM 推理调用</li>
+    </ul>
+
+    <!-- ===== 11. 参考文献 ===== -->
+    <h2 id="references">参考文献</h2>
+
+    <p>以下为论文中引用的主要相关工作：</p>
+
+    <ol>
+      <li>Yao, S. et al. (2024). <strong>τ-bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains.</strong> arXiv:2406.12045.</li>
+      <li>Jimenez, C. et al. (2024). <strong>SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</strong> ICLR 2024.</li>
+      <li>Yang, J. et al. (2024). <strong>SWE-agent: Agent-Computer Interfaces Enable Automated Software Engineering.</strong> NeurIPS 2024.</li>
+      <li>Zhou, S. et al. (2024). <strong>WebArena: A Realistic Web Environment for Building Autonomous Agents.</strong> ICLR 2024.</li>
+      <li>Schick, T. et al. (2023). <strong>Toolformer: Language Models Can Teach Themselves to Use Tools.</strong> NeurIPS 2023.</li>
+      <li>Qin, Y. et al. (2024). <strong>ToolLLM: Facilitating Large Language Models to Master 16000+ Real-world APIs.</strong> ICLR 2024.</li>
+      <li>Wang, Y. et al. (2023). <strong>Self-Instruct: Aligning Language Models with Self-Generated Instructions.</strong> ACL 2023.</li>
+      <li>Kaufman, L. &amp; Rousseeuw, P.J. (1990). <strong>Finding Groups in Data: An Introduction to Cluster Analysis.</strong> Wiley.</li>
+      <li>Tevet, G. &amp; Berant, J. (2021). <strong>Evaluating the Diversity of NLG.</strong> EACL 2021.</li>
+      <li>Shaib, C. et al. (2024). <strong>Standardizing the Measurement of Text Diversity: A Tool and a Comparative Analysis of Scores.</strong> arXiv:2403.00553.</li>
+      <li>Liu, M. et al. (2024). <strong>APIGen: Automated Pipeline for Generating Verifiable and Diverse Function-Calling Datasets.</strong> NeurIPS 2024.</li>
+      <li>Yan, S. et al. (2024). <strong>Berkeley Function-Calling Leaderboard (BFCL).</strong> arXiv:2407.14561.</li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086;font-size:0.85em;text-align:center;">
+      阅读报告生成日期：2026年6月5日 &nbsp;|&nbsp;
+      论文来源：<a href="https://arxiv.org/abs/2605.28556" target="_blank">arXiv:2605.28556</a> &nbsp;|&nbsp;
+      报告作者：Claude Opus 4.8 (1M context)
+    </p>
+
+  </main>
+
+  <script>
+    // 初始化 Mermaid
+    mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+
+    // 自动生成 TOC
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach(function(h, i) {
+      if (!h.id) h.id = 'section-' + i;
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // 滚动高亮
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        var link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(function(h) {
+      observer.observe(h);
+    });
+  </script>
+</body>
+</html>

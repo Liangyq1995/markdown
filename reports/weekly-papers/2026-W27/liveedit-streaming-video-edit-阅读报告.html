@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveEdit 阅读报告 — 实时流式视频编辑</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; } a { color: var(--link); } strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; } li { margin: 0.3em 0; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>LiveEdit：面向实时的扩散式流式视频编辑</h1>
+    <p><span class="tag">视频编辑</span><span class="tag orange">流式生成</span><span class="tag green">ECCV 2026</span><span class="tag purple">清华大学</span></p>
+    <p style="color:#6c7086;font-size:0.9em;">arXiv: 2606.26740 · 2026-06-25 · ECCV 2026 · HuggingFace本周 #6 (81 upvotes)</p>
+
+    <table>
+      <tr><th>标题</th><td>LiveEdit: Towards Real-Time Diffusion-Based Streaming Video Editing</td></tr>
+      <tr><th>核心问题</th><td>如何用扩散模型实现实时（12+ FPS）的流式视频编辑，同时保持背景稳定和低延迟</td></tr>
+      <tr><th>项目主页</th><td><a href="https://live-edit.github.io">live-edit.github.io</a></td></tr>
+    </table>
+
+    <h2 id="overview">1. 核心问题与动机</h2>
+    <p>现有的视频编辑方法分为两类：<strong>离线编辑</strong>（处理完整视频，质量好但延迟高）和<strong>流式生成</strong>（低延迟但仅为生成而非编辑）。两者的本质区别在于：</p>
+    <ul>
+      <li>编辑任务需要<strong>严格保护非编辑区域</strong>（如背景、无关物体），这是生成任务不需要的约束</li>
+      <li>流式场景要求<strong>单向时序处理</strong>，不能回望未来帧</li>
+      <li>实时应用要求<strong>12+ FPS</strong>，而现有扩散模型推理极慢</li>
+    </ul>
+    <blockquote>
+      核心矛盾：双向基础模型（bidirectional diffusion）编辑质量好但无法流式；单向流式模型速度快但无法保持编辑一致性。LiveEdit 通过三阶段蒸馏桥接两者。
+    </blockquote>
+
+    <h2 id="background">2. 背景与相关工作</h2>
+    <table>
+      <tr><th>方法类型</th><th>代表工作</th><th>流式能否实时</th><th>编辑区域保护</th></tr>
+      <tr><td>双向扩散编辑</td><td>InstructPix2Pix, TokenFlow</td><td>否</td><td>好</td></tr>
+      <tr><td>流式视频生成</td><td>StreamingT2V, CogVideoX</td><td>是</td><td>差</td></tr>
+      <tr><td>在线视频编辑</td><td>Pix2Video, Ground-A-Video</td><td>否</td><td>中</td></tr>
+      <tr><td><strong>LiveEdit（本文）</strong></td><td>—</td><td><strong>是（12.66 FPS）</strong></td><td><strong>好</strong></td></tr>
+    </table>
+
+    <h2 id="method">3. 三阶段蒸馏流程</h2>
+    <pre class="mermaid">
+flowchart TD
+    A["双向基础模型<br>Bidirectional Foundation Model<br>高质量但非流式"] --> |"Stage 1: 能力迁移"| B["单向流式编辑器<br>Unidirectional Streaming Editor<br>蒸馏编辑能力"]
+    B --> |"Stage 2: 稳定性强化"| C["背景保护对齐<br>Region Preservation Alignment<br>强化非编辑区一致性"]
+    C --> |"Stage 3: 速度优化"| D["AR-Oriented Mask Cache<br>跨帧复用区域计算"]
+    D --> E["LiveEdit<br>12.66 FPS · 实时流式编辑"]
+
+    style A fill:#2a2a3e,stroke:#fab387
+    style E fill:#2a2a3e,stroke:#a6e3a1,stroke-width:2px
+    </pre>
+
+    <h3>Stage 1：能力迁移蒸馏</h3>
+    <p>从双向基础模型（如预训练的视频扩散模型）中蒸馏编辑能力到单向流式模型。核心挑战是：单向模型只能看到过去帧，而双向模型能看到完整视频。通过<strong>知识蒸馏</strong>和<strong>特征对齐</strong>，让单向模型模拟双向模型的编辑行为。</p>
+
+    <h3>Stage 2：背景保护强化</h3>
+    <p>针对编辑任务的特殊需求，额外训练区域保护对齐模块：</p>
+    <p>$$\mathcal{L}_{\text{preserve}} = \| M_{\text{bg}} \odot (\hat{x}_t - x_t^{\text{ref}}) \|_2^2$$</p>
+    <p>其中 $M_{\text{bg}}$ 是背景区域掩码，$\hat{x}_t$ 是预测帧，$x_t^{\text{ref}}$ 是参考帧。</p>
+
+    <h3>Stage 3：AR-Oriented Mask Cache</h3>
+    <p>最重要的加速机制：<strong>自回归导向的掩码缓存</strong>。对于跨帧变化较小的区域（通常是背景），在前一帧已计算的注意力特征可以直接复用，无需重新计算：</p>
+    <ul>
+      <li>检测帧间运动较小的区域（光流估计）</li>
+      <li>这些区域的 Key-Value 缓存跨帧复用</li>
+      <li>仅对运动区域重新计算注意力</li>
+    </ul>
+    <p>这与 KV Cache 在文本生成中的加速原理类似，但应用到了视频的空间维度。</p>
+
+    <h2 id="experiment">5. 实验结果</h2>
+    <div id="chart-fps" class="echarts-container" style="height:280px"></div>
+
+    <table>
+      <tr><th>指标</th><th>LiveEdit</th><th>离线编辑方法</th><th>流式生成基线</th></tr>
+      <tr><td>推理速度（FPS）</td><td><strong>12.66</strong></td><td>0.1-0.5</td><td>8-15</td></tr>
+      <tr><td>背景一致性（PSNR）</td><td><strong>最优</strong></td><td>较好</td><td>较差</td></tr>
+      <tr><td>编辑质量（LPIPS）</td><td><strong>SOTA流式</strong></td><td>最优</td><td>差</td></tr>
+      <tr><td>适用场景</td><td>AR/交互式</td><td>后期制作</td><td>纯生成</td></tr>
+    </table>
+
+    <h2 id="ablation">6. 消融实验与关键发现</h2>
+    <ul>
+      <li><strong>三阶段蒸馏缺一不可</strong>：去掉任意一阶段，编辑质量或速度显著下降</li>
+      <li><strong>Mask Cache 的加速比</strong>：背景占比越高，加速效果越明显（高达2-3×）</li>
+      <li><strong>单向 vs 双向蒸馏后</strong>：蒸馏后单向模型与双向基础模型的编辑质量差距约15%（LPIPS），但速度提升30×</li>
+    </ul>
+
+    <h2 id="limitation">7. 局限性</h2>
+    <ul>
+      <li>在大面积高速运动场景下，Mask Cache 的复用效果下降</li>
+      <li>三阶段训练成本较高，训练 pipeline 复杂</li>
+      <li>编辑指令仍需文字描述，不支持细粒度的像素级指令</li>
+    </ul>
+
+    <h2 id="insight">8. 核心洞见与读后评注</h2>
+    <blockquote>
+      <strong>关键洞见</strong>：流式视频编辑的核心矛盾是"实时性"与"区域保护"的权衡。LiveEdit 通过蒸馏将离线双向模型的编辑能力迁移到流式单向模型，再用 Mask Cache 大幅加速，提供了一个优雅的工程解决方案。
+    </blockquote>
+    <p>这篇论文被 ECCV 2026 接收，体现了视频生成/编辑领域对"实用性"的更高要求——12.66 FPS 已经接近人类视觉的流畅阈值（约15 FPS），这意味着 LiveEdit 可以真正嵌入 AR 眼镜、实时视频流等应用场景。</p>
+    <p>AR-Oriented Mask Cache 的设计思路（空间维度的 KV Cache）是一个重要贡献，它本质上是在视频帧之间做了时序自适应的稀疏计算，有望在更多扩散式视频任务中推广。</p>
+
+    <h2 id="ref">参考文献</h2>
+    <ul>
+      <li>[1] Xinyu Wang et al. <em>LiveEdit: Towards Real-Time Diffusion-Based Streaming Video Editing</em>. arXiv:2606.26740, ECCV 2026.</li>
+      <li>[2] Brooks et al. <em>InstructPix2Pix: Learning to Follow Image Editing Instructions</em>. CVPR 2023.</li>
+      <li>[3] Geyer et al. <em>TokenFlow: Consistent Video Editing via Temporal Consistency</em>. ICLR 2024.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const chart = echarts.init(document.getElementById('chart-fps'));
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '视频编辑方法速度对比 (FPS)', textStyle: { color: '#89b4fa' } },
+      tooltip: { trigger: 'axis' },
+      xAxis: { type: 'category', data: ['LiveEdit', '流式生成基线', '离线编辑方法A', '离线编辑方法B'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, name: 'FPS', nameTextStyle: { color: '#cdd6f4' } },
+      series: [{ type: 'bar', data: [12.66, 10.0, 0.3, 0.1], itemStyle: { color: (p) => ['#a6e3a1','#89b4fa','#fab387','#f38ba8'][p.dataIndex] }, label: { show: true, position: 'top', color: '#cdd6f4' } }]
+    });
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id; a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

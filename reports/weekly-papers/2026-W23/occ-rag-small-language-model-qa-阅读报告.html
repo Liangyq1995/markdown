@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OCC-RAG 阅读报告</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #toc a:hover{background:var(--border);}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+    #toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+    main{margin-left:240px;max-width:none;padding:40px 64px;}
+    h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+    h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+    p{margin:.6em 0;}
+    a{color:var(--link);}
+    strong{color:var(--strong);}
+    ul,ol{margin:.6em 0 .6em 1.6em;}
+    li{margin:.3em 0;}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+    th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+    td{padding:7px 12px;border:1px solid var(--border);}
+    tr:hover td{background:#2a2a3e;}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+    code{font-family:'JetBrains Mono','Fira Code',monospace;}
+    p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+    .echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+    .badge{display:inline-block;background:#2a2a3e;border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:.82em;margin:2px 4px 2px 0;color:var(--heading);}
+    .tag-green{border-color:var(--strong);color:var(--strong);}
+    .tag-orange{border-color:var(--quote-bar);color:var(--quote-bar);}
+    .highlight-row td{background:#2a2a3e;font-weight:600;color:var(--strong);}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ===== 标题 & 论文信息 ===== -->
+    <h1>OCC-RAG: Optimal Cognitive Core for Faithful Question Answering</h1>
+    <p>
+      <span class="badge">arXiv: 2606.00683</span>
+      <span class="badge tag-green">cs.CL</span>
+      <span class="badge tag-orange">SLM · RAG · 忠实性QA</span>
+      <span class="badge">2026-05-30</span>
+      <span class="badge tag-green">Upvotes: 82</span>
+    </p>
+
+    <table>
+      <tr><th>字段</th><th>内容</th></tr>
+      <tr><td>标题</td><td>OCC-RAG: Optimal Cognitive Core for Faithful Question Answering</td></tr>
+      <tr><td>arXiv ID</td><td><a href="https://arxiv.org/abs/2606.00683" target="_blank">2606.00683</a></td></tr>
+      <tr><td>机构</td><td>OCC (Optimal Cognitive Core)</td></tr>
+      <tr><td>作者</td><td>Maksim Savkin, Mikhail Goncharov, Alexander Gambashidze, Alla Chepurova, Dmitrii Tarasov, Nikita Andriianov, Daria Pugacheva, Vasily Konovalov, Andrey Galichin, Ivan Oseledets</td></tr>
+      <tr><td>发布日期</td><td>2026-05-30</td></tr>
+      <tr><td>许可证</td><td>CC BY 4.0</td></tr>
+      <tr><td>模型</td><td><a href="https://huggingface.co/occ-ai" target="_blank">huggingface.co/occ-ai</a></td></tr>
+      <tr><td>代码</td><td><a href="https://github.com/optimal-cognitive-core/OCC-RAG" target="_blank">github.com/optimal-cognitive-core/OCC-RAG</a></td></tr>
+      <tr><td>核心贡献</td><td>3M+ 合成数据流水线；OCC-RAG-0.6B &amp; 1.7B；结构化推理trace；以小胜大（2-6×）</td></tr>
+    </table>
+
+    <blockquote>
+      <strong>一句话概括：</strong>本文提出 OCC-RAG，一个专为 RAG 场景设计的任务专化小语言模型家族，通过 3M+ 合成多跳 QA 数据进行中间训练，在忠实性、多跳推理和弃权三项能力上以 0.6B/1.7B 的参数量超越体量大 2–6 倍的通用大模型。
+    </blockquote>
+
+    <!-- ===== 概述 ===== -->
+    <h2>概述：小模型大推理的核心主张</h2>
+
+    <p>在大语言模型（LLM）领域，主流研究范式长期以"越大越好"为信条——更多参数意味着更丰富的参数化知识、更强的泛化能力。然而，OCC-RAG 这篇论文提出了一个尖锐的反问：<strong>对于检索增强生成（RAG）场景，模型真正需要的是"记住更多知识"，还是"更好地推理所提供的上下文"？</strong></p>
+
+    <p>作者的核心主张是：在 RAG 场景下，模型的首要任务是对<em>供给的上下文</em>进行忠实推理，而非依赖参数化记忆。这一洞察催生了 OCC（Optimal Cognitive Core）——一个面向特定任务的小型语言模型（SLM）家族。其中 OCC-RAG 变体专门针对基于上下文的问答进行优化，核心能力包括三个维度：</p>
+    <ul>
+      <li><strong>多跳推理（Multi-hop Reasoning）</strong>：跨多个文档片段进行链式推理，得出最终答案。</li>
+      <li><strong>严格忠实性（Strict Faithfulness）</strong>：答案必须以上下文中的原文引用为锚点，不允许凭空生成。</li>
+      <li><strong>校准弃权（Calibrated Abstention）</strong>：当上下文信息不足以支撑答案时，模型应明确输出"无法回答"，而非编造内容。</li>
+    </ul>
+
+    <p>实验证明，OCC-RAG-0.6B 和 OCC-RAG-1.7B 在 5 个基准测试上能够<strong>匹敌甚至超越参数量大 2–6 倍的通用模型</strong>，在忠实度指标（ConFiQA M_R）上甚至在所有测试规模（含 32B 模型）中取得最优成绩。这一结果有力地挑战了"RAG 系统必须依赖大模型"的惯性认知。</p>
+
+    <!-- ===== 研究背景 ===== -->
+    <h2>研究背景</h2>
+
+    <p>理解 OCC-RAG 的价值，需要先厘清两条相互碰撞的技术路线：大模型 Scaling 范式与任务专化 SLM 路线，以及 RAG 系统在实际部署中面临的忠实性挑战。</p>
+
+    <h3>大模型 Scaling 范式的局限</h3>
+    <p>自 GPT-3 以来，Scaling Law 成为 NLP 研究的主旋律：模型越大、数据越多、算力越强，下游任务性能就越好。这一范式在知识密集型任务（如 TriviaQA、NaturalQuestions）上确实奏效——大模型通过海量预训练"记住"了大量世界知识，推理时直接检索参数记忆即可。</p>
+    <p>然而，这种范式在 RAG 场景下暴露出若干根本性缺陷：</p>
+    <ul>
+      <li><strong>参数知识与上下文冲突</strong>：大模型在推理时倾向于"相信自己的参数记忆"，当检索到的文档与预训练知识矛盾时，模型可能忽略文档、输出错误答案。</li>
+      <li><strong>幻觉问题（Hallucination）</strong>：通用大模型在上下文信息不足时，往往会"补全"一个听起来合理但实际不正确的答案，而非承认无法回答。</li>
+      <li><strong>部署成本高昂</strong>：在生产环境中运行 70B+ 参数的模型，推理延迟和硬件成本对大多数企业而言难以承受。</li>
+    </ul>
+
+    <h3>RAG 系统的忠实性挑战</h3>
+    <p>RAG（Retrieval-Augmented Generation）系统的核心假设是：通过检索外部知识库，模型可以回答超出参数知识范围的问题。但这一假设的成立前提是<strong>模型能够严格基于检索结果进行推理</strong>，而非将检索结果与参数记忆混合使用。</p>
+    <p>现实中，RAG 系统面临以下忠实性挑战：</p>
+    <ul>
+      <li><strong>记忆率（Memorization Rate, M_R）</strong>：衡量模型在回答时有多少比例来自参数记忆而非上下文。高 M_R 意味着模型"不忠实"于检索结果。</li>
+      <li><strong>多跳推理困难</strong>：真实世界的问题往往需要跨多个文档片段进行链式推理（如"A 的作者在哪出生？"需要先找到 A 的作者，再查找其出生地）。通用模型在这类任务上表现参差不齐。</li>
+      <li><strong>弃权能力缺失</strong>：当检索结果不包含答案所需信息时，理想模型应输出"信息不足"。但通用模型往往倾向于强行生成一个答案，导致错误信息传播。</li>
+    </ul>
+
+    <h3>专用 SLM 的崛起机遇</h3>
+    <p>上述挑战为任务专化 SLM 提供了差异化竞争的空间。如果一个小模型能够：（1）专注于上下文推理而非参数记忆；（2）通过针对性训练数据强化忠实性和弃权能力；（3）以更低的推理成本部署——那么它完全可以在 RAG 场景下超越体量更大的通用模型。OCC-RAG 正是沿着这条路线设计的。</p>
+
+    <!-- ===== OCC 设计哲学 ===== -->
+    <h2>OCC 设计哲学</h2>
+
+    <p>OCC（Optimal Cognitive Core）的设计哲学可以用一句话概括：<strong>为特定认知任务裁剪最优模型，而非追求通用能力的无限扩展</strong>。这一哲学与当前主流的"基础模型 + 指令微调"路线形成了鲜明对比。</p>
+
+    <h3>推理优先，记忆靠后</h3>
+    <p>传统 LLM 预训练的目标是最大化对海量文本的语言建模能力，这自然会让模型"记住"大量事实性知识。OCC 的设计则反其道而行之：<strong>主动压缩参数化知识的权重，将模型容量集中于推理能力</strong>。</p>
+    <p>具体体现在：</p>
+    <ul>
+      <li>基础模型选择轻量级的 Qwen3-Base（0.6B 和 1.7B），而非从大模型蒸馏。</li>
+      <li>中间训练（Mid-training）阶段使用的数据全部是<em>合成的</em>推理任务，不包含额外的世界知识注入。</li>
+      <li>训练目标明确要求模型"只从提供的上下文中回答"，违反此原则的输出在训练中受到惩罚。</li>
+    </ul>
+
+    <h3>任务专化 SLM 的设计原则</h3>
+    <p>OCC 系列模型遵循以下设计原则：</p>
+    <ul>
+      <li><strong>单一任务精通</strong>：每个 OCC 变体只针对一类认知任务（如 RAG QA）进行深度优化，不追求多任务通用性。</li>
+      <li><strong>结构化输出</strong>：模型输出遵循固定的五段式结构（见模型架构章节），便于下游系统解析和验证。</li>
+      <li><strong>可解释推理链</strong>：每个答案都附带推理过程和原文引用，使得输出可验证、可审计。</li>
+      <li><strong>知识蒸馏驱动</strong>：训练数据由更大的教师模型生成，将大模型的推理能力"蒸馏"进小模型，而非直接从大模型微调。</li>
+    </ul>
+
+    <h3>与通用 RLHF 微调路线的对比</h3>
+    <table>
+      <tr><th>维度</th><th>通用 LLM（RLHF 微调）</th><th>OCC 任务专化 SLM</th></tr>
+      <tr><td>训练目标</td><td>多任务对齐、有用性、安全性</td><td>单任务推理忠实性</td></tr>
+      <tr><td>参数规模</td><td>7B–70B+</td><td>0.6B–1.7B</td></tr>
+      <tr><td>知识来源</td><td>参数记忆 + 上下文</td><td>严格依赖上下文</td></tr>
+      <tr><td>弃权能力</td><td>需要额外提示工程</td><td>训练内置，原生支持</td></tr>
+      <tr><td>推理延迟</td><td>高（GPU 密集）</td><td>低（可 CPU 推理）</td></tr>
+      <tr><td>可解释性</td><td>黑盒输出</td><td>结构化推理链 + 引用</td></tr>
+    </table>
+
+    <!-- ===== 数据合成流水线 ===== -->
+    <h2>数据合成流水线</h2>
+
+    <p>OCC-RAG 的核心竞争力之一是其大规模合成数据流水线，共生成 <strong>325 万+</strong> 高质量 QA 对，覆盖单跳、多跳、多文档和弃权四类场景。这一流水线的设计充分体现了"以数据质量驱动模型能力"的工程哲学。</p>
+
+    <h3>数据构成分布</h3>
+    <table>
+      <tr><th>数据类型</th><th>数量</th><th>占比</th><th>训练目标</th></tr>
+      <tr><td>单跳 QA（Single-hop）</td><td>~278 万</td><td>85.5%</td><td>基础上下文理解与引用</td></tr>
+      <tr><td>多跳单文档（Multi-hop, Single-context）</td><td>~26.2 万</td><td>8.1%</td><td>文档内链式推理</td></tr>
+      <tr><td>多跳多文档（Multi-hop, Multi-context）</td><td>~16.5 万</td><td>5.1%</td><td>跨文档证据整合</td></tr>
+      <tr><td>弃权示例（Abstention）</td><td>~4.3 万</td><td>1.3%</td><td>识别不可回答问题</td></tr>
+      <tr><td><strong>合计</strong></td><td><strong>~325 万</strong></td><td><strong>100%</strong></td><td>—</td></tr>
+    </table>
+    <p>值得注意的是，多跳和多文档子集被<strong>过采样（oversampled）</strong>以强调组合推理能力——尽管这类数据只占总量的 13.2%，但在训练中的权重远高于其数量占比。</p>
+
+    <h3>流水线架构（Mermaid 流程图）</h3>
+    <pre class="mermaid">flowchart TD
+    A["原始文档语料库<br>（Wikipedia / 领域文档）"] --> B["文档分块与索引<br>Chunking &amp; Indexing"]
+    B --> C{"问题类型路由"}
+    C -->|"单跳"| D["单跳问题生成器<br>Teacher LLM"]
+    C -->|"多跳单文档"| E["多跳问题生成器<br>单文档内链式"]
+    C -->|"多跳多文档"| F["多跳问题生成器<br>跨文档证据链"]
+    C -->|"弃权"| G["弃权问题生成器<br>移除关键证据"]
+    D --> H["教师模型推理<br>生成 Citation-Anchored<br>Reasoning Trace"]
+    E --> H
+    F --> H
+    G --> I["弃权标注<br>UNANSWERABLE + 理由"]
+    H --> J["质量过滤<br>答案一致性验证"]
+    I --> J
+    J --> K["过采样多跳 &amp; 多文档<br>平衡训练分布"]
+    K --> L["最终训练语料<br>~325万 QA 对"]
+    L --> M["OCC-RAG 中间训练<br>SFT on Qwen3-Base"]
+    M --> N["OCC-RAG-0.6B<br>OCC-RAG-1.7B"]
+</pre>
+
+    <h3>Citation-Anchored Reasoning Trace</h3>
+    <p>数据合成的核心创新在于<strong>引用锚定推理链（Citation-Anchored Reasoning Trace）</strong>。教师模型在生成答案时，不仅要给出推理步骤，还必须将每个推理步骤与上下文中的具体文本片段对应。这种设计确保了：</p>
+    <ul>
+      <li>推理过程可追溯——每一步推断都有原文支撑。</li>
+      <li>学生模型（OCC-RAG）通过模仿这种输出格式，自然习得"先引用、后推理"的认知习惯。</li>
+      <li>输出结果可被外部系统自动验证（将引用片段与原文比对）。</li>
+    </ul>
+
+    <h3>弃权数据的构造方式</h3>
+    <p>弃权示例的生成是流水线中最具技巧性的部分。其核心思路是：从原本可回答的多跳问题中，<strong>故意移除一个或多个关键证据文档</strong>，使得问题变得不可回答，然后标注答案为 "Not enough information"。这种构造方式比直接生成"无意义问题"更具挑战性，因为模型需要真正理解"缺少了什么"，而非仅仅识别问题语法上的不完整。</p>
+
+    <!-- ===== 训练目标 ===== -->
+    <h2>训练目标</h2>
+
+    <p>OCC-RAG 的训练目标可以分解为三个相互耦合的子目标：多跳推理、严格忠实性和校准弃权。这三个目标共同构成了模型的"认知核心"，通过统一的监督微调（SFT）框架实现。</p>
+
+    <h3>整体训练目标</h3>
+    <p>设模型参数为 $\theta$，输入为问题 $q$ 和上下文集合 $\mathcal{C} = \{c_1, c_2, \ldots, c_k\}$，输出为结构化推理序列 $y = (y_{\text{qA}}, y_{\text{sA}}, y_{\text{R}}, y_{\text{st}}, y_{\text{ans}})$，则训练目标为最大化条件对数似然：</p>
+    <p>$$\mathcal{L}(\theta) = \mathbb{E}_{(q,\mathcal{C},y) \sim \mathcal{D}} \left[ \log P_\theta(y \mid q, \mathcal{C}) \right]$$</p>
+    <p>其中 $\mathcal{D}$ 为合成训练集，$y$ 的各分量分别对应五段式输出结构的不同部分。</p>
+
+    <h3>子目标一：多跳推理（Multi-hop Reasoning）</h3>
+    <p>多跳推理要求模型能够将复合问题分解为若干子问题，并依次从上下文中检索证据，最终整合得出答案。形式化地，设问题 $q$ 可分解为 $n$ 个子问题 $\{q_1, q_2, \ldots, q_n\}$，每个子问题对应一个证据片段 $c_{i_j} \in \mathcal{C}$，则推理链为：</p>
+    <p>$$y_{\text{R}} = \text{Chain}(q_1 \xrightarrow{c_{i_1}} a_1, \quad q_2 \xrightarrow{c_{i_2}} a_2, \quad \ldots, \quad q_n \xrightarrow{c_{i_n}} a_n)$$</p>
+    <p>训练时，模型需要学会：（1）将原始问题分解为子问题；（2）识别每个子问题对应的相关上下文片段；（3）按照正确的逻辑顺序串联子答案，得出最终答案。</p>
+
+    <h3>子目标二：严格忠实性（Strict Faithfulness）</h3>
+    <p>忠实性约束要求模型的每个答案声明都必须有上下文原文支撑。设答案 $y_{\text{ans}}$ 中的每个关键声明为 $s_i$，则忠实性约束为：</p>
+    <p>$$\forall s_i \in y_{\text{ans}}, \quad \exists c_j \in \mathcal{C} : s_i \subseteq \text{span}(c_j)$$</p>
+    <p>即答案中的每个声明都必须是某个上下文片段的子串或语义等价表达。在训练数据生成阶段，教师模型被要求以"原文引用"（literal quote）的形式标注每个声明的来源，确保训练信号的忠实性。</p>
+    <p>忠实性的量化指标为<strong>记忆率（Memorization Rate, $M_R$）</strong>：</p>
+    <p>$$M_R = \frac{\text{来自参数记忆的答案数}}{\text{总答案数}} \times 100\%$$</p>
+    <p>$M_R$ 越低，模型越忠实于上下文。OCC-RAG-1.7B 在 ConFiQA 基准上取得 $M_R = 5.0$，是所有测试模型（含 32B）中的最低值。</p>
+
+    <h3>子目标三：校准弃权（Calibrated Abstention）</h3>
+    <p>弃权能力要求模型在上下文不包含足够信息时，输出 "Not enough information" 而非强行生成答案。设可回答性判断函数为 $\text{Ans}(q, \mathcal{C}) \in \{0, 1\}$，则弃权目标为：</p>
+    <p>$$P_\theta(y_{\text{st}} = \text{UNANSWERABLE} \mid q, \mathcal{C}) \approx \mathbf{1}[\text{Ans}(q, \mathcal{C}) = 0]$$</p>
+    <p>即模型输出"不可回答"状态的概率应与问题的真实可回答性高度对齐。训练数据中的弃权示例通过"移除关键证据"的方式构造，使模型学会识别"证据链断裂"的信号。</p>
+    <p>弃权能力的量化指标为<strong>拒答准确率（Refusal Accuracy, R-Acc）</strong>：</p>
+    <p>$$R\text{-}Acc = \frac{\text{正确弃权数} + \text{正确回答数}}{\text{总问题数}} \times 100\%$$</p>
+    <p>OCC-RAG-1.7B 在 MuSiQue-Un 基准上取得 R-Acc = 87.2%，与 8B+ 模型持平。</p>
+
+    <!-- ===== 模型架构 ===== -->
+    <h2>模型架构</h2>
+
+    <p>OCC-RAG 在模型架构层面并未引入全新的 Transformer 变体，而是在成熟的 Qwen3-Base 基础上，通过<strong>中间训练（Mid-training）</strong>和<strong>结构化输出设计</strong>实现任务专化。其核心创新在于输出格式的工程设计，而非底层架构的改变。</p>
+
+    <h3>基础模型选择</h3>
+    <table>
+      <tr><th>模型</th><th>基础模型</th><th>参数量</th><th>训练方式</th></tr>
+      <tr><td>OCC-RAG-0.6B</td><td>Qwen3-0.6B-Base</td><td>0.6B</td><td>SFT 中间训练，~325万样本</td></tr>
+      <tr><td>OCC-RAG-1.7B</td><td>Qwen3-1.7B-Base</td><td>1.7B</td><td>SFT 中间训练，~325万样本</td></tr>
+    </table>
+    <p>选择 Qwen3-Base（而非 Instruct 版本）作为起点，是因为 Base 模型尚未经过 RLHF 对齐，其参数空间对特定任务的塑造更为灵活。中间训练（而非全量微调）保留了 Qwen3 的语言理解基础，同时注入了 RAG 专用的推理模式。</p>
+
+    <h3>五段式结构化输出设计</h3>
+    <p>OCC-RAG 最具特色的设计是其<strong>五段式结构化输出</strong>，每个输出段落由特殊 token 标记边界，形成可解析的推理链：</p>
+
+    <table>
+      <tr><th>段落</th><th>名称</th><th>内容</th><th>作用</th></tr>
+      <tr><td>1</td><td>查询分析（Query Analysis）</td><td>将问题分解为若干子问题</td><td>问题理解与规划</td></tr>
+      <tr><td>2</td><td>来源分析（Source Analysis）</td><td>评估每个上下文片段的相关性</td><td>证据筛选与定位</td></tr>
+      <tr><td>3</td><td>推理（Reasoning）</td><td>多跳证据链，含原文引用</td><td>逻辑推导过程</td></tr>
+      <tr><td>4</td><td>状态（Status）</td><td><code>ANSWERABLE</code> / <code>UNANSWERABLE</code></td><td>可回答性判断</td></tr>
+      <tr><td>5</td><td>答案（Answer）</td><td>最终答案或 "Not enough information"</td><td>输出结果</td></tr>
+    </table>
+
+    <p>这种设计的优势在于：</p>
+    <ul>
+      <li><strong>可验证性</strong>：推理链中的每个引用可与原文自动比对，检测幻觉。</li>
+      <li><strong>可调试性</strong>：当答案错误时，可以逐段定位问题所在（是问题分解错了，还是证据筛选错了，还是推理步骤错了）。</li>
+      <li><strong>系统集成友好</strong>：下游应用可以只消费 "Status" 和 "Answer" 字段，忽略推理过程；也可以完整解析推理链用于审计。</li>
+    </ul>
+
+    <h3>推理配置建议</h3>
+    <p>官方推荐使用<strong>贪婪解码（greedy decoding，temperature=0.0）</strong>而非采样解码。这与模型的训练目标一致：在 RAG 场景下，答案的确定性比多样性更重要，贪婪解码能够最大化输出的忠实性和一致性。</p>
+
+    <!-- ===== 实验结果 ===== -->
+    <h2>实验结果</h2>
+
+    <p>OCC-RAG 在 5 个基准测试上与多个通用模型进行了系统对比，涵盖多跳推理、忠实性和弃权三类能力。以下展示完整实验数据及可视化对比。</p>
+
+    <h3>基准测试说明</h3>
+    <table>
+      <tr><th>基准</th><th>类型</th><th>评估指标</th><th>核心挑战</th></tr>
+      <tr><td>HotpotQA</td><td>多跳推理</td><td>In-Acc（包含准确率）</td><td>需跨 2 个文档推理</td></tr>
+      <tr><td>MuSiQue</td><td>多跳推理</td><td>In-Acc</td><td>需跨 2-4 个文档推理，干扰文档多</td></tr>
+      <tr><td>TAT-QA</td><td>多跳推理（含数值计算）</td><td>F1</td><td>表格 + 文本混合推理，含算术</td></tr>
+      <tr><td>ConFiQA</td><td>忠实性</td><td>In-Acc + M_R↓</td><td>测试模型对上下文的忠实程度</td></tr>
+      <tr><td>MuSiQue-Un</td><td>弃权/拒答</td><td>R-Acc</td><td>测试模型识别不可回答问题的能力</td></tr>
+    </table>
+
+    <h3>完整实验数据表</h3>
+    <table>
+      <tr>
+        <th>模型</th><th>参数量</th>
+        <th>HotpotQA<br>In-Acc</th>
+        <th>MuSiQue<br>In-Acc</th>
+        <th>TAT-QA<br>F1</th>
+        <th>ConFiQA<br>In-Acc</th>
+        <th>ConFiQA<br>M_R↓</th>
+        <th>MuSiQue-Un<br>R-Acc</th>
+      </tr>
+      <tr><td>Pleias-RAG-1.2B</td><td>1.2B</td><td>48.5</td><td>15.0</td><td>8.4</td><td>37.3</td><td>25.3</td><td>21.9</td></tr>
+      <tr><td>gemma-3-4b-it</td><td>4B</td><td>55.8</td><td>30.1</td><td>65.3</td><td>69.8</td><td>8.9</td><td>55.8</td></tr>
+      <tr><td>Qwen3-1.7B (think)</td><td>1.7B</td><td>60.9</td><td>30.7</td><td>74.8</td><td>70.4</td><td>8.3</td><td>82.8</td></tr>
+      <tr><td>Qwen3-4B (think)</td><td>4B</td><td>67.1</td><td>41.5</td><td>79.1</td><td>74.1</td><td>7.5</td><td>84.0</td></tr>
+      <tr><td>Qwen3-32B (think)</td><td>32B</td><td>71.4</td><td>49.3</td><td>—</td><td>75.8</td><td>8.5</td><td>—</td></tr>
+      <tr class="highlight-row"><td>OCC-RAG-0.6B</td><td>0.6B</td><td>57.6</td><td>36.6</td><td>75.0</td><td>79.9</td><td>5.2</td><td>86.9</td></tr>
+      <tr class="highlight-row"><td>OCC-RAG-1.7B</td><td>1.7B</td><td>60.9</td><td>38.2</td><td>81.0</td><td>81.4</td><td>5.0</td><td>87.2</td></tr>
+    </table>
+
+    <h3>ECharts 可视化对比（多跳推理与忠实性）</h3>
+    <div id="chart-main" class="echarts-container" style="height:360px"></div>
+    <script>
+    (function(){
+      var chart = echarts.init(document.getElementById('chart-main'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '5 基准测试：OCC-RAG vs 对比模型', left: 'center', top: 12, textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: {
+          data: ['Pleias-RAG-1.2B','gemma-3-4b-it','Qwen3-1.7B(think)','Qwen3-4B(think)','OCC-RAG-0.6B','OCC-RAG-1.7B'],
+          bottom: 4, textStyle: { color: '#cdd6f4', fontSize: 11 }
+        },
+        grid: { left: '3%', right: '3%', bottom: '14%', top: '14%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['HotpotQA\nIn-Acc', 'MuSiQue\nIn-Acc', 'TAT-QA\nF1', 'ConFiQA\nIn-Acc', 'MuSiQue-Un\nR-Acc'],
+          axisLabel: { color: '#cdd6f4', fontSize: 11 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value', min: 0, max: 100,
+          axisLabel: { color: '#cdd6f4' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          { name: 'Pleias-RAG-1.2B', type: 'bar', data: [48.5, 15.0, 8.4, 37.3, 21.9], itemStyle: { color: '#6c7086' } },
+          { name: 'gemma-3-4b-it',   type: 'bar', data: [55.8, 30.1, 65.3, 69.8, 55.8], itemStyle: { color: '#fab387' } },
+          { name: 'Qwen3-1.7B(think)',type:'bar', data: [60.9, 30.7, 74.8, 70.4, 82.8], itemStyle: { color: '#89dceb' } },
+          { name: 'Qwen3-4B(think)', type: 'bar', data: [67.1, 41.5, 79.1, 74.1, 84.0], itemStyle: { color: '#cba6f7' } },
+          { name: 'OCC-RAG-0.6B',    type: 'bar', data: [57.6, 36.6, 75.0, 79.9, 86.9], itemStyle: { color: '#a6e3a1' }, barBorderRadius: [3,3,0,0] },
+          { name: 'OCC-RAG-1.7B',    type: 'bar', data: [60.9, 38.2, 81.0, 81.4, 87.2], itemStyle: { color: '#89b4fa' }, barBorderRadius: [3,3,0,0] }
+        ]
+      });
+    })();
+    </script>
+
+    <h3>ECharts 可视化：忠实度记忆率对比（越低越好）</h3>
+    <div id="chart-mr" class="echarts-container" style="height:300px"></div>
+    <script>
+    (function(){
+      var chart = echarts.init(document.getElementById('chart-mr'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'ConFiQA 记忆率 M_R（越低越好）', left: 'center', top: 12, textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis', formatter: '{b}: {c}%' },
+        grid: { left: '3%', right: '8%', bottom: '8%', top: '18%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['Pleias-RAG\n1.2B','gemma-3-4b\n-it','Qwen3-32B\n(think)','Qwen3-4B\n(think)','Qwen3-1.7B\n(think)','OCC-RAG\n0.6B','OCC-RAG\n1.7B'],
+          axisLabel: { color: '#cdd6f4', fontSize: 10 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value', name: 'M_R (%)', nameTextStyle: { color: '#cdd6f4' },
+          axisLabel: { color: '#cdd6f4' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [{
+          type: 'bar',
+          data: [
+            { value: 25.3, itemStyle: { color: '#f38ba8' } },
+            { value: 8.9,  itemStyle: { color: '#fab387' } },
+            { value: 8.5,  itemStyle: { color: '#cba6f7' } },
+            { value: 7.5,  itemStyle: { color: '#89dceb' } },
+            { value: 8.3,  itemStyle: { color: '#89dceb' } },
+            { value: 5.2,  itemStyle: { color: '#a6e3a1' } },
+            { value: 5.0,  itemStyle: { color: '#89b4fa' } }
+          ],
+          label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11, formatter: '{c}%' },
+          barBorderRadius: [3,3,0,0]
+        }]
+      });
+    })();
+    </script>
+
+    <h3>关键结果解读</h3>
+    <ul>
+      <li><strong>忠实性（ConFiQA M_R）</strong>：OCC-RAG-1.7B 以 M_R=5.0 位居所有测试模型最低，包括 32B 的 Qwen3。这证明任务专化训练在忠实性上具有压倒性优势，参数量不是决定因素。</li>
+      <li><strong>弃权能力（MuSiQue-Un R-Acc）</strong>：OCC-RAG-0.6B（86.9%）和 1.7B（87.2%）均超越了 4B 的 Qwen3 和 gemma，与 8B+ 模型持平。</li>
+      <li><strong>多跳推理（MuSiQue）</strong>：OCC-RAG-0.6B（36.6）超越了 Qwen3-1.7B（30.7）和 gemma-3-4b（30.1），体量仅为前者的 1/3。</li>
+      <li><strong>数值推理（TAT-QA F1）</strong>：OCC-RAG-1.7B（81.0）超越了 Qwen3-4B（79.1），尽管后者参数量是前者的 2.4 倍。</li>
+      <li><strong>Pleias-RAG-1.2B 的对比</strong>：同为 RAG 专用 SLM，Pleias 在 TAT-QA（8.4）和 MuSiQue-Un（21.9）上表现极差，说明数据质量和训练方法的差异远大于参数量的差异。</li>
+    </ul>
+
+    <!-- ===== 效率分析 ===== -->
+    <h2>效率分析</h2>
+
+    <p>效率分析从两个维度展开：参数效率（单位参数量的性能产出）和实际部署效率（推理延迟与硬件需求）。OCC-RAG 的价值不仅在于"以小胜大"的性能，更在于其在生产环境中的实际可行性。</p>
+
+    <h3>参数效率对比</h3>
+    <table>
+      <tr><th>模型</th><th>参数量</th><th>ConFiQA In-Acc</th><th>M_R↓</th><th>R-Acc</th><th>MuSiQue In-Acc</th><th>参数效率评级</th></tr>
+      <tr><td>OCC-RAG-0.6B</td><td>0.6B</td><td>79.9</td><td>5.2</td><td>86.9</td><td>36.6</td><td style="color:var(--strong)">极高</td></tr>
+      <tr><td>OCC-RAG-1.7B</td><td>1.7B</td><td>81.4</td><td>5.0</td><td>87.2</td><td>38.2</td><td style="color:var(--strong)">极高</td></tr>
+      <tr><td>Qwen3-1.7B (think)</td><td>1.7B</td><td>70.4</td><td>8.3</td><td>82.8</td><td>30.7</td><td style="color:var(--heading)">中等</td></tr>
+      <tr><td>Qwen3-4B (think)</td><td>4B</td><td>74.1</td><td>7.5</td><td>84.0</td><td>41.5</td><td style="color:var(--heading)">中等</td></tr>
+      <tr><td>gemma-3-4b-it</td><td>4B</td><td>69.8</td><td>8.9</td><td>55.8</td><td>30.1</td><td style="color:var(--quote-bar)">偏低</td></tr>
+      <tr><td>Qwen3-32B (think)</td><td>32B</td><td>75.8</td><td>8.5</td><td>—</td><td>49.3</td><td style="color:var(--quote-bar)">低（RAG场景）</td></tr>
+    </table>
+
+    <h3>"以小胜大"的关键指标</h3>
+    <table>
+      <tr><th>对比关系</th><th>参数比</th><th>OCC 优势指标</th><th>差距幅度</th></tr>
+      <tr><td>OCC-0.6B vs Qwen3-1.7B</td><td>1 : 2.8×</td><td>ConFiQA In-Acc (+9.5), M_R (-3.1), R-Acc (+4.1)</td><td>显著</td></tr>
+      <tr><td>OCC-0.6B vs gemma-3-4b</td><td>1 : 6.7×</td><td>ConFiQA In-Acc (+10.1), M_R (-3.7), R-Acc (+31.1)</td><td>压倒性</td></tr>
+      <tr><td>OCC-1.7B vs Qwen3-4B</td><td>1 : 2.4×</td><td>ConFiQA In-Acc (+7.3), M_R (-2.5), TAT-QA F1 (+1.9)</td><td>明显</td></tr>
+      <tr><td>OCC-1.7B vs Qwen3-32B</td><td>1 : 18.8×</td><td>ConFiQA In-Acc (+5.6), M_R (-3.5)</td><td>忠实性压倒</td></tr>
+    </table>
+
+    <h3>部署效率优势</h3>
+    <p>除性能外，OCC-RAG 在实际部署中还具备显著的效率优势：</p>
+    <ul>
+      <li><strong>显存需求</strong>：0.6B 模型以 FP16 精度仅需约 1.2GB 显存，可在消费级 GPU 甚至部分 CPU 上运行；1.7B 模型约需 3.4GB，可在单张 RTX 3060 上流畅推理。</li>
+      <li><strong>推理延迟</strong>：相比 4B 模型，0.6B 模型的 token 生成速度约快 4-6 倍（取决于硬件），1.7B 约快 2-3 倍。</li>
+      <li><strong>批处理吞吐量</strong>：更小的模型允许更大的批处理大小，在高并发 RAG 系统中具有显著的吞吐量优势。</li>
+      <li><strong>边缘部署可行性</strong>：0.6B 模型为边缘设备（如企业内网服务器、嵌入式设备）上的本地 RAG 系统提供了可行方案。</li>
+    </ul>
+
+    <h3>中间训练的增益分析</h3>
+    <p>通过对比 OCC-RAG-1.7B 与其基础模型 Qwen3-1.7B，可以量化中间训练带来的增益：</p>
+    <table>
+      <tr><th>指标</th><th>Qwen3-1.7B (think)</th><th>OCC-RAG-1.7B</th><th>增益</th></tr>
+      <tr><td>ConFiQA M_R↓</td><td>8.3</td><td>5.0</td><td style="color:var(--strong)">-3.3（降低 39.8%）</td></tr>
+      <tr><td>ConFiQA In-Acc</td><td>70.4</td><td>81.4</td><td style="color:var(--strong)">+11.0</td></tr>
+      <tr><td>MuSiQue In-Acc</td><td>30.7</td><td>38.2</td><td style="color:var(--strong)">+7.5</td></tr>
+      <tr><td>MuSiQue-Un R-Acc</td><td>82.8</td><td>87.2</td><td style="color:var(--strong)">+4.4</td></tr>
+      <tr><td>TAT-QA F1</td><td>74.8</td><td>81.0</td><td style="color:var(--strong)">+6.2</td></tr>
+    </table>
+    <p>中间训练在不增加参数量的前提下，将 M_R 降低了近 40%，同时在所有基准上均有显著提升，充分验证了任务专化训练策略的有效性。</p>
+
+    <!-- ===== 总结与启发 ===== -->
+    <h2>总结与启发</h2>
+
+    <p>OCC-RAG 是一篇思路清晰、工程扎实的论文，其价值不仅在于提出了两个性能优异的小模型，更在于它为 NLP 工程界提供了一种新的思维框架：<strong>在明确定义的任务边界内，专化优于泛化，质量优于规模</strong>。</p>
+
+    <h3>核心贡献总结</h3>
+    <ul>
+      <li><strong>挑战 Scaling 范式</strong>：在 RAG 场景下，0.6B 的专化模型可以超越 4B 的通用模型，18.8 倍参数量的 Qwen3-32B 在忠实性上也不如 1.7B 的 OCC-RAG。这一结果有力地证明：对于任务边界清晰的应用场景，模型规模不是性能的决定性因素。</li>
+      <li><strong>数据质量的决定性作用</strong>：OCC-RAG 与 Pleias-RAG-1.2B 的对比（后者在 TAT-QA 上仅 8.4 分）揭示了一个关键事实：同为 RAG 专用 SLM，数据质量和训练策略的差异可以导致数量级的性能差距。325 万高质量合成数据远比数量更多但质量参差的数据有价值。</li>
+      <li><strong>结构化输出的工程价值</strong>：五段式输出格式不仅提升了模型的可解释性，更为 RAG 系统的工程集成提供了标准化接口。这种"输出格式即协议"的设计思路值得在工业界推广。</li>
+      <li><strong>弃权能力的重要性被低估</strong>：在 RAG 系统中，"正确地拒绝回答"与"正确地给出答案"同等重要。OCC-RAG 将弃权作为一等公民纳入训练目标，而非事后通过提示工程修补，这一设计决策在 MuSiQue-Un 基准上得到了充分验证。</li>
+    </ul>
+
+    <h3>对 RAG 系统设计的启发</h3>
+    <ul>
+      <li><strong>选型建议</strong>：对于以 RAG 为核心的生产系统，OCC-RAG-0.6B 是一个极具性价比的选择——在忠实性和弃权能力上超越 4B 通用模型，同时推理成本降低 6-7 倍。</li>
+      <li><strong>忠实性优先原则</strong>：在知识库问答、法律文档分析、医疗记录查询等高风险场景中，M_R 低的模型比 Acc 高的模型更安全可靠。OCC-RAG 的 M_R=5.0 意味着 95% 的答案来自提供的上下文，这对合规性要求高的场景至关重要。</li>
+      <li><strong>中间训练策略的可复用性</strong>：OCC-RAG 的数据合成流水线和中间训练策略具有通用性，可以迁移到其他任务专化 SLM 的开发中（如代码审查、文档摘要、结构化信息抽取等）。</li>
+    </ul>
+
+    <h3>局限性与未来方向</h3>
+    <ul>
+      <li><strong>任务边界限制</strong>：OCC-RAG 只擅长 RAG QA，不具备通用对话、代码生成等能力。这是任务专化的必然代价，需要根据实际需求权衡。</li>
+      <li><strong>推理链长度上限</strong>：训练数据上限为三跳推理，更长的推理链属于分布外情况，性能可能下降。</li>
+      <li><strong>语言覆盖</strong>：当前版本主要针对英文场景，多语言 RAG 能力有待验证。</li>
+      <li><strong>动态知识更新</strong>：SLM 的参数化知识更新成本低（因为本就不依赖参数记忆），但如何高效更新检索库中的知识仍是 RAG 系统的核心挑战。</li>
+    </ul>
+
+    <blockquote>
+      <strong>个人评价：</strong>OCC-RAG 是 2026 年 RAG 领域最值得关注的工作之一。它不是在追求 SOTA 的数字游戏，而是在回答一个真实的工程问题：如何以最低成本构建最可靠的 RAG 系统？这种务实的工程哲学，以及"小而精"的设计理念，对工业界的实际落地具有直接的指导价值。
+    </blockquote>
+
+    <!-- ===== 参考文献 ===== -->
+    <h2>参考文献</h2>
+    <ol>
+      <li>Savkin et al. (2026). <em>OCC-RAG: Optimal Cognitive Core for Faithful Question Answering</em>. arXiv:2606.00683. <a href="https://arxiv.org/abs/2606.00683" target="_blank">https://arxiv.org/abs/2606.00683</a></li>
+      <li>Yang et al. (2018). <em>HotpotQA: A Dataset for Diverse, Explainable Multi-hop Question Answering</em>. EMNLP 2018.</li>
+      <li>Trivedi et al. (2022). <em>MuSiQue: Multihop Questions via Single-hop Question Composition</em>. TACL 2022.</li>
+      <li>Zhu et al. (2021). <em>TAT-QA: A Question Answering Benchmark on a Hybrid of Tabular and Textual Content in Finance</em>. ACL 2021.</li>
+      <li>Vakula &amp; Ravindran (2024). <em>ConFiQA: Examining the Confidence of Large Language Models upon Context Conflicting with Parametric Knowledge</em>. arXiv:2409.16514.</li>
+      <li>Lewis et al. (2020). <em>Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks</em>. NeurIPS 2020.</li>
+      <li>Qwen Team (2025). <em>Qwen3 Technical Report</em>. arXiv:2505.09388.</li>
+      <li>Team Gemma (2025). <em>Gemma 3 Technical Report</em>. arXiv:2503.19786.</li>
+      <li>Hinton et al. (2015). <em>Distilling the Knowledge in a Neural Network</em>. NeurIPS Workshop 2015.</li>
+      <li>OCC GitHub Repository: <a href="https://github.com/optimal-cognitive-core/OCC-RAG" target="_blank">https://github.com/optimal-cognitive-core/OCC-RAG</a></li>
+      <li>OCC HuggingFace Models: <a href="https://huggingface.co/occ-ai" target="_blank">https://huggingface.co/occ-ai</a></li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086;font-size:.85em;text-align:center;">
+      阅读报告生成时间：2026-06-05 &nbsp;|&nbsp; 模型：claude-opus-4-8[1m] &nbsp;|&nbsp; 论文 arXiv: 2606.00683
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({startOnLoad:true, theme:'dark'});
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 's' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const obs = new IntersectionObserver(entries => entries.forEach(e => {
+      const l = toc.querySelector('a[href="#' + e.target.id + '"]');
+      if (l) l.classList.toggle('active', e.isIntersecting);
+    }), { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+  </script>
+</body>
+</html>

@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DQN 算法与改进 · 动手学强化学习 第7-8章</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --red: #f38ba8;
+      --yellow: #f9e2af;
+      --purple: #cba6f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      line-height: 1.85;
+    }
+
+    /* ── TOC ── */
+    #toc {
+      position: fixed; top: 0; left: 0;
+      width: 232px; height: 100vh;
+      background: var(--bg-nav);
+      overflow-y: auto; padding: 20px 12px;
+      font-size: 12.5px;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+    #toc h2 {
+      color: var(--heading); font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 14px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    #toc a {
+      display: block; color: var(--text);
+      text-decoration: none; padding: 3px 8px;
+      border-radius: 4px; margin-bottom: 2px;
+      transition: background 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 700; }
+    #toc a.toc-h3 { padding-left: 18px; font-size: 11.5px; opacity: 0.82; }
+    #toc a.toc-h4 { padding-left: 30px; font-size: 11px; opacity: 0.68; }
+
+    /* ── Main ── */
+    main { margin-left: 232px; max-width: none; padding: 44px 52px 80px; }
+    h1 { color: var(--heading); font-size: 2em; margin-bottom: 10px; line-height: 1.3; }
+    h2 {
+      color: var(--heading); font-size: 1.42em;
+      margin: 2.4em 0 0.7em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 7px;
+    }
+    h3 { color: var(--heading); font-size: 1.12em; margin: 1.6em 0 0.5em; }
+    h4 { color: var(--yellow); font-size: 1em; margin: 1.2em 0 0.4em; }
+    p { margin: 0.65em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { padding-left: 1.6em; margin: 0.5em 0; }
+    li { margin-bottom: 0.3em; }
+    blockquote {
+      border-left: 3px solid var(--quote-bar);
+      padding: 10px 18px; margin: 1.2em 0;
+      background: #252536; border-radius: 0 6px 6px 0;
+    }
+    table { border-collapse: collapse; width: 100%; margin: 1.2em 0; font-size: 0.92em; }
+    th { background: #252536; color: var(--heading); padding: 9px 13px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 8px 13px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #252536; }
+    pre {
+      background: var(--bg-code); border-radius: 7px;
+      padding: 16px 18px; overflow-x: auto;
+      margin: 1em 0; font-size: 0.87em;
+      border: 1px solid var(--border);
+    }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    p code, li code, td code {
+      background: var(--bg-code); padding: 2px 6px;
+      border-radius: 3px; font-size: 0.87em;
+    }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.4em 0; }
+
+    /* ── Mermaid ── */
+    .mermaid {
+      background: #252536; border-radius: 8px;
+      padding: 20px; margin: 1.2em 0;
+      text-align: center; overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+
+    /* ── ECharts ── */
+    .echarts-container { margin: 1.2em 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+
+    /* ── Cards ── */
+    .card {
+      border-radius: 8px; padding: 16px 20px;
+      margin: 1em 0; border-left: 4px solid;
+    }
+    .card.blue  { background: #1e2a3a; border-color: var(--heading); }
+    .card.green { background: #1e2e24; border-color: var(--strong); }
+    .card.yellow{ background: #2e2a1a; border-color: var(--yellow); }
+    .card.purple{ background: #261e2e; border-color: var(--purple); }
+    .card.red   { background: #2e1e22; border-color: var(--red); }
+    .card h4 { margin-top: 0; }
+
+    /* ── Formula boxes ── */
+    .fbox {
+      background: #252536; border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px 22px;
+      margin: 1.2em 0; overflow-x: auto;
+    }
+    .fbox.derive {
+      background: #1e2a3a; border-color: var(--heading);
+      border-left: 4px solid var(--heading);
+    }
+    .fbox.def {
+      background: #261e2e; border-color: var(--purple);
+      border-left: 4px solid var(--purple);
+    }
+    .fbox-title {
+      font-size: 0.82em; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin-bottom: 8px; opacity: 0.7;
+    }
+    .fbox.derive .fbox-title { color: var(--heading); }
+    .fbox.def .fbox-title { color: var(--purple); }
+
+    /* ── Steps ── */
+    .steps { margin: 1em 0; }
+    .step {
+      display: flex; gap: 14px; align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .step-n {
+      min-width: 28px; height: 28px;
+      background: var(--heading); color: #1e1e2e;
+      border-radius: 50%; display: flex;
+      align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85em;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .step-body { flex: 1; }
+    .step-body strong { display: block; margin-bottom: 3px; }
+
+    /* ── Compare columns ── */
+    .cmp {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 16px; margin: 1.2em 0;
+    }
+    .cmp-col { border-radius: 8px; padding: 16px 18px; }
+    .cmp-col.a { background: #1e2a3a; border: 1px solid var(--heading); }
+    .cmp-col.b { background: #1e2e24; border: 1px solid var(--strong); }
+    .cmp-col h4 { margin-top: 0; margin-bottom: 8px; }
+    .cmp-col.a h4 { color: var(--heading); }
+    .cmp-col.b h4 { color: var(--strong); }
+
+    /* ── Symbol table ── */
+    .sym-grid {
+      display: grid; grid-template-columns: 120px 1fr;
+      gap: 0; margin: 1em 0;
+      border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; font-size: 0.92em;
+    }
+    .sym-grid .sym-k {
+      background: #252536; padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--yellow); font-weight: 600;
+    }
+    .sym-grid .sym-v {
+      background: var(--bg); padding: 7px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sym-grid .sym-k:last-of-type,
+    .sym-grid .sym-v:last-of-type { border-bottom: none; }
+
+    /* ── Tag badges ── */
+    .badge {
+      display: inline-block; font-size: 0.75em;
+      padding: 2px 8px; border-radius: 20px;
+      font-weight: 600; margin-left: 6px; vertical-align: middle;
+    }
+    .badge.blue   { background: #1e3a5f; color: var(--heading); }
+    .badge.green  { background: #1a3a22; color: var(--strong); }
+    .badge.yellow { background: #3a2e0a; color: var(--yellow); }
+    .badge.red    { background: #3a1a1e; color: var(--red); }
+    .badge.purple { background: #2e1a3a; color: var(--purple); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-nav); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$']],
+        displayMath: [['$$','$$']],
+        tags: 'ams'
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<nav id="toc"><h2>目录</h2></nav>
+
+<main>
+
+<!-- ═══════════════════════════════════════════
+     HEADER
+════════════════════════════════════════════ -->
+<h1>DQN 算法与改进</h1>
+<blockquote>
+  <strong>动手学强化学习 · 第 7–8 章</strong> &nbsp;|&nbsp;
+  深度 Q 网络原理、关键技术与四大改进算法完整解析
+</blockquote>
+
+<!-- ═══════════════════════════════════════════
+     符号总表
+════════════════════════════════════════════ -->
+<h2 id="symbols">符号总表</h2>
+<p>全文使用如下统一符号，请在阅读各节公式前先熟悉其含义。</p>
+
+<div class="sym-grid">
+  <div class="sym-k">$\theta$</div>
+  <div class="sym-v"><strong>训练网络参数</strong>——在线 Q 网络 $Q(s,a;\theta)$ 的权重，每步梯度更新</div>
+  <div class="sym-k">$\theta^-$</div>
+  <div class="sym-v"><strong>目标网络参数</strong>——延迟副本，每 $C$ 步同步一次，用于计算 TD 目标</div>
+  <div class="sym-k">$\mathcal{D}$</div>
+  <div class="sym-v"><strong>经验回放池</strong>——存储转移元组 $(s, a, r, s', \text{done})$ 的循环缓冲区</div>
+  <div class="sym-k">$N$</div>
+  <div class="sym-v"><strong>Mini-batch 大小</strong>——每次从 $\mathcal{D}$ 中随机采样的样本数</div>
+  <div class="sym-k">$C$</div>
+  <div class="sym-v"><strong>目标网络更新频率</strong>——每训练 $C$ 步将 $\theta$ 复制到 $\theta^-$</div>
+  <div class="sym-k">$Q(s,a;\theta)$</div>
+  <div class="sym-v"><strong>Q 网络输出</strong>——神经网络对状态-动作对 $(s,a)$ 的价值估计</div>
+  <div class="sym-k">$\gamma$</div>
+  <div class="sym-v"><strong>折扣因子</strong>——$\gamma \in [0,1)$，控制未来奖励的衰减程度</div>
+  <div class="sym-k">$\delta$</div>
+  <div class="sym-v"><strong>TD 误差</strong>——$\delta = y - Q(s,a;\theta)$，衡量预测与目标的差距</div>
+  <div class="sym-k">$V(s)$</div>
+  <div class="sym-v"><strong>状态价值函数</strong>——Dueling 网络的 V 流输出，与动作无关</div>
+  <div class="sym-k">$A(s,a)$</div>
+  <div class="sym-v"><strong>优势函数</strong>——Dueling 网络的 A 流输出，表示动作相对于均值的优劣</div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     第 7 章
+════════════════════════════════════════════ -->
+<h2 id="ch7">第 7 章 &nbsp;DQN 算法</h2>
+<p>
+  深度 Q 网络（Deep Q-Network，DQN）是 DeepMind 于 2013/2015 年提出的里程碑算法，
+  首次将深度卷积神经网络与 Q-learning 结合，在 Atari 游戏上达到人类水平。
+  本章从表格 Q-learning 的局限出发，逐步引入<strong>经验回放</strong>和<strong>目标网络</strong>两大核心技术，
+  并给出完整的损失函数推导与算法流程。
+</p>
+
+<!-- 7.1 -->
+<h3 id="sec71">7.1 从表格 Q-learning 到深度 Q 网络</h3>
+
+<p>
+  经典 Q-learning 维护一张 $|S| \times |A|$ 的 Q 表，对每个状态-动作对独立存储价值估计。
+  这在状态空间有限且离散时工作良好，但面对高维连续输入（如 $84\times84$ 像素图像）时彻底失效。
+</p>
+
+<div class="cmp">
+  <div class="cmp-col a">
+    <h4>表格 Q-learning 的局限</h4>
+    <ul>
+      <li>状态空间连续或高维时无法枚举</li>
+      <li>无泛化能力：相似状态独立存储</li>
+      <li>存储开销随 $|S|$ 线性爆炸</li>
+      <li>Atari 像素空间：$256^{84\times84}$ 种状态</li>
+    </ul>
+  </div>
+  <div class="cmp-col b">
+    <h4>函数逼近的解决思路</h4>
+    <ul>
+      <li>用神经网络 $Q(s,a;\theta)$ 逼近 $Q^*(s,a)$</li>
+      <li>共享参数实现跨状态泛化</li>
+      <li>卷积层自动提取视觉特征</li>
+      <li>参数量与状态空间解耦</li>
+    </ul>
+  </div>
+</div>
+
+<p><strong>朴素深度 Q 学习面临两大根本问题：</strong></p>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-n">1</div>
+    <div class="step-body">
+      <strong>数据相关性（Correlated Data）</strong>
+      智能体与环境交互产生的轨迹 $(s_t, a_t, r_t, s_{t+1})$ 在时间上高度相关——
+      相邻帧的状态几乎相同，违反了 SGD 要求样本独立同分布（i.i.d.）的假设，
+      导致梯度估计有偏、网络收敛困难。
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n">2</div>
+    <div class="step-body">
+      <strong>训练目标不稳定（Moving Target）</strong>
+      朴素方法中目标值为
+      $y_t = r + \gamma \max_{a'} Q(s',a';\theta)$，
+      其中目标 $y_t$ 本身依赖于正在更新的参数 $\theta$。
+      每次参数更新都会改变目标，形成"追着移动的目标跑"的恶性循环，
+      极易导致震荡甚至发散。
+    </div>
+  </div>
+</div>
+
+<!-- 7.2 -->
+<h3 id="sec72">7.2 关键技术一：经验回放（Experience Replay）</h3>
+
+<p>
+  经验回放是 DQN 打破数据相关性的核心机制。
+  其思想来源于生物记忆巩固理论——海马体在睡眠中反复"回放"白天的经历以强化记忆。
+</p>
+
+<div class="card blue">
+  <h4>机制描述</h4>
+  <p>
+    维护一个容量为 $M$ 的循环缓冲区 $\mathcal{D}$，智能体每与环境交互一步，
+    就将转移元组 $(s, a, r, s', \text{done})$ 压入 $\mathcal{D}$。
+    缓冲区满时，最旧的样本被覆盖。
+    每次训练时，从 $\mathcal{D}$ 中<strong>均匀随机</strong>采样 $N$ 个样本组成 mini-batch，
+    用于计算梯度并更新 $\theta$。
+  </p>
+</div>
+
+<h4>作用分析</h4>
+<ul>
+  <li><strong>打破时序相关性</strong>：随机采样使得 mini-batch 中的样本来自不同时间步，近似满足 i.i.d. 假设</li>
+  <li><strong>提高数据利用率</strong>：每条经验可被反复采样用于多次梯度更新，样本效率显著提升</li>
+  <li><strong>平滑数据分布</strong>：混合了不同策略下的历史数据，使训练分布更加稳定</li>
+</ul>
+
+<div class="fbox def">
+  <div class="fbox-title">定义 · 经验回放损失函数</div>
+  <p>$$
+    \mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s') \sim \mathcal{D}}\!\left[\left(y - Q(s,a;\theta)\right)^2\right]
+  $$</p>
+  <p>其中目标值 $y = r + \gamma \max_{a'} Q(s',a';\theta^-)$，$\theta^-$ 为目标网络参数（见 7.3 节）。</p>
+</div>
+
+<!-- 7.3 -->
+<h3 id="sec73">7.3 关键技术二：目标网络（Target Network）</h3>
+
+<p>
+  目标网络是 DQN 解决训练目标不稳定的核心机制。
+  通过维护一个更新频率更低的"慢速"副本，将目标值在一段时间内固定，
+  从而将强化学习问题转化为更接近监督学习的形式。
+</p>
+
+<div class="card green">
+  <h4>机制描述</h4>
+  <p>
+    维护两套网络参数：<br>
+    &nbsp;&nbsp;• <strong>训练网络</strong> $Q(s,a;\theta)$：每步通过梯度下降更新<br>
+    &nbsp;&nbsp;• <strong>目标网络</strong> $Q(s,a;\theta^-)$：每 $C$ 步<em>硬复制</em>训练网络：$\theta^- \leftarrow \theta$
+  </p>
+</div>
+
+<h4>训练目标推导</h4>
+
+<div class="fbox derive">
+  <div class="fbox-title">推导 · 目标网络 TD 目标</div>
+  <p>对于终止状态（$\text{done}=1$），未来无奖励，目标即为即时奖励：</p>
+  <p>$$y_t = r_{t+1} \quad (\text{done}=1)$$</p>
+  <p>对于非终止状态（$\text{done}=0$），使用 Bellman 最优方程展开：</p>
+  <p>$$y_t = r_{t+1} + \gamma \max_{a'} Q(s_{t+1}, a';\,\theta^-)$$</p>
+  <p>统一写成（利用 done 标志合并两种情况）：</p>
+  <p>$$\boxed{y_t = r_{t+1} + \gamma \cdot (1-\text{done}) \cdot \max_{a'} Q(s_{t+1}, a';\,\theta^-)}$$</p>
+</div>
+
+<div class="fbox def">
+  <div class="fbox-title">定义 · DQN 完整损失函数</div>
+  <p>$$
+    \mathcal{L}(\theta) = \mathbb{E}_{(s,a,r,s',\text{done})\sim\mathcal{D}}
+    \!\left[\Bigl(r + \gamma(1-\text{done})\cdot\max_{a'}Q(s',a';\theta^-) - Q(s,a;\theta)\Bigr)^2\right]
+  $$</p>
+</div>
+
+<p><strong>目标网络的作用：</strong>在 $C$ 步内，$\theta^-$ 保持不变，$y_t$ 成为固定目标，
+问题退化为监督回归，有效遏制了震荡和发散。$C$ 越大，目标越稳定，但参数滞后也越严重；
+典型取值 $C = 1000 \sim 10000$。</p>
+
+<!-- 7.4 -->
+<h3 id="sec74">7.4 DQN 完整算法流程</h3>
+
+<p>
+  将经验回放与目标网络结合，DQN 的完整训练循环如下图所示。
+  算法采用 $\varepsilon$-贪心策略在探索与利用之间权衡，$\varepsilon$ 随训练进行线性衰减。
+</p>
+
+<pre class="mermaid">
+flowchart TD
+    A(["初始化"]) --> B["初始化 Q 网络参数 θ\n目标网络 θ- ← θ，清空回放池 D"]
+    B --> C["重置环境，获取初始状态 s"]
+    C --> D{"ε-贪心选择动作"}
+    D -->|"探索"| D1["随机选择 a"]
+    D -->|"利用"| D2["a = argmax Q(s,a;θ)"]
+    D1 --> E["执行动作 a\n获得 r, s_next, done"]
+    D2 --> E
+    E --> F["存储 (s, a, r, s_next, done) 到 D"]
+    F --> G{"样本数 >= N?"}
+    G -->|"否"| H["s ← s_next"]
+    G -->|"是"| I["从 D 随机采样\nN 个转移元组"]
+    I --> J["计算目标值\ny = r + γ(1-done)·max Q(s_next,a;θ-)"]
+    J --> K["计算损失\nL(θ) = (y - Q(s,a;θ))^2"]
+    K --> L["梯度下降更新 θ"]
+    L --> M{"步数 mod C = 0?"}
+    M -->|"是"| N["同步目标网络\nθ- ← θ"]
+    M -->|"否"| H
+    N --> H
+    H --> O{"done?"}
+    O -->|"否"| D
+    O -->|"是"| C
+</pre>
+
+<div class="steps">
+  <div class="step">
+    <div class="step-n">1</div>
+    <div class="step-body">
+      <strong>初始化</strong>：随机初始化 $\theta$，令 $\theta^- \leftarrow \theta$，清空回放池 $\mathcal{D}$，设置 $\varepsilon = 1.0$
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n">2</div>
+    <div class="step-body">
+      <strong>收集数据</strong>：以 $\varepsilon$-贪心策略选择动作，执行后获得 $(s, a, r, s', \text{done})$，存入 $\mathcal{D}$
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n">3</div>
+    <div class="step-body">
+      <strong>采样训练</strong>：当 $|\mathcal{D}| \geq N$ 时，均匀随机采样 $N$ 个样本，计算目标值 $y_t$
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n">4</div>
+    <div class="step-body">
+      <strong>参数更新</strong>：对 $\mathcal{L}(\theta)$ 求梯度，使用 Adam/RMSprop 优化器更新 $\theta$
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-n">5</div>
+    <div class="step-body">
+      <strong>目标同步</strong>：每 $C$ 步执行 $\theta^- \leftarrow \theta$，衰减 $\varepsilon$，重复步骤 2–5
+    </div>
+  </div>
+</div>
+
+<!-- 7.5 -->
+<h3 id="sec75">7.5 DQN 与 Q-learning 的对比</h3>
+
+<p>下表从多个维度系统对比经典表格 Q-learning 与 DQN 的异同。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th>表格 Q-learning</th>
+      <th>DQN</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>状态表示</strong></td>
+      <td>离散枚举，存储 Q 表</td>
+      <td>神经网络函数逼近，支持连续/高维输入</td>
+    </tr>
+    <tr>
+      <td><strong>数据利用</strong></td>
+      <td>在线学习，每条数据用一次</td>
+      <td>经验回放，每条数据可多次复用</td>
+    </tr>
+    <tr>
+      <td><strong>训练稳定性</strong></td>
+      <td>有理论收敛保证（有限 MDP）</td>
+      <td>目标网络稳定训练，但无严格收敛证明</td>
+    </tr>
+    <tr>
+      <td><strong>泛化能力</strong></td>
+      <td>无泛化，每状态独立</td>
+      <td>参数共享，相似状态自动泛化</td>
+    </tr>
+    <tr>
+      <td><strong>计算开销</strong></td>
+      <td>查表 $O(1)$，内存 $O(|S||A|)$</td>
+      <td>前向传播，内存 $O(\text{参数量})$</td>
+    </tr>
+    <tr>
+      <td><strong>适用场景</strong></td>
+      <td>小规模离散状态空间（棋盘游戏等）</td>
+      <td>高维连续状态（Atari、机器人控制等）</td>
+    </tr>
+    <tr>
+      <td><strong>超参数</strong></td>
+      <td>学习率 $\alpha$、折扣 $\gamma$、$\varepsilon$</td>
+      <td>额外需要：回放池大小 $M$、batch $N$、更新频率 $C$</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ═══════════════════════════════════════════
+     第 8 章
+════════════════════════════════════════════ -->
+<h2 id="ch8">第 8 章 &nbsp;DQN 改进算法</h2>
+<p>
+  尽管 DQN 取得了突破性成果，但其仍存在 Q 值系统性高估、网络结构利用不充分、
+  样本采样效率低等问题。本章介绍四种经典改进：
+  <span class="badge blue">Double DQN</span>
+  <span class="badge green">Dueling DQN</span>
+  <span class="badge yellow">PER</span>
+  <span class="badge purple">Rainbow</span>，
+  每种改进均针对 DQN 的一个具体缺陷。
+</p>
+
+<!-- 8.1 -->
+<h3 id="sec81">8.1 Double DQN：解决 Q 值高估</h3>
+
+<p>
+  Double DQN（van Hasselt et al., 2016）针对 DQN 中 $\max$ 操作引入的系统性高估偏差，
+  通过解耦动作选择与价值估计，将过估计程度从理论上降低。
+</p>
+
+<h4>高估问题的数学根源</h4>
+
+<div class="fbox derive">
+  <div class="fbox-title">推导 · max 操作引入正向偏差</div>
+  <p>设有两个带噪声的估计量 $\hat{Q}_1, \hat{Q}_2$，满足 $\mathbb{E}[\hat{Q}_i] = Q_i$，则：</p>
+  <p>$$\mathbb{E}\!\left[\max(\hat{Q}_1, \hat{Q}_2)\right] \;\geq\; \max\!\left(\mathbb{E}[\hat{Q}_1],\, \mathbb{E}[\hat{Q}_2]\right)$$</p>
+  <p>这是 Jensen 不等式的直接推论（$\max$ 是凸函数）。在 Q-learning 中，</p>
+  <p>$$y = r + \gamma \max_{a'} Q(s', a';\theta^-)$$</p>
+  <p>
+    目标网络 $\theta^-$ 对 $Q^*$ 的估计存在随机误差，$\max$ 操作会系统性地选择<em>被高估</em>的动作，
+    导致目标值 $y$ 持续偏高，进而使整个 Q 网络的估计向上漂移。
+  </p>
+</div>
+
+<h4>DQN vs Double DQN 目标值对比</h4>
+
+<div class="cmp">
+  <div class="cmp-col a">
+    <h4>DQN 目标（产生高估）</h4>
+    <p>$$y = r + \gamma\, Q\!\left(s',\, \underbrace{\arg\max_{a'} Q(s',a';\theta^-)}_{\text{动作选择}}\,;\, \underbrace{\theta^-}_{\text{值估计}}\right)$$</p>
+    <p>动作选择与值估计<strong>使用同一网络</strong> $\theta^-$，选出的"最优"动作恰好是被 $\theta^-$ 高估的动作，形成正反馈偏差。</p>
+  </div>
+  <div class="cmp-col b">
+    <h4>Double DQN 目标（解耦消偏）</h4>
+    <p>$$y = r + \gamma\, Q\!\left(s',\, \underbrace{\arg\max_{a'} Q(s',a';\theta)}_{\text{训练网络选动作}}\,;\, \underbrace{\theta^-}_{\text{目标网络估值}}\right)$$</p>
+    <p>动作选择用<strong>训练网络</strong> $\theta$，值估计用<strong>目标网络</strong> $\theta^-$，两者独立，互相校正偏差。</p>
+  </div>
+</div>
+
+<div class="fbox derive">
+  <div class="fbox-title">推导 · 解耦为何降低过估计</div>
+  <p>设训练网络选出动作 $a^* = \arg\max_{a'} Q(s',a';\theta)$，目标网络估计其价值 $Q(s', a^*;\theta^-)$。</p>
+  <p>
+    由于 $\theta$ 与 $\theta^-$ 的误差<em>不完全相关</em>（训练网络更新频率更高，两者处于不同状态），
+    $a^*$ 不一定是 $\theta^-$ 高估最多的动作。因此：
+  </p>
+  <p>$$\mathbb{E}\!\left[Q(s', a^*;\theta^-)\right] \;\leq\; \mathbb{E}\!\left[\max_{a'} Q(s',a';\theta^-)\right]$$</p>
+  <p>即 Double DQN 的期望目标值不超过 DQN 的期望目标值，<strong>系统性高估得到抑制</strong>。</p>
+  <p>实践中，Double DQN 相比 DQN 高估量可降低 50% 以上，最终策略性能平均提升约 10–15%。</p>
+</div>
+
+<div class="card green">
+  <h4>实现要点</h4>
+  <p>
+    Double DQN 相比 DQN 的代码改动<strong>极小</strong>——仅需修改目标值计算的一行：
+  </p>
+  <pre><code class="language-python"># DQN（原版）
+next_q = target_net(next_s).max(dim=1).values
+
+# Double DQN（只改这里）
+best_actions = online_net(next_s).argmax(dim=1, keepdim=True)
+next_q = target_net(next_s).gather(1, best_actions).squeeze(1)</code></pre>
+</div>
+
+<!-- 8.2 -->
+<h3 id="sec82">8.2 Dueling DQN：分解价值与优势</h3>
+
+<p>
+  Dueling DQN（Wang et al., 2016）从网络结构角度改进 DQN，
+  将 Q 值分解为<strong>状态价值</strong>和<strong>优势函数</strong>两个独立流，
+  使网络能在无需评估每个动作的情况下学习状态的整体价值。
+</p>
+
+<h4>Q 值分解</h4>
+
+<div class="fbox def">
+  <div class="fbox-title">定义 · 优势函数</div>
+  <p>$$A^\pi(s, a) \;\triangleq\; Q^\pi(s, a) - V^\pi(s)$$</p>
+  <p>优势函数衡量动作 $a$ 相对于该状态下<em>平均水平</em>的好坏。由定义可知：</p>
+  <p>$$\mathbb{E}_{a \sim \pi}\!\left[A^\pi(s, a)\right] = 0$$</p>
+  <p>即在策略 $\pi$ 下，所有动作的平均优势为零。</p>
+</div>
+
+<div class="fbox derive">
+  <div class="fbox-title">推导 · 去中心化实现</div>
+  <p>朴素分解 $Q = V + A$ 存在<strong>不可识别性</strong>问题：对任意常数 $c$，</p>
+  <p>$$(V + c) + (A - c) = V + A = Q$$</p>
+  <p>$V$ 和 $A$ 无法被唯一确定，梯度无法有效传播。</p>
+  <p>解决方案：强制 $A$ 的均值为零（去中心化）：</p>
+  <p>$$\boxed{Q(s,a;\theta) = V(s;\theta_V) + A(s,a;\theta_A) - \frac{1}{|\mathcal{A}|}\sum_{a'} A(s,a';\theta_A)}$$</p>
+  <p>
+    减去均值而非最大值（$\max_{a'} A$），是因为均值的梯度更稳定，
+    不会因为最大值动作的突变导致训练震荡。
+  </p>
+</div>
+
+<h4>Dueling DQN 网络结构</h4>
+
+<pre class="mermaid">
+flowchart TD
+    IN["输入状态 s\n&#40;像素/特征向量&#41;"] --> CONV["共享特征提取层\n&#40;CNN / MLP&#41;"]
+    CONV --> SPLIT{" "}
+    SPLIT --> VA["V 流\n全连接层"]
+    SPLIT --> AA["A 流\n全连接层"]
+    VA --> VS["V&#40;s; θ_V&#41;\n标量输出"]
+    AA --> AS["A&#40;s,a; θ_A&#41;\n向量输出 &#40;|A| 维&#41;"]
+    VS --> MERGE["合并\nQ = V + A - mean&#40;A&#41;"]
+    AS --> NORM["去中心化\nA' = A - mean&#40;A&#41;"]
+    NORM --> MERGE
+    MERGE --> OUT["Q&#40;s,a; θ&#41;\n向量输出 &#40;|A| 维&#41;"]
+</pre>
+
+<h4>优势分析</h4>
+
+<div class="card purple">
+  <h4>为何 Dueling 结构更高效？</h4>
+  <ul>
+    <li>
+      <strong>状态价值独立学习</strong>：在许多状态下，不同动作的价值差异很小（如静止悬停时各方向加速效果相近），
+      此时只需更新 $V(s)$ 而无需精确估计每个动作的 $A(s,a)$，梯度信号更集中。
+    </li>
+    <li>
+      <strong>更快的价值传播</strong>：$V(s)$ 在所有动作间共享，每次更新都能同时改善所有动作的估计，
+      样本效率提升。
+    </li>
+    <li>
+      <strong>动作无关更新</strong>：当智能体访问某状态但只执行了部分动作时，
+      其他动作的 Q 值也通过 $V(s)$ 得到间接更新。
+    </li>
+  </ul>
+</div>
+
+<!-- 8.3 -->
+<h3 id="sec83">8.3 优先经验回放（Prioritized Experience Replay, PER）</h3>
+
+<p>
+  标准经验回放对所有历史转移均匀采样，忽视了不同样本的信息含量差异。
+  PER（Schaul et al., 2016）根据 TD 误差的大小为样本分配不同的采样优先级，
+  让网络更多地学习"出乎意料"的经历。
+</p>
+
+<h4>优先级采样</h4>
+
+<div class="fbox def">
+  <div class="fbox-title">定义 · 采样概率</div>
+  <p>$$P(i) = \frac{p_i^\alpha}{\sum_k p_k^\alpha}, \quad p_i = |\delta_i| + \epsilon$$</p>
+  <p>
+    其中 $\delta_i = y_i - Q(s_i, a_i;\theta)$ 为样本 $i$ 的 TD 误差，
+    $\epsilon > 0$ 为防止优先级为零的小常数，
+    $\alpha \in [0,1]$ 控制优先化程度（$\alpha=0$ 退化为均匀采样）。
+  </p>
+</div>
+
+<h4>重要性采样权重（纠正偏差）</h4>
+
+<p>
+  优先采样改变了数据分布，引入了采样偏差。为保证无偏梯度估计，
+  需用重要性采样（IS）权重对梯度进行校正：
+</p>
+
+<div class="fbox derive">
+  <div class="fbox-title">推导 · IS 权重</div>
+  <p>均匀采样时每个样本的概率为 $\frac{1}{N}$，优先采样时为 $P(i)$，IS 权重为：</p>
+  <p>$$w_i = \left(\frac{1}{N \cdot P(i)}\right)^\beta$$</p>
+  <p>归一化（防止权重过大破坏训练稳定性）：</p>
+  <p>$$\boxed{\tilde{w}_i = \frac{w_i}{\max_j w_j} = \frac{\left(\frac{1}{N \cdot P(i)}\right)^\beta}{\max_j \left(\frac{1}{N \cdot P(j)}\right)^\beta}}$$</p>
+  <p>
+    $\beta \in [0,1]$ 控制偏差校正程度，训练初期 $\beta$ 较小（允许一定偏差以加速学习），
+    随训练进行线性增大至 $1$（完全无偏）。
+    更新时梯度乘以 $\tilde{w}_i$：$\nabla \mathcal{L} = \tilde{w}_i \cdot \delta_i \cdot \nabla Q(s_i, a_i;\theta)$
+  </p>
+</div>
+
+<h4>SumTree 高效实现</h4>
+
+<div class="card yellow">
+  <h4>数据结构：SumTree</h4>
+  <p>
+    朴素实现中，按优先级采样需要 $O(N)$ 时间。SumTree 是一种线段树，
+    叶节点存储每个样本的优先级 $p_i$，内部节点存储子树优先级之和。
+  </p>
+  <ul>
+    <li><strong>插入/更新</strong>：$O(\log N)$——从叶节点向上更新路径上的和</li>
+    <li><strong>采样</strong>：$O(\log N)$——生成随机数 $u \sim \text{Uniform}(0, \text{total})$，沿树向下查找</li>
+    <li><strong>空间复杂度</strong>：$O(N)$</li>
+  </ul>
+  <p>实践中回放池大小 $N = 10^6$，SumTree 使得采样从 $O(N)$ 降至 $O(\log N) \approx 20$ 次操作。</p>
+</div>
+
+<!-- 8.4 -->
+<h3 id="sec84">8.4 Rainbow：组合改进</h3>
+
+<p>
+  Rainbow（Hessel et al., 2018）将六种独立的 DQN 改进方法组合成一个统一算法，
+  在 Atari-57 基准上以更少的交互步数达到超越人类的性能。
+</p>
+
+<div class="card blue">
+  <h4>Rainbow 的六种组件</h4>
+  <table>
+    <thead>
+      <tr><th>组件</th><th>解决的问题</th><th>关键思想</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="badge blue">Double DQN</span></td>
+        <td>Q 值高估</td>
+        <td>解耦动作选择与值估计</td>
+      </tr>
+      <tr>
+        <td><span class="badge green">Dueling Network</span></td>
+        <td>网络结构效率</td>
+        <td>分离状态价值与优势函数</td>
+      </tr>
+      <tr>
+        <td><span class="badge yellow">PER</span></td>
+        <td>样本采样效率</td>
+        <td>TD 误差驱动的优先采样</td>
+      </tr>
+      <tr>
+        <td><span class="badge purple">Multi-step Return</span></td>
+        <td>TD 偏差-方差权衡</td>
+        <td>$n$ 步回报替代单步 TD 目标</td>
+      </tr>
+      <tr>
+        <td><span class="badge red">Noisy Nets</span></td>
+        <td>探索策略</td>
+        <td>参数噪声替代 $\varepsilon$-贪心</td>
+      </tr>
+      <tr>
+        <td><span class="badge purple">Distributional RL</span></td>
+        <td>回报分布建模</td>
+        <td>学习 Q 值的完整分布而非期望</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4>消融实验：各组件对性能的贡献</h4>
+
+<div id="chart-rainbow" class="echarts-container" style="height:320px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-rainbow');
+  if(!dom) return;
+  var chart = echarts.init(dom, 'dark');
+  chart.setOption({
+    backgroundColor: '#252536',
+    title: {
+      text: 'Rainbow 消融实验（Atari-57 中位数得分，相对人类水平）',
+      textStyle: { color: '#cdd6f4', fontSize: 13 },
+      left: 'center', top: 10
+    },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: 60, right: 30, top: 60, bottom: 80 },
+    xAxis: {
+      type: 'category',
+      data: ['DQN\n基线', '+Double', '+Dueling', '+PER', '+Multi-step', '+Noisy', '+Distrib.\n(Rainbow)'],
+      axisLabel: { color: '#cdd6f4', fontSize: 11, interval: 0 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    yAxis: {
+      type: 'value',
+      name: '中位数得分 (%)',
+      nameTextStyle: { color: '#89b4fa' },
+      axisLabel: { color: '#cdd6f4' },
+      splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+    },
+    series: [{
+      name: '相对人类得分',
+      type: 'bar',
+      data: [
+        { value: 79,  itemStyle: { color: '#45475a' } },
+        { value: 91,  itemStyle: { color: '#89b4fa' } },
+        { value: 106, itemStyle: { color: '#a6e3a1' } },
+        { value: 124, itemStyle: { color: '#f9e2af' } },
+        { value: 147, itemStyle: { color: '#fab387' } },
+        { value: 161, itemStyle: { color: '#cba6f7' } },
+        { value: 223, itemStyle: { color: '#f38ba8' } }
+      ],
+      label: {
+        show: true, position: 'top',
+        formatter: '{c}%',
+        color: '#cdd6f4', fontSize: 11
+      },
+      barMaxWidth: 52
+    }]
+  });
+})();
+</script>
+
+<p>
+  消融实验表明，<strong>Multi-step Return</strong> 和 <strong>Distributional RL</strong> 是贡献最大的两个组件，
+  而所有组件组合后的 Rainbow 性能远超任何单一改进，体现了协同效应。
+</p>
+
+<!-- ═══════════════════════════════════════════
+     小结
+════════════════════════════════════════════ -->
+<h2 id="summary">小结</h2>
+<p>
+  DQN 家族从经典 Q-learning 出发，通过一系列针对性改进，
+  逐步解决了高维状态表示、训练稳定性、Q 值偏差、样本效率等核心问题。
+  下图展示了算法演进的脉络。
+</p>
+
+<h3 id="evolution">DQN 家族演进图</h3>
+
+<pre class="mermaid">
+graph TD
+    QL["Q-learning\n表格方法\n有限 MDP"] -->|函数逼近\n+ 经验回放\n+ 目标网络| DQN
+
+    DQN["DQN\nMnih et al. 2015\nAtari 突破"] -->|解耦动作选择\n与值估计| DDQN
+    DQN -->|分解 Q = V + A| DUEL
+    DQN -->|TD 误差优先采样| PER
+
+    DDQN["Double DQN\n消除高估偏差"] --> RB
+    DUEL["Dueling DQN\n高效梯度传播"] --> RB
+    PER["优先经验回放\n提升样本效率"] --> RB
+
+    DQN -->|n 步回报| MS["Multi-step Return\n偏差-方差权衡"]
+    DQN -->|参数噪声探索| NN["Noisy Nets\n自适应探索"]
+    DQN -->|分布式价值学习| DIST["Distributional RL\nC51 / QR-DQN"]
+
+    MS --> RB
+    NN --> RB
+    DIST --> RB
+
+    RB["Rainbow\nHessel et al. 2018\n六种改进组合"]
+
+    style QL fill:#313244,stroke:#45475a,color:#cdd6f4
+    style DQN fill:#1e3a5f,stroke:#89b4fa,color:#89b4fa
+    style DDQN fill:#1e2e24,stroke:#a6e3a1,color:#a6e3a1
+    style DUEL fill:#261e2e,stroke:#cba6f7,color:#cba6f7
+    style PER fill:#2e2a1a,stroke:#f9e2af,color:#f9e2af
+    style MS fill:#2e1e22,stroke:#f38ba8,color:#f38ba8
+    style NN fill:#2a2a1e,stroke:#fab387,color:#fab387
+    style DIST fill:#1e2a2e,stroke:#89dceb,color:#89dceb
+    style RB fill:#3a1a2e,stroke:#f38ba8,color:#f38ba8
+</pre>
+
+<h3 id="summary-table">各改进针对问题总结</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>算法</th>
+      <th>针对的 DQN 缺陷</th>
+      <th>核心改动</th>
+      <th>关键公式</th>
+      <th>实现复杂度</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge blue">Double DQN</span></td>
+      <td>max 操作引入的 Q 值高估偏差</td>
+      <td>训练网络选动作，目标网络估值</td>
+      <td>$y = r + \gamma Q(s', \arg\max_a Q(s',a;\theta);\theta^-)$</td>
+      <td>★☆☆（一行代码）</td>
+    </tr>
+    <tr>
+      <td><span class="badge purple">Dueling DQN</span></td>
+      <td>Q 网络结构利用不充分</td>
+      <td>分叉为 V 流和 A 流，去中心化合并</td>
+      <td>$Q = V + A - \text{mean}(A)$</td>
+      <td>★★☆（修改网络结构）</td>
+    </tr>
+    <tr>
+      <td><span class="badge yellow">PER</span></td>
+      <td>均匀采样忽视样本信息量差异</td>
+      <td>TD 误差加权采样 + IS 权重校正</td>
+      <td>$P(i) \propto |\delta_i|^\alpha$</td>
+      <td>★★★（SumTree 数据结构）</td>
+    </tr>
+    <tr>
+      <td><span class="badge red">Rainbow</span></td>
+      <td>单一改进效益有限</td>
+      <td>六种改进协同组合</td>
+      <td>—</td>
+      <td>★★★（工程复杂度高）</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="takeaways">学习要点</h3>
+
+<div class="card blue">
+  <h4>理论层面</h4>
+  <ul>
+    <li>DQN 的两大核心创新（经验回放 + 目标网络）各自针对一个根本性问题，缺一不可</li>
+    <li>Double DQN 的解耦思想本质上是减少估计量之间的相关性，是统计偏差控制的经典手法</li>
+    <li>Dueling 网络体现了归纳偏置（inductive bias）的设计哲学：将先验知识编码进网络结构</li>
+    <li>PER 的重要性采样校正是保证无偏性的必要条件，不能省略</li>
+  </ul>
+</div>
+
+<div class="card green">
+  <h4>实践层面</h4>
+  <ul>
+    <li>回放池大小 $M$ 和批量大小 $N$ 对训练稳定性影响显著，典型值：$M=10^6$，$N=32\sim256$</li>
+    <li>目标网络更新频率 $C$ 需要调优：太小目标不稳定，太大参数滞后严重</li>
+    <li>Double DQN 几乎无代价，实践中应作为 DQN 的默认替代</li>
+    <li>PER 的超参数 $\alpha, \beta$ 敏感，建议 $\alpha=0.6$，$\beta$ 从 $0.4$ 线性退火至 $1.0$</li>
+  </ul>
+</div>
+
+<hr>
+<p style="text-align:center; color:#6c7086; font-size:0.85em;">
+  基于《动手学强化学习》第 7–8 章 &nbsp;·&nbsp; 技术报告生成于 2026-05-14
+</p>
+
+
+</main>
+
+<script>
+  // ── Mermaid 初始化 ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      darkMode: true,
+      background: '#252536',
+      primaryColor: '#1e3a5f',
+      primaryTextColor: '#cdd6f4',
+      primaryBorderColor: '#89b4fa',
+      lineColor: '#89b4fa',
+      secondaryColor: '#313244',
+      tertiaryColor: '#181825'
+    },
+    flowchart: { curve: 'basis', htmlLabels: true }
+  });
+
+  // ── 目录自动生成 ──
+  (function buildToc() {
+    const toc = document.getElementById('toc');
+    const headings = document.querySelectorAll('main h2, main h3, main h4');
+    headings.forEach(function(h, i) {
+      if (!h.id) h.id = 'h-' + i;
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent.replace(/\s+/g, ' ').trim();
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      if (h.tagName === 'H4') a.classList.add('toc-h4');
+      toc.appendChild(a);
+    });
+  })();
+
+  // ── 滚动高亮 ──
+  (function setupObserver() {
+    var toc = document.getElementById('toc');
+    var headings = document.querySelectorAll('main h2, main h3, main h4');
+    var observer = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        var link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (!link) return;
+        if (e.isIntersecting) {
+          // 移除所有 active
+          toc.querySelectorAll('a.active').forEach(function(el){ el.classList.remove('active'); });
+          link.classList.add('active');
+          // 滚动目录到可见
+          link.scrollIntoView({ block: 'nearest' });
+        }
+      });
+    }, { rootMargin: '-5% 0px -85% 0px' });
+    headings.forEach(function(h){ observer.observe(h); });
+  })();
+</script>
+
+</body>
+</html>

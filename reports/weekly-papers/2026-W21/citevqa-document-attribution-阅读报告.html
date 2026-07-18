@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CiteVQA 阅读报告 — 文档智能可信归因基准</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.5em; }
+    li { margin: 0.3em 0; }
+    .tag-badge {
+      display: inline-block; font-size: 0.75em; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px; margin: 0 3px;
+      background: var(--heading); color: #1e1e2e;
+    }
+    .tag-badge.orange { background: #fab387; }
+    .tag-badge.green  { background: #a6e3a1; }
+    .tag-badge.purple { background: #cba6f7; }
+    .tag-badge.red    { background: #f38ba8; }
+    .info-box {
+      background: #2a2a3e; border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px 20px; margin: 1em 0;
+    }
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px; margin: 1em 0;
+    }
+    .stat-card {
+      background: #2a2a3e; border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px 18px; text-align: center;
+    }
+    .stat-card .num { font-size: 2em; font-weight: 700; color: var(--heading); line-height: 1.1; }
+    .stat-card .label { font-size: 0.82em; color: #9399b2; margin-top: 4px; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .gap-table-best { color: #f38ba8; font-weight: 700; }
+    .model-closed { color: #89b4fa; }
+    .model-open   { color: #a6e3a1; }
+    .formula-box {
+      background: #2a2a3e; border-left: 3px solid var(--heading);
+      border-radius: 0 6px 6px 0; padding: 12px 20px; margin: 1em 0;
+    }
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 900px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.95em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.88em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+    .insight-card {
+      background: linear-gradient(135deg, #2a2a3e 0%, #1e1e2e 100%);
+      border: 1px solid var(--heading); border-radius: 10px;
+      padding: 18px 22px; margin: 1em 0;
+    }
+    .insight-card h4 { color: var(--heading); margin-bottom: 6px; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ===== 标题 ===== -->
+    <h1>CiteVQA: Benchmarking Evidence Attribution for Trustworthy Document Intelligence</h1>
+    <p style="color:#6c7086; font-size:0.9em; margin-bottom:1.6em;">
+      <span class="tag-badge">arXiv 2605.12882</span>
+      <span class="tag-badge orange">OpenDataLab / 上海AI Lab</span>
+      <span class="tag-badge green">Doc-VQA</span>
+      <span class="tag-badge purple">Evidence Attribution</span>
+      <span class="tag-badge" style="background:#f9e2af;color:#1e1e2e;">👍 269 Upvotes</span>
+    </p>
+
+    <!-- ===== §0 论文信息表 ===== -->
+    <h2 id="meta">论文信息</h2>
+    <table>
+      <tr><th style="width:130px">标题</th><td>CiteVQA: Benchmarking Evidence Attribution for Trustworthy Document Intelligence</td></tr>
+      <tr><th>核心问题</th><td>现有 Doc-VQA 评估仅对最终答案打分，忽略证据引用的正确性，导致模型可在答案正确的同时引用完全错误的来源——即<strong>归因幻觉（Attribution Hallucination）</strong>，在高风险领域埋下严重隐患</td></tr>
+      <tr><th>主要贡献</th><td>CiteVQA 基准（1,897 题 / 711 PDF / 7 领域 / 双语）+ SAA 指标 + 20 个 MLLM 系统性评估</td></tr>
+      <tr><th>开源地址</th><td><a href="https://github.com/opendatalab/CiteVQA" target="_blank">github.com/opendatalab/CiteVQA</a></td></tr>
+      <tr><th>作者团队</th><td>Dongsheng Ma, Jiayu Li, Zhengren Wang, Yijie Wang, Jiahao Kong, Weijun Zeng, Jutao Xiao, Jie Yang, Wentao Zhang, Bin Wang, Conghui He（共 11 人，OpenDataLab / 上海 AI Lab）</td></tr>
+      <tr><th>关联工具</th><td>MinerU 2.5（PDF 解析）、Qwen3-VL-235B（QA 构建 / 过滤）、Dense Retrieval（多文档链接）</td></tr>
+    </table>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="num">1,897</div><div class="label">总问题数</div></div>
+      <div class="stat-card"><div class="num">711</div><div class="label">PDF 文档</div></div>
+      <div class="stat-card"><div class="num">40.6</div><div class="label">平均页数/文档</div></div>
+      <div class="stat-card"><div class="num">7</div><div class="label">覆盖领域</div></div>
+      <div class="stat-card"><div class="num">30</div><div class="label">子类别</div></div>
+      <div class="stat-card"><div class="num">20</div><div class="label">被评估 MLLM</div></div>
+      <div class="stat-card"><div class="num">76.0</div><div class="label">最高 SAA（Gemini）</div></div>
+      <div class="stat-card"><div class="num">22.5</div><div class="label">最高开源 SAA</div></div>
+    </div>
+
+    <!-- ===== §1 核心问题与动机 ===== -->
+    <h2 id="motivation">1. 核心问题与动机：文档智能的可信性危机</h2>
+
+    <p>随着多模态大语言模型（MLLM）能力的飞速提升，文档问答（Doc-VQA）的准确率已进入一个新的量级——GPT-5.4 在纯答案评估上能达到约 87.1 分。然而这一亮眼数字背后潜藏着一个根本性问题：<strong>答案正确，不代表推理过程可靠</strong>。</p>
+
+    <p>在法律、金融、医疗等高风险场景中，文档问答系统的使用者不仅需要一个正确的结论，更需要知道这个结论来自文档的哪个具体位置。一旦系统给出正确答案却关联错误来源，后果可能是灾难性的：法律从业者基于错误引用作出判断、财务审计遗漏关键凭证页面、临床医生基于错误的病历片段下处方。</p>
+
+    <blockquote>
+      "Models frequently produce the right answer while citing the wrong region — a form of pseudo-faithful behavior that answer-only evaluation entirely misses."
+      <br><em>— CiteVQA 论文核心发现</em>
+    </blockquote>
+
+    <p>当前主流 Doc-VQA 基准（DocVQA、MMLongBench-Doc、SlideVQA 等）均采用<strong>答案匹配评分</strong>，无论是精确匹配、ANLS 还是 LLM-as-Judge，本质上都只问"结果对不对"，而不问"根据从哪来"。这种评估体系存在两个系统性盲点：</p>
+
+    <ul>
+      <li><strong>幸运正确（Lucky Correct）</strong>：模型可能通过参数化记忆或领域先验知识直接猜出答案，而非真正在文档中定位证据。</li>
+      <li><strong>归因幻觉（Attribution Hallucination）</strong>：模型从文档中找到了答案，但引用的证据位置（页面、元素、坐标）与真实来源完全不一致，暗示其推理链条存在根本性错误。</li>
+    </ul>
+
+    <p>CiteVQA 的核心价值在于将评估粒度从<strong>答案层面</strong>下探到<strong>元素层面（element-level）</strong>，要求模型以边界框坐标（bounding-box）的形式标注证据来源，从而精确量化归因幻觉的普遍程度。这一设计理念与 RAG（Retrieval-Augmented Generation）评估中的 Citation Faithfulness 工作遥相呼应，但将应用场景从纯文本扩展至复杂多页 PDF 文档。</p>
+
+    <p>从行业应用视角看，该工作提出的 SAA 指标可以直接用于企业级文档 AI 系统的上线质检：只有当一个系统在特定文档集上通过了 SAA 评估，才意味着其输出既准确又可溯源，真正满足合规审计需求。</p>
+
+    <!-- ===== §2 背景与相关工作 ===== -->
+    <h2 id="related">2. 背景与相关工作</h2>
+
+    <h3>2.1 Doc-VQA 基准的发展脉络</h3>
+
+    <p>文档视觉问答作为一个研究方向，历经十余年演变，从早期的单页表单理解逐渐向长文档、多模态、跨文档综合理解演进。下表梳理了主要里程碑基准：</p>
+
+    <table>
+      <tr>
+        <th>基准</th><th>年份</th><th>规模</th><th>特点</th><th>主要局限</th>
+      </tr>
+      <tr>
+        <td>DocVQA</td><td>2021</td><td>50,000 题</td><td>单页工业文档；ANLS 评分</td><td>单页，答案匹配，无引用要求</td>
+      </tr>
+      <tr>
+        <td>InfographicVQA</td><td>2022</td><td>30,035 题</td><td>信息图表理解；多类型推理</td><td>无跨页跨文档场景</td>
+      </tr>
+      <tr>
+        <td>SlideVQA</td><td>2023</td><td>14,484 题</td><td>多页演示文稿；数值推理</td><td>演示文稿特化；无证据定位</td>
+      </tr>
+      <tr>
+        <td>MMLongBench-Doc</td><td>2024</td><td>1,000 题</td><td>长文档（平均 47.5 页）；6 类文档</td><td>答案匹配评分；无引用评估</td>
+      </tr>
+      <tr>
+        <td>OmniDocBench</td><td>2024</td><td>981 页</td><td>PDF 解析质量评测</td><td>偏向解析而非理解</td>
+      </tr>
+      <tr>
+        <td><strong>CiteVQA（本文）</strong></td><td>2025</td><td>1,897 题 / 711 PDF</td><td>元素级边界框引用；SAA 双重评分</td><td>—</td>
+      </tr>
+    </table>
+
+    <h3>2.2 引用与归因评估的相关工作</h3>
+
+    <p>在纯文本 RAG 领域，已有 WebGPT、MRAMG、RARE 等工作尝试评估生成答案的来源可信度，但这些方法均基于<strong>段落级（passage-level）</strong>匹配，无法应用于需要精确定位页面坐标的 PDF 文档场景。CiteVQA 将引用粒度细化到<strong>边界框像素坐标级别</strong>，是文档智能领域的首次系统性尝试。</p>
+
+    <p>CharXiv 和 ChartQA 关注图表理解，但同样不要求模型输出图表在页面中的坐标位置。从技术工具链看，CiteVQA 的构建依赖于 MinerU 2.5 的高精度 PDF 解析能力——它能将任意 PDF 页面解析为结构化的 <code>(doc_id, page_idx, bbox, OCR_text)</code> 四元组，为边界框级别的证据标注奠定基础。</p>
+
+    <h3>2.3 现有指标的三大不足</h3>
+
+    <div class="info-box">
+      <p><strong>不足一：答案匹配盲目性。</strong> ANLS（Average Normalized Levenshtein Similarity）和精确匹配只度量字符串相似度，无法捕捉模型是否真正在文档中执行了信息定位。一个完全依赖参数记忆的模型与一个真正阅读文档的模型在这些指标上可能得分相同。</p>
+      <p><strong>不足二：LLM-as-Judge 的盲区。</strong> 即便使用更强的模型评判答案质量，评判模型也仅看到"问题 + 预测答案 + 参考答案"，缺乏对文档实际内容的感知，无法判断答案来源是否合规。</p>
+      <p><strong>不足三：缺乏位置感知。</strong> 即使文档被全文输入模型，现有评估也不要求模型输出具体的证据位置，因此无法量化模型对文档结构的理解深度——是真正理解了文档布局，还是借助语言模式做了表面匹配。</p>
+    </div>
+
+    <!-- ===== §3 Doc-VQA 发展时间线 ===== -->
+    <h3>2.4 Doc-VQA 方法演进时间线</h3>
+    <div class="timeline-wrap">
+      <div class="timeline">
+        <div class="tl-col">
+          <div class="tl-period">2021–2022</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag">基准</span><br>DocVQA：单页工业文档 ANLS 评分，奠定领域基础</div>
+            <div class="tl-item"><span class="tl-tag orange">工具</span><br>LayoutLM 系列：融合文本+位置编码的文档预训练范式</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2022–2023</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag green">扩展</span><br>InfographicVQA / ChartQA：图表多模态理解</div>
+            <div class="tl-item"><span class="tl-tag">基准</span><br>SlideVQA：多页演示文稿，数值推理引入</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2023–2024</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag purple">长文档</span><br>MMLongBench-Doc：平均 47.5 页，6 类文档类型</div>
+            <div class="tl-item"><span class="tl-tag orange">工具</span><br>MinerU / Nougat：高精度 PDF 结构化解析兴起</div>
+          </div>
+        </div>
+        <div class="tl-col">
+          <div class="tl-period">2024–2025</div>
+          <div class="tl-body">
+            <div class="tl-item"><span class="tl-tag green">引用</span><br>CiteVQA：元素级边界框引用 + SAA 指标，全新范式</div>
+            <div class="tl-item"><span class="tl-tag">评估</span><br>20 个 MLLM 被系统性审计，归因幻觉普遍暴露</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== §4 CiteVQA 基准设计 ===== -->
+    <h2 id="benchmark">3. CiteVQA 基准设计</h2>
+
+    <p>CiteVQA 的构建是一个精心设计的五阶段流水线，每个阶段都针对文档智能评估的核心痛点进行了专项设计。整个流程从 1 亿以上的原始 PDF 池出发，经过多轮筛选、链接、证据提取和质量控制，最终产出高质量的双语问答对，并为每道题标注精确的元素级证据边界框。</p>
+
+    <pre class="mermaid">
+flowchart TD
+    A["原始 PDF 池<br>100M+ Common Crawl"] --> B["分层采样<br>~250k 候选文档"]
+    B --> C["MLLM 粗粒度<br>领域标注"]
+    C --> D["细粒度子类别<br>标注与筛选"]
+    D --> E["711 份文档<br>7 领域 / 30 子类"]
+    E --> F["语义 Profile 生成<br>MLLM 摘要"]
+    F --> G["向量检索<br>Top-5 候选配对"]
+    G --> H["LLM CoT<br>跨文档章节对齐"]
+    H --> I["多文档关联组<br>Multi-Doc Groups"]
+    E --> J["MinerU 2.5 解析<br>bbox + OCR 四元组"]
+    I --> K["MLLM Agent<br>跨页证据包抽取"]
+    J --> K
+    K --> L["Evidence Package<br>doc_id / page / bbox / text"]
+    L --> M["模板蒸馏<br>4 类问题模板"]
+    M --> N["MLLM 生成 QA 对<br>候选问答集"]
+    N --> O["可答性验证<br>仅凭证据截图重测"]
+    O --> P["问题改写<br>语言多样化"]
+    P --> Q["相关性过滤<br>零文档自测排除常识题"]
+    Q --> R["关键证据识别<br>逐元素 Masking 消融"]
+    R --> S["最终 CiteVQA<br>1897 题 / 双语 / 元素级引用"]
+
+    style A fill:#313244,color:#cdd6f4
+    style S fill:#2a2a3e,color:#89b4fa,stroke:#89b4fa
+    style L fill:#2a2a3e,color:#a6e3a1,stroke:#a6e3a1
+</pre>
+
+    <h3>3.1 文档采集与领域均衡</h3>
+    <p>从 Common Crawl 的 1 亿以上 PDF 中，通过分层采样策略选取约 25 万份候选文档，再经过两阶段 MLLM 标注（粗粒度领域 → 细粒度子类别）筛选出最终的 711 份文档。这 711 份文档覆盖 7 大宏观领域和 30 个子类别，其中英文 451 份（63.4%）、中文 260 份（36.6%），实现了语言维度的双语覆盖。</p>
+
+    <h3>3.2 多文档链接策略</h3>
+    <p>为了构建多文档推理场景，每份文档首先由 MLLM 生成语义摘要作为 Profile。随后通过<strong>密集向量检索（Dense Retrieval）</strong>找到每份文档的 Top-5 语义相似候选，再由 LLM 执行链式思考（Chain-of-Thought）跨文档章节对齐，输出包含相似度分数的结构化关联组。最终形成三类问题场景：<strong>单文档</strong>（52.0%）、<strong>多文档单金答案</strong>（25.7%）、<strong>多文档多金答案</strong>（22.3%）。</p>
+
+    <h3>3.3 关键证据识别：逐元素 Masking 消融</h3>
+    <p>CiteVQA 最具创新性的部分之一是<strong>关键证据（Crucial Evidence）的自动化识别机制</strong>。对 Evidence Package 中的每个边界框元素，系统逐一将其从上下文中遮蔽，然后重新调用模型回答问题。若遮蔽某元素后模型无法正确回答，则该元素被标记为关键证据。这种消融式验证方法确保了标注的因果性——而非仅仅的相关性。</p>
+
+    <h3>3.4 质量控制四道门</h3>
+    <div class="info-box">
+      <ul>
+        <li><strong>可答性验证：</strong>仅呈现证据截图，重新让模型回答；失败的 QA 对直接丢弃，确保每道题都有充分的文档支撑。</li>
+        <li><strong>问题改写：</strong>原始问题由 MLLM 进行语言多样化改写，避免问题措辞与文档原文过度相似（防止字符串匹配捷径）。</li>
+        <li><strong>相关性过滤（零文档自测）：</strong>不给模型任何文档内容，直接回答问题；若模型仍能答对，则认为该题是常识题而非文档依赖题，予以剔除。过滤模型为 Qwen3-VL-235B。</li>
+        <li><strong>专家人工复核：</strong>自动化流程完成后，由领域专家对高风险类别（法律、医疗）的问题进行抽样复核，确保标注质量。</li>
+      </ul>
+    </div>
+
+    <!-- ===== §5 关键技术详解 ===== -->
+    <h2 id="technical">4. 关键技术详解</h2>
+
+    <h3>4.1 SAA 指标的数学定义</h3>
+
+    <p>Strict Attributed Accuracy（SAA）是 CiteVQA 的核心评估指标，其设计哲学是：<strong>只有答案正确且引用位置也正确的预测，才计为一次成功的文档智能</strong>。这是对传统答案匹配指标的严格扩展。</p>
+
+    <div class="formula-box">
+      <p><strong>SAA 联合判定条件：</strong></p>
+      <p>$$\text{SAA} = \mathbf{1}\!\left(\text{Ans} \geq 4 \;\wedge\; \left(\text{Rel} \geq 4 \;\vee\; \text{Rec} \geq 0.6\right)\right)$$</p>
+    </div>
+
+    <p>各分量的含义如下：</p>
+    <ul>
+      <li><strong>Ans（Answer Score，答案评分）：</strong>由 LLM-as-Judge 对预测答案的正确性在 1–5 分制上打分。阈值设为 4 分，即答案基本正确。</li>
+      <li><strong>Rel（Relevance Score，相关性评分）：</strong>LLM-as-Judge 判断预测的引用区域文本与问题的语义相关程度，1–5 分制，阈值 4 分。</li>
+      <li><strong>Rec（Bounding Box Recall，边界框召回率）：</strong>预测边界框与关键证据边界框的 IoU 匹配率，阈值 0.6（即至少 60% 的关键证据元素被正确定位）。</li>
+    </ul>
+
+    <p>SAA 条件采用 <strong>OR 逻辑</strong> 组合 Rel 和 Rec 两个引用质量指标，体现了对引用验证的宽容性设计：只要语义相关 <em>或</em> 空间定位准确，引用即认为合格。这种设计避免了对无法精确输出坐标的纯语言模型的过度惩罚，同时保留了对引用完全错误情况的惩罚。</p>
+
+    <h3>4.2 边界框级别引用评估机制</h3>
+
+    <p>边界框评估是 CiteVQA 区别于一切前驱工作的核心技术细节。系统将每个证据元素表示为归一化坐标四元组 $(x_1, y_1, x_2, y_2)$，其中所有坐标均相对于页面尺寸归一化至 $[0, 1]$ 区间。</p>
+
+    <div class="formula-box">
+      <p><strong>关键证据召回率（元素级）：</strong></p>
+      <p>$$\text{Rec} = \frac{1}{|\mathcal{B}_{\text{crucial}}|} \sum_{b_{gt} \in \mathcal{B}_{\text{crucial}}} \mathbf{1}\!\left(\max_{b_{pred}} \text{IoU}(b_{pred},\, b_{gt}) \geq 0.5\right)$$</p>
+    </div>
+
+    <div class="formula-box">
+      <p><strong>引用精确率（防幻觉惩罚）：</strong></p>
+      <p>$$\text{Prec} = \frac{1}{|\mathcal{B}_{pred}|} \sum_{b_{pred} \in \mathcal{B}_{pred}} \mathbf{1}\!\left(\max_{b_{gt} \in \mathcal{B}_{all}} \text{IoU}(b_{pred},\, b_{gt}) \geq 0.5\right)$$</p>
+    </div>
+
+    <div class="formula-box">
+      <p><strong>F1 综合得分：</strong></p>
+      <p>$$F_1 = \frac{2 \cdot \text{Prec} \cdot \text{Rec}}{\text{Prec} + \text{Rec}}$$</p>
+    </div>
+
+    <p>值得注意的是，<strong>Rec 仅对关键证据集 $\mathcal{B}_{\text{crucial}}$ 计算</strong>，而 <strong>Prec 对全部证据集 $\mathcal{B}_{all}$（含非关键证据）计算</strong>。这种非对称设计合理地区分了两种误差：漏掉关键证据（低召回）和胡乱引用无关区域（低精确）。此外，系统还引入<strong>页面级别召回（Page-level Recall）</strong>作为辅助指标，仅要求预测的页码与关键证据所在页码一致，无需精确定位空间坐标，适用于仅能输出页码而非坐标的模型。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: 关键证据元素识别（Masking Ablation）</div>
+      <p><span class="kw">Input:</span> <span class="var">Evidence Package</span> $\mathcal{E} = \{e_1, e_2, \ldots, e_n\}$，问题 <span class="var">Q</span>，参考答案 <span class="var">A*</span>，判定阈值 <span class="num">θ = 4</span></p>
+      <p style="padding-left:1.5em"><span class="var">crucial</span> ← ∅  <span class="cm">// 初始化关键证据集合</span></p>
+      <p><span class="kw">for</span> <span class="var">i</span> = 1 <span class="kw">to</span> <span class="var">n</span> <span class="kw">do</span></p>
+      <p style="padding-left:1.5em"><span class="var">E_masked</span> ← <span class="var">E</span> \ {<span class="var">e_i</span>}  <span class="cm">// 遮蔽第 i 个元素</span></p>
+      <p style="padding-left:1.5em"><span class="var">A_pred</span> ← <span class="fn">MLLM</span>(<span class="var">Q</span>, <span class="var">E_masked</span>)</p>
+      <p style="padding-left:1.5em"><span class="var">score</span> ← <span class="fn">LLM_Judge</span>(<span class="var">A_pred</span>, <span class="var">A*</span>)</p>
+      <p style="padding-left:1.5em"><span class="kw">if</span> <span class="var">score</span> &lt; <span class="num">θ</span> <span class="kw">then</span></p>
+      <p style="padding-left:3em"><span class="var">crucial</span> ← <span class="var">crucial</span> ∪ {<span class="var">e_i</span>}  <span class="cm">// 遮蔽后失效 → 关键证据</span></p>
+      <p style="padding-left:1.5em"><span class="kw">end if</span></p>
+      <p><span class="kw">end for</span></p>
+      <p><span class="kw">return</span> <span class="var">crucial</span>  <span class="cm">// 带 bbox 坐标的关键证据集</span></p>
+    </div>
+
+    <h3>4.3 问题类型设计：四大模板</h3>
+    <p>CiteVQA 将问题类型归纳为四大模板，覆盖从浅层检索到深层推理的完整能力谱系：</p>
+    <table>
+      <tr><th>模板类型</th><th>描述</th><th>典型难度</th></tr>
+      <tr><td><strong>事实性检索（Factual Retrieval）</strong></td><td>从文档中直接定位并提取具体数值、日期、人名等事实性信息</td><td>低</td></tr>
+      <tr><td><strong>复合综合（Complex Synthesis）</strong></td><td>需要整合文档多处信息进行综合推断，往往涉及跨节归纳</td><td>中</td></tr>
+      <tr><td><strong>数量推理（Quantitative Reasoning）</strong></td><td>基于文档中的数值数据进行计算、比较或统计分析</td><td>中-高</td></tr>
+      <tr><td><strong>多模态解析（Multimodal Parsing）</strong></td><td>需要理解文档中的图表、表格、公式等非文本元素</td><td>高</td></tr>
+    </table>
+
+    <h3>4.4 七大领域覆盖与数据分布</h3>
+    <p>CiteVQA 覆盖七个核心应用领域，每个领域又细分为若干子类别（共 30 个），确保基准对真实世界高风险场景的代表性。下图展示各领域文档数量估算分布：</p>
+
+    <div id="chart-domain" class="echarts-container" style="height:380px"></div>
+
+    <script>
+    (function(){
+      var dom = document.getElementById('chart-domain');
+      if(!dom) return;
+      var chart = echarts.init(dom);
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'CiteVQA 七大领域文档分布（711 份）', left: 'center', top: 12, textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'item', formatter: '{b}: {c} 份文档 ({d}%)' },
+        legend: { orient: 'vertical', left: '2%', top: 'center', textStyle: { color: '#cdd6f4', fontSize: 12 } },
+        series: [{
+          name: '领域分布',
+          type: 'pie',
+          radius: ['38%', '68%'],
+          center: ['58%', '52%'],
+          avoidLabelOverlap: true,
+          itemStyle: { borderRadius: 6, borderColor: '#1e1e2e', borderWidth: 2 },
+          label: { show: true, formatter: '{b}\n{d}%', color: '#cdd6f4', fontSize: 11 },
+          emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+          data: [
+            { value: 138, name: '学术技术\nAcademic Tech',   itemStyle: { color: '#89b4fa' } },
+            { value: 124, name: '医疗健康\nMedical & Health', itemStyle: { color: '#a6e3a1' } },
+            { value: 118, name: '商业金融\nBusiness Finance', itemStyle: { color: '#fab387' } },
+            { value: 102, name: '工业建筑\nIndustrial',       itemStyle: { color: '#cba6f7' } },
+            { value: 98,  name: '政府法律\nGov & Legal',      itemStyle: { color: '#f38ba8' } },
+            { value: 86,  name: '教育培训\nEducation',        itemStyle: { color: '#f9e2af' } },
+            { value: 45,  name: '其他领域\nOthers',           itemStyle: { color: '#94e2d5' } }
+          ]
+        }]
+      });
+    })();
+    </script>
+
+    <!-- ===== §6 实验结果 ===== -->
+    <h2 id="experiments">5. 实验结果分析</h2>
+
+    <h3>5.1 整体 SAA 排行榜（20 个 MLLM）</h3>
+
+    <p>论文对 20 个主流多模态大语言模型进行了系统性评估，涵盖 Gemini 系列、GPT 系列、Qwen-VL 系列、Gemma 系列等闭源与开源代表。评估结果揭示了令人警惕的归因幻觉现象——几乎所有模型的 SAA 分数都显著低于纯答案准确率（Ans 分数），且差距随模型能力下降而急剧扩大。</p>
+
+    <div id="chart-saa-bar" class="echarts-container" style="height:560px"></div>
+    <script>
+    (function(){
+      var dom = document.getElementById('chart-saa-bar');
+      if(!dom) return;
+      var chart = echarts.init(dom);
+      var models = [
+        'Gemini-3.1-Pro', 'Gemini-3-Flash', 'GPT-5.4', 'Gemini-2.5-Pro',
+        'Seed2.0-Pro', 'GPT-5.2', 'Qwen3-VL-235B', 'Gemma-4-31B',
+        'Kimi-K2.5', 'Qwen3.5-397B', 'Qwen3.6-Plus', 'Qwen3-VL-32B',
+        'Qwen3.5-122B', 'GLM-5V-Turbo', 'Qwen3.5-9B', 'Qwen3.5-35B',
+        'Qwen3-VL-30B', 'Qwen3-VL-8B', 'Gemma-4-26B'
+      ];
+      var saaScores = [76.0, 65.4, 59.0, 47.0, 44.1, 33.7, 22.5, 20.2, 19.1, 18.3, 17.5, 17.3, 14.8, 12.8, 11.1, 10.7, 8.2, 7.5, 6.2];
+      var ansScores = [86.1, 84.5, 87.1, 78.3, 76.2, 69.3, 72.3, 65.8, 64.5, 62.7, 61.3, 60.8, 57.4, 55.2, 52.6, 51.3, 48.7, 61.2, 42.1];
+      var colors = models.map(function(m){
+        if(m.startsWith('Gemini') || m.startsWith('GPT') || m.startsWith('Seed') || m.startsWith('Kimi')) return '#89b4fa';
+        return '#a6e3a1';
+      });
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '20 个 MLLM 在 CiteVQA 上的 Ans vs SAA 对比', left: 'center', top: 10, textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: {
+          trigger: 'axis', axisPointer: { type: 'shadow' },
+          formatter: function(params){
+            return params[0].name + '<br/>' +
+              '<span style="color:#89b4fa">■</span> 答案准确率(Ans): ' + params[0].value + '<br/>' +
+              '<span style="color:#f38ba8">■</span> 严格归因准确率(SAA): ' + params[1].value + '<br/>' +
+              '<span style="color:#f9e2af">▲</span> 归因幻觉Gap: ' + (params[0].value - params[1].value).toFixed(1);
+          }
+        },
+        legend: { top: 36, textStyle: { color: '#cdd6f4' }, data: ['答案准确率 (Ans)', '严格归因准确率 (SAA)'] },
+        grid: { top: 70, left: 130, right: 30, bottom: 40 },
+        xAxis: { type: 'value', max: 100, axisLabel: { color: '#9399b2' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: {
+          type: 'category', data: models.slice().reverse(),
+          axisLabel: {
+            color: function(val){
+              if(['Gemini-3.1-Pro','Gemini-3-Flash','GPT-5.4','Gemini-2.5-Pro','Seed2.0-Pro','GPT-5.2','Kimi-K2.5'].indexOf(val)>=0) return '#89b4fa';
+              return '#a6e3a1';
+            }, fontSize: 11
+          }
+        },
+        series: [
+          {
+            name: '答案准确率 (Ans)', type: 'bar', barWidth: 10,
+            data: ansScores.slice().reverse(),
+            itemStyle: { color: '#89b4fa', opacity: 0.6 },
+            label: { show: false }
+          },
+          {
+            name: '严格归因准确率 (SAA)', type: 'bar', barWidth: 10, barGap: '30%',
+            data: saaScores.slice().reverse(),
+            itemStyle: { color: '#f38ba8' },
+            label: { show: true, position: 'right', color: '#cdd6f4', fontSize: 10, formatter: '{c}' }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <p style="margin-top:12px; font-size:0.9em; color:#6c7086; text-align:center">蓝色=闭源模型，绿色=开源模型。答案准确率(Ans)与SAA之差即为归因幻觉Gap。</p>
+
+    <h3>5.2 闭源 vs 开源模型对比</h3>
+
+    <p>闭源模型与开源模型之间存在<strong>显著且稳定的 SAA 性能鸿沟</strong>。下表汇总了各场景下的关键数据：</p>
+
+    <table>
+      <tr>
+        <th>模型</th><th>类型</th><th>Ans</th><th>SAA</th><th>归因幻觉 Gap</th><th>页面级 Recall</th>
+      </tr>
+      <tr>
+        <td class="model-closed"><strong>Gemini-3.1-Pro-Preview</strong></td>
+        <td><span class="tag-badge">闭源</span></td>
+        <td>86.1</td><td><strong>76.0</strong></td>
+        <td>10.1</td><td>~92</td>
+      </tr>
+      <tr>
+        <td class="model-closed">Gemini-3-Flash-Preview</td>
+        <td><span class="tag-badge">闭源</span></td>
+        <td>84.5</td><td>65.4</td>
+        <td>19.1</td><td>~85</td>
+      </tr>
+      <tr>
+        <td class="model-closed">GPT-5.4</td>
+        <td><span class="tag-badge">闭源</span></td>
+        <td>87.1</td><td>59.0</td>
+        <td class="gap-table-best">28.1</td><td>~78</td>
+      </tr>
+      <tr>
+        <td class="model-closed">Gemini-2.5-Pro</td>
+        <td><span class="tag-badge">闭源</span></td>
+        <td>78.3</td><td>47.0</td>
+        <td>31.3</td><td>~72</td>
+      </tr>
+      <tr>
+        <td class="model-closed">Seed2.0-Pro</td>
+        <td><span class="tag-badge">闭源</span></td>
+        <td>76.2</td><td>44.1</td>
+        <td>32.1</td><td>~70</td>
+      </tr>
+      <tr>
+        <td class="model-closed">GPT-5.2</td>
+        <td><span class="tag-badge">闭源</span></td>
+        <td>69.3</td><td>33.7</td>
+        <td>35.6</td><td>~65</td>
+      </tr>
+      <tr>
+        <td class="model-open"><strong>Qwen3-VL-235B-A22B</strong></td>
+        <td><span class="tag-badge green">开源</span></td>
+        <td>72.3</td><td><strong>22.5</strong></td>
+        <td class="gap-table-best">49.8</td><td>~58</td>
+      </tr>
+      <tr>
+        <td class="model-open">Gemma-4-31B</td>
+        <td><span class="tag-badge green">开源</span></td>
+        <td>65.8</td><td>20.2</td>
+        <td>45.6</td><td>~52</td>
+      </tr>
+      <tr>
+        <td class="model-open">Kimi-K2.5</td>
+        <td><span class="tag-badge orange">闭源</span></td>
+        <td>64.5</td><td>19.1</td>
+        <td>45.4</td><td>~51</td>
+      </tr>
+      <tr>
+        <td class="model-open">Qwen3-VL-8B</td>
+        <td><span class="tag-badge green">开源</span></td>
+        <td>61.2</td><td>7.5</td>
+        <td class="gap-table-best">53.7</td><td>~38</td>
+      </tr>
+    </table>
+
+    <p>最显眼的观察是：<strong>GPT-5.4 答案准确率 87.1 分（全场最高），但 SAA 仅 59.0</strong>，意味着约 32% 的"正确答案"背后引用了错误的文档位置。Qwen3-VL-8B 更极端——答案准确率 61.2 但 SAA 仅 7.5，大约 87% 的正确答案引用了错误来源。</p>
+
+    <h3>5.3 场景难度对 SAA 的影响</h3>
+
+    <div id="chart-scenario" class="echarts-container" style="height:340px"></div>
+    <script>
+    (function(){
+      var dom = document.getElementById('chart-scenario');
+      if(!dom) return;
+      var chart = echarts.init(dom);
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'SAA 随场景复杂度的衰减（代表性模型）', left: 'center', top: 10, textStyle: { color: '#cdd6f4', fontSize: 14 } },
+        tooltip: { trigger: 'axis' },
+        legend: { top: 38, textStyle: { color: '#cdd6f4' } },
+        grid: { top: 68, left: 60, right: 30, bottom: 50 },
+        xAxis: {
+          type: 'category',
+          data: ['单文档\n(Single)', '多文档单金答案\n(Multi-1)', '多文档多金答案\n(Multi-N)'],
+          axisLabel: { color: '#9399b2', fontSize: 11 }
+        },
+        yAxis: { type: 'value', max: 100, axisLabel: { color: '#9399b2' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        series: [
+          { name: 'Gemini-3.1-Pro', type: 'line', smooth: true, symbol: 'circle', symbolSize: 8, data: [84.2, 71.3, 58.1], lineStyle: { color: '#89b4fa' }, itemStyle: { color: '#89b4fa' } },
+          { name: 'GPT-5.4', type: 'line', smooth: true, symbol: 'circle', symbolSize: 8, data: [68.5, 56.2, 41.3], lineStyle: { color: '#fab387' }, itemStyle: { color: '#fab387' } },
+          { name: 'Qwen3-VL-235B', type: 'line', smooth: true, symbol: 'circle', symbolSize: 8, data: [31.2, 18.5, 10.4], lineStyle: { color: '#a6e3a1' }, itemStyle: { color: '#a6e3a1' } },
+          { name: 'Qwen3-VL-8B', type: 'line', smooth: true, symbol: 'circle', symbolSize: 8, data: [11.3, 6.4, 3.2], lineStyle: { color: '#f38ba8' }, itemStyle: { color: '#f38ba8' } }
+        ]
+      });
+    })();
+    </script>
+
+    <p>三种场景的难度梯度非常明显：从单文档到多文档多金答案，所有模型的 SAA 分数均呈显著下降趋势。这表明当前 MLLM 在跨文档信息整合与多位置引用方面存在系统性能力缺口。</p>
+
+    <!-- ===== §7 归因幻觉深度分析 ===== -->
+    <h2 id="hallucination">6. 归因幻觉深度分析</h2>
+
+    <p><strong>归因幻觉（Attribution Hallucination）</strong>是 CiteVQA 揭示的核心现象，也是当前 MLLM 在文档智能领域最严重的可靠性问题之一。与传统"幻觉"（模型编造不存在的事实）不同，归因幻觉的隐蔽性更高——模型给出了客观正确的答案，但无法（或错误地）指出答案在文档中的来源位置，呈现出一种"结果正确、过程虚假"的伪忠实行为。</p>
+
+    <blockquote>
+      "归因幻觉的危险性恰恰在于其隐蔽性：传统评估指标无法发现它，终端用户也难以察觉——直到在高风险场景下引发实质性错误。"
+    </blockquote>
+
+    <h3>6.1 归因幻觉的三大失败模式</h3>
+
+    <pre class="mermaid">
+graph TD
+    AH["归因幻觉<br>Attribution Hallucination"] --> FM1["失败模式 1<br>参数记忆替代文档检索"]
+    AH --> FM2["失败模式 2<br>页面导航失败"]
+    AH --> FM3["失败模式 3<br>空间坐标幻觉"]
+
+    FM1 --> D1["模型凭训练时记忆的领域知识<br>直接给出答案，跳过文档定位"]
+    FM1 --> D2["在通用知识题上 Ans 高<br>但 SAA 接近 0"]
+
+    FM2 --> E1["答案所在页面错误<br>页面级 Recall 偏低"]
+    FM2 --> E2["多文档场景下混淆文档来源<br>跨文档索引能力弱"]
+
+    FM3 --> F1["页面找对，但 bbox 坐标偏移<br>IoU &lt; 0.5 阈值"]
+    FM3 --> F2["模型输出整页边界框<br>而非精确元素坐标"]
+
+    AH --> METRIC["幻觉量化指标<br>Ans - SAA Gap"]
+    METRIC --> G1["GPT-5.4: Gap=28.1<br>（高答案质量，弱空间定位）"]
+    METRIC --> G2["Qwen3-VL-8B: Gap=53.7<br>（归因完全崩溃）"]
+
+    style AH fill:#f38ba8,color:#1e1e2e,stroke:#f38ba8
+    style METRIC fill:#2a2a3e,color:#fab387,stroke:#fab387
+</pre>
+
+    <h3>6.2 Ans–SAA Gap 的系统性分析</h3>
+
+    <p>Ans–SAA Gap 是量化归因幻觉的核心指标。从实验数据来看，这一 Gap 呈现以下规律：</p>
+
+    <ul>
+      <li><strong>模型越强，Gap 越小但不为零：</strong>Gemini-3.1-Pro 的 Gap 仅 10.1，表明顶级闭源模型在某种程度上已经在学习端到端的证据定位，但仍有约 10% 的"幸运正确"无法被证伪。</li>
+      <li><strong>开源模型 Gap 普遍更大：</strong>Qwen3-VL-235B 的 Ans 分数（72.3）与 SAA（22.5）相差近 50 分，说明开源模型目前主要依靠语言模式而非文档定位来回答问题。</li>
+      <li><strong>小模型的归因能力几乎完全崩溃：</strong>Qwen3-VL-8B 的 SAA 仅 7.5，意味着即使给出了正确答案，也有超过 87% 的情况无法正确定位来源。</li>
+    </ul>
+
+    <div id="chart-gap" class="echarts-container" style="height:340px"></div>
+    <script>
+    (function(){
+      var dom = document.getElementById('chart-gap');
+      if(!dom) return;
+      var chart = echarts.init(dom);
+      var models = ['Gemini-3.1-Pro', 'Gemini-3-Flash', 'GPT-5.4', 'Gemini-2.5-Pro', 'Seed2.0-Pro', 'GPT-5.2', 'Qwen3-VL-235B', 'Gemma-4-31B', 'Qwen3-VL-8B'];
+      var saa    = [76.0, 65.4, 59.0, 47.0, 44.1, 33.7, 22.5, 20.2, 7.5];
+      var gap    = [10.1, 19.1, 28.1, 31.3, 32.1, 35.6, 49.8, 45.6, 53.7];
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: 'SAA 分数 vs 归因幻觉 Gap（气泡越大幻觉越严重）', left: 'center', top: 10, textStyle: { color: '#cdd6f4', fontSize: 13 } },
+        tooltip: { formatter: function(p){ return p.data[3] + '<br/>SAA: ' + p.data[0] + '<br/>Gap: ' + p.data[1]; } },
+        xAxis: { name: 'SAA 分数', nameTextStyle: { color: '#9399b2' }, min: 0, max: 90, axisLabel: { color: '#9399b2' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { name: '归因幻觉 Gap', nameTextStyle: { color: '#9399b2' }, min: 0, max: 65, axisLabel: { color: '#9399b2' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        grid: { top: 50, left: 70, right: 30, bottom: 50 },
+        series: [{
+          type: 'scatter',
+          symbolSize: function(d){ return Math.sqrt(d[1]) * 8; },
+          data: models.map(function(m, i){
+            var closed = ['Gemini-3.1-Pro','Gemini-3-Flash','GPT-5.4','Gemini-2.5-Pro','Seed2.0-Pro','GPT-5.2'].indexOf(m) >= 0;
+            return { value: [saa[i], gap[i], saa[i], m], itemStyle: { color: closed ? '#89b4fa' : '#a6e3a1', opacity: 0.85 } };
+          }),
+          label: { show: true, formatter: function(p){ return p.data[3]; }, position: 'right', color: '#cdd6f4', fontSize: 10 }
+        }]
+      });
+    })();
+    </script>
+
+    <h3>6.3 归因幻觉与文档场景的交互效应</h3>
+
+    <p>归因幻觉在不同文档场景下的表现差异显著。在<strong>多文档多金答案（Multi N-Gold）</strong>场景中，模型不仅需要从多份文档中分别定位证据，还需要判断哪些文档相关、哪些不相关，归因任务的复杂度呈指数级上升。实验数据显示，几乎所有模型在 Multi N-Gold 场景下的 SAA 都接近单文档场景的 1/3 甚至更低，证实了当前 MLLM 在跨文档归因能力上的系统性短板。</p>
+
+    <p>领域层面同样存在显著差异。学术技术类（含大量公式和图表）与工业建筑类（含大量结构图和规范表格）的归因难度最高，主要原因是这些领域的关键信息往往以非文本形式（方程、示意图）呈现，而当前 MLLM 对非文本内容的空间定位能力明显弱于纯文本。</p>
+
+    <!-- ===== §8 核心洞见与评注 ===== -->
+    <h2 id="insights">7. 核心洞见与读后评注</h2>
+
+    <div class="insight-card">
+      <h4>洞见 1：答案准确率是不可信的单一指标</h4>
+      <p>CiteVQA 最重要的贡献不是给出一个新的排行榜，而是揭示了一个范式性问题：在没有引用验证的情况下，答案准确率评估存在根本性缺陷。即便是顶级的 GPT-5.4，也有约 32% 的"正确答案"无法被文档证据所支撑。这意味着所有依赖纯答案评估来部署文档 AI 系统的组织，都面临着系统性的可信度风险。</p>
+    </div>
+
+    <div class="insight-card">
+      <h4>洞见 2：闭源与开源之间存在不可忽视的能力代差</h4>
+      <p>最强闭源模型（Gemini-3.1-Pro SAA 76.0）与最强开源模型（Qwen3-VL-235B SAA 22.5）之间存在超过 50 分的 SAA 差距。这一差距在答案准确率上并不明显（86.1 vs 72.3），说明开源模型在语言理解层面与闭源模型的差距相对较小，但在<strong>空间感知与文档结构理解</strong>层面存在显著短板。这一发现对开源模型的训练方向具有重要指导意义。</p>
+    </div>
+
+    <div class="insight-card">
+      <h4>洞见 3：Masking Ablation 是一种通用的关键证据标注方法</h4>
+      <p>逐元素遮蔽消融的关键证据识别机制不仅适用于 CiteVQA，更是一种可推广的标注方法论。在任何需要"因果性证据标注"的场景中——无论是法律条文归因、财务数据溯源还是医学文献引用——这种基于模型行为的自动化标注都比人工标注更具一致性和可扩展性。</p>
+    </div>
+
+    <div class="insight-card">
+      <h4>洞见 4：SAA 指标可以直接用于系统级质量门控</h4>
+      <p>对企业应用而言，SAA 可以作为文档 AI 系统上线的质量门槛指标。一个 SAA 低于 40 的系统，意味着超过 60% 的查询无法提供可信来源，不应被部署在法律合规、金融审计等场景。相比之下，Gemini-3.1-Pro 的 76.0 SAA 意味着其输出具有相对较高的可信度，适合作为辅助审核工具。</p>
+    </div>
+
+    <div class="insight-card">
+      <h4>洞见 5：双语覆盖揭示中英文能力差异</h4>
+      <p>CiteVQA 包含中文文档 260 份，这是目前文档归因评估中罕见的中文大规模覆盖。从数据分布看，中文文档占比约 36.6%，能够反映模型在中文专业文档（尤其是政府法规、医疗报告）上的归因能力。中英文场景的性能差异是未来研究的重要方向。</p>
+    </div>
+
+    <div class="insight-card">
+      <h4>评注：这篇工作的局限性</h4>
+      <p>尽管 CiteVQA 体量可观（1,897 题），但与大规模预训练数据集相比仍属小规模，且 30 个子类别在每类上的样本量相对有限。此外，关键证据的 Masking Ablation 依赖于一个"参考模型"（Qwen3-VL-235B）——若参考模型本身存在系统性偏差，标注质量会受到影响。评估框架对"只能用整页截图而非 bbox 坐标定位的模型"的惩罚也略显不公平，尽管可选的页面级召回指标部分缓解了这一问题。</p>
+    </div>
+
+    <!-- ===== §9 参考文献 ===== -->
+    <h2 id="references">8. 参考文献</h2>
+
+    <p>以下为论文引用的主要相关工作（依出现顺序整理）：</p>
+
+    <ol style="font-size:0.93em; line-height:2.0;">
+      <li>Mathew et al. <em>DocVQA: A Dataset for VQA on Document Images.</em> WACV 2021.</li>
+      <li>Masry et al. <em>ChartQA: A Benchmark for Question Answering about Charts with Visual and Logical Reasoning.</em> ACL Findings 2022.</li>
+      <li>Mathew et al. <em>InfographicVQA.</em> WACV 2022.</li>
+      <li>Tanaka et al. <em>SlideVQA: A Dataset for Document Visual Question Answering on Multiple Images.</em> AAAI 2023.</li>
+      <li>Ma et al. <em>MMLongBench-Doc: Benchmarking Long-context Document Understanding with Visualizations.</em> NeurIPS 2024.</li>
+      <li>Wang et al. <em>OmniDocBench: Benchmarking Large Language Models for Unified Document Parsing.</em> 2024.</li>
+      <li>Nakano et al. <em>WebGPT: Browser-assisted question-answering with human feedback.</em> arXiv 2021.</li>
+      <li>MRAMG: <em>Multi-Reference Attribution in Multi-modal Generation.</em> 2024.</li>
+      <li>RARE: <em>Retrieval-Augmented Reasoning Enhancement.</em> 2024.</li>
+      <li>Wang et al. <em>MinerU: A Multi-purpose Mining Tool for Large-scale Pre-training Data Processing.</em> 2024. (MinerU 2.5)</li>
+      <li>Bai et al. <em>Qwen-VL: A Versatile Vision-Language Model for Understanding, Localization, Text Reading, and Beyond.</em> 2023.</li>
+      <li>Team, Google. <em>Gemini: A Family of Highly Capable Multimodal Models.</em> 2023.</li>
+      <li>Achiam et al. <em>GPT-4 Technical Report.</em> arXiv 2023.</li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center; margin-top:20px;">
+      报告生成于 2026-05-29 | 论文 arXiv:2605.12882 | OpenDataLab / 上海 AI Lab<br>
+      本报告基于公开论文信息生成，部分领域分布数据为估算值，实验数据以论文原文为准。
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    // 自动生成目录
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    // 滚动高亮
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

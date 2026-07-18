@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI-MOPD：面向持续 GUI Agent 学习的多平台 On-Policy 蒸馏 - 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    td.best, span.best { color: var(--strong); font-weight: 700; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .info-table th { width: 160px; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>UI-MOPD：面向持续 GUI Agent 学习的多平台 On-Policy 蒸馏</h1>
+    <p style="color:#6c7086;">Multi-Platform On-Policy Distillation for Continual GUI Agent Learning · Niu Lian, Alan Chen, Zhehao Yu, Chengzhen Duan, Fazhan Liu, Hui Liu, Pei Fu, Jian Luan, Yaowei Wang, Shu-Tao Xia, Jinpeng Wang · 清华大学 / 小米 / 哈工大(深圳) / 浙江大学 / 鹏城实验室</p>
+
+    <table class="info-table">
+      <tr><th>标题</th><td>UI-MOPD: Multi-Platform On-Policy Distillation for Continual GUI Agent Learning</td></tr>
+      <tr><th>核心问题</th><td>如何让一个共享 GUI Agent 在持续学习跨桌面/移动等异构平台时，既能适应新平台、又不破坏各平台特有的交互行为约定（避免行为混淆与灾难性遗忘）</td></tr>
+      <tr><th>关键思路</th><td>为每个平台训练专用教师，在学生 on-policy rollout 上按平台路由选择对应教师做 reverse-KL on-policy 蒸馏，把平台特有行为先验作为“行为锚点”注入共享策略</td></tr>
+      <tr><th>主要贡献</th><td>(1) 构建 Uni-GUI 跨平台高质量数据集（约 11.5K 轨迹 / 160K 步）；(2) 首次将多教师 on-policy 蒸馏 (MOPD) 引入 GUI Agent 持续学习；(3) 提出平台条件化教师路由框架</td></tr>
+      <tr><th>核心结果</th><td>OSWorld 38.2%、MobileWorld 12.0%，相对基座分别提升 12.7% 与 55.8%</td></tr>
+      <tr><th>基座模型</th><td>学生：Qwen3-VL-8B-Thinking；教师：Qwen3-VL-32B-Thinking</td></tr>
+      <tr><th>开源地址</th><td>论文标注 GitHub / Hugging Face / Homepage（链接见原文 § 标识）</td></tr>
+    </table>
+
+    <h2 id="sec-overview">1. 概述</h2>
+    <p>随着多模态基础模型与 Agent 系统的发展，GUI Agent 正从“单平台任务执行”走向“跨平台交互”。真实工作流往往横跨桌面应用、移动 App 与 Web 服务，因此一个能干的 GUI Agent 必须在异构 GUI 环境间持续适应，同时<strong>保留每个平台各自的交互约定</strong>。</p>
+    <p>论文指出当前跨平台 GUI 学习存在两大瓶颈：</p>
+    <ul>
+      <li><strong>高质量跨平台轨迹稀缺</strong>：现有数据集多聚焦单平台，存在无效动作、状态-动作对齐不准、任务粒度不一致等问题。</li>
+      <li><strong>平台行为语义差异</strong>：桌面与移动平台在动作语义与 affordance 上差异显著（例如“返回上一级”在桌面是关闭窗口，在移动端是按返回键），简单混合训练会产生过度平均的策略，并在持续学习中引发<strong>灾难性遗忘</strong>。</li>
+    </ul>
+    <p>为此，作者先构建统一跨平台数据采集工具与 <strong>Uni-GUI</strong> 数据集，再提出 <strong>UI-MOPD</strong>——首个把<strong>多教师 on-policy 蒸馏 (MOPD)</strong> 引入 GUI Agent 持续学习的方法。其核心是：学生在线采样 rollout，按当前环境动态选择平台专用教师，通过平台条件化蒸馏把平台特有行为分布迁移到共享策略，从而在适应新平台的同时保留既有平台能力。</p>
+
+    <blockquote>
+      <p><strong>一句话总结：</strong>UI-MOPD 把 MOPD 从通用基础模型后训练迁移到 GUI Agent 场景，用“平台条件化教师路由 + on-policy reverse-KL”取代简单的 mixed-SFT / model merging，让单一 8B 学生同时吃下桌面与移动两套行为先验。</p>
+    </blockquote>
+
+    <h2 id="sec-motivation">2. 研究背景与动机</h2>
+
+    <h3 id="sec-mot-bottleneck">2.1 两大瓶颈与三种朴素方案的失效</h3>
+    <p>论文用 Figure 1 直观对比了三种整合桌面/移动信号的思路，前两种都会“塌缩”出平均策略，只有 MOPD 能保留平台行为约定：</p>
+
+    <table>
+      <tr><th>方案</th><th>整合方式</th><th>问题</th></tr>
+      <tr><td>(a) Model Merge</td><td>参数空间平均（weight averaging / TIES）</td><td>桌面/移动动作在参数空间冲突，得到平均化策略</td></tr>
+      <tr><td>(b) Mixed SFT</td><td>动作空间混合监督微调</td><td>异构动作语义被混合，行为约定坍塌（Action Convention Collapse）</td></tr>
+      <tr><td><strong>(c) MOPD (Ours)</strong></td><td>平台路由 + 多教师 on-policy 蒸馏</td><td>各平台教师提供独立“行为锚点”，避免混淆</td></tr>
+    </table>
+
+    <h3 id="sec-mot-related">2.2 相关工作谱系</h3>
+    <p><strong>GUI Agent 从单平台到多平台。</strong>早期研究聚焦单平台：Web 环境（WebArena / VisualWebArena）、移动环境（AndroidWorld、MobileWorld、UI-R1、ClawGUI）、桌面环境（OSWorld、WindowsAgentArena、ComputerRL、EvoCUA）。近期的通用型 GUI Agent（MobileAgent-v3.5、UI-Venus-1.5、UI-TARS-2）尝试跨平台统一建模。UI-MOPD 的差异点在于聚焦<strong>持续学习</strong>，强调端到端长程导航同时保留/迁移各平台交互能力。</p>
+    <p><strong>多教师 On-Policy 蒸馏 (MOPD)。</strong>后训练中不同能力常呈“跷跷板效应”。On-policy distillation (OPD) 从学生采样轨迹、用 reverse-KL 匹配教师分布，提供稠密 token 级监督；MOPD 进一步为每个能力维度选最强 checkpoint 作为教师，让学生在一个蒸馏阶段吸收多种能力。近期工作：MiMo-V2-Flash 与 GLM-5 用 MOPD 作最终后训练步、Nemotron-Cascade 2 用作专门 RL 阶段间的遗忘恢复、DeepSeek-V4 进一步用全词表 logits 与十余个教师。但 <strong>MOPD 在 GUI Agent 领域几乎未被探索</strong>，UI-MOPD 是首个将其引入 GUI Agent 并提出平台条件化蒸馏框架的工作。</p>
+
+    <h3 id="sec-mot-mopd-diff">2.3 与标准 RLHF 中 KL 项的本质区别</h3>
+    <p>这是理解 UI-MOPD 的关键洞见：标准 RLHF 把 KL 当作<strong>保守正则项</strong>限制策略漂移；而 UI-MOPD 把 KL 升级为<strong>定向迁移机制</strong>——把平台专家交互行为迁移到共享学生。由于教师监督施加在“学生当前真正决策的状态分布”上，蒸馏信号与学生当前误差更匹配，使共享策略在通过 RL 提升任务成功率的同时保留桌面/移动的行为锚点。</p>
+
+
+    <h2 id="sec-method">3. 核心方法</h2>
+
+    <h3 id="sec-method-overview">3.1 方法总览：两阶段训练流程</h3>
+    <p>UI-MOPD 训练一个能同时适应桌面与移动两类异构环境的统一原生 GUI Agent，包含两个阶段：</p>
+    <ul>
+      <li><strong>Stage 1（SFT 得教师）</strong>：在视觉-语言基座上对各平台高质量轨迹做 SFT，得到两个专家教师——桌面教师 $\pi_\mathrm{ref}^{d}$ 与移动教师 $\pi_\mathrm{ref}^{m}$（均初始化自 Qwen3-VL-32B-Thinking，在 Uni-GUI 上 SFT）。</li>
+      <li><strong>Stage 2（MOPD 训学生）</strong>：用多教师 on-policy 蒸馏把两套专有能力整合进统一学生 $\pi_\theta$（初始化自 Qwen3-VL-8B-Thinking），学生在线采样 rollout，平台条件化路由选对应教师提供 reverse-KL 指导，并叠加规则化 rollout 奖励。</li>
+    </ul>
+
+    <pre class="mermaid">
+flowchart TD
+    subgraph S1["Stage 1: SFT 得到平台教师"]
+        A1["Uni-GUI 桌面轨迹"] --> A2["SFT"]
+        A3["Uni-GUI 移动轨迹"] --> A4["SFT"]
+        A2 --> T1["桌面教师 π_ref^d (32B)"]
+        A4 --> T2["移动教师 π_ref^m (32B)"]
+    end
+    subgraph S2["Stage 2: 多教师 On-Policy 蒸馏"]
+        B1["混合平台 Prompt 采样"] --> B2["学生 πθ (8B) On-Policy Rollout"]
+        B2 --> B3{"平台路由 Platform Router"}
+        B3 -->|桌面 rollout| B4["桌面教师 π_ref^d"]
+        B3 -->|移动 rollout| B5["移动教师 π_ref^m"]
+        B4 --> B6["reverse-KL 蒸馏信号"]
+        B5 --> B6
+        B2 --> B7["规则化 ORM 奖励"]
+        B6 --> B8["GRPO/DAPO 目标 + KL 罚"]
+        B7 --> B8
+        B8 --> B9["更新共享学生 πθ"]
+    end
+    T1 -.提供 logπ.-> B4
+    T2 -.提供 logπ.-> B5
+    </pre>
+    <figcaption>图：UI-MOPD 两阶段训练流水线。Stage 1 SFT 出两个平台教师；Stage 2 学生 on-policy 采样后按平台路由到对应教师做 reverse-KL，并与规则奖励共同优化。</figcaption>
+
+    <h3 id="sec-method-opd">3.2 多教师 On-Policy 蒸馏（MOPD）算法推导</h3>
+
+    <h4>核心原则</h4>
+    <p>把多教师知识整合建模为<strong>在线策略优化中的条件行为约束</strong>。不同于直接合并多个专家模型或从静态离线轨迹蒸馏，UI-MOPD 让学生 $\pi_\theta$ 在线采样 rollout，仅在学生<strong>实际访问的状态</strong>上施加教师监督。这样蒸馏信号集中在学生当前真正决策的状态分布上，而非要求学生模仿教师所有行为模式。</p>
+    <p>教师监督以<strong>平台条件化</strong>方式施加：不同平台的 rollout 对齐到对应平台教师。教师信号不简单聚合成单个 KL 罚，而是按 rollout 所属平台提供行为约束。</p>
+
+    <h4>On-policy KL（公式 1-2）</h4>
+    <p>对第 $i$ 条采样响应 $y^{(i)}=(y_1,\dots,y_T)$，设 $h_t^{(i)}=(x^{(i)}, y_{\lt t}^{(i)})$ 为 token $t$ 处的解码状态，$\pi_\mathrm{ref}^{(i)}$ 为路由到的平台教师。学生到教师的 on-policy KL 为：</p>
+    <p>$$D_\mathrm{KL}^{(t,i)} = D_\mathrm{KL}\!\left(\pi_\theta(\cdot\mid h_t^{(i)})\;\|\;\pi_\mathrm{ref}^{(i)}(\cdot\mid h_t^{(i)})\right). \tag{1}$$</p>
+    <p>等价地，按学生分布期望展开（这正是 on-policy 的体现——在 $\pi_\theta$ 自身采样上取期望）：</p>
+    <p>$$D_\mathrm{KL}^{(t,i)} = \mathbb{E}_{a\sim\pi_\theta(\cdot\mid h_t^{(i)})}\!\left[\log\pi_\theta(a\mid h_t^{(i)}) - \log\pi_\mathrm{ref}^{(i)}(a\mid h_t^{(i)})\right]. \tag{2}$$</p>
+
+    <h4>Mini-batch MOPD 损失（公式 3）</h4>
+    <p>$$\mathcal{L}_\mathrm{MOPD}(\theta) = \frac{\sum_{i\in B}\sum_t m_t^{(i)}\,\mu^{(i)}\,\hat{D}_\mathrm{KL}^{(t,i)}}{\sum_{i\in B}\sum_t m_t^{(i)}}, \tag{3}$$</p>
+    <p>其中 $m_t^{(i)}$ 把 prompt 与 padding token 掩掉，$\mu^{(i)}$ 是自适应 KL 掩码，$\hat{D}_\mathrm{KL}^{(t,i)}$ 是 token 级 KL 估计。</p>
+
+    <h4>K3 估计器（公式 4-5）</h4>
+    <p>在全词表上算完整 KL 开销过大，故采用 <strong>K3 估计器</strong>，只需学生与教师对采样 token 的对数概率。定义：</p>
+    <p>$$\delta_t^{(i)} = \log\pi_\mathrm{ref}^{(i)}(y_t\mid h_t^{(i)}) - \log\pi_\theta(y_t\mid h_t^{(i)}), \tag{4}$$</p>
+    <p>$$\rho_t^{(i)} = \exp(\delta_t^{(i)}), \tag{5a}$$</p>
+    <p>$$\hat{D}_\mathrm{KL}^{(t,i)} = \rho_t^{(i)} - \delta_t^{(i)} - 1. \tag{5b}$$</p>
+    <p>该估计量非负、在 $\pi_\theta$ 采样下对 $D_\mathrm{KL}(\pi_\theta\|\pi_\mathrm{ref})$ 无偏，且经验上方差低于直接 log-ratio 估计器。实现中对 $\delta_t^{(i)}$ 做 clamp 以保证数值稳定。</p>
+
+    <h4>自适应 KL 掩码（公式 6）</h4>
+    <p>教师约束在任务反馈仍弱时最有用；若某 prompt 组已获充分奖励，过强 KL 正则会不必要地限制探索。于是用组级掩码：</p>
+    <p>$$\mu^{(i)} = \begin{cases}0, & \text{if } \frac{1}{|g^{(i)}|}\sum_{k\in g^{(i)}} R^{(k)} \gt \tau_\mathrm{KL},\\ 1, & \text{otherwise.}\end{cases} \tag{6}$$</p>
+    <p>其中 $g^{(i)}$ 为样本 $i$ 的 prompt 组。该掩码在任务反馈已足以改进策略时移除教师罚，在低奖励 rollout 上保留教师指导。</p>
+
+    <h3 id="sec-method-routing">3.3 平台条件化教师路由（公式 7）</h3>
+    <p>跨平台 GUI 交互不仅在视觉布局上不同，在动作语义、affordance 结构、执行上下文上也不同：桌面任务常用鼠标、键盘快捷键、滚动、窗口切换；移动任务依赖 tap、swipe、长按、App 导航。单个教师或直接混合教师 logits 会把异构行为压成平均分布，削弱平台交互先验。</p>
+    <p>UI-MOPD 改为训练独立的专家教师，并按 rollout 的平台标签路由：</p>
+    <p>$$\pi_\mathrm{ref}^{(i)} = \begin{cases}\pi_\mathrm{ref}^{m}, & s_i \in S_\mathrm{mobile},\\ \pi_\mathrm{ref}^{d}, & s_i \in S_\mathrm{desktop},\end{cases} \tag{7}$$</p>
+    <p>其中 $s_i$ 是数据构建时记录的来源标签。<strong>该路由只影响教师对数概率计算</strong>，学生始终是单一共享策略——推理时不引入多 Agent 或额外教师模型。</p>
+    <p>每次 RL 更新中：学生先从混合平台 prompt 采样 rollout；mini-batch 按平台划分，各子集由对应教师评估；教师对数概率按原 batch 顺序合并回；K3 估计器（公式 5）为公式 3 提供 token 级蒸馏信号。这给每个平台在共享参数空间中一个独立行为锚点：RL 把策略推向更高任务奖励，路由教师约束该移动以免原生交互模式被另一平台信号覆盖。</p>
+
+    <div class="mermaid">
+graph LR
+    subgraph Shared["共享学生 πθ (单一策略)"]
+        S1["桌面 rollout"]
+        S2["移动 rollout"]
+    end
+    S1 -->|"路由 s_i∈S_desktop"| R1["桌面教师 π_ref^d"]
+    S2 -->|"路由 s_i∈S_mobile"| R2["移动教师 π_ref^m"]
+    R1 --> KL["平台条件化 reverse-KL"]
+    R2 --> KL
+    KL --> Up["更新共享参数 θ"]
+    </div>
+    <figcaption>图：平台条件化教师路由——不同平台 rollout 各自对齐到对应教师，但学生始终为单一共享策略。</figcaption>
+
+    <h3 id="sec-method-reward">3.4 结构化奖励设计（公式 8）</h3>
+    <p>对 GUI 动作用结构化结果奖励。策略在 tool-call 格式内输出 action JSON（含动作类型、坐标、文本等）。对每个动作类型定义一组必需维度（动作类型正确性、坐标落入目标 bbox、滚动方向、按键集合相等、大小写不敏感文本匹配等）。设 $f_a\in[0,1]$ 为动作 $a$ 的匹配维度占比：</p>
+    <p>$$R(x,y) = \begin{cases}1.0, & f_a = 1,\\ -0.5, & 0 \le f_a \lt 1,\\ -1.0, & \text{unparsable or invalid action.}\end{cases} \tag{8}$$</p>
+    <p>中间罚 $-0.5$ 把“部分合法但错误”的动作与无效输出区分开，为策略优化中的 group-relative 优势估计保留有用的奖励间距。</p>
+
+    <h3 id="sec-method-objective">3.5 训练目标（公式 9-12）</h3>
+    <p>token 级优势（group-relative）：</p>
+    <p>$$A_t^{(i)} = R(x^{(i)},y^{(i)}) - \frac{1}{|g^{(i)}|}\sum_{k\in g^{(i)}} R(x^{(k)},y^{(k)}). \tag{9}$$</p>
+    <p>策略比率：</p>
+    <p>$$r_t(\theta) = \frac{\pi_\theta(y_t\mid h_t)}{\pi_{\theta_\mathrm{old}}(y_t\mid h_t)}. \tag{10}$$</p>
+    <p>对平台 $p$ 的 rollout，最大化正则化目标（非对称 clip 的 DAPO 风格策略损失 + 平台条件化 MOPD 罚）：</p>
+    <p>$$J(\theta) = \mathbb{E}_{p,x,y\sim\pi_\theta}\!\left[\sum_t m_t\,\ell_\mathrm{PG}^{(t)}(\theta) - \beta\,\mu\,\hat{D}_\mathrm{KL}^{(t,p)}\right], \tag{11}$$</p>
+    <p>$$\ell_\mathrm{PG}^{(t)}(\theta) = \min\!\left(r_t(\theta)A_t,\;\mathrm{clip}(r_t(\theta),\,1-\epsilon_\mathrm{low},\,1+\epsilon_\mathrm{high})\,A_t\right).$$</p>
+    <p>其中 $\hat{D}_\mathrm{KL}^{(t,p)}$ 由公式 7 选定的教师计算，$m_t$ 掩 response token，$\mu$ 为自适应 KL 掩码，$\beta$ 控制蒸馏强度（论文取 $\beta=0.01$）。等价地最小化：</p>
+    <p>$$\mathcal{L}(\theta) = -J(\theta) = \mathcal{L}_\mathrm{PG}(\theta) + \beta\,\mathcal{L}_\mathrm{MOPD}(\theta). \tag{12}$$</p>
+    <p>该目标通过在线 RL 提升长程任务完成度，同时通过路由教师监督保留平台特有行为锚点。</p>
+
+
+    <h3 id="sec-method-algo">3.6 算法伪代码</h3>
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: UI-MOPD 平台条件化多教师 On-Policy 蒸馏</div>
+      <p><span class="kw">Input:</span> 平台教师 <span class="var">π_ref^d, π_ref^m</span>；学生 <span class="var">πθ</span>（初始化自 8B 基座）；超参 <span class="num">β=0.01, ε_low, ε_high, τ_KL</span>；每个 prompt 采样 <span class="num">8</span> 条 rollout</p>
+      <p><span class="kw">for</span> each training step <span class="kw">do</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 1) 混合平台 prompt 在线采样</span></p>
+      <p style="padding-left:1.5em">从混合桌面/移动 prompt 采样 mini-batch <span class="var">B</span>，学生 <span class="var">πθ</span> 生成 rollout <span class="var">{y^(i)}</span>，记录每条来源标签 <span class="var">s_i</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 2) 规则化奖励（公式 8）</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> 每条 rollout <span class="var">i</span> <span class="kw">do</span> 计算 <span class="var">R(x^(i), y^(i))</span>；解析动作维度匹配比 <span class="var">f_a</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 3) 平台路由教师（公式 7）</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> 每条 rollout <span class="var">i</span> <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="kw">if</span> <span class="var">s_i ∈ S_desktop</span> <span class="kw">then</span> <span class="var">π_ref^(i) ← π_ref^d</span></p>
+      <p style="padding-left:3em"><span class="kw">else</span> <span class="var">π_ref^(i) ← π_ref^m</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 4) K3 token 级 KL 估计（公式 4-5）</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> 每条 rollout <span class="var">i</span>, 每个 response token <span class="var">t</span> <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="var">δ_t^(i) ← log π_ref^(i)(y_t|h_t^(i)) − log πθ(y_t|h_t^(i))</span>；clamp 保稳</p>
+      <p style="padding-left:3em"><span class="var">ρ_t^(i) ← exp(δ_t^(i))</span>；<span class="var">D̂_KL^(t,i) ← ρ_t^(i) − δ_t^(i) − 1</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 5) 自适应 KL 掩码（公式 6）</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> 每个 prompt 组 <span class="var">g^(i)</span> <span class="kw">do</span></p>
+      <p style="padding-left:3em"><span class="kw">if</span> <span class="fn">mean</span>(<span class="var">R^(k)</span>) <span class="kw">&gt;</span> <span class="num">τ_KL</span> <span class="kw">then</span> <span class="var">μ^(i) ← 0</span> <span class="kw">else</span> <span class="var">μ^(i) ← 1</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 6) group-relative 优势（公式 9）与策略比率（公式 10）</span></p>
+      <p style="padding-left:1.5em"><span class="var">A_t^(i) ← R^(i) − mean_{k∈g} R^(k)</span>；<span class="var">r_t(θ) ← πθ(y_t|h_t)/π_old(y_t|h_t)</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 7) 合并目标并更新（公式 11-12）</span></p>
+      <p style="padding-left:1.5em"><span class="var">ℓ_PG^(t) ← min(r_t A_t, clip(r_t, 1−ε_low, 1+ε_high) A_t)</span></p>
+      <p style="padding-left:1.5em"><span class="var">L ← −Σ_t m_t ℓ_PG^(t) + β · L_MOPD(θ)</span>（按 token mean 聚合）</p>
+      <p style="padding-left:1.5em">对 <span class="var">θ</span> 做一步梯度下降更新；同步 <span class="var">π_old ← πθ</span></p>
+      <p><span class="kw">return</span> 训练后的共享学生 <span class="var">πθ</span></p>
+    </div>
+
+    <h3 id="sec-method-arch">3.7 多平台架构与动作空间</h3>
+    <p>桌面轨迹使用 <code>computer_use</code> 工具接口（鼠标 + 键盘动作），移动轨迹使用 <code>mobile_use</code> 接口（触屏动作）。后处理时不同数据源动作被转换到这些平台特有 tool-call 格式。两套动作空间见表（对应原文 Table 5）：</p>
+    <table>
+      <tr><th>平台</th><th>工具接口</th><th>动作集合</th></tr>
+      <tr><td>桌面 Desktop</td><td><code>computer_use</code></td><td>key, type, mouse_move, left_click, left_click_drag, right_click, middle_click, double_click, triple_click, scroll, wait, terminate</td></tr>
+      <tr><td>移动 Mobile</td><td><code>mobile_use</code></td><td>click, long_press, swipe, type, answer, system_button, wait, ask_user, terminate</td></tr>
+    </table>
+    <p>视觉输入：训练只用当前截图；推理用 4 张历史截图 + 当前截图 + 完整文本动作历史。桌面图分辨率 1920×1080，移动 1080×2400。</p>
+
+    <h3 id="sec-method-data">3.8 数据策略：Uni-GUI 与统一采集工具</h3>
+    <p>作者构建统一跨平台数据采集 harness（查询生成 → 轨迹采集 → 轨迹清洗 → 后处理四阶段）。桌面查询用 Kimi-K2.6 生成、移动查询用 Gemini-3.1-Pro 生成；从环境可执行功能点合成自然且可执行的用户查询。轨迹采集后做多阶段清洗：去除步骤结构异常、动作无法映射到学生动作空间、超过 40 步的过长轨迹、查询与环境不一致的轨迹；最后用 Gemini-3.1-Pro 作自动裁判，按<strong>子任务级</strong>判定整条轨迹是否完成（避免单次长上下文判定的噪声）。</p>
+    <p>Uni-GUI 由四组轨迹构成（原文 Table 4，计数已取整）：</p>
+    <table>
+      <tr><th>平台</th><th>来源类型</th><th>步数</th><th>轨迹数</th></tr>
+      <tr><td rowspan="2">桌面 Desktop</td><td>自采集</td><td>~95K</td><td>~7K</td></tr>
+      <tr><td>OpenCUA</td><td>~13K</td><td>~0.8K</td></tr>
+      <tr><td rowspan="2">移动 Mobile</td><td>自采集</td><td>~17K</td><td>~1K</td></tr>
+      <tr><td>OpenMobile</td><td>~35K</td><td>~2.7K</td></tr>
+      <tr><td><strong>合计</strong></td><td>—</td><td><strong>~160K</strong></td><td><strong>~11.5K</strong></td></tr>
+    </table>
+    <p>公开轨迹（OpenCUA / OpenMobile）不直接使用原始版本，而是经附录 B 的清洗与后处理（动作空间兼容性检查、轨迹过滤、格式归一化、CoT 重写、bbox 重标注）后才纳入。</p>
+
+
+    <h2 id="sec-exp">4. 实验结果与分析</h2>
+
+    <h3 id="sec-exp-setup">4.1 实验设置</h3>
+    <ul>
+      <li><strong>评测基准</strong>：OSWorld（桌面，361 任务）、MobileWorld（移动，117 任务）；静态 GUI 能力用 AndroidControl⋆（4260 步级记录 / 781 条 Android 轨迹的评测子集）；GUI grounding 用 ScreenSpot-Pro、ScreenSpotV2、OSWorld-G。主指标为任务成功率。</li>
+      <li><strong>训练</strong>：Stage 1 用 Qwen3-VL-32B-Thinking 在 Uni-GUI 上 SFT 得平台教师；Stage 2 学生初始化自 Qwen3-VL-8B-Thinking，用 GRPO/DAPO 目标 + MOPD，每个 prompt 采 8 条 rollout，OPD KL 系数 0.01，K3 估计器。</li>
+      <li><strong>基础设施</strong>：verl 训练框架 + Megatron-Core 后端 + SGLang rollout 引擎；64 块 NVIDIA H100（8 节点 × 8 GPU）；评测用 vLLM 部署。</li>
+    </ul>
+
+    <h3 id="sec-exp-main">4.2 主结果（原文 Table 1）</h3>
+    <p>下表对比 UI-MOPD 与四组基线。加粗为各列最优；UI-MOPD 在两平台间取得最均衡的跨平台表现。</p>
+    <table>
+      <tr><th>分组</th><th>方法</th><th>OSWorld</th><th>MobileWorld</th></tr>
+      <tr><td rowspan="6">通用模型</td><td>SeedVL-1.5</td><td>34.1%</td><td>–</td></tr>
+      <tr><td>Qwen3-VL-8B-Instruct</td><td>33.9%</td><td>–</td></tr>
+      <tr><td>Qwen3-VL-8B-Thinking（学生基座）</td><td>33.9%</td><td>7.7%</td></tr>
+      <tr><td>Qwen3-VL-32B-Instruct</td><td>32.6%</td><td>9.4%</td></tr>
+      <tr><td>Qwen3-VL-235B-A22B-Instruct</td><td>31.6%</td><td>7.7%</td></tr>
+      <tr><td>Qwen3-VL-235B-A22B-Thinking</td><td>38.1%</td><td>9.0%</td></tr>
+      <tr><td rowspan="3">GUI（单平台）</td><td>OpenCUA-7B</td><td>28.2%</td><td>–</td></tr>
+      <tr><td>OpenAI CUA o3</td><td>31.3%</td><td>–</td></tr>
+      <tr><td>OpenCUA-32B</td><td>34.8%</td><td>–</td></tr>
+      <tr><td rowspan="5">GUI（多平台）</td><td>UI-TARS-72B-DPO</td><td>27.1%</td><td>–</td></tr>
+      <tr><td>UI-TARS-1.5-7B</td><td>27.4%</td><td>9.5%</td></tr>
+      <tr><td>GELab-Zero-4B</td><td>31.9%</td><td>10.9%</td></tr>
+      <tr><td>GUI-Owl-7B</td><td>34.9%</td><td>4.5%</td></tr>
+      <tr><td>GUI-Owl-32B</td><td>35.0%</td><td>5.5%</td></tr>
+      <tr><td rowspan="3">整合策略</td><td>Mixed-SFT</td><td>36.5%</td><td>6.4%</td></tr>
+      <tr><td>Model Merge (Weight Avg.)</td><td>36.8%</td><td>6.8%</td></tr>
+      <tr><td>Model Merge (TIES Merging)</td><td>–</td><td>0%</td></tr>
+      <tr><td><strong>本文</strong></td><td><strong>UI-MOPD</strong></td><td class="best">38.2%</td><td class="best">12.0%</td></tr>
+    </table>
+
+    <p>下面用 ECharts 可视化几组关键多平台方法在两个基准上的对比，凸显 UI-MOPD 的均衡性（多数基线“一侧强、另一侧弱”）：</p>
+    <div id="chart-main" class="echarts-container" style="height:380px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-main')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '多平台 GUI 方法：OSWorld vs MobileWorld 成功率', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center' },
+        legend: { data: ['OSWorld', 'MobileWorld'], textStyle: { color: '#cdd6f4' }, top: 28 },
+        grid: { left: 60, right: 30, bottom: 90, top: 70 },
+        xAxis: { type: 'category', data: ['UI-MOPD','Mixed-SFT','Merge(WA)','GUI-Owl-7B','GUI-Owl-32B','GELab-Zero-4B','UI-TARS-1.5-7B','Qwen3-VL-8B-Thk'], axisLabel: { color: '#cdd6f4', rotate: 30, fontSize: 10 }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', name: '成功率 %', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        tooltip: { trigger: 'axis' },
+        series: [
+          { name: 'OSWorld', type: 'bar', data: [38.2, 36.5, 36.8, 34.9, 35.0, 31.9, 27.4, 33.9], itemStyle: { color: '#89b4fa' } },
+          { name: 'MobileWorld', type: 'bar', data: [12.0, 6.4, 6.8, 4.5, 5.5, 10.9, 9.5, 7.7], itemStyle: { color: '#a6e3a1' } }
+        ]
+      });
+    </script>
+    <p><strong>分析</strong>：现有 GUI Agent 基线常“一侧强另一侧弱”——GELab-Zero-4B 移动端 10.9% 但桌面仅 31.9%；GUI-Owl-7B 桌面 34.9% 但移动仅 4.5%。整合基线表明直接混合异构监督或静态合并平台模型均不足：Mixed-SFT 对两个平台都没一致提升，两种 model merging 均不如 UI-MOPD，尤其在 MobileWorld 上。说明平台条件化 on-policy 蒸馏在把桌面/移动专长迁移进单一共享策略上更有效。</p>
+
+    <h3 id="sec-exp-transfer">4.3 跨平台能力迁移分析（原文 Table 2）</h3>
+    <table>
+      <tr><th>方法</th><th>OSWorld</th><th>MobileWorld</th></tr>
+      <tr><td>Qwen3-VL-8B-Thinking（学生基座）</td><td>33.9%</td><td>7.7%</td></tr>
+      <tr><td>Qwen3-VL-32B-Thinking（教师基座）</td><td>41.0%</td><td>9.4%</td></tr>
+      <tr><td>8B SFT on OSWorld（仅桌面）</td><td>35.8%</td><td>0%</td></tr>
+      <tr><td>8B SFT on MobileWorld（仅移动）</td><td>35.8%</td><td>12.8%</td></tr>
+      <tr><td>Desktop Teacher, 32B</td><td class="best">46.3%</td><td>–</td></tr>
+      <tr><td>Mobile Teacher, 32B</td><td>–</td><td class="best">16.2%</td></tr>
+      <tr><td><strong>UI-MOPD</strong></td><td><strong>38.2%</strong></td><td><strong>12.0%</strong></td></tr>
+    </table>
+    <p>三个关键发现：</p>
+    <ol>
+      <li><strong>单平台 SFT 导致不均衡迁移</strong>：仅在 OSWorld 上 SFT 把桌面从 33.9% 提到 35.8%，但 MobileWorld 直接掉到 0%（典型灾难性遗忘）；仅在 MobileWorld 上 SFT 把移动提到 12.8%，却达不到 UI-MOPD 的桌面水平。</li>
+      <li><strong>UI-MOPD 同时提升两端</strong>：OSWorld 与 MobileWorld 各 +4.3 点，且移动端用更小的 8B 学生超越 32B 基座（12.0% vs 9.4%），说明提升并非单纯来自模型规模。</li>
+      <li><strong>平台条件化行为锚点生效</strong>：桌面 rollout 对齐桌面教师、移动 rollout 对齐移动教师，避免异构信号被压成单一平均约束。</li>
+    </ol>
+
+    <h3 id="sec-exp-grounding">4.4 静态 GUI 理解与 Grounding（原文 Table 3）</h3>
+    <table>
+      <tr><th>模型</th><th>AndroidControl⋆</th><th>ScreenSpot-Pro</th><th>ScreenSpotV2</th><th>OSWorld-G</th></tr>
+      <tr><td>Qwen3-VL-8B-Thinking（基座）</td><td>78.73%</td><td>43.71%</td><td class="best">91.27%</td><td>52.13%</td></tr>
+      <tr><td>Model Merge (TIES)</td><td>74.01%</td><td>37.13%</td><td>88.60%</td><td>47.16%</td></tr>
+      <tr><td><strong>UI-MOPD</strong></td><td class="best">80.05%</td><td class="best">43.14%*</td><td>90.88%</td><td class="best">52.84%</td></tr>
+    </table>
+    <p><small>* ScreenSpot-Pro 上 UI-MOPD 与基座基本持平，远优于 TIES 的 37.13%。</small></p>
+    <p>AndroidControl⋆ 上 UI-MOPD 取三者最优（78.73% → 80.05%），而 Model Merge 降至 74.01%——说明把跨平台行为迁移进共享学生时，MOPD 比静态参数合并更能保留移动 GUI 理解。Grounding 上 UI-MOPD 基本保留基座能力（ScreenSpot-Pro 43.14%、ScreenSpotV2 90.88%，接近基座；OSWorld-G 甚至从 52.13% 升至 52.84%），而 Model Merge 在三个 grounding 数据集上全面下滑。说明 UI-MOPD 对 GUI grounding 的破坏性远小于静态参数合并。</p>
+
+
+    <h3 id="sec-exp-finegrained">4.5 细粒度 Grounding 结果（原文 Table 7）</h3>
+    <p>下表为静态 GUI 与 grounding 的细粒度拆分（Base = Qwen3-VL-8B-Thinking）。</p>
+    <table>
+      <tr><th>基准 / 指标</th><th>Base</th><th>Model Merge (TIES)</th><th>UI-MOPD</th></tr>
+      <tr><td colspan="4"><strong>AndroidControl⋆</strong></td></tr>
+      <tr><td>Action Type Accuracy</td><td>85.75%</td><td>81.62%</td><td class="best">87.02%</td></tr>
+      <tr><td>Grounding (target)</td><td>88.04%</td><td>86.02%</td><td class="best">88.33%</td></tr>
+      <tr><td>Grounding (ancestor)</td><td>89.59%</td><td>87.69%</td><td class="best">89.98%</td></tr>
+      <tr><td>Overall Accuracy</td><td>78.73%</td><td>74.01%</td><td class="best">80.05%</td></tr>
+      <tr><td colspan="4"><strong>ScreenSpot-Pro</strong></td></tr>
+      <tr><td>Overall</td><td class="best">43.71%</td><td>37.13%</td><td>43.14%</td></tr>
+      <tr><td>CAD</td><td class="best">24.90%</td><td>20.31%</td><td>22.61%</td></tr>
+      <tr><td>Dev</td><td class="best">41.81%</td><td>32.78%</td><td>41.14%</td></tr>
+      <tr><td>Creative</td><td>41.06%</td><td>35.48%</td><td class="best">41.64%</td></tr>
+      <tr><td>Scientific</td><td>50.39%</td><td>50.79%</td><td class="best">52.36%</td></tr>
+      <tr><td>Office</td><td class="best">64.78%</td><td>49.57%</td><td>63.48%</td></tr>
+      <tr><td>OS</td><td class="best">42.86%</td><td>36.73%</td><td>40.31%</td></tr>
+      <tr><td colspan="4"><strong>ScreenSpotV2</strong></td></tr>
+      <tr><td>Overall</td><td class="best">91.27%</td><td>88.60%</td><td>90.88%</td></tr>
+      <tr><td>mobile</td><td class="best">93.41%</td><td>92.02%</td><td>91.62%</td></tr>
+      <tr><td>desktop</td><td>90.12%</td><td>88.02%</td><td class="best">92.22%</td></tr>
+      <tr><td>web</td><td class="best">89.70%</td><td>85.13%</td><td>89.02%</td></tr>
+      <tr><td colspan="4"><strong>OSWorld-G</strong></td></tr>
+      <tr><td>Overall</td><td>52.13%</td><td>47.16%</td><td class="best">52.84%</td></tr>
+      <tr><td>Text Matching</td><td>31.58%</td><td>24.07%</td><td class="best">42.11%</td></tr>
+      <tr><td>Element Recognition</td><td class="best">59.70%</td><td>47.37%</td><td>57.46%</td></tr>
+      <tr><td>Layout Understanding</td><td>56.44%</td><td>47.76%</td><td class="best">60.44%</td></tr>
+      <tr><td>Fine-grained Manipulation</td><td>51.52%</td><td class="best">53.78%</td><td>50.76%</td></tr>
+      <tr><td>Refusal</td><td class="best">24.07%</td><td>14.81%</td><td>18.52%</td></tr>
+    </table>
+
+    <div id="chart-grounding" class="echarts-container" style="height:360px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-grounding')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '静态 GUI / Grounding：Base vs TIES vs UI-MOPD', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center' },
+        legend: { data: ['Base','Model Merge (TIES)','UI-MOPD'], textStyle: { color: '#cdd6f4' }, top: 28 },
+        grid: { left: 60, right: 30, bottom: 70, top: 70 },
+        xAxis: { type: 'category', data: ['AndroidCtrl⋆','ScreenSpot-Pro','ScreenSpotV2','OSWorld-G'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', name: '%', nameTextStyle: { color: '#cdd6f4' }, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        tooltip: { trigger: 'axis' },
+        series: [
+          { name: 'Base', type: 'line', data: [78.73, 43.71, 91.27, 52.13], itemStyle: { color: '#f9e2af' }, smooth: true },
+          { name: 'Model Merge (TIES)', type: 'line', data: [74.01, 37.13, 88.60, 47.16], itemStyle: { color: '#f38ba8' }, smooth: true },
+          { name: 'UI-MOPD', type: 'line', data: [80.05, 43.14, 90.88, 52.84], itemStyle: { color: '#a6e3a1' }, smooth: true, lineStyle: { width: 3 } }
+        ]
+      });
+    </script>
+    <p>AndroidControl⋆ 上 UI-MOPD 各项指标全面优于基座；Model Merge 全面退化。Grounding 上 UI-MOPD 基本保留基座性能并避免 Model Merge 的大幅退化，ScreenSpot-Pro/ScreenSpotV2 多个子类（Creative、Scientific、desktop grounding）有提升；OSWorld-G 取得最优总体分且提升 Layout Understanding 与 Text Matching。</p>
+
+    <h3 id="sec-exp-case">4.6 案例研究</h3>
+    <p>Figure 3 给出一个移动端任务示例：模型能解析用户指令、识别屏幕 UI 元素、产出可执行动作序列完成目标（定位目标 widget、跨屏导航、把动作 ground 到正确屏幕区域）。附录 E 另有桌面端案例，展示处理更大布局、窗口级操作与基于光标的精细 grounding 的能力。</p>
+
+    <h2 id="sec-ablation">5. 消融与关键发现</h2>
+
+    <h3 id="sec-ablation-findings">5.1 关键发现汇总</h3>
+    <table>
+      <tr><th>对比维度</th><th>观察</th><th>说明</th></tr>
+      <tr><td>单平台 SFT vs UI-MOPD</td><td>仅桌面 SFT → 移动掉到 0%；仅移动 SFT → 桌面不及 UI-MOPD</td><td>单平台监督会特化一种交互风格而削弱跨平台鲁棒性（灾难性遗忘）</td></tr>
+      <tr><td>Mixed-SFT vs UI-MOPD</td><td>Mixed-SFT 两端均无一致提升，MobileWorld 仅 6.4%</td><td>动作空间混合会引发行为约定坍塌</td></tr>
+      <tr><td>Model Merge vs UI-MOPD</td><td>TIES 移动端 0%；静态合并全面退化 grounding</td><td>参数空间平均无法解决动作语义冲突</td></tr>
+      <tr><td>规模效应</td><td>8B 学生 (12.0%) 超过 32B 基座 (9.4%) 移动端</td><td>提升不来自规模，而来自平台条件化蒸馏</td></tr>
+      <tr><td>教师路由</td><td>路由只影响教师 log-prob 计算，学生保持单一策略</td><td>推理无额外教师开销</td></tr>
+      <tr><td>静态能力保留</td><td>grounding 与 AndroidControl⋆ 基本保留甚至提升</td><td>MOPD 对基础 GUI 能力破坏性远小于参数合并</td></tr>
+    </table>
+
+    <h3 id="sec-ablation-discuss">5.2 关于“行为锚点”机制的作用讨论</h3>
+    <p>论文未给出逐组件消融表（如去掉自适应 KL 掩码、去掉路由、换不同 β），但从 Table 2 的教师-学生对比可侧面验证“平台条件化行为锚点”的作用：32B 桌面教师单独达 46.3%、移动教师单独达 16.2%，而 UI-MOPD 把部分平台知识迁移进 8B 学生后达到 38.2%/12.0%——说明蒸馏确实把教师的部分行为先验压缩进了共享参数，而非在推理时依赖多教师。自适应 KL 掩码（公式 6）在“任务反馈已充分”时关闭教师罚以鼓励探索，是平衡蒸馏约束与 RL 探索的关键设计。</p>
+    <blockquote><p><strong>说明：</strong>原文未提供逐超参/逐组件的独立消融实验表（如 β 扫描、τ_KL 扫描、路由 ablation、有无 K3 估计器的对比），相关结论由主表与教师-学生分析间接支撑。</p></blockquote>
+
+    <h2 id="sec-conclusion">6. 总结与启发</h2>
+
+    <h3 id="sec-conclusion-summary">6.1 工作总结</h3>
+    <p>UI-MOPD 针对跨平台（桌面/移动）GUI Agent 持续学习中的行为模式混淆、平台能力退化、灾难性遗忘三大问题，给出了一套数据 + 方法协同的方案：统一跨平台采集 harness 与 Uni-GUI 数据集提供高质量轨迹基础；多教师 on-policy 蒸馏 + 平台条件化路由把平台特有行为作为“行为锚点”注入共享学生。在 OSWorld/MobileWorld 上达到 38.2%/12.0%，相对基座提升 12.7%/55.8%，并在 grounding/静态理解上基本无损。</p>
+
+    <h3 id="sec-conclusion-insight">6.2 核心启发与读后评注</h3>
+    <ul>
+      <li><strong>KL 项的角色重定义</strong>：把 RLHF 中“保守漂移正则”升级为“定向能力迁移机制”，是把 MOPD 思想落到 Agent 场景的关键。这对所有“多专长合并进单策略”的后训练任务都有借鉴价值。</li>
+      <li><strong>平台条件化 ≠ 多 Agent</strong>：路由只决定用哪个教师算 log-prob，学生始终单一——这保证了推理时零额外开销，是一个工程上优雅的折中。</li>
+      <li><strong>on-policy 是降低蒸馏噪声的关键</strong>：仅在学生当前访问的状态上施加教师监督，使蒸馏信号匹配学生当前误差，避免“要求学生模仿教师全部行为模式”带来的过约束。这与离线轨迹蒸馏形成对比。</li>
+      <li><strong>K3 估计器 + 自适应掩码的工程组合</strong>：K3 只需采样 token 的师生对数概率，避免全词表 KL；自适应掩码在高奖励组关闭 KL 以鼓励探索。两者共同降低 on-policy 蒸馏的计算与稳定性代价。</li>
+      <li><strong>“行为锚点”可作为持续学习的通用范式</strong>：未来若有第 3、第 4 个平台，只需训练对应教师并扩展路由表，理论上可增量扩展而不重训——这正是 continual learning 所需的可扩展性。</li>
+    </ul>
+
+    <h3 id="sec-conclusion-limit">6.3 局限性</h3>
+    <ul>
+      <li>实验仅覆盖桌面 + 移动两类平台，未验证 Web/平板/多语言等更多平台下的可扩展性。</li>
+      <li>未提供逐组件/超参的独立消融（β、τ_KL、路由、K3、自适应掩码），机制归因主要靠主表与教师-学生对比间接支撑。</li>
+      <li>移动端绝对成功率仍较低（12.0%），距离实用仍有差距；MobileWorld 任务数仅 117，方差可能较大。</li>
+      <li>教师依赖更大模型 (32B) 与外部强模型（Kimi-K2.6 / Gemini-3.1-Pro）采集轨迹，数据构建成本较高。</li>
+      <li>Table 6 中部分超参（batch size、序列长度等）在 PDF 中以“–”留空，原文未给出具体数值。</li>
+    </ul>
+
+    <h2 id="sec-refs">7. 参考文献（代表性）</h2>
+    <ul>
+      <li>[2] Qwen3-VL Technical Report (Bai et al., 2025) — 学生/教师基座。</li>
+      <li>[13] MobileWorld (Kong et al., 2025) — 移动端评测基准。</li>
+      <li>[22] UI-TARS (Qin et al., 2025) — 多平台 GUI Agent 代表基线。</li>
+      <li>[32] UI-TARS-2 Technical Report (2025) — 多轮 RL 的 GUI Agent。</li>
+      <li>[33] OpenCUA (Wang et al., 2026) — 桌面轨迹公开数据来源与单平台基线。</li>
+      <li>[7] OpenMobile (Cheng et al., 2026) — 移动轨迹公开数据来源。</li>
+      <li>[37] MiMo-V2-Flash / [50] GLM-5 — MOPD 作为最终后训练步的前驱工作。</li>
+      <li>[47] Nemotron-Cascade 2 — MOPD 作为专门 RL 阶段间遗忘恢复。</li>
+      <li>[40] DeepSeek-V4 — 全词表 logits + 十余教师 + 专用教师调度基础设施。</li>
+      <li>[38] OSWorld (Xie et al., 2024) — 桌面端评测基准。</li>
+      <li>[35] Model Soups / [43] TIES-Merging — 整合策略基线。</li>
+      <li>[25] verl / [26] Megatron-Core / [52] SGLang / [14] vLLM — 训练与推理基础设施。</li>
+    </ul>
+
+    <hr>
+    <p style="color:#6c7086;font-size:0.85em;">本报告基于论文原文（arXiv:2607.04425）整理，公式、算法与实验数值均取自 PDF 原文。Table 6 中 PDF 标注为“–”的超参项未列出具体数值。</p>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

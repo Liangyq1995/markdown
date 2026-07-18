@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RL 训练提交工作流程</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f5f6fa; color: #2c3e50; }
+
+    header { background: linear-gradient(135deg, #1a237e, #283593); color: white; padding: 32px 40px; }
+    header h1 { font-size: 26px; font-weight: 700; }
+    header p  { margin-top: 6px; opacity: .8; font-size: 14px; }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px; }
+
+    /* ── OVERVIEW CARDS ── */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .card  { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.07); border-left: 4px solid; }
+    .card.blue   { border-color: #1976d2; }
+    .card.green  { border-color: #388e3c; }
+    .card.orange { border-color: #f57c00; }
+    .card.purple { border-color: #7b1fa2; }
+    .card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; opacity: .6; margin-bottom: 6px; }
+    .card p  { font-size: 15px; font-weight: 600; }
+
+    /* ── SECTION TITLE ── */
+    .section-title { font-size: 18px; font-weight: 700; margin: 36px 0 14px; padding-left: 12px; border-left: 4px solid #1976d2; }
+
+    /* ── FLOW DIAGRAM ── */
+    .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 0; margin-bottom: 40px; }
+    .flow-step { background: white; border-radius: 10px; padding: 14px 18px; box-shadow: 0 2px 8px rgba(0,0,0,.08); min-width: 150px; text-align: center; position: relative; }
+    .flow-step .step-num { font-size: 11px; font-weight: 700; color: white; background: #1976d2; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; display: inline-block; margin-bottom: 6px; }
+    .flow-step .step-title { font-size: 13px; font-weight: 700; }
+    .flow-step .step-sub   { font-size: 11px; color: #666; margin-top: 3px; }
+    .flow-arrow { font-size: 22px; color: #1976d2; padding: 0 8px; }
+    .flow-step.highlight { border: 2px solid #1976d2; }
+
+    /* ── TWO PHASES ── */
+    .phases { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+    @media(max-width:700px){ .phases { grid-template-columns: 1fr; } }
+    .phase { background: white; border-radius: 10px; padding: 22px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+    .phase h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; color: white; }
+    .badge.p1 { background: #1976d2; }
+    .badge.p2 { background: #388e3c; }
+
+    .cmd-block { background: #1e1e2e; color: #cdd6f4; border-radius: 8px; padding: 14px 16px; font-family: "Fira Code", "Courier New", monospace; font-size: 13px; line-height: 1.7; margin: 10px 0; overflow-x: auto; }
+    .cmd-block .comment { color: #6c7086; }
+    .cmd-block .path    { color: #89dceb; }
+    .cmd-block .flag    { color: #a6e3a1; }
+    .cmd-block .keyword { color: #cba6f7; }
+
+    /* ── FILE TABLE ── */
+    .file-table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 40px; }
+    .file-table th { background: #1976d2; color: white; padding: 12px 16px; text-align: left; font-size: 13px; font-weight: 600; }
+    .file-table td { padding: 11px 16px; font-size: 13px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    .file-table tr:last-child td { border-bottom: none; }
+    .file-table tr:hover td { background: #f8f9ff; }
+    .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 4px; font-weight: 600; margin-right: 4px; }
+    .tag.req { background: #ffebee; color: #c62828; }
+    .tag.opt { background: #e8f5e9; color: #2e7d32; }
+    .tag.gen { background: #e3f2fd; color: #1565c0; }
+    .file-name { font-family: monospace; font-weight: 600; color: #1976d2; }
+
+    /* ── INNER FLOW ── */
+    .inner-flow { background: white; border-radius: 10px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 40px; }
+    .inner-step { display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+    .inner-step:last-child { margin-bottom: 0; }
+    .inner-num { min-width: 28px; height: 28px; border-radius: 50%; background: #1976d2; color: white; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .inner-body h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .inner-body p  { font-size: 13px; color: #555; line-height: 1.6; }
+    .inner-body code { background: #f0f4ff; color: #1565c0; padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: monospace; }
+    .connector { width: 2px; height: 14px; background: #90caf9; margin-left: 13px; }
+
+    /* ── NOTE BOX ── */
+    .note { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 14px 18px; font-size: 13px; color: #5d4037; margin-bottom: 20px; }
+    .note strong { color: #e65100; }
+
+    /* ── DIR TREE ── */
+    pre.dir-tree { background: #1e1e2e; color: #cdd6f4; border-radius: 8px; padding: 16px 20px; font-family: "Fira Code", "Courier New", monospace; font-size: 13px; line-height: 2; white-space: pre; overflow-x: auto; }
+    pre.dir-tree .dir  { color: #89b4fa; }
+    pre.dir-tree .file { color: #a6e3a1; }
+    pre.dir-tree .note { background: none; border: none; padding: 0; color: #6c7086; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>RL 训练提交工作流程</h1>
+  <p>基于 AFO + Ray 的两阶段分布式强化学习训练提交流程</p>
+</header>
+
+<div class="container">
+
+  <!-- ── OVERVIEW ── -->
+  <div class="cards">
+    <div class="card blue">
+      <h3>阶段一</h3>
+      <p>AFO 提交 Ray 集群</p>
+    </div>
+    <div class="card green">
+      <h3>阶段二</h3>
+      <p>向 Ray 提交训练 Job</p>
+    </div>
+    <div class="card orange">
+      <h3>入口脚本</h3>
+      <p>submit_rl_job_sh_v2.py</p>
+    </div>
+    <div class="card purple">
+      <h3>集群启动脚本</h3>
+      <p>afo_start/start_ray.py</p>
+    </div>
+  </div>
+
+  <!-- ── OVERALL FLOW ── -->
+  <div class="section-title">整体流程</div>
+  <div class="flow">
+    <div class="flow-step highlight">
+      <div class="step-num">1</div>
+      <div class="step-title">本地执行</div>
+      <div class="step-sub">submit_rl_job_sh_v2.py</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-title">AFO 调度</div>
+      <div class="step-sub">分配 GPU 节点</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">3</div>
+      <div class="step-title">拉起 Ray 集群</div>
+      <div class="step-sub">start_ray.py（各节点）</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">4</div>
+      <div class="step-title">获取 Ray 地址</div>
+      <div class="step-sub">dashboard http://ip:44390</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step highlight">
+      <div class="step-num">5</div>
+      <div class="step-title">提交训练 Job</div>
+      <div class="step-sub">auto_submit_30b.sh</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="step-num">6</div>
+      <div class="step-title">Ray Job 运行</div>
+      <div class="step-sub">verl 训练脚本</div>
+    </div>
+  </div>
+
+  <!-- ── TWO PHASES ── -->
+  <div class="section-title">两个阶段命令</div>
+  <div class="phases">
+
+    <div class="phase">
+      <h3><span class="badge p1">阶段一</span> 启动 Ray 集群（AFO）</h3>
+      <p style="font-size:13px; color:#555; margin-bottom:10px;">在 <code style="background:#f0f4ff;padding:1px 5px;border-radius:3px;">starship_job_submitter/</code> 目录下执行：</p>
+      <div class="cmd-block">
+<span class="comment"># 在 starship_job_submitter/ 目录下</span>
+python3 submit_rl_job_sh_v2.py \
+  <span class="flag">--num_gpu</span>=32 \
+  <span class="flag">--workdir</span> ./jobs/verl \
+  <span class="flag">--command</span> sh your_train.sh \
+  <span class="flag">--debug</span> &gt; err
+      </div>
+      <p style="font-size:12px; color:#888; margin-top:8px;">
+        <strong>--debug</strong>：不提交实际命令，仅拉起集群 + Jupyter，方便调试<br>
+        <strong>--num_gpu</strong>：总 GPU 数，除以 8 得到 worker 节点数
+      </p>
+    </div>
+
+    <div class="phase">
+      <h3><span class="badge p2">阶段二</span> 提交训练 Job（Ray）</h3>
+      <p style="font-size:13px; color:#555; margin-bottom:10px;">等集群就绪后，从 <code style="background:#f0f4ff;padding:1px 5px;border-radius:3px;">/log/service.txt</code> 获取 Ray 地址，再执行：</p>
+      <div class="cmd-block">
+<span class="comment"># 在 /workfiles/sankuai/man/ 目录下</span>
+cd /Users/liangyongqi03/workfiles/sankuai/man
+
+sh submit/auto_submit_30b.sh \
+  <span class="flag">--ray-address</span> http://33.32.42.19:44390 \
+  &gt; err
+      </div>
+      <p style="font-size:12px; color:#888; margin-top:8px;">
+        <strong>auto_submit_30b.sh</strong> → 调用 <code style="background:#f0f4ff;padding:1px 4px;border-radius:3px;">submit_script_30b.py</code>，自动生成时间戳、更新 TensorBoard 路径，最终执行 <code style="background:#f0f4ff;padding:1px 4px;border-radius:3px;">ray job submit</code>
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ── PHASE 1 INNER FLOW ── -->
+  <div class="section-title">阶段一内部执行流程（submit_rl_job_sh_v2.py）</div>
+  <div class="inner-flow">
+    <div class="inner-step">
+      <div class="inner-num">1</div>
+      <div class="inner-body">
+        <h4>解析参数 & 生成 Job 名称</h4>
+        <p>从 <code>--jobname</code>、<code>--command</code>、当前时间戳生成唯一的 <code>MODEL_DT</code>，作为 AFO 任务名和 Ray submission-id。</p>
+      </div>
+    </div>
+    <div class="connector"></div>
+    <div class="inner-step">
+      <div class="inner-num">2</div>
+      <div class="inner-body">
+        <h4>构造 worker_script</h4>
+        <p>拼接各节点启动命令：<code>python3 afo_start/start_ray.py --workdir &lt;basename&gt; --command &lt;cmd&gt; ...</code>，每个 AFO worker 节点都会执行此脚本。</p>
+      </div>
+    </div>
+    <div class="connector"></div>
+    <div class="inner-step">
+      <div class="inner-num">3</div>
+      <div class="inner-body">
+        <h4>写入 params.xml</h4>
+        <p>通过 <code>Configurator</code> 加载 <code>ray.yml</code>，覆写 AFO 参数（GPU 数量、队列、镜像、节点黑名单等），输出到 <code>params.xml</code>。</p>
+      </div>
+    </div>
+    <div class="connector"></div>
+    <div class="inner-step">
+      <div class="inner-num">4</div>
+      <div class="inner-body">
+        <h4>conf.submit_job() 上传并提交</h4>
+        <p>执行 <code>hope run --files=&lt;workdir&gt;,./ray_submit/afo_start,mt_tools,runtime_env.yaml</code>，<strong>每个路径的内容</strong>（非路径本身）被平铺上传到容器 <code>/workdir/</code> 下。注意 <code>./ray_submit/afo_start</code> 上传后变为 <code>/workdir/afo_start/</code>，而非 <code>/workdir/ray_submit/afo_start/</code>。</p>
+      </div>
+    </div>
+    <div class="connector"></div>
+    <div class="inner-step">
+      <div class="inner-num">5</div>
+      <div class="inner-body">
+        <h4>各节点执行 start_ray.py</h4>
+        <p>节点 0（master）：启动 Ray head、Grafana、Prometheus、TensorBoard；等所有节点 join 后执行 <code>ray job submit</code>。<br>
+           其他节点：执行 <code>ray start --address=master:44391</code> 加入集群，并监控 job 失败节点。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PHASE 2 INNER FLOW ── -->
+  <div class="section-title">阶段二内部执行流程（auto_submit_30b.sh）</div>
+  <div class="inner-flow">
+    <div class="inner-step">
+      <div class="inner-num">1</div>
+      <div class="inner-body">
+        <h4>生成时间戳</h4>
+        <p><code>submit_script_30b.py</code> 生成格式为 <code>MMDDHHMM</code> 的时间戳，用于区分不同训练运行。</p>
+      </div>
+    </div>
+    <div class="connector"></div>
+    <div class="inner-step">
+      <div class="inner-num">2</div>
+      <div class="inner-body">
+        <h4>更新 TensorBoard 路径</h4>
+        <p>修改 <code>submit/test_runtime.yaml</code> 中的 <code>TENSORBOARD_DIR</code> 为 <code>.../tensorboard_log/{timestamp}</code>，自动备份原文件。</p>
+      </div>
+    </div>
+    <div class="connector"></div>
+    <div class="inner-step">
+      <div class="inner-num">3</div>
+      <div class="inner-body">
+        <h4>执行 ray job submit</h4>
+        <p>以 <code>/workfiles/sankuai/man/</code> 为 working-dir，使用 <code>submit/test_runtime.yaml</code> 作为 runtime-env，执行 verl 训练 shell 脚本：<br>
+           <code>verl/experimental/fully_async_policy/shell/rlfactory_35b_16-16_sh_reward_server_http.sh</code></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REQUIRED FILES ── -->
+  <div class="section-title">提交必须包含的文件</div>
+
+  <div class="note">
+    <strong>重要：</strong> AFO 提交时 <code>model</code> 参数指定上传路径为 <code>{p.workdir}, ./ray_submit/afo_start, mt_tools, runtime_env.yaml</code>，这些内容将被解压到容器内 <code>/workdir/</code> 下。
+  </div>
+
+  <table class="file-table">
+    <thead>
+      <tr>
+        <th>文件 / 目录</th>
+        <th>位置（本地）</th>
+        <th>容器内路径</th>
+        <th>类型</th>
+        <th>说明</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="file-name">submit_rl_job_sh_v2.py</td>
+        <td>starship_job_submitter/</td>
+        <td>— 本地执行 —</td>
+        <td><span class="tag req">必需</span></td>
+        <td>阶段一入口，负责生成参数并提交 AFO 任务</td>
+      </tr>
+      <tr>
+        <td class="file-name">ray.yml</td>
+        <td>starship_job_submitter/</td>
+        <td>— 本地读取 —</td>
+        <td><span class="tag req">必需</span></td>
+        <td>AFO 任务模板，定义镜像、队列、资源等基础配置</td>
+      </tr>
+      <tr>
+        <td class="file-name">runtime_env.yaml</td>
+        <td>starship_job_submitter/</td>
+        <td>/workdir/runtime_env.yaml</td>
+        <td><span class="tag req">必需</span></td>
+        <td>Ray runtime 环境配置（excludes、env_vars 等），start_ray.py 启动时读取</td>
+      </tr>
+      <tr>
+        <td class="file-name">ray_submit/afo_start/start_ray.py</td>
+        <td>starship_job_submitter/</td>
+        <td>/workdir/afo_start/start_ray.py</td>
+        <td><span class="tag req">必需</span></td>
+        <td>各节点真正执行的启动脚本，拉起 Ray head/worker，提交训练 Job</td>
+      </tr>
+      <tr>
+        <td class="file-name">&lt;--workdir 指定的目录&gt;/</td>
+        <td>由 <code>--workdir</code> 参数指定</td>
+        <td>/workdir/&lt;basename&gt;/</td>
+        <td><span class="tag req">必需</span></td>
+        <td><code>start_ray.py</code> 的 <code>os.chdir</code> 落脚点，<strong>可以是空目录</strong>。训练代码通过阶段二 <code>ray job submit --working-dir</code> 上传，不依赖此目录的内容</td>
+      </tr>
+      <tr>
+        <td class="file-name">mt_tools/</td>
+        <td>starship_job_submitter/</td>
+        <td>/workdir/mt_tools/</td>
+        <td><span class="tag req">必需</span></td>
+        <td>美团内部工具依赖，submit_job 时一并上传</td>
+      </tr>
+      <tr>
+        <td class="file-name">requirements.txt</td>
+        <td>starship_job_submitter/</td>
+        <td>— 提交时读取 —</td>
+        <td><span class="tag req">必需</span></td>
+        <td>传入 <code>submit_job(requirement=...)</code>，用于容器内安装依赖</td>
+      </tr>
+      <tr>
+        <td class="file-name">configurator.py</td>
+        <td>starship_job_submitter/</td>
+        <td>— 本地执行 —</td>
+        <td><span class="tag req">必需</span></td>
+        <td>解析 yml、组装 xml、调用 AFO 提交接口的核心库</td>
+      </tr>
+      <tr>
+        <td class="file-name">params.xml</td>
+        <td>starship_job_submitter/</td>
+        <td>— 本地生成 —</td>
+        <td><span class="tag gen">自动生成</span></td>
+        <td>由 configurator.py 写出，提交时作为 AFO 任务参数文件</td>
+      </tr>
+      <tr>
+        <td class="file-name">submit/auto_submit_30b.sh</td>
+        <td>man/submit/</td>
+        <td>— 本地执行 —</td>
+        <td><span class="tag req">必需</span></td>
+        <td>阶段二入口，调用 submit_script_30b.py</td>
+      </tr>
+      <tr>
+        <td class="file-name">submit/submit_script_30b.py</td>
+        <td>man/submit/</td>
+        <td>— 本地执行 —</td>
+        <td><span class="tag req">必需</span></td>
+        <td>生成时间戳、更新 TensorBoard 路径、执行 ray job submit</td>
+      </tr>
+      <tr>
+        <td class="file-name">submit/test_runtime.yaml</td>
+        <td>man/submit/</td>
+        <td>Ray runtime-env</td>
+        <td><span class="tag req">必需</span></td>
+        <td>阶段二 Ray Job 的 runtime 环境配置，包含 TENSORBOARD_DIR 等环境变量</td>
+      </tr>
+      <tr>
+        <td class="file-name">verl/experimental/.../rlfactory_35b_*.sh</td>
+        <td>man/verl/</td>
+        <td>Ray working-dir 内</td>
+        <td><span class="tag req">必需</span></td>
+        <td>实际训练启动脚本，由 ray job submit 执行</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── DIR STRUCTURE ── -->
+  <div class="section-title">关键目录结构</div>
+  <pre class="dir-tree"><span class="dir">starship_job_submitter/</span>          <span class="note"># 阶段一工作目录</span>
+├── <span class="file">submit_rl_job_sh_v2.py</span>       <span class="note"># 入口</span>
+├── <span class="file">ray.yml</span>                      <span class="note"># AFO 任务模板</span>
+├── <span class="file">runtime_env.yaml</span>             <span class="note"># Ray runtime env（上传到容器）</span>
+├── <span class="file">configurator.py</span>              <span class="note"># AFO 提交库</span>
+├── <span class="file">requirements.txt</span>             <span class="note"># 容器内 pip 依赖</span>
+├── <span class="file">params.xml</span>                   <span class="note"># 自动生成</span>
+├── <span class="dir">ray_submit/afo_start/</span>
+│   └── <span class="file">start_ray.py</span>             <span class="note"># 容器内各节点执行</span>
+├── <span class="dir">mt_tools/</span>                    <span class="note"># 美团内部工具</span>
+└── <span class="dir">jobs/</span>
+    └── <span class="dir">verl/</span>                    <span class="note"># 训练代码（--workdir 指定）</span>
+
+<span class="dir">man/</span>                              <span class="note"># 阶段二工作目录</span>
+├── <span class="dir">submit/</span>
+│   ├── <span class="file">auto_submit_30b.sh</span>       <span class="note"># 阶段二入口</span>
+│   ├── <span class="file">submit_script_30b.py</span>     <span class="note"># 自动化提交脚本</span>
+│   └── <span class="file">test_runtime.yaml</span>        <span class="note"># Ray Job runtime env</span>
+└── <span class="dir">verl/</span>
+    └── <span class="dir">experimental/fully_async_policy/shell/</span>
+        └── <span class="file">rlfactory_35b_*.sh</span>   <span class="note"># 真正的训练脚本</span></pre>
+
+  <!-- ── CONTAINER DIR ── -->
+  <div class="section-title">容器内目录结构（/workdir/）</div>
+
+  <div class="note">
+    <strong>核心规则：</strong> <code>hope run --files=A,B,C</code> 上传的是每个路径的<strong>内容</strong>，不是路径名本身。目录名会保留，但其父路径会被丢弃。例如 <code>./ray_submit/afo_start</code> → 容器内变成 <code>/workdir/afo_start/</code>。
+  </div>
+
+  <pre class="dir-tree"><span class="dir">/workdir/</span>                               <span class="note"># AFO 容器内挂载点，SSD 存储</span>
+├── <span class="dir">&lt;basename of --workdir&gt;/</span>            <span class="note"># start_ray.py 的 os.chdir 落脚点，可以是空目录</span>
+│                                        <span class="note">训练代码不在这里！由阶段二 ray job submit --working-dir 上传</span>
+│                                        <span class="note">示例：--workdir ./jobs/verl → /workdir/verl/</span>
+│                                        <span class="note">示例：--workdir ./jobs/my_exp → /workdir/my_exp/</span>
+├── <span class="dir">afo_start/</span>                          <span class="note"># 来自 ./ray_submit/afo_start（父路径 ray_submit 被丢弃）</span>
+│   ├── <span class="file">start_ray.py</span>                    <span class="note"># 各节点启动脚本，AFO worker_script 直接调用</span>
+│   └── <span class="file">start_ray_extern_head.py</span>
+├── <span class="dir">mt_tools/</span>                           <span class="note"># 来自 ./mt_tools/</span>
+├── <span class="file">runtime_env.yaml</span>                    <span class="note"># 来自 ./runtime_env.yaml，start_ray.py 默认读 /workdir/runtime_env.yaml</span>
+└── <span class="dir">tmp/</span>                                <span class="note"># start_ray.py 运行时创建，Ray 临时文件存储（/tmp/ray 软链至此）</span>
+    └── <span class="dir">ray/</span>
+        └── <span class="dir">session_latest/</span>
+            ├── <span class="dir">logs/</span>               <span class="note"># Ray job driver 日志，定期 rsync 到 /log/ray_logs/</span>
+            ├── <span class="dir">metrics/</span>            <span class="note"># Grafana / Prometheus 配置</span>
+            └── <span class="dir">runtime_resources/</span>
+                └── <span class="dir">working_dir_files/</span> <span class="note"># ray job submit --working-dir 上传的文件（阶段二）</span></pre>
+
+  <div class="note" style="margin-top:16px;">
+    <strong>阶段二 ray job submit 的 working-dir</strong><br>
+    <code>submit_script_30b.py</code> 以 <code>man/</code> 为 working-dir 执行 <code>ray job submit --working-dir .</code>，Ray 会将整个 <code>man/</code> 目录打包上传到集群，解压到 <code>/workdir/tmp/ray/session_latest/runtime_resources/working_dir_files/</code>，训练脚本在此目录内执行。
+  </div>
+
+  <!-- ── NOTES ── -->
+  <div class="section-title">常见问题</div>
+  <div class="note">
+    <strong>FileNotFoundError: /workdir/test</strong><br>
+    原因：<code>start_ray.py</code> 执行 <code>os.chdir("/workdir/" + workdir_basename)</code>，但上传的是完整路径（如 <code>./jobs/test</code>），导致容器内实际路径是 <code>/workdir/jobs/test</code> 而非 <code>/workdir/test</code>。<br>
+    <strong>解决：</strong> <code>worker_script</code> 中改为传 <code>--workdir {p.workdir}</code>（完整相对路径）而不是 <code>workdir_base</code>（basename）。
+  </div>
+  <div class="note">
+    <strong>获取 Ray 地址</strong><br>
+    集群启动后，从容器日志或 AFO 页面查看 master 节点 IP，Ray dashboard 固定端口为 <strong>44390</strong>，即 <code>http://&lt;master_ip&gt;:44390</code>。
+  </div>
+
+</div>
+</body>
+</html>

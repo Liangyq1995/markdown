@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RynnWorld-Teleop 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .info-table th { width: 130px; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>RynnWorld-Teleop：面向数字遥操作的动作条件世界模型</h1>
+    <p style="color:#6c7086">原文标题：RynnWorld-Teleop: An Action-Conditioned World Model for Digital Teleoperation ｜ HuggingFace 2026-W28 排名 #5（upvotes 69）</p>
+
+    <table class="info-table">
+      <tr><th>标题</th><td>RynnWorld-Teleop: An Action-Conditioned World Model for Digital Teleoperation</td></tr>
+      <tr><th>核心问题</th><td>用动作条件的生成式世界模型替代真实机器人，把人类手势流直接转化为可用于模仿学习的（视频, 动作）轨迹，突破物理遥操作的数据采集瓶颈。</td></tr>
+      <tr><th>核心范式</th><td>Digital Teleoperation（数字遥操作）：操作者的手部位姿流驱动一个机器人中心的世界模型，从单张参考图合成 egocentric 视频，并经 retargeting 得到 embodiment-agnostic 动作标签。</td></tr>
+      <tr><th>三大要求</th><td>(i) robot-centric 机器人中心；(ii) action-grounded 动作可恢复；(iii) real-time 实时闭环</td></tr>
+      <tr><th>关键能力</th><td>40+ FPS 实时交互生成（单卡 H100）；纯合成数据可零样本 Sim2Real；增强真实数据持续提升成功率</td></tr>
+      <tr><th>开源地址</th><td><a href="https://alibaba-damo-academy.github.io/RynnWorld-Teleop.github.io">项目主页</a> ｜ <a href="https://github.com/alibaba-damo-academy/RynnWorld-Teleop">GitHub</a> ｜ <a href="https://huggingface.co/Alibaba-DAMO-Academy/RynnWorld-Teleop">HuggingFace</a> ｜ <a href="https://www.modelscope.cn/models/DAMO_Academy/RynnWorld-Teleop">ModelScope</a></td></tr>
+    </table>
+
+    <h2 id="sec-overview">1. 概述</h2>
+    <p>机器人学习要 scale up，瓶颈不在算法本身，而在<strong>轨迹数据</strong>。传统物理遥操作把每条演示绑定到具体硬件与固定工位，吞吐量被“操作员工时 × 硬件可用性”封顶，还伴随着繁琐的环境复位与多样物体采购，根本采不到长尾交互。RynnWorld-Teleop 提出 <strong>Digital Teleoperation（数字遥操作）</strong>范式：用生成式世界模型<strong>替换真实机器人</strong>，操作者的实时手部位姿流驱动模型从单张参考图合成 egocentric 视频；由于视频以操作者关节级手部位姿为锚，该手势流本身就是 embodiment-agnostic 的动作标签，可经标准 retargeting 迁移到任意目标机器人。</p>
+    <p>论文指出，此前两条路线都无法同时满足数字遥操作的三个硬性要求：(1) 机器人中心；(2) 动作可恢复；(3) 实时闭环。<strong>人→机视频翻译</strong>（Phantom、Masquerade、H2R、Mitty 等）只能被动地在预录视频上做视觉重定向，无法用动作控制未来状态；<strong>动作条件 egocentric 世界模型</strong>（Hand2World、GeneratedReality、InterDyn、CosHand 等）虽能用人类动作信号合成未来帧，但渲染出的仍是人手，embodiment gap 未被弥合。RynnWorld-Teleop 是首个同时满足三项要求的系统。</p>
+    <blockquote>核心论断：If digital teleoperation works, robot data collection becomes bound only by operator imagination, not by physical infrastructure.（一旦数字遥操作成立，机器人数据采集的上限就只剩操作员的想象力，而非物理基础设施。）</blockquote>
+    <p>系统由三大设计支撑：<strong>深度感知动作表示</strong>（21 关节手部位姿按相机空间深度调制颜色与半径）、<strong>渐进式人→机跨域训练</strong>（先在大规模 egocentric 人类视频上预训练吸收操作先验，再在配对人-机数据上微调弥合 embodiment gap）、<strong>流式自回归蒸馏</strong>（把双向教师蒸馏成因果学生，4 步采样达 40 FPS）。实验证明：纯用合成数据训练的策略可零样本迁移到真实双臂灵巧任务，且用合成数据增强真实数据可在几乎所有任务上持续提升成功率。</p>
+
+    <h2 id="sec-motivation">2. 研究背景与动机</h2>
+    <h3 id="sec-mot-data">2.1 数据瓶颈：物理遥操作的天然天花板</h3>
+    <p>VLA 模型（π0、RT-1、OpenVLA 等）与世界模型（Cosmos、Genie 等）虽前景可观，但被<strong>数据稀缺</strong>严重制约。传统遥操作系统的痛点：</p>
+    <ul>
+      <li>每条演示绑定真实机器人与固定工位，吞吐 = 操作员工时 × 硬件可用性；</li>
+      <li>受限于固定实验室场景与特定物体，长尾交互难以覆盖；</li>
+      <li>手动环境复位开销巨大，多样真实物体采购物流成本高。</li>
+    </ul>
+
+    <h3 id="sec-mot-gap">2.2 两条已有路线及其不足</h3>
+    <table>
+      <tr><th>路线</th><th>代表工作</th><th>做了什么</th><th>关键不足</th></tr>
+      <tr><td>人→机视频翻译</td><td>Phantom、Masquerade、X-Humanoid、Mitty、H2R</td><td>用 inpainting / 渲染 / DiT video-to-video 把机器人外观叠加到人类演示帧</td><td>被动、observation-only，不产生机器人动作；重型 DiT 骨干无法闭环交互</td></tr>
+      <tr><td>动作条件 egocentric 世界模型</td><td>Hand2World、GeneratedReality、InterDyn、CosHand、Mask2IV、EgoControl</td><td>用人类动作信号（mask / 手势）合成第一人称未来帧</td><td>仍是 human-centric，渲染的是人手，embodiment gap 未弥合；多数帧率仅 2–10 Hz</td></tr>
+    </table>
+    <p>数字遥操作必须同时做到机器人中心、动作可恢复、实时闭环，<strong>此前无任何框架同时满足这三点</strong>——这是 RynnWorld-Teleop 要填补的空白。</p>
+
+    <h3 id="sec-mot-related">2.3 相关工作谱系</h3>
+    <p>世界模型正从<strong>隐空间状态预测</strong>（World Models、V-JEPA 2）转向<strong>高保真视觉仿真</strong>（视频扩散模型驱动）。Cosmos、Genie 等基础模型在超大规模视频上训练，但只支持粗粒度控制，不足以服务精细机器人任务。动作条件 egocentric 世界模型这条线靠 ControlNet 分支（InterDyn）、mask 输入（CosHand）、轨迹 mask（Mask2IV）、自由空间手势（Hand2World）等方式注入控制，但仍停留在人类中心。RynnWorld-Teleop 把这条线推进到<strong>机器人中心</strong>，弥合大规模人类运动先验与可执行的机器人专用世界建模之间的鸿沟。</p>
+
+    <h2 id="sec-pipeline">3. 训练流程总览</h2>
+    <p>RynnWorld-Teleop 以 Wan-I2V 架构为基础（3D VAE + Transformer 去噪器），采用条件流匹配（CFM）训练目标。整体流程分四步：参考图与手势流输入 → 深度感知骨骼渲染并编码为控制 latent → DiT 条件生成 → 蒸馏为因果学生实现实时自回归推理。</p>
+    <pre class="mermaid">flowchart TD
+  A["参考图 I_ref"] --> E["VAE Encoder"]
+  B["操作者手势流 P (21关节)"] --> C["深度感知骨骼渲染<br/>depth-modulated color & radius"]
+  C --> D["VAE Encoder"]
+  E --> F["z_ref 参考latent"]
+  D --> G["c 控制latent (C×T×H×W)"]
+  F --> H["Wan-DiT 去噪器 F_Θ<br/>分布对齐加性 patch embedding"]
+  G --> H
+  I["噪声 z_t"] --> H
+  H --> J["双向教师模型<br/>CFM 训练 velocity v_Θ"]
+  J --> K["Stage1: egocentric 人类预训练<br/>Stage2: 机器人域适配"]
+  K --> L["蒸馏: 因果流匹配 warm-up → DMD"]
+  L --> M["因果学生 (KV cache, 4-step)"]
+  M --> N["实时 egocentric 机器人视频 40+ FPS"]</pre>
+
+    <h2 id="sec-method">4. 核心方法</h2>
+
+    <h3 id="sec-method-prelim">4.1 预备：条件流匹配（CFM）基础</h3>
+    <p>RynnWorld-Teleop 构建于 Wan-I2V 架构之上，使用 3D VAE 与 Transformer 去噪器 $F_\Theta$，训练目标遵循 Conditional Flow Matching（CFM）。给定初始图像 latent $z_0 = \mathcal{E}(I_V)$，前向过程在数据与噪声间构造概率路径：</p>
+    <p>$$z_t = (1-t)\,z_0 + t\,\epsilon, \quad \epsilon \sim \mathcal{N}(0, \mathbf{I})$$</p>
+    <p>其中 $t \in [0,1]$。网络 $v_\Theta$ 被训练预测速度场，条件为参考图像 latent $z_\mathrm{ref} = \mathcal{E}(I_\mathrm{ref})$ 与深度感知骨骼控制 latent $c$。损失函数为：</p>
+    <p>$$\mathcal{L}_\mathrm{CFM} = \mathbb{E}_{t,z_0,\epsilon}\left[\left\| v_\Theta(z_t, t, z_\mathrm{ref}, c) - (\epsilon - z_0) \right\|_2^2\right] \tag{2}$$</p>
+    <p>推理时通过求解 $v_\Theta$ 定义的 ODE 来生成视频，使用蒸馏后的因果学生以保证实时性。</p>
+
+    <h3 id="sec-method-depth">4.2 深度感知动作表示（Depth-Aware Skeletal Conditioning）</h3>
+    <p>动作表示为 21 关节手部追踪导出的骨骼视频。标准 2D 投影存在固有的<strong>深度歧义</strong>，而这对精细手-物交互建模至关重要。论文采用<strong>深度调制渲染</strong>：每个关节与骨骼的颜色映射和直径都按其<strong>相机空间深度</strong>动态缩放，从而用 2D 潜在条件信号显式编码 3D 空间线索。</p>
+    <blockquote>设计要点：把 3D 深度信息"塞进"2D 渲染——深度近的关节画得更大、颜色更亮，远的更小更暗。这样后续 VAE 与 DiT 无需显式 3D 输入即可感知前后景关系。</blockquote>
+    <p>渲染出的位姿视频再用预训练 VAE 编码器投影到 latent 空间，得到控制 latent $c \in \mathbb{R}^{C\times T\times H\times W}$，与目标视频 latent 在空间和时间上对齐，支撑动作-外观的细粒度 grounding。</p>
+
+    <h3 id="sec-method-arch">4.3 动作条件视频生成架构</h3>
+    <p>模型遵循 image-to-video 范式：给定参考图 latent $z_\mathrm{ref}$ 与控制 latent $c$，预测后续运动。为注入位姿信息，采用<strong>带分布对齐的加性 patch embedding</strong>方案：在原有视频 embedding 层 $\mathrm{PatchEmbed}^{C\to D}_z$ 之外，并行引入专用控制 patch embedding 层 $\mathrm{PatchEmbed}^{C\to D}_c$，二者输出通过可学习标量门 $\alpha$ 融合：</p>
+    <p>$$x = \mathrm{PatchEmbed}^{C\to D}_z(z_t) + \alpha \cdot \mathrm{PatchEmbed}^{C\to D}_c(\tilde{c}) \tag{3}$$</p>
+    <p>其中 $z_t \in \mathbb{R}^{C\times T\times H\times W}$ 是带噪视频 latent，$\tilde{c}$ 是分布对齐后的控制 latent。由于 $c$ 与 $z$ 来自不同模态、统计量不同，模型维护两者的均值/标准差滑动估计 $(\mu, \sigma)$，在 patchify 之前把 $c$ 对齐到视频 latent 分布：</p>
+    <p>$$\tilde{c} = \frac{c - \mu_c}{\sigma_c} \cdot \sigma_z + \mu_z$$</p>
+    <p>这保证加性控制信号在训练全程与预训练视频流统计兼容。为保留生成先验，$\mathrm{PatchEmbed}_c$ <strong>零初始化</strong>，门控标量 $\alpha$ 初始化为小值（如 0.1），让网络渐进地吸收位姿信号而不破坏预训练权重。</p>
+    <pre class="mermaid">graph TD
+  subgraph Conditioning["动作条件注入"]
+    Z["带噪视频 latent z_t"] --> PZ["PatchEmbed_z (预训练)"]
+    C["控制 latent c"] --> AL["分布对齐<br/>align to z distribution"]
+    AL --> PC["PatchEmbed_c (零初始化)"]
+    PZ --> SUM(("+"))
+    PC --> GATE["gate α (init=0.1)"]
+    GATE --> SUM
+    SUM --> DIT["Wan-DiT Blocks"]
+    REF["参考 latent z_ref"] --> DIT
+    DIT --> OUT["去噪预测"]
+  end</pre>
+    <p>消融证明：相比于把控制 latent 直接 <strong>拼接到</strong> 带噪 latent（Concatenation Fusion），这种分布对齐的加性方案 FVD 从 1191 降到 585——因为直接拼接会扰乱基础 DiT 的预训练 latent 分布，导致合成不稳定。</p>
+
+    <h3 id="sec-method-train">4.4 渐进式跨域训练（两阶段）</h3>
+    <p>为把灵巧操作技能从人类先验迁移到机器人 embodiment，采用两阶段训练。两阶段都把数据统一转为配对的 (2D Skeleton, RGB) 序列。</p>
+    <p><strong>Stage 1 — Egocentric 人类预训练：</strong>在大规模 egocentric 人类视频上训练，让 DiT 学习手-物交互基本动力学并建立"骨骼构型 → 真实视觉合成"的映射。使用 EgoDex（切成 81 帧 clip）与 VITRA（25 帧 segment）。EgoDex 把 3D SE(3) 手部位姿转到相机系并投影到 2D 渲染关节-连杆骨骼视频（含双手与前臂）；VITRA 用其 21 关节 MediaPipe 标注，按首帧相机内参与位姿投影到 2D 骨骼视频。</p>
+    <p><strong>Stage 2 — 机器人域适配：</strong>在配对遥操作数据上微调，人类手势经逆运动学（IK）映射为机器人动作，使模型成为机器人中心世界模型——类人意图直接驱动机器人执行视频。自采大规模真实世界双臂协调数据集含 4 个任务共 1800 段高质量演示（详见 5.1）。为与预训练时间一致，所有机器人轨迹切成 81 帧 clip。</p>
+    <table>
+      <tr><th>数据集</th><th>类型</th><th>序列长度</th><th>总帧数</th><th>切片数</th></tr>
+      <tr><td>VITRA</td><td>人类</td><td>25</td><td>30.7M</td><td>0.91M</td></tr>
+      <tr><td>EgoDex</td><td>人类</td><td>81</td><td>74.0M</td><td>0.43M</td></tr>
+      <tr><td>Ours (Real-Robot)</td><td>机器人</td><td>81</td><td>1.23M</td><td>5.3K</td></tr>
+    </table>
+
+    <h3 id="sec-method-distill">4.5 流式自回归蒸馏</h3>
+    <p>为支持交互式闭环应用，把双向教师模型蒸馏成<strong>因果学生</strong>，能在帧级自回归生成视频。过程含两阶段优化：因果流匹配 warm-up + 对抗分布匹配（DMD）。</p>
+    <p><strong>因果流式架构：</strong>学生使用因果时间 mask 与定长 KV cache（预分配缓冲、原地写入）实现低延迟推理。与教师不同，学生在时刻 $t$ 的注意力只限于 $\{1,\dots,t\}$。为在自回归 rollout 中保持长期一致性，把 $I_\mathrm{ref}$ 的 embedding 作为<strong>持久 sink token</strong>保留，并将后续生成的 KV 状态追加到 cache，从而在整个生成过程中保持初始参考图的身份与空间上下文。</p>
+    <p><strong>因果流匹配 warm-up：</strong>以因果流匹配目标训练学生预测速度场 $v_\theta$，最小化均方误差：</p>
+    <p>$$\mathcal{L}_\mathrm{MSE} = \mathbb{E}_{t,\epsilon}\left[\left\| v_\theta(x_t, t) - (\epsilon - x_0) \right\|_2^2\right] \tag{4}$$</p>
+    <p>该阶段用单步速度回归建立学生的流式生成与 control-following 能力，为采样加速提供稳定初始化。</p>
+    <p><strong>分布匹配蒸馏（DMD）：</strong>为实现仅 4 步去噪的高保真合成，采用 DMD。该精化利用学习到的 critic 与冻结教师提供基于 score 的梯度引导，把学生输出分布推向教师分布。学生执行 4-step 采样 rollout，并<strong>跨连续 chunk 通过持久 KV cache 反向传播梯度</strong>——这种跨 chunk 梯度流鼓励模型最小化过渡处的边界伪影，保证时间连续平滑，使最终模型在实时交互环路中匹配教师的视觉质量。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: RynnWorld-Teleop 训练与流式推理总览</div>
+      <p><span class="kw">Input:</span> 参考图 <span class="var">I_ref</span>, 手势流 <span class="var">P</span>={p_1,...,p_T}; 预训练 Wan-I2V 权重; 人类数据集 <span class="var">D_h</span>, 机器人数据集 <span class="var">D_r</span></p>
+      <p><span class="cm"># Stage 0: 视觉域 warm-up（无动作条件）</span></p>
+      <p style="padding-left:1.5em"><span class="fn">TI2V-finetune</span>(<span class="var">Wan-2.2-TI2V-5B</span>, lr=<span class="num">2e-5</span>, steps=<span class="num">2000</span>)</p>
+      <p><span class="cm"># Stage 1: Egocentric 人类预训练（学操作先验）</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> batch <span class="kw">in</span> <span class="var">D_h</span>:  <span class="cm"># EgoDex(81帧) + VITRA(25帧)</span></p>
+      <p style="padding-left:3em"><span class="var">c</span> ← <span class="fn">VAE_Enc</span>(<span class="fn">DepthAwareRender</span>(<span class="var">P</span>))  <span class="cm"># 深度调制骨骼 → latent</span></p>
+      <p style="padding-left:3em"><span class="var">c̃</span> ← <span class="fn">Align</span>(<span class="var">c</span>; μ,σ)  <span class="cm"># 对齐到视频 latent 分布</span></p>
+      <p style="padding-left:3em"><span class="var">x</span> ← <span class="fn">PatchEmbed_z</span>(<span class="var">z_t</span>) + <span class="num">α</span>·<span class="fn">PatchEmbed_c</span>(<span class="var">c̃</span>)  <span class="cm"># α=0.1, PatchEmbed_c 零初始化</span></p>
+      <p style="padding-left:3em"><span class="fn">minimize</span> <span class="var">L_CFM</span> (<span class="kw">Eq.2</span>) on 双向教师 <span class="var">v_Θ</span></p>
+      <p><span class="cm"># Stage 2: 机器人域适配（弥合 embodiment gap）</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> batch <span class="kw">in</span> <span class="var">D_r</span> (1800 episodes): <span class="fn">continue-train</span> on 双向教师</p>
+      <p><span class="cm"># Stage 3: 流式自回归蒸馏</span></p>
+      <p style="padding-left:1.5em"><span class="var">student</span> ← <span class="fn">CausalWarmup</span>(teacher; <span class="var">L_MSE</span>, lr=<span class="num">1e-5</span>)  <span class="cm"># 因果流匹配 warm-up</span></p>
+      <p style="padding-left:1.5em"><span class="var">student</span> ← <span class="fn">DMD</span>(student, teacher; gen-lr=<span class="num">2e-6</span>, critic-lr=<span class="num">5e-7</span>, 4-step rollout, backprop <span class="kw">through</span> KV cache)</p>
+      <p><span class="cm"># 推理：实时闭环生成</span></p>
+      <p style="padding-left:1.5em"><span class="kw">for</span> chunk <span class="kw">in</span> long-horizon rollout (chunk=81帧):</p>
+      <p style="padding-left:3em"><span class="kw">if</span> first chunk: <span class="var">I_ref</span> ← true start frame</p>
+      <p style="padding-left:3em"><span class="kw">else</span>: <span class="var">I_ref</span> ← re-anchor 到真实 egocentric 帧  <span class="cm"># 抑制漂移</span></p>
+      <p style="padding-left:3em"><span class="var">V</span> ← <span class="fn">student.generate</span>(<span class="var">I_ref</span>, <span class="var">S</span>[chunk]; 4-step, KV cache)</p>
+      <p><span class="kw">return</span> <span class="var">V</span> = {v_1,...,v_T} <span class="kw">at</span> ~40 FPS</p>
+    </div>
+
+    <h3 id="sec-method-system">4.6 数字遥操作数据生成流水线</h3>
+    <p>世界模型本身不足以实现数字遥操作，必须嵌入闭环：捕获操作者意图 → 驱动生成器 → 产出下游策略可直接消费的轨迹。</p>
+    <p><strong>Retargeting：</strong>操作者胸前、手腕、上臂佩戴 Vive 追踪器。先用标定的坐标变换链把操作者工作空间映射到机器人工作空间（含平移缩放因子），得每臂目标末端位姿；再用迭代阻尼最小二乘（DLS）IK 求解器求关节构型，并用上臂追踪器导出的零空间肩部先验正则化以保持自然类人姿态，每步更新后强制关节限位。每个手势最终得到与位姿流精确对齐的 <strong>54 维机器人动作向量</strong>（双 7-DoF 臂 + 双 20-DoF 灵巧手）。</p>
+    <p><strong>Retargeting 变换链：</strong></p>
+    <p>$$T_\mathrm{target} = T_\mathrm{base} \cdot \mathrm{Scale}\left(T_\mathrm{chest}^{-1}\,T_\mathrm{wrist}\right) \cdot T_\mathrm{ee} \tag{5}$$</p>
+    <p>其中 $T_\mathrm{chest}^{-1}\,T_\mathrm{wrist}$ 提取追踪器空间下手腕相对胸部位姿，$\mathrm{Scale}(\cdot)$ 只对平移分量按因子 $s$（如 $s=1.5$）缩放，$T_\mathrm{base}, T_\mathrm{ee}$ 是固定标定变换。</p>
+    <p><strong>DLS 关节更新：</strong>每次迭代计算 6D 任务空间误差 $e\in\mathbb{R}^6$（位置+姿态），关节更新为</p>
+    <p>$$\Delta q = J_\lambda^{\#}\, e \tag{6}$$</p>
+    <p>其中 $J_\lambda^{\#}$ 是经 SVD 得到的阻尼伪逆：</p>
+    <p>$$J = U\Sigma V^\top, \quad J_\lambda^{\#} = V\,\mathrm{diag}\!\left(\frac{\sigma_i}{\sigma_i^2 + \lambda^2}\right) U^\top \tag{7}$$</p>
+    <p>自适应阻尼因子 $\lambda = \lambda_\min + \frac{0.01}{1+\sigma_\max}$ 在奇异点附近增大以保持稳定。肩部零空间先验注入为：</p>
+    <p>$$\Delta q \leftarrow \Delta q + \left(I - J_\lambda^{\#} J\right) w\,(q_\mathrm{ref}^{\mathrm{shoulder}} - q) \tag{8}$$</p>
+    <p>其中肩部权重 $w=0.5$，每步积分后硬裁剪关节限位。</p>
+    <p><strong>骨骼条件合成：</strong>每条源演示取首帧 RGB 作 $I_\mathrm{ref}$，手位姿流以 16 FPS 渲染成 2D 深度感知骨骼序列 $S_{1:T}$，条件化生成机器人执行视频。由于 $I_\mathrm{ref}$ 是场景的唯一视觉规格，它可由用户提供或合成编辑，以实例化训练分布之外的场景（5.3 验证）。真实机器人动作 $a_{1:T}$ 与生成帧同步，每个 $a_t \in \mathbb{R}^{54}$ 是双 7-DoF 臂 + 双 20-DoF 灵巧手绝对关节位置的拼接。</p>
+    <p><strong>Chunked Re-anchoring 抑制漂移：</strong>纯自回归生成短视频会累积视觉漂移与物理不一致。采用 chunk 生成（段长 81 帧）：首 chunk 用演示真实起始帧初始化；后续每个 chunk 用该时刻机器人相机真实 egocentric 帧作为新 $I_\mathrm{ref}$ 重新锚定，确保合成环境（物体位姿、光照）与真实动作序列在长程任务中保持一致。</p>
+    <pre class="mermaid">sequenceDiagram
+      participant Op as 操作者
+      participant Track as Vive/MoCap追踪
+      participant RT as Retargeting (IK)
+      participant WM as RynnWorld-Teleop
+      participant Pol as 下游策略
+      Op->>Track: 实时手部位姿流 P
+      Track->>RT: 6-DoF poses (100-120Hz)
+      RT->>RT: DLS-IK + 零空间肩部先验
+      RT->>WM: 54维动作 a_t (与位姿对齐)
+      Track->>WM: 深度感知骨骼 S[1:T]
+      Op->>WM: 单张参考图 I_ref
+      WM->>WM: chunk生成(81帧) + re-anchor
+      WM->>Pol: 同步(视频, 动作)轨迹
+      Pol->>Pol: 模仿学习训练</pre>
+
+    <h3 id="sec-method-vs-sim">4.7 与传统仿真器对比（数据引擎视角）</h3>
+    <table>
+      <tr><th>维度</th><th>传统物理仿真器</th><th>RynnWorld-Teleop</th></tr>
+      <tr><td>3D 资产开销</td><td>每个物体需显式 mesh / URDF</td><td>单张参考图隐式实例化环境，完全绕开资产建模瓶颈</td></tr>
+      <tr><td>视觉域差</td><td>渲染存在 reality gap，需 domain randomization</td><td>直接在真实像素分布内合成，自然捕捉光照/反射/传感器噪声</td></tr>
+      <tr><td>物理建模</td><td>需繁琐 System Identification（摩擦、质量），难处理可变形物</td><td>预训练吸收物理"常识"，无需显式微分方程即可生成合理接触动力学</td></tr>
+    </table>
+
+    <h2 id="sec-exp">5. 实验结果与分析</h2>
+
+    <h3 id="sec-exp-setup">5.1 训练与评测设置</h3>
+    <p>基础模型为 <strong>Wan2.2-TI2V-5B</strong>。先做标准 TI2V 微调（无动作条件）warm-up：64 张 H100，2000 steps，lr $2\times10^{-5}$，对齐目标环境的视觉特性。动作条件训练探索 LoRA（rank 64）与全参 SFT 两种范式，均遵循两阶段渐进调度。蒸馏阶段：因果流匹配 warm-up lr $1\times10^{-5}$；DMD 生成器 lr $2\times10^{-6}$、critic lr $5\times10^{-7}$。</p>
+    <p>硬件：TIANJI M6 移动机器人（双臂 + 双 WUJI 灵巧手），egocentric RealSense D435i。策略推理 50 Hz，命令延迟 18–30 ms，底层接口 500 Hz，LCM 通信。采集系统：5 个 HTC Vive 追踪器（胸前/双腕/双上臂），100–120 Hz 计算腕-胸相对变换，Pinocchio IK，Ruckig 轨迹生成器（速度/加速度/jerk 约束）200 Hz 发送；手部用 Manus 数据手套，转 21 点 MediaPipe 骨骼后 retarget 到 20-DoF WUJI 手，EMA 平滑。</p>
+    <p>四个评测任务（均做 6-DoF 物体位姿与轴向旋转随机化，每任务 35 次连续真实试验，120 秒内达目标态算成功）：</p>
+    <table>
+      <tr><th>任务</th><th>描述</th><th>挑战点</th></tr>
+      <tr><td>Dual Picking</td><td>左臂取苹果、右臂取香蕉从盘到桌面</td><td>双臂顺序协作</td></tr>
+      <tr><td>Block Pushing</td><td>左臂把大块从左推到中，右臂接力推到右</td><td>时序接力</td></tr>
+      <tr><td>Bimanual Lifting</td><td>双臂同步抬起西瓜抱枕并精准放入托盘</td><td>重载同步协调</td></tr>
+      <tr><td>Lid Placement</td><td>取盖并精准对齐盖到纸箱</td><td>高精度对齐</td></tr>
+    </table>
+
+    <h3 id="sec-exp-policy">5.2 数字遥操作系统评测：真实世界策略成功率</h3>
+    <p>用合成数据增强三种 SOTA 策略（DP、π0.5、π0）。下表为四任务成功率（%），加粗为同策略同任务最优。</p>
+    <table>
+      <tr><th>策略</th><th>数据来源</th><th>Dual Picking</th><th>Block Pushing</th><th>Bimanual Lifting</th><th>Lid Placement</th></tr>
+      <tr><td>DP</td><td>300 Real</td><td>82.86</td><td>85.71</td><td>88.57</td><td>57.14</td></tr>
+      <tr><td>DP</td><td>300 Real + 300 Rynn</td><td><strong>88.57</strong></td><td><strong>88.57</strong></td><td><strong>94.29</strong></td><td><strong>65.71</strong></td></tr>
+      <tr><td>π0.5</td><td>300 Real</td><td>94.29</td><td>100.00</td><td>94.29</td><td>42.86</td></tr>
+      <tr><td>π0.5</td><td>300 Real + 300 Rynn</td><td><strong>97.14</strong></td><td><strong>97.14</strong></td><td><strong>100.00</strong></td><td><strong>62.86</strong></td></tr>
+      <tr><td>π0</td><td>300 Real</td><td>88.57</td><td>94.29</td><td>91.43</td><td>34.29</td></tr>
+      <tr><td>π0</td><td>0 Real + 300 Rynn（零真实数据）</td><td>68.57</td><td>82.86</td><td>77.14</td><td>28.57</td></tr>
+      <tr><td>π0</td><td>300 Real + 300 Rynn</td><td><strong>94.29</strong></td><td><strong>100.00</strong></td><td><strong>97.14</strong></td><td><strong>54.29</strong></td></tr>
+    </table>
+    <div id="chart-policy" class="echarts-container" style="height:380px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-policy')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '真实世界策略成功率对比（%）', textStyle: { color: '#89b4fa' } },
+        tooltip: { trigger: 'axis' },
+        legend: { textStyle: { color: '#cdd6f4' }, top: 28 },
+        grid: { left: 55, right: 24, bottom: 50, top: 80 },
+        xAxis: { type: 'category', data: ['Dual Picking','Block Pushing','Bimanual Lifting','Lid Placement'], axisLabel: { color: '#cdd6f4' } },
+        yAxis: { type: 'value', max: 100, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } } },
+        series: [
+          { name: 'π0: 300 Real', type: 'bar', data: [88.57,94.29,91.43,34.29], itemStyle:{color:'#89b4fa'} },
+          { name: 'π0: 0 Real + 300 Rynn', type: 'bar', data: [68.57,82.86,77.14,28.57], itemStyle:{color:'#fab387'} },
+          { name: 'π0: 300 Real + 300 Rynn', type: 'bar', data: [94.29,100.00,97.14,54.29], itemStyle:{color:'#a6e3a1'} }
+        ]
+      });
+    </script>
+    <p>关键发现：</p>
+    <ul>
+      <li><strong>增强一致提升</strong>：300 真实 + 300 合成 在几乎所有任务上提升成功率。高精度任务 Lid Placement 提升最显著——π0.5 从 42.86% → 62.86%（+20%），π0 从 34.29% → 54.29%（+20%）。</li>
+      <li><strong>零真实数据也能跑</strong>：π0 仅用 300 条合成数据（无任何真实数据）训练，Block Pushing 达 82.86%、Bimanual Lifting 达 77.14%，证明合成视频不仅视觉逼真且物理 grounding 扎实，捕捉到了灵巧操作的核心动力学。</li>
+    </ul>
+    <p><strong>特征分布分析（t-SNE）：</strong>从真实演示集与 RynnWorld-Teleop 生成集各随机采样 1000 帧，用预训练 I3D 提取高层语义特征。两者分布显著重叠，说明生成式世界模型成功捕捉了机器人操作的真实分布（含复杂手-物交互与环境光照），这解释了策略学习中的有效零样本 Sim2Real 迁移。</p>
+
+    <h3 id="sec-exp-genmodel">5.3 动作条件世界模型评测（生成质量）</h3>
+    <p>两个评测基准：EgoDex-Test（人类中心域，50 段 81 帧 16FPS，覆盖未见人-物交互，用于消融）与 Robotic-Test（机器人域，20 段 81 帧，涵盖四任务，未参与 Stage2 训练）。指标：PSNR/SSIM 结构保真、LPIPS 感知相似、FVD 时间一致性（I3D backbone），FPS 在单卡 H100 测。</p>
+    <table>
+      <tr><th>方法</th><th>类别</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>FVD ↓</th><th>FPS ↑</th></tr>
+      <tr><td>CogVideoX-1.5-I2V-5B</td><td>文本条件</td><td>18.22</td><td>0.786</td><td>0.322</td><td>2790</td><td>0.8</td></tr>
+      <tr><td>Wan-2.2-TI2V-5B</td><td>文本条件</td><td>18.61</td><td>0.772</td><td>0.279</td><td>1998</td><td>2.8</td></tr>
+      <tr><td>Wan-2.1-I2V-14B</td><td>文本条件</td><td>18.08</td><td>0.735</td><td>0.260</td><td>1540</td><td>0.3</td></tr>
+      <tr><td>Wan-2.2-I2V-14B</td><td>文本条件</td><td>21.05</td><td>0.816</td><td>0.151</td><td>1337</td><td>0.3</td></tr>
+      <tr><td>Wan-2.2-TI2V-5B (SFT)</td><td>文本条件</td><td>20.93</td><td>0.806</td><td>0.207</td><td>1223</td><td>2.8</td></tr>
+      <tr><td>InterDyn</td><td>动作条件</td><td>18.14</td><td>0.831</td><td>0.406</td><td>1527</td><td>0.8</td></tr>
+      <tr><td>CosHand</td><td>动作条件</td><td>21.47</td><td>0.785</td><td>0.373</td><td>1650</td><td>2.9</td></tr>
+      <tr><td>Mask2IV</td><td>动作条件</td><td>21.50</td><td>0.836</td><td>0.219</td><td>585</td><td>0.8</td></tr>
+      <tr><td>RynnWorld-Teleop (LoRA)</td><td>动作条件</td><td>22.25</td><td>0.830</td><td>0.282</td><td>1191</td><td>2.8</td></tr>
+      <tr><td><strong>RynnWorld-Teleop (SFT)</strong></td><td>动作条件</td><td><strong>26.08</strong></td><td><strong>0.876</strong></td><td>0.282</td><td><strong>550</strong></td><td>2.8</td></tr>
+      <tr><td><strong>RynnWorld-Teleop-Causal</strong></td><td>动作条件</td><td>26.78</td><td><strong>0.887</strong></td><td><strong>0.119</strong></td><td>1226</td><td><strong>40.0</strong></td></tr>
+      <tr><td>RynnWorld-Teleop</td><td>机器人专用</td><td>22.53</td><td>0.898</td><td>0.148</td><td>—</td><td>—</td></tr>
+      <tr><td>RynnWorld-Teleop-Causal</td><td>机器人专用</td><td>18.66</td><td>0.743</td><td>0.249</td><td>—</td><td>—</td></tr>
+    </table>
+    <div id="chart-gen" class="echarts-container" style="height:400px"></div>
+    <script>
+      echarts.init(document.getElementById('chart-gen')).setOption({
+        backgroundColor: '#2a2a3e',
+        title: { text: '生成质量对比（FVD ↓ 越低越好 / FPS ↑ 对数轴）', textStyle: { color: '#89b4fa' } },
+        tooltip: { trigger: 'item' },
+        legend: { textStyle: { color: '#cdd6f4' }, top: 28 },
+        grid: { left: 60, right: 70, bottom: 50, top: 80 },
+        xAxis: { type: 'value', name: 'FVD ↓', nameTextStyle:{color:'#cdd6f4'}, axisLabel: { color: '#cdd6f4' }, splitLine:{lineStyle:{color:'#45475a'}} },
+        yAxis: { type: 'log', name: 'FPS ↑ (log)', nameTextStyle:{color:'#cdd6f4'}, axisLabel: { color: '#cdd6f4' }, splitLine:{lineStyle:{color:'#45475a'}} },
+        series: [{
+          name: '方法', type: 'scatter',
+          data: [
+            [2790,0.8,'CogVideoX-1.5'],[1998,2.8,'Wan-2.2-TI2V-5B'],[1540,0.3,'Wan-2.1-I2V-14B'],
+            [1337,0.3,'Wan-2.2-I2V-14B'],[1223,2.8,'Wan-2.2-TI2V-5B(SFT)'],
+            [1527,0.8,'InterDyn'],[1650,2.9,'CosHand'],[585,0.8,'Mask2IV'],
+            [1191,2.8,'Rynn(LoRA)'],[550,2.8,'Rynn(SFT)'],[1226,40.0,'Rynn-Causal']
+          ],
+          symbolSize: 16,
+          label: { show: true, formatter: p=>p.data[2], color:'#cdd6f4', fontSize:10, position:'right' },
+          itemStyle: { color: '#a6e3a1' }
+        }]
+      });
+    </script>
+    <p>关键观察：</p>
+    <ul>
+      <li><strong>通用 I2V 基线</strong>（Wan、CogVideoX）虽有强纹理先验，但缺乏响应细粒度手势的机制，操作时序一致性差（FVD &gt; 1300）。</li>
+      <li><strong>朴素 SFT 基线</strong>直接用相同人机数据微调 Wan-2.2-TI2V-5B，仍大幅落后 RynnWorld-Teleop（FVD 1223 vs 585；PSNR 20.93 vs 26.08），证明简单监督微调不足以掌握复杂机器人灵巧度，专门的深度感知位姿表示与分布对齐条件化是关键。</li>
+      <li><strong>Causal 学生</strong>在保持高保真（LPIPS 0.119 最低）的同时把 FPS 从 2.8 拉到 <strong>40.0</strong>，实现实时交互。FVD 略升（1226）是实时化的合理代价。</li>
+    </ul>
+    <p><strong>OOD 泛化：</strong>从单张参考图可实例化新场景。两轴 OOD——未见物体（如木块换红球、西瓜抱枕换橄榄球）与未见背景（桌面换花纹桌布），参考图均由现成图像编辑产生，不做真实场景改动。模型在两类 shift 下都保持时序一致并忠实执行动作条件轨迹，说明学到的是与具体物体纹理/背景外观解耦的广义交互先验。</p>
+
+    <h3 id="sec-exp-latency">5.4 实时延迟分析</h3>
+    <p>蒸馏因果学生用 4-step flow matching，480×832 分辨率下达 <strong>40.0 fps</strong>，平均每帧约 25 ms，分三段：</p>
+    <table>
+      <tr><th>阶段</th><th>占比</th><th>说明</th></tr>
+      <tr><td>骨骼动作编码</td><td>~5%</td><td>深度感知骨骼序列预处理与 VAE 编码为条件 latent</td></tr>
+      <tr><td>因果 DiT 去噪</td><td>~72%</td><td>4-step DiT 自回归 latent 生成，滑动窗口 KV cache 提升时序效率</td></tr>
+      <tr><td>视觉解码</td><td>~23%</td><td>VAE 从 latent 解码到 RGB 像素</td></tr>
+    </table>
+    <p>有效交互频率 ~40 Hz，远超现有动作条件世界模型典型 2–10 Hz（Hand2World、InterDyn 等），匹配甚至超过真实机器人相机标准 30 Hz，最小化 sensing-to-actuation 差距，保证数字遥操作流畅响应。</p>
+
+    <h2 id="sec-ablation">6. 消融实验与关键发现</h2>
+    <table>
+      <tr><th>变体（LoRA, EgoDex-Test）</th><th>PSNR ↑</th><th>SSIM ↑</th><th>LPIPS ↓</th><th>FVD ↓</th></tr>
+      <tr><td><strong>RynnWorld-Teleop（完整）</strong></td><td><strong>22.25</strong></td><td><strong>0.830</strong></td><td>0.282</td><td><strong>1191</strong></td></tr>
+      <tr><td>Concatenation Fusion</td><td>19.69</td><td>0.821</td><td>0.322</td><td>1191→<strong>1191</strong></td></tr>
+      <tr><td>w/o Human Pre-training</td><td>17.81</td><td>0.763</td><td>0.453</td><td>2598</td></tr>
+      <tr><td>w/o DMD (Causal)</td><td>19.25</td><td>0.777</td><td>0.418</td><td>408</td></tr>
+      <tr><td>w/o Causal Warm-up (Causal)</td><td>14.26</td><td>0.688</td><td>0.265</td><td>244</td></tr>
+    </table>
+    <p>注：表中 Concatenation Fusion 的 FVD 论文原文记为从 585 → 1191（相对完整 SFT 模型 585 而言），消融表内列为 1191。</p>
+    <ul>
+      <li><strong>条件化策略（加性 vs 拼接）：</strong>分布对齐加性方案显著优于 Concat Fusion。直接拼接扰乱基础 DiT 预训练 latent 分布，FVD 从 585 升到 1191。零初始化门控的加性方案有效保留生成先验。</li>
+      <li><strong>人类 egocentric 预训练的价值：</strong>去掉 Stage1 直接在机器人数据微调，性能崩塌（FVD 2598、LPIPS 0.453）。有限机器人数据不足以从零教会复杂手-物物理。可视化显示无预训练模型无法合成真实手结构，出现严重"鬼影"与模糊纹理，最终丢失物体恒常性——机器人末端执行器与目标苹果在操作中完全消失。</li>
+      <li><strong>顺序蒸馏的必要性：</strong>相比仅 Flow-Matching（w/o DMD，PSNR 19.25），完整模型 PSNR 22.25，说明 flow-matching 只建立基本因果架构但缺高保真精化。更关键的是<strong>直接对双向教师施 DMD 而无因果 warm-up</strong>会导致严重训练不稳定与模糊纹理——确认因果 warm-up 是弥合双向↔因果结构鸿沟、让后续 DMD 在仅 4 步内继承教师复杂手-物交互先验的必要前提。</li>
+    </ul>
+
+    <h2 id="sec-conclusion">7. 总结与启发</h2>
+    <p>RynnWorld-Teleop 把数字遥操作从概念落地为可扩展的数据引擎：深度感知手部位姿表示 + 两阶段渐进训练把人类交互先验迁移到具体机器人 embodiment；流式自回归蒸馏把双向教师压成因果学生，4 步达 40+ FPS 实时闭环；配以 retargeting、骨骼条件合成与 chunked re-anchoring 构成完整数据生成流水线。纯合成数据训练的策略可零样本 Sim2Real，增强真实数据持续提升成功率。</p>
+    <p><strong>读后启发：</strong></p>
+    <ul>
+      <li><strong>范式转移</strong>：把"采数据"从物理世界搬到生成模型世界，数据上限从"硬件×工时"变为"操作员想象力"。这与用世界模型当仿真器的思路一脉相承，但绕开了 3D 资产建模与 SysID 两大痛点。</li>
+      <li><strong>动作即标签</strong>：因为视频以关节级手部位姿为锚，手势流本身就是 embodiment-agnostic 动作标签——这是"生成即标注"的精妙之处，免去了对生成视频再回归动作的二次误差。</li>
+      <li><strong>工程可借鉴点</strong>：分布对齐的加性条件注入（零初始化 + 小门控 α=0.1）是接入预训练视频 DiT 的稳态范式；跨 KV cache 反传梯度抑制 chunk 边界伪影、持久 sink token 保留参考图身份，都是流式视频扩散的实用技巧。</li>
+      <li><strong>局限</strong>：复杂液体动力学与高可变形物仍处理吃力；弥合 embodiment gap 仍需逐平台微调，跨 embodiment 基础世界模型（可能以机器人运动学描述为条件）是未来方向。</li>
+    </ul>
+
+    <h2 id="sec-refs">8. 参考文献（精选）</h2>
+    <ul>
+      <li>Wang et al. Wan: Open and Advanced Large-Scale Video Generative Models. arXiv:2503.20314, 2025.（基础 I2V 架构）</li>
+      <li>Lipman et al. Flow Matching for Generative Modeling. arXiv:2210.02747, 2022.（CFM 训练目标）</li>
+      <li>Yin et al. One-step Diffusion with Distribution Matching Distillation. CVPR 2024.（DMD 蒸馏）</li>
+      <li>Yin et al. From Slow Bidirectional to Fast Autoregressive Video Diffusion Models. CVPR 2025.（双向→因果蒸馏）</li>
+      <li>Hoque et al. EgoDex: Learning Dexterous Manipulation from Large-Scale Egocentric Video. arXiv:2505.11709, 2025.（人类预训练数据与评测集）</li>
+      <li>Li et al. VITRA / Scalable VLA Pretraining with Real-life Human Activity Videos. arXiv:2510.21571, 2025.（人类预训练数据）</li>
+      <li>Wang et al. Hand2World: Autoregressive Egocentric Interaction Generation via Free-Space Hand Gestures. arXiv:2602.09600, 2026.（前驱：双向蒸馏为因果）</li>
+      <li>Black et al. π0: A Vision-Language-Action Flow Model for General Robot Control. arXiv:2410.24164, 2024.</li>
+      <li>Intelligence et al. π0.5: A VLA Model with Open-World Generalization. arXiv:2504.16054, 2025.</li>
+      <li>Chi et al. Diffusion Policy: Visuomotor Policy Learning via Action Diffusion. IJRR 2025.</li>
+      <li>Hu et al. LoRA: Low-Rank Adaptation of Large Language Models. ICLR 2022.</li>
+      <li>Akkerman et al. InterDyn: Controllable Interactive Dynamics with Video Diffusion Models. CVPR 2025.</li>
+      <li>Sudhakar et al. CosHand / Controlling the World by Sleight of Hand. ECCV 2024.</li>
+      <li>Li et al. Mask2IV: Interaction-centric Video Generation via Mask Trajectories. AAAI 2026.</li>
+      <li>Lepert et al. Phantom (arXiv:2503.00779) & Masquerade (arXiv:2508.09976), 2025.（人→机视频翻译）</li>
+    </ul>
+</main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

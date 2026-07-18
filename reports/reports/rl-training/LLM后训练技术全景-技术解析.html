@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM 后训练技术全景 — 深度技术解析</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+
+    /* Math block */
+    .math-block { background: #2a2a3e; border-radius: 6px; padding: 14px 20px; margin: 1em 0; overflow-x: auto; }
+    .math-block mjx-container[display="true"] { display: block !important; text-align: left !important; margin: 0.4em 0 !important; line-height: 1.6 !important; }
+    .math-block mjx-container[display="true"] mjx-mtr { line-height: 1 !important; }
+
+    /* Algo box */
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+
+    /* Timeline */
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 900px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.95em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.88em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+    .tl-tag.red    { background: #f38ba8; }
+
+    /* Model card */
+    .model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin: 1em 0; }
+    .model-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+    .model-card h4 { color: var(--heading); font-size: 1em; margin-bottom: 8px; }
+    .model-card .tag { display: inline-block; font-size: 0.75em; padding: 2px 8px; border-radius: 10px; margin-right: 4px; margin-bottom: 6px; }
+    .tag-blue { background: #1e3a5f; color: #89b4fa; }
+    .tag-green { background: #1a3a2a; color: #a6e3a1; }
+    .tag-orange { background: #3a2a1a; color: #fab387; }
+    .tag-purple { background: #2a1a3a; color: #cba6f7; }
+
+    /* Comparison badge */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; }
+    .badge-high { background: #1a3a2a; color: #a6e3a1; }
+    .badge-med { background: #3a2a1a; color: #fab387; }
+    .badge-low { background: #3a1a1a; color: #f38ba8; }
+
+    .subtitle { color: #6c7086; font-size: 1em; margin-bottom: 20px; }
+    .info-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .info-box p { margin: 0.3em 0; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LLM 后训练技术全景</h1>
+<p class="subtitle">深度技术解析 · SFT / RLHF / DPO / GRPO / 主流模型实践 · 2025年6月</p>
+
+<div class="info-box">
+  <p><strong>核心问题</strong>：大语言模型如何从"下一词预测机器"转变为"有用、无害、诚实的助手"？</p>
+  <p><strong>覆盖范围</strong>：SFT → 奖励模型 → PPO-RLHF → DPO 家族 → GRPO → 主流模型实现细节 → 2025 年最新趋势</p>
+  <p><strong>参考来源</strong>：InstructGPT/GPT-4 技术报告、DeepSeek-R1 论文、LLaMA 3 报告、DPO/SimPO/KTO 原始论文、Anthropic Constitutional AI</p>
+</div>
+
+<!-- ======================== 1. 发展脉络 ======================== -->
+<h2 id="s1">1. 发展脉络与技术演进</h2>
+<p>
+  LLM 后训练（Post-Training）是指在海量语料预训练之后，通过<strong>监督信号与人类反馈</strong>将模型行为对齐到人类偏好的过程。
+  从 2022 年的 InstructGPT 三阶段 RLHF，到 2023 年 DPO 的无 RL 简化，再到 2025 年 GRPO 驱动的推理模型爆发，
+  后训练技术在短短三年内完成了从"学术探索"到"工业标准"的跃迁。
+</p>
+
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">2022</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">OpenAI</span><br>
+          <strong>InstructGPT</strong>：首次大规模验证 SFT + RM + PPO 三阶段 RLHF，1.3B 模型胜过 175B GPT-3
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag purple">Anthropic</span><br>
+          <strong>Constitutional AI</strong>：RLAIF 范式，AI 自我批评生成偏好数据
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">OpenAI</span><br>
+          <strong>ChatGPT</strong> 发布，RLHF 进入公众视野
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2023</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag green">Stanford</span><br>
+          <strong>DPO</strong>：直接偏好优化，无需奖励模型和 PPO，数学等价但工程简单
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">Meta</span><br>
+          <strong>LLaMA 2</strong>：SFT + Ghost Attention + RLHF，1.4M 偏好对
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">Google</span><br>
+          <strong>Gemini 1.0</strong>：多模态 RLHF，强化安全训练
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024 上</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag purple">UC Berkeley</span><br>
+          <strong>KTO</strong>：无配对数据，基于前景理论的优化目标
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag green">KAIST</span><br>
+          <strong>ORPO</strong>：SFT+偏好合并，去除参考模型
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">Princeton</span><br>
+          <strong>SimPO</strong>：无参考模型，长度归一化奖励，更强基准
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">Meta</span><br>
+          <strong>LLaMA 3</strong>：SFT + RM + PPO/DPO 混合，>50M 偏好训练成本
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024 下</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag red">DeepSeek</span><br>
+          <strong>DeepSeekMath</strong>：引入 GRPO 算法，去除价值网络
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">Alibaba</span><br>
+          <strong>Qwen2.5</strong>：18T token 预训练 + SFT + DPO + GRPO 后训练
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">OpenAI</span><br>
+          <strong>o1</strong>：大规模 RL with verifiable rewards，思维链训练
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag red">DeepSeek</span><br>
+          <strong>DeepSeek-R1</strong>：四阶段训练（冷启动 SFT → 推理 RL → SFT 混合 → 全场景 RL），GRPO 驱动
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag purple">Anthropic</span><br>
+          <strong>Claude Opus 4</strong>：混合推理，Constitution v2.0（~80页），RLVR
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">OpenAI</span><br>
+          <strong>o3/GPT-4.1</strong>：后训练计算量占总计算 40%+ 的新范式
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag green">行业趋势</span><br>
+          三阶段标准：SFT → DPO/偏好对齐 → RLVR 推理增强，合成数据主导
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>后训练全景流程图</h3>
+<pre class="mermaid">
+flowchart TD
+    A["预训练基础模型<br>（10T+ tokens）"] --> B["监督微调 SFT<br>高质量 指令-回复 对"]
+    B --> C{"对齐策略选择"}
+    C -->|"在线 RL"| D["奖励模型训练 RM<br>Bradley-Terry 偏好对"]
+    D --> E["PPO 强化学习<br>4模型并行 + KL约束"]
+    C -->|"离线偏好"| F["DPO / IPO / KTO<br>SimPO / ORPO"]
+    C -->|"可验证奖励"| G["GRPO / RLVR<br>规则奖励 + 组内归一化"]
+    E --> H["对齐后模型"]
+    F --> H
+    G --> H
+    H --> I["迭代改进<br>拒绝采样 + 合成数据"]
+    I --> B
+</pre>
+
+<!-- ======================== 2. SFT ======================== -->
+<h2 id="s2">2. 监督微调 (SFT)</h2>
+<p>
+  SFT 是后训练的第一步，也是所有后续对齐技术的基础。其目标是将一个"文本续写机器"改造成能够<strong>遵循指令</strong>的模型。
+</p>
+
+<h3>2.1 数据构造</h3>
+<p>高质量 SFT 数据是性能的关键。数据来源通常包括：</p>
+<ul>
+  <li><strong>人工标注</strong>：专业标注员编写示范回复，质量最高，成本极高（OpenAI 的 InstructGPT 使用约 13,000 条）</li>
+  <li><strong>模型蒸馏</strong>：以更强模型（如 GPT-4）生成的回复作为训练目标，成本低廉，质量中等</li>
+  <li><strong>拒绝采样（Rejection Sampling）</strong>：采样多个回复，由奖励模型或人工选出最优者，常与后续 RL 阶段结合</li>
+  <li><strong>合成数据</strong>：2024 年后成为主流，DeepSeek-R1 使用的 CoT 冷启动数据即为合成的推理链</li>
+</ul>
+
+<h3>2.2 损失函数</h3>
+<p>SFT 采用标准的<strong>因果语言建模（Causal Language Modeling）</strong>交叉熵损失，仅对回复 token 计算梯度：</p>
+<div class="math-block">
+$$\mathcal{L}_{SFT}(\theta) = -\frac{1}{|y|}\sum_{t=1}^{|y|} \log \pi_\theta\!\left(y_t \mid x,\, y_{\lt t}\right)$$
+</div>
+<p>其中 $x$ 为输入 prompt，$y = (y_1, y_2, \ldots, y_{|y|})$ 为目标回复序列，$\pi_\theta$ 为模型参数化的策略。</p>
+<p>
+  注意：只对 <strong>回复部分（assistant turn）</strong> 的 token 计算损失，Prompt 部分的 token 在反向传播时被 mask 掉。
+  这与预训练时对所有 token 求损失的方式不同。
+</p>
+
+<h3>2.3 关键工程细节</h3>
+<table>
+  <tr><th>技术点</th><th>说明</th></tr>
+  <tr><td><strong>数据混合比例</strong></td><td>通用对话、代码、数学、安全拒绝类数据按比例混合，防止灾难性遗忘</td></tr>
+  <tr><td><strong>学习率</strong></td><td>远小于预训练（通常 1e-5 至 2e-5），防止破坏预训练知识</td></tr>
+  <tr><td><strong>训练轮数</strong></td><td>通常 2-4 epoch，过多会导致 reward hacking 和多样性下降</td></tr>
+  <tr><td><strong>数据质量筛选</strong></td><td>长度过滤、语言检测、困惑度筛选，去除低质量样本</td></tr>
+  <tr><td><strong>Pack sequences</strong></td><td>将短对话打包至固定上下文长度，提升 GPU 利用率</td></tr>
+  <tr><td><strong>LoRA / QLoRA</strong></td><td>低秩适配，显著降低显存需求，适合资源受限场景</td></tr>
+</table>
+
+<h3>2.4 SFT 的局限性</h3>
+<blockquote>
+  SFT 教会模型"格式"，但无法区分"好回复"和"更好回复"——这正是偏好对齐技术的动机。SFT 模型倾向于模仿训练数据的风格，但可能无法拒绝有害请求，也无法权衡安全与帮助之间的 trade-off。
+</blockquote>
+
+<!-- ======================== 3. 奖励模型 ======================== -->
+<h2 id="s3">3. 奖励模型 (Reward Model)</h2>
+
+<h3>3.1 Bradley-Terry 偏好模型</h3>
+<p>
+  人类偏好数据的形式是：给定 prompt $x$，标注员对两个回复 $y_w$（更好）和 $y_l$（较差）进行比较。
+  奖励模型的训练基于 <strong>Bradley-Terry 配对比较模型</strong>，假设人类选择 $y_w$ 优于 $y_l$ 的概率为：
+</p>
+<div class="math-block">
+$$P(y_w \succ y_l \mid x) = \sigma\!\left(r_\phi(x, y_w) - r_\phi(x, y_l)\right) = \frac{\exp\!\left(r_\phi(x, y_w)\right)}{\exp\!\left(r_\phi(x, y_w)\right) + \exp\!\left(r_\phi(x, y_l)\right)}$$
+</div>
+<p>其中 $r_\phi(x, y)$ 是奖励模型（通常以 SFT 模型为初始化，最后一层替换为标量输出头）给出的标量分数。</p>
+
+<h3>3.2 奖励模型训练目标</h3>
+<p>通过最大化似然（等价于最小化负对数似然）训练：</p>
+<div class="math-block">
+$$\mathcal{L}_{RM}(\phi) = -\mathbb{E}_{(x,\, y_w,\, y_l)\sim \mathcal{D}}\!\left[\log\sigma\!\left(r_\phi(x, y_w) - r_\phi(x, y_l)\right)\right]$$
+</div>
+
+<h3>3.3 奖励模型架构与工程</h3>
+<ul>
+  <li><strong>初始化</strong>：以 SFT 模型为基础，移除 LM Head，添加线性层输出单个标量</li>
+  <li><strong>数据规模</strong>：LLaMA 2 使用约 140 万偏好对；Anthropic 使用大量 AI 生成的偏好对（RLAIF）</li>
+  <li><strong>多维度奖励</strong>：有些实验室（如 Meta）使用多个奖励头分别预测 Helpfulness、Safety、Honesty 等维度</li>
+  <li><strong>奖励 Hack 问题</strong>：单一 RM 容易被 PPO 过度优化，导致模型生成人类读来觉得好但 RM 高分的"投机回复"</li>
+</ul>
+
+<h3>3.4 PRM vs ORM</h3>
+<table>
+  <tr>
+    <th>维度</th>
+    <th>结果奖励模型 (ORM)</th>
+    <th>过程奖励模型 (PRM)</th>
+  </tr>
+  <tr>
+    <td><strong>奖励粒度</strong></td>
+    <td>仅对最终答案给分</td>
+    <td>对每个推理步骤给分</td>
+  </tr>
+  <tr>
+    <td><strong>训练数据</strong></td>
+    <td>最终答案正确/错误</td>
+    <td>人工/自动标注每步正确性</td>
+  </tr>
+  <tr>
+    <td><strong>优势</strong></td>
+    <td>数据容易获取，易于验证</td>
+    <td>更精确的过程监督，引导推理路径</td>
+  </tr>
+  <tr>
+    <td><strong>劣势</strong></td>
+    <td>无法区分运气答对的错误推理</td>
+    <td>步骤标注极度昂贵</td>
+  </tr>
+  <tr>
+    <td><strong>代表</strong></td>
+    <td>InstructGPT、LLaMA 2/3</td>
+    <td>OpenAI PRM800K、DeepSeek-R1（部分阶段）</td>
+  </tr>
+  <tr>
+    <td><strong>使用场景</strong></td>
+    <td>通用对话、安全对齐</td>
+    <td>数学推理、代码生成</td>
+  </tr>
+</table>
+
+<!-- ======================== 4. PPO-RLHF ======================== -->
+<h2 id="s4">4. PPO-RLHF：在线强化学习</h2>
+
+<h3>4.1 RLHF 优化目标</h3>
+<p>
+  RLHF 的核心是在最大化奖励的同时，通过 <strong>KL 散度约束</strong>防止策略偏离 SFT 参考模型太远（避免 reward hacking）：
+</p>
+<div class="math-block">
+$$\max_{\pi_\theta}\ \mathbb{E}_{x \sim \mathcal{D},\; y \sim \pi_\theta(y \mid x)}\!\left[r_\phi(x, y)\right] - \beta\, \mathbb{D}_{KL}\!\left[\pi_\theta(y \mid x) \;\|\; \pi_{ref}(y \mid x)\right]$$
+</div>
+<p>
+  实践中 KL 约束嵌入奖励：$R_{total}(x, y) = r_\phi(x, y) - \beta \log\dfrac{\pi_\theta(y \mid x)}{\pi_{ref}(y \mid x)}$，
+  其中 $\beta$（典型值 0.01–0.1）控制偏离 SFT 模型的幅度。
+</p>
+
+<h3>4.2 PPO 算法详解</h3>
+<p>PPO（Proximal Policy Optimization）通过<strong>截断（Clipping）</strong>机制稳定策略更新，避免步长过大导致训练崩溃：</p>
+<div class="math-block">
+$$L^{CLIP}(\theta) = \mathbb{E}_t\!\left[\min\!\left(r_t(\theta)\hat{A}_t,\; \text{clip}\!\left(r_t(\theta),\; 1 - \varepsilon,\; 1 + \varepsilon\right)\hat{A}_t\right)\right]$$
+</div>
+<p>其中重要性采样比 $r_t(\theta) = \dfrac{\pi_\theta(a_t \mid s_t)}{\pi_{\theta_{old}}(a_t \mid s_t)}$，截断参数 $\varepsilon$ 典型值为 0.1–0.2。</p>
+
+<h3>4.3 GAE 优势估计</h3>
+<p>PPO 使用<strong>广义优势估计（GAE）</strong>平衡偏差与方差：</p>
+<div class="math-block">
+$$\hat{A}_t^{GAE(\gamma,\lambda)} = \sum_{l=0}^{\infty}(\gamma\lambda)^l\, \delta_{t+l}, \qquad \delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$$
+</div>
+<p>
+  其中 $\gamma$ 为折扣因子，$\lambda$ 控制 GAE 平滑度（$\lambda = 0$ 退化为单步 TD，$\lambda = 1$ 退化为蒙特卡洛估计），
+  $V(s_t)$ 为价值函数网络的预测。
+</p>
+
+<h3>4.4 四模型并行架构</h3>
+<p>PPO-RLHF 训练时需要同时维护 <strong>4 个模型</strong>在 GPU 显存中：</p>
+<pre class="mermaid">
+graph LR
+    A["Actor Model<br>（待优化策略 πθ）"]
+    B["Reference Model<br>（SFT 模型，冻结）"]
+    C["Reward Model<br>（RM，冻结）"]
+    D["Critic / Value Model<br>（价值函数）"]
+
+    E["Prompt x"] --> A
+    A --> |"生成 y"| C
+    A --> |"生成 y"| B
+    B --> |"计算 KL"| A
+    C --> |"奖励 r(x,y)"| D
+    D --> |"优势估计 Â"| A
+</pre>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: PPO-RLHF 训练循环</div>
+  <p><span class="kw">Input:</span> <span class="var">SFT 模型 π_ref, 奖励模型 r_φ, 偏好数据集 D</span></p>
+  <p><span class="kw">Initialize:</span> <span class="var">Actor π_θ ← π_ref</span>，<span class="var">Critic V_ψ ← random</span></p>
+  <p><span class="kw">for</span> <span class="num">epoch = 1, 2, ..., N</span> <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Phase 1: 生成经验（Rollout）</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">x</span> ~ <span class="fn">sample</span>(<span class="var">D</span>) <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="var">y</span> ~ <span class="var">π_θ</span>(<span class="var">y|x</span>) <span class="cm">// Actor 生成回复</span></p>
+  <p style="padding-left:3em"><span class="var">r</span> = <span class="var">r_φ</span>(<span class="var">x, y</span>) - <span class="var">β</span> · <span class="fn">log</span>(<span class="var">π_θ</span>(<span class="var">y|x</span>) / <span class="var">π_ref</span>(<span class="var">y|x</span>)) <span class="cm">// KL 惩罚奖励</span></p>
+  <p style="padding-left:3em"><span class="var">Â</span> = <span class="fn">GAE</span>(<span class="var">r, V_ψ, γ, λ</span>) <span class="cm">// 广义优势估计</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Phase 2: 策略优化（Policy Update）</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="num">k = 1, ..., K_ppo</span> <span class="kw">do</span> <span class="cm">// 多步梯度更新</span></p>
+  <p style="padding-left:3em"><span class="var">r_t</span> = <span class="var">π_θ</span>(<span class="var">a_t|s_t</span>) / <span class="var">π_θ_old</span>(<span class="var">a_t|s_t</span>) <span class="cm">// 重要性采样比</span></p>
+  <p style="padding-left:3em"><span class="var">L_clip</span> = <span class="fn">min</span>(<span class="var">r_t</span> · <span class="var">Â_t</span>, <span class="fn">clip</span>(<span class="var">r_t</span>, <span class="num">1-ε</span>, <span class="num">1+ε</span>) · <span class="var">Â_t</span>)</p>
+  <p style="padding-left:3em"><span class="fn">gradient_step</span>(<span class="var">θ</span>, -<span class="var">L_clip</span>) <span class="cm">// Actor 参数更新</span></p>
+  <p style="padding-left:3em"><span class="fn">gradient_step</span>(<span class="var">ψ</span>, <span class="fn">MSE</span>(<span class="var">V_ψ, returns</span>)) <span class="cm">// Critic 更新</span></p>
+  <p><span class="kw">return</span> <span class="var">π_θ</span></p>
+</div>
+
+<!-- ======================== 5. DPO ======================== -->
+<h2 id="s5">5. 直接偏好优化 (DPO)</h2>
+
+<h3>5.1 DPO 的核心洞见</h3>
+<blockquote>
+  <strong>"Your Language Model is Secretly a Reward Model"</strong>（Rafailov et al., Stanford 2023）<br>
+  DPO 揭示：RLHF 的最优策略可以用参考策略直接表达，无需显式训练独立的奖励模型和运行 RL 循环。
+</blockquote>
+
+<h3>5.2 数学推导</h3>
+<p><strong>Step 1</strong>：RLHF 带 KL 约束的优化问题存在解析最优解：</p>
+<div class="math-block">
+$$\pi^{*}(y \mid x) = \frac{1}{Z(x)}\, \pi_{ref}(y \mid x) \cdot \exp\!\left(\frac{r^{*}(x, y)}{\beta}\right)$$
+</div>
+<p>其中 $Z(x) = \sum_y \pi_{ref}(y \mid x)\exp\!\left(\frac{r^{*}(x,y)}{\beta}\right)$ 为归一化常数（配分函数）。</p>
+
+<p><strong>Step 2</strong>：对上式取对数，解出隐式奖励（消去 $Z(x)$）：</p>
+<div class="math-block">
+$$r^{*}(x, y) = \beta \log\frac{\pi^{*}(y \mid x)}{\pi_{ref}(y \mid x)} + \beta \log Z(x)$$
+</div>
+
+<p><strong>Step 3</strong>：将隐式奖励代入 Bradley-Terry 模型，注意 $\log Z(x)$ 相消：</p>
+<div class="math-block">
+$$P(y_w \succ y_l \mid x) = \sigma\!\left(\beta\log\frac{\pi^{*}(y_w \mid x)}{\pi_{ref}(y_w \mid x)} - \beta\log\frac{\pi^{*}(y_l \mid x)}{\pi_{ref}(y_l \mid x)}\right)$$
+</div>
+
+<p><strong>Step 4</strong>：以当前策略 $\pi_\theta$ 代替最优策略 $\pi^{*}$，得到 DPO 损失函数：</p>
+<div class="math-block">
+$$\mathcal{L}_{DPO}(\pi_\theta;\,\pi_{ref}) = -\mathbb{E}_{(x,\,y_w,\,y_l)\sim\mathcal{D}}\!\left[\log\sigma\!\left(\beta\log\frac{\pi_\theta(y_w \mid x)}{\pi_{ref}(y_w \mid x)} - \beta\log\frac{\pi_\theta(y_l \mid x)}{\pi_{ref}(y_l \mid x)}\right)\right]$$
+</div>
+
+<h3>5.3 DPO 梯度分析</h3>
+<p>对 $\theta$ 求梯度，DPO 的训练信号有清晰的直觉：</p>
+<div class="math-block">
+$$\nabla_\theta \mathcal{L}_{DPO} = -\beta\,\mathbb{E}\!\left[\underbrace{\sigma(\hat{r}_l - \hat{r}_w)}_{\text{预测错误时权重大}}\!\left(\nabla_\theta\log\pi_\theta(y_w \mid x) - \nabla_\theta\log\pi_\theta(y_l \mid x)\right)\right]$$
+</div>
+<p>
+  其中 $\hat{r}_w = \beta\log\frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)}$，$\hat{r}_l = \beta\log\frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)}$。
+  梯度方向：增大 chosen 的对数概率，降低 rejected 的对数概率，权重由当前预测置信度决定。
+</p>
+
+<h3>5.4 DPO vs PPO 工程对比</h3>
+<table>
+  <tr><th>维度</th><th>PPO-RLHF</th><th>DPO</th></tr>
+  <tr><td>训练阶段</td><td>SFT → RM → PPO（三阶段）</td><td>SFT → DPO（两阶段）</td></tr>
+  <tr><td>显存需求</td><td>4 个模型同时加载</td><td>2 个模型（π_θ + π_ref）</td></tr>
+  <tr><td>奖励模型</td><td>显式训练独立 RM</td><td>无，隐式奖励</td></tr>
+  <tr><td>数据类型</td><td>在线生成 + 离线偏好对</td><td>仅离线偏好对</td></tr>
+  <tr><td>训练稳定性</td><td>不稳定，超参敏感</td><td>稳定，类似监督学习</td></tr>
+  <tr><td>工程复杂度</td><td>极高</td><td>低，易复现</td></tr>
+  <tr><td>主要缺点</td><td>4 模型显存、训练不稳</td><td>离线数据分布偏移，可能过拟合</td></tr>
+</table>
+
+<!-- ======================== 6. DPO 变体 ======================== -->
+<h2 id="s6">6. DPO 变体家族</h2>
+<p>DPO 提出后，研究者发现其存在若干局限（过度依赖 Bradley-Terry 假设、可能奖励长回复、需要配对数据等），催生了一系列变体。</p>
+
+<h3>6.1 IPO：恒等偏好优化</h3>
+<p>
+  <strong>IPO（Identity Preference Optimization，Azar et al., 2024）</strong> 指出 DPO 在偏好数据确定性过强时会过拟合。
+  IPO 去除 Bradley-Terry 假设，直接优化偏好对数差：
+</p>
+<div class="math-block">
+$$\mathcal{L}_{IPO}(\pi_\theta;\,\pi_{ref}) = \mathbb{E}_{(x,\,y_w,\,y_l)\sim\mathcal{D}}\!\left[\left(\log\frac{\pi_\theta(y_w \mid x)}{\pi_{ref}(y_w \mid x)} - \log\frac{\pi_\theta(y_l \mid x)}{\pi_{ref}(y_l \mid x)} - \frac{1}{2\tau}\right)^2\right]$$
+</div>
+<p>使用平方损失（而非 DPO 的 sigmoid），理论上防止过拟合，但实践中性能提升有限。</p>
+
+<h3>6.2 KTO：基于前景理论的优化</h3>
+<p>
+  <strong>KTO（Kahneman-Tversky Optimization，Ethayarajh et al., UC Berkeley 2024）</strong>
+  受行为经济学启发，<strong>不需要配对偏好数据</strong>，仅需对每条回复标注"好"或"坏"（binary）：
+</p>
+<div class="math-block">
+$$\mathcal{L}_{KTO}(\pi_\theta;\,\pi_{ref}) = \mathbb{E}_{(x,y)\sim\mathcal{D}}\!\left[w(y)\left(1 - v_{KTO}(x, y;\beta)\right)\right]$$
+</div>
+<p>其中 $w(y) = \begin{cases} \lambda_w & y \text{ 是 chosen} \\ \lambda_l & y \text{ 是 rejected} \end{cases}$，
+$v_{KTO}(x, y;\beta) = \sigma\!\left(\beta\log\frac{\pi_\theta(y|x)}{\pi_{ref}(y|x)} - z_{ref}\right)$，
+$z_{ref}$ 为当前批次的 KL 参考基线。
+KTO 在数据量较大时性能与 DPO 相当，且数据利用率更高（无需同一 prompt 有两条对比回复）。</p>
+
+<h3>6.3 SimPO：无参考模型的简化</h3>
+<p>
+  <strong>SimPO（Simple Preference Optimization，Meng et al., Princeton 2024）</strong> 彻底去掉参考模型，
+  将奖励定义为回复的<strong>平均对数概率（长度归一化）</strong>：
+</p>
+<div class="math-block">
+$$r_{SimPO}(x, y) = \frac{1}{|y|}\log\pi_\theta(y \mid x)$$
+</div>
+<div class="math-block">
+$$\mathcal{L}_{SimPO} = -\mathbb{E}\!\left[\log\sigma\!\left(\frac{\beta}{|y_w|}\log\pi_\theta(y_w \mid x) - \frac{\beta}{|y_l|}\log\pi_\theta(y_l \mid x) - \gamma\right)\right]$$
+</div>
+<p>
+  引入 margin $\gamma$（目标奖励差距），长度归一化解决了 DPO 倾向于奖励长回复的问题。
+  在 AlpacaEval 2 和 Arena-Hard 等基准上，SimPO 显著优于 DPO（LLaMA-3 8B 上 AlpacaEval 2 LC 提升约 14%）。
+</p>
+
+<h3>6.4 ORPO：合并 SFT 与偏好优化</h3>
+<p>
+  <strong>ORPO（Odds Ratio Preference Optimization，Hong et al., KAIST 2024）</strong> 彻底去除参考模型和独立 SFT 阶段，
+  将 SFT 损失和偏好损失合并为单一目标：
+</p>
+<div class="math-block">
+$$\mathcal{L}_{ORPO} = \mathcal{L}_{SFT} + \lambda \cdot \mathcal{L}_{OR}$$
+</div>
+<p>其中赔率比损失（Odds Ratio Loss）：</p>
+<div class="math-block">
+$$\mathcal{L}_{OR} = -\mathbb{E}\!\left[\log\sigma\!\left(\log\frac{\text{odds}_\theta(y_w \mid x)}{\text{odds}_\theta(y_l \mid x)}\right)\right]$$
+</div>
+<p>$\text{odds}(y \mid x) = \dfrac{\pi_\theta(y \mid x)}{1 - \pi_\theta(y \mid x)}$ 衡量模型"选择"某回复的内在倾向。
+ORPO 将训练压缩为单阶段，参数效率高，适合资源受限场景。</p>
+
+<h3>6.5 DPO 变体性能对比</h3>
+<div id="chart-dpo" class="echarts-container" style="height:360px"></div>
+<script>
+echarts.init(document.getElementById('chart-dpo')).setOption({
+  backgroundColor:'#2a2a3e',
+  title:{ text:'DPO 变体 AlpacaEval 2 LC Win Rate（Llama-3 8B Base）', textStyle:{color:'#cdd6f4', fontSize:13}, left:'center' },
+  tooltip:{ trigger:'axis', axisPointer:{type:'shadow'} },
+  legend:{ data:['LC Win Rate (%)'], textStyle:{color:'#cdd6f4'}, bottom:0 },
+  grid:{ left:'8%', right:'5%', top:'15%', bottom:'12%' },
+  xAxis:{ type:'category', axisLabel:{color:'#cdd6f4'}, data:['SFT','DPO','IPO','KTO','ORPO','R-DPO','SimPO'] },
+  yAxis:{ type:'value', name:'LC Win Rate (%)', nameTextStyle:{color:'#6c7086'}, axisLabel:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#45475a'}} },
+  series:[{ name:'LC Win Rate (%)', type:'bar', barWidth:'55%',
+    data:[6.2, 18.2, 14.4, 14.2, 12.2, 17.6, 21.5],
+    itemStyle:{ color: function(p){ const c=['#45475a','#89b4fa','#74c7ec','#94e2d5','#cba6f7','#f5c2e7','#a6e3a1']; return c[p.dataIndex]; } },
+    label:{ show:true, position:'top', color:'#cdd6f4', formatter:'{c}%' }
+  }]
+});
+</script>
+<p style="color:#6c7086; font-size:0.85em; margin-top:4px">数据来源：SimPO 论文 (Meng et al., 2024)，基于 Llama-3 8B Base 模型</p>
+
+<!-- ======================== 7. GRPO ======================== -->
+<h2 id="s7">7. GRPO：组内相对策略优化</h2>
+
+<h3>7.1 GRPO 的动机</h3>
+<blockquote>
+  PPO 需要独立价值网络（Critic），参数量约等于策略模型，大幅增加显存和计算开销，且价值函数估计的误差会影响 Advantage 质量。
+  GRPO（DeepSeek-Math & DeepSeek-R1，2024-2025）以"<strong>组内平均奖励</strong>"替代 Critic，在不牺牲性能的前提下显著降低计算成本。
+</blockquote>
+
+<h3>7.2 GRPO 算法</h3>
+<p>
+  对于问题 $q$，从旧策略 $\pi_{\theta_{old}}$ 中采样 $G$ 个输出 $\{o_1, o_2, \ldots, o_G\}$，
+  每个输出获得奖励 $\{r_1, r_2, \ldots, r_G\}$，然后计算<strong>组内相对优势</strong>：
+</p>
+<div class="math-block">
+$$\hat{A}_{i,t} = \frac{r_i - \text{mean}(\{r_1, \ldots, r_G\})}{\text{std}(\{r_1, \ldots, r_G\})}$$
+</div>
+
+<p>GRPO 的完整目标函数：</p>
+<div class="math-block">
+$$\mathcal{J}_{GRPO}(\theta) = \mathbb{E}_{\substack{q \sim P(Q) \\ \{o_i\}_{i=1}^G \sim \pi_{\theta_{old}}(O \mid q)}}\!\left[\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\!\left(\min\!\left(\frac{\pi_\theta(o_{i,t}\mid q, o_{i,\lt t})}{\pi_{\theta_{old}}(o_{i,t}\mid q, o_{i,\lt t})}\hat{A}_{i,t},\; \text{clip}(\cdot, 1-\varepsilon, 1+\varepsilon)\hat{A}_{i,t}\right) - \beta\, \mathbb{D}_{KL}(\pi_\theta \| \pi_{ref})\right)\right]$$
+</div>
+
+<p>其中 KL 项直接嵌入损失（与 PPO 用于奖励的方式不同），通常用无偏 KL 估计器：</p>
+<div class="math-block">
+$$\mathbb{D}_{KL}(\pi_\theta \| \pi_{ref}) \approx \frac{\pi_{ref}(o_{i,t} \mid q, o_{i,\lt t})}{\pi_\theta(o_{i,t} \mid q, o_{i,\lt t})} - \log\frac{\pi_{ref}(o_{i,t} \mid q, o_{i,\lt t})}{\pi_\theta(o_{i,t} \mid q, o_{i,\lt t})} - 1$$
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 2: GRPO 训练循环</div>
+  <p><span class="kw">Input:</span> <span class="var">策略 π_θ, 参考模型 π_ref, 奖励函数 R, 数据集 Q</span></p>
+  <p><span class="kw">Hyperparameters:</span> <span class="var">G</span>（组大小，典型值 <span class="num">8-16</span>），<span class="var">ε</span>=<span class="num">0.2</span>，<span class="var">β</span>=<span class="num">0.01</span></p>
+  <p><span class="kw">for</span> <span class="num">step = 1, ..., T</span> <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤 1: 采样</span></p>
+  <p style="padding-left:1.5em"><span class="var">q</span> ~ <span class="fn">sample</span>(<span class="var">Q</span>)</p>
+  <p style="padding-left:1.5em"><span class="var">{o_1, ..., o_G}</span> ~ <span class="var">π_θ_old</span>(<span class="var">o|q</span>) <span class="cm">// 采样 G 个输出</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤 2: 奖励评分</span></p>
+  <p style="padding-left:1.5em"><span class="var">r_i</span> = <span class="fn">R</span>(<span class="var">q, o_i</span>) <span class="cm">// 规则奖励（准确性）或 RM 奖励</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤 3: 组内优势归一化</span></p>
+  <p style="padding-left:1.5em"><span class="var">Â_i</span> = (<span class="var">r_i</span> - <span class="fn">mean</span>(<span class="var">{r}</span>)) / (<span class="fn">std</span>(<span class="var">{r}</span>) + <span class="num">ε_stable</span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤 4: PPO 风格策略更新（含 KL 项）</span></p>
+  <p style="padding-left:1.5em"><span class="fn">gradient_step</span>(<span class="var">θ</span>, -<span class="var">J_GRPO</span>)</p>
+  <p style="padding-left:1.5em"><span class="var">π_θ_old</span> ← <span class="var">π_θ</span></p>
+  <p><span class="kw">return</span> <span class="var">π_θ</span></p>
+</div>
+
+<h3>7.3 GRPO 的奖励设计（DeepSeek-R1）</h3>
+<table>
+  <tr><th>奖励类型</th><th>说明</th><th>用途</th></tr>
+  <tr><td><strong>准确性奖励</strong></td><td>数学题答案正确 +1，错误 0；代码通过测试用例</td><td>主奖励，可验证</td></tr>
+  <tr><td><strong>格式奖励</strong></td><td>要求 &lt;think&gt;...&lt;/think&gt; 包裹推理步骤</td><td>引导 CoT 格式</td></tr>
+  <tr><td><strong>语言一致性奖励</strong></td><td>惩罚中英文混杂输出</td><td>解决 R1-Zero 的语言混乱问题</td></tr>
+  <tr><td><strong>过程奖励（PRM）</strong></td><td>部分阶段使用步骤级奖励</td><td>精细化数学推理</td></tr>
+</table>
+
+<h3>7.4 GRPO vs PPO 核心区别</h3>
+<table>
+  <tr><th>对比维度</th><th>PPO</th><th>GRPO</th></tr>
+  <tr><td>价值网络</td><td>需要独立 Critic（约等于策略大小）</td><td><span class="badge badge-high">无 Critic</span>，用组内均值替代</td></tr>
+  <tr><td>优势估计</td><td>GAE（时序差分 + 折扣）</td><td>组内奖励归一化（$\hat{A}_i = (r_i - \mu)/\sigma$）</td></tr>
+  <tr><td>KL 约束位置</td><td>嵌入奖励 $R = r - \beta \log(\pi/\pi_{ref})$</td><td>直接嵌入损失函数</td></tr>
+  <tr><td>显存占用</td><td>Actor + Critic + RM + Ref（4 模型）</td><td>Actor + RM + Ref（3 模型）</td></tr>
+  <tr><td>采样策略</td><td>单次采样</td><td>每 prompt 采样 G 次（组采样）</td></tr>
+  <tr><td>主要适用</td><td>通用 RLHF 对齐</td><td>数学/代码等可验证推理任务</td></tr>
+</table>
+
+<!-- ======================== 8. 主流模型 ======================== -->
+<h2 id="s8">8. 主流模型后训练策略深度解析</h2>
+
+<h3>8.1 InstructGPT / GPT-4（OpenAI）</h3>
+<div class="model-card" style="margin: 1em 0; max-width: none;">
+  <h4>InstructGPT 三阶段 RLHF 范式（2022，奠基之作）</h4>
+  <span class="tag tag-blue">SFT</span>
+  <span class="tag tag-green">Reward Model</span>
+  <span class="tag tag-orange">PPO</span>
+</div>
+
+<pre class="mermaid">
+flowchart LR
+    A["Stage 1: SFT<br>~13,000 人工示范<br>GPT-3 微调"] --> B["Stage 2: RM 训练<br>~33,000 比较对<br>Bradley-Terry 损失"]
+    B --> C["Stage 3: PPO-RLHF<br>RM 评分 + KL 约束<br>策略模型更新"]
+    C --> D["InstructGPT<br>1.3B > 175B GPT-3<br>（人类偏好评估）"]
+</pre>
+
+<p>关键数据点：</p>
+<ul>
+  <li>SFT 数据：~13,000 条人工标注的 prompt-completion 对</li>
+  <li>偏好数据：~33,000 比较对，每个 prompt 4-9 个回复供标注员排序</li>
+  <li>PPO 配置：KL 系数 $\beta$ 随训练动态调整（使用 PPO-KL-Pen 变体）</li>
+  <li>令人惊讶的结果：1.3B InstructGPT 在 labeler 偏好上击败 175B GPT-3，证明对齐质量比规模更重要</li>
+</ul>
+
+<p>GPT-4 的改进：</p>
+<ul>
+  <li>更大规模的人类反馈数据（未公开具体数量）</li>
+  <li>引入<strong>对抗性红队测试（Red-Teaming）</strong>专门针对危险输出</li>
+  <li>使用基于规则的奖励模型（RBRM）处理安全性 refusal</li>
+  <li>引入 PPO 与 SFT 的<strong>过拟合惩罚</strong>（SFT Policy Loss 混合）</li>
+</ul>
+
+<h3>8.2 Claude / Anthropic：Constitutional AI (CAI)</h3>
+<div class="model-card" style="margin: 1em 0; max-width: none;">
+  <h4>Constitutional AI — RLAIF 范式（2022–2025）</h4>
+  <span class="tag tag-purple">CAI</span>
+  <span class="tag tag-blue">RLAIF</span>
+  <span class="tag tag-green">Hybrid</span>
+</div>
+
+<p>Anthropic 创造性地以<strong>AI 自我批评</strong>替代人工标注，其核心流程分为两个阶段：</p>
+
+<pre class="mermaid">
+flowchart TD
+    A["宪法（Constitution）<br>~80页原则文档<br>2025年版"] --> B["SL-CAI阶段<br>AI生成有害回复<br>→ AI按宪法自我批评<br>→ AI修正回复"]
+    B --> C["合成偏好数据集<br>AI生成多个回复<br>→ 宪法AI评判优劣<br>→ 生成比较对"]
+    C --> D["RL-CAI阶段<br>以 AI 偏好训练 RM<br>RLAIF 代替 RLHF"]
+    D --> E["Claude 系列模型<br>安全性更高<br>一致性更强"]
+</pre>
+
+<p>Constitutional AI 的关键技术细节：</p>
+<ul>
+  <li><strong>宪法版本迭代</strong>：2022 年初版约 16 条原则，2025 年版扩充至约 80 页，涵盖 Helpful、Harmless、Honest 三个维度</li>
+  <li><strong>RLAIF 成本优势</strong>：AI 生成偏好数据成本约 &lt;$0.01/样本，人工标注约 $5–$20/样本，降低成本 1000× 以上</li>
+  <li><strong>质量对比</strong>：Anthropic 2023-2024 研究显示 RLAIF 在大多数对齐维度与人工 RLHF 相当，在一致性上更优</li>
+  <li><strong>混合策略</strong>：RLAIF 生成批量偏好数据 + 人工标注覆盖安全边缘案例</li>
+  <li><strong>Claude 3.7+</strong>：引入<strong>混合推理模式</strong>（可切换 extended thinking），结合 RLVR 进行推理增强</li>
+</ul>
+
+<h3>8.3 DeepSeek-R1：四阶段推理模型训练</h3>
+<div class="model-card" style="margin: 1em 0; max-width: none;">
+  <h4>DeepSeek-R1（2025年1月）— GRPO 驱动的推理模型</h4>
+  <span class="tag tag-blue">GRPO</span>
+  <span class="tag tag-orange">冷启动SFT</span>
+  <span class="tag tag-green">拒绝采样</span>
+  <span class="tag tag-purple">RLVR</span>
+</div>
+
+<pre class="mermaid">
+flowchart TD
+    A["DeepSeek-V3-Base<br>（671B MoE 预训练模型）"] --> B["Stage 1: 冷启动 SFT<br>数千条精心设计的长 CoT 数据<br>解决纯 RL 初期不稳定问题"]
+    B --> C["Stage 2: 推理导向 RL<br>GRPO + 准确性奖励 + 格式奖励<br>语言一致性奖励"]
+    C --> D["Stage 3: 拒绝采样 + SFT<br>600k 推理数据 + 200k 通用数据<br>增强通用能力"]
+    D --> E["Stage 4: 全场景 RL<br>帮助性 + 安全性 RM<br>推理 + 通用双优化"]
+    E --> F["DeepSeek-R1<br>AIME 2024: 79.8%<br>MATH-500: 97.3%"]
+</pre>
+
+<p>DeepSeek-R1-Zero（纯 RL 实验）的"顿悟时刻"：</p>
+<blockquote>
+  在纯 GRPO 训练过程中，模型自发出现了<strong>自我反思行为</strong>——当推理路径出错时，模型会主动重新思考（"Wait, let me reconsider..."），
+  这一行为完全由奖励信号驱动涌现，无需任何监督示范。这证明了 RL 可以激发 LLM 潜在的推理能力。
+</blockquote>
+
+<p>冷启动的关键意义：</p>
+<ul>
+  <li>DeepSeek-R1-Zero 虽然推理能力强，但存在<strong>语言混乱</strong>（中英文混杂）和<strong>可读性差</strong>的问题</li>
+  <li>冷启动使用数千条精心格式化的 CoT 数据（&lt;think&gt;...&lt;/think&gt;&lt;answer&gt;...&lt;/answer&gt;），锚定模型的输出格式</li>
+  <li>冷启动带来轻微性能下降（限制了 RL 探索空间），但大幅提升用户体验</li>
+</ul>
+
+<h3>8.4 Qwen2.5（Alibaba）</h3>
+<div class="model-card" style="margin: 1em 0; max-width: none;">
+  <h4>Qwen2.5 后训练流程（2024年12月）</h4>
+  <span class="tag tag-blue">SFT</span>
+  <span class="tag tag-green">DPO</span>
+  <span class="tag tag-orange">GRPO</span>
+</div>
+
+<ul>
+  <li><strong>预训练规模</strong>：18T tokens（超越 LLaMA 3 的 15T），数据质量和多样性大幅提升</li>
+  <li><strong>SFT 数据</strong>：包含大量合成数据，覆盖数学、代码、通用知识、安全等多领域</li>
+  <li><strong>偏好对齐</strong>：采用 DPO 进行初步偏好对齐，数据来自模型自生成 + 人工筛选</li>
+  <li><strong>推理增强</strong>：对数学和代码任务采用 GRPO，使用可验证规则奖励</li>
+  <li><strong>性能表现</strong>：Qwen2.5-72B 在多数指标上持平或超越 LLaMA-3.1-405B；Qwen2.5-14B 接近 GPT-4o-mini</li>
+</ul>
+
+<h3>8.5 LLaMA 3（Meta）</h3>
+<div class="model-card" style="margin: 1em 0; max-width: none;">
+  <h4>LLaMA 3 对齐策略（2024年4月）</h4>
+  <span class="tag tag-blue">SFT</span>
+  <span class="tag tag-green">RM</span>
+  <span class="tag tag-orange">PPO + DPO</span>
+</div>
+
+<pre class="mermaid">
+flowchart LR
+    A["LLaMA 3 Base<br>15T tokens"] --> B["SFT<br>高质量指令对<br>多轮对话"]
+    B --> C["奖励模型<br>多维度：帮助性+安全性<br>人工标注偏好对"]
+    C --> D["PPO 在线 RL<br>主要对齐阶段"]
+    D --> E["DPO 离线精化<br>消除 PPO 残留问题"]
+    E --> F["Safety RLHF<br>针对安全性专项强化"]
+    F --> G["LLaMA 3-Instruct"]
+</pre>
+
+<p>LLaMA 3 后训练关键技术：</p>
+<ul>
+  <li><strong>多轮对话建模</strong>：使用 Ghost Attention（GAttN）技术，确保多轮对话中系统指令始终被遵循</li>
+  <li><strong>PPO + DPO 组合</strong>：PPO 用于主要对齐，DPO 用于离线精化消除 PPO 的边缘问题</li>
+  <li><strong>Safety 专项</strong>：独立的安全性 RLHF 阶段，强化拒绝有害请求的能力</li>
+  <li><strong>成本估算</strong>：LLaMA 3.1 后训练总成本估计 &gt;$50M，相比 LLaMA 2（约 $10-20M）大幅提升</li>
+  <li><strong>团队规模</strong>：约 200 人的专职后训练团队</li>
+</ul>
+
+<h3>8.6 Gemini（Google DeepMind）</h3>
+<ul>
+  <li><strong>多模态 RLHF</strong>：Gemini 1.0 将多模态理解能力与 RLHF 对齐相结合，是首个大规模多模态 RLHF</li>
+  <li><strong>Gemini 1.5</strong>：超长上下文（1M token）+ 改进的安全对齐，引入 Responsible AI 专项后训练</li>
+  <li><strong>Gemini 2.0 Flash Thinking</strong>：类似 DeepSeek-R1，引入 RLVR（可验证奖励 RL），支持 extended thinking</li>
+  <li><strong>数据飞轮</strong>：通过 Bard/Gemini 产品收集大规模用户偏好隐式信号，形成数据飞轮</li>
+</ul>
+
+<!-- ======================== 9. 技术对比 ======================== -->
+<h2 id="s9">9. 算法全景对比</h2>
+
+<table>
+  <tr>
+    <th>方法</th>
+    <th>年份</th>
+    <th>是否需要 RM</th>
+    <th>是否需要 RL</th>
+    <th>数据要求</th>
+    <th>显存开销</th>
+    <th>训练稳定性</th>
+    <th>代表使用</th>
+  </tr>
+  <tr>
+    <td><strong>PPO-RLHF</strong></td><td>2022</td>
+    <td><span class="badge badge-low">需要</span></td>
+    <td><span class="badge badge-low">需要（在线）</span></td>
+    <td>偏好对 + 在线采样</td>
+    <td><span class="badge badge-low">4模型</span></td>
+    <td><span class="badge badge-low">不稳定</span></td>
+    <td>InstructGPT, LLaMA 2/3</td>
+  </tr>
+  <tr>
+    <td><strong>DPO</strong></td><td>2023</td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td>配对偏好对</td>
+    <td><span class="badge badge-high">2模型</span></td>
+    <td><span class="badge badge-high">稳定</span></td>
+    <td>Qwen2, LLaMA 3</td>
+  </tr>
+  <tr>
+    <td><strong>IPO</strong></td><td>2024</td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td>配对偏好对</td>
+    <td><span class="badge badge-high">2模型</span></td>
+    <td><span class="badge badge-high">稳定</span></td>
+    <td>学术探索</td>
+  </tr>
+  <tr>
+    <td><strong>KTO</strong></td><td>2024</td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td><strong>无配对要求</strong>，二元标签</td>
+    <td><span class="badge badge-high">2模型</span></td>
+    <td><span class="badge badge-high">稳定</span></td>
+    <td>数据利用率优化场景</td>
+  </tr>
+  <tr>
+    <td><strong>SimPO</strong></td><td>2024</td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td>配对偏好对</td>
+    <td><span class="badge badge-high">1模型</span></td>
+    <td><span class="badge badge-high">稳定</span></td>
+    <td>基准最强无参考方法</td>
+  </tr>
+  <tr>
+    <td><strong>ORPO</strong></td><td>2024</td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td><span class="badge badge-high">不需要</span></td>
+    <td>配对偏好对</td>
+    <td><span class="badge badge-high">1模型</span></td>
+    <td><span class="badge badge-high">稳定</span></td>
+    <td>资源受限场景</td>
+  </tr>
+  <tr>
+    <td><strong>GRPO</strong></td><td>2024</td>
+    <td><span class="badge badge-med">可选RM</span></td>
+    <td><span class="badge badge-low">需要（在线）</span></td>
+    <td>可验证任务 + 组采样</td>
+    <td><span class="badge badge-med">3模型</span></td>
+    <td><span class="badge badge-med">中等</span></td>
+    <td>DeepSeek-R1, Qwen2.5</td>
+  </tr>
+  <tr>
+    <td><strong>CAI/RLAIF</strong></td><td>2022</td>
+    <td><span class="badge badge-low">需要（AI）</span></td>
+    <td><span class="badge badge-low">需要</span></td>
+    <td>宪法原则 + AI自评</td>
+    <td><span class="badge badge-low">同PPO</span></td>
+    <td><span class="badge badge-med">中等</span></td>
+    <td>Claude 系列</td>
+  </tr>
+</table>
+
+<!-- ======================== 10. 可视化对比 ======================== -->
+<h2 id="s10">10. 主流模型性能对比</h2>
+
+<div id="chart-models" class="echarts-container" style="height:380px"></div>
+<script>
+echarts.init(document.getElementById('chart-models')).setOption({
+  backgroundColor: '#2a2a3e',
+  title: { text: '主流 LLM 关键基准对比（2024-2025）', textStyle:{color:'#cdd6f4', fontSize:13}, left:'center' },
+  tooltip: { trigger:'axis' },
+  legend: { data:['MATH-500 (%)','MMLU (%)','HumanEval (%)'], textStyle:{color:'#cdd6f4'}, bottom:0 },
+  grid: { left:'8%', right:'5%', top:'15%', bottom:'14%' },
+  xAxis: { type:'category', axisLabel:{color:'#cdd6f4', rotate:15}, data:['GPT-4o','Claude 3.5 Sonnet','Gemini 1.5 Pro','DeepSeek-R1','Qwen2.5-72B','LLaMA 3.1-405B'] },
+  yAxis: { type:'value', name:'Score (%)', nameTextStyle:{color:'#6c7086'}, axisLabel:{color:'#cdd6f4'}, min:70, splitLine:{lineStyle:{color:'#45475a'}} },
+  series: [
+    { name:'MATH-500 (%)', type:'bar', barWidth:'25%',
+      data:[74.6, 78.3, 75.4, 97.3, 92.2, 73.8],
+      itemStyle:{color:'#89b4fa'} },
+    { name:'MMLU (%)', type:'bar', barWidth:'25%',
+      data:[87.2, 88.7, 85.9, 90.8, 86.1, 88.6],
+      itemStyle:{color:'#a6e3a1'} },
+    { name:'HumanEval (%)', type:'bar', barWidth:'25%',
+      data:[90.2, 92.0, 84.1, 96.3, 86.6, 89.0],
+      itemStyle:{color:'#cba6f7'} }
+  ]
+});
+</script>
+<p style="color:#6c7086; font-size:0.85em; margin-top:4px">注：数据来自各模型技术报告及公开评测，部分数据为近似值，供横向参考</p>
+
+<!-- ======================== 11. 合成数据趋势 ======================== -->
+<h2 id="s11">11. 合成数据：后训练的新范式</h2>
+<p>
+  2024–2025 年，合成数据已成为后训练的<strong>核心驱动力</strong>。
+  相比人工标注（$5–$20/样本），AI 生成数据成本低至 &lt;$0.01/样本，且可无限规模化。
+</p>
+
+<h3>11.1 合成数据的主要形式</h3>
+<ul>
+  <li><strong>蒸馏数据</strong>：以 GPT-4/Claude 3.5 生成回复作为 SFT 目标，质量接近人工但规模更大</li>
+  <li><strong>拒绝采样</strong>：模型自采样多个回复，用 RM 或规则筛选最优者，DeepSeek-R1 使用此方法生成 60 万条推理数据</li>
+  <li><strong>自我改进（Self-Improvement）</strong>：模型对自身回复评分并迭代改进，Constitutional AI 的核心机制</li>
+  <li><strong>Scalable Oversight</strong>：AI 辅助人类标注超出人类直接评估能力的任务（如复杂数学证明）</li>
+</ul>
+
+<h3>11.2 合成数据的挑战</h3>
+<blockquote>
+  合成数据存在<strong>分布偏移</strong>风险：如果生成模型本身存在偏见或错误，这些错误会被放大并传递给学生模型。
+  2025 年前沿实践通常采用<strong>混合策略</strong>：合成数据处理批量对齐 + 人工标注覆盖关键安全边界。
+</blockquote>
+
+<!-- ======================== 12. 2025 趋势 ======================== -->
+<h2 id="s12">12. 2025 年后训练前沿趋势</h2>
+
+<h3>12.1 从两阶段到三阶段标准化</h3>
+<p>
+  后训练的行业标准已从 2022 年的"SFT + RLHF"两阶段，演进为 2025 年的<strong>三阶段标准</strong>：
+</p>
+<div class="math-block">
+$$\text{SFT（指令跟随）} \longrightarrow \text{DPO/偏好对齐（安全帮助性）} \longrightarrow \text{RLVR（推理增强）}$$
+</div>
+
+<h3>12.2 后训练计算量的急剧增长</h3>
+<ul>
+  <li>OpenAI o1/o3 系列：后训练计算量占总计算量的 <strong>40%+</strong>，后训练从配角变主角</li>
+  <li>后训练成本估算：LLaMA（2023）&lt;$1M → LLaMA 2（2023）~$10-20M → LLaMA 3.1（2024）&gt;$50M</li>
+  <li>合成推理链（CoT）生成的 inference 成本占后训练总成本的显著比例</li>
+</ul>
+
+<h3>12.3 RLVR：可验证奖励强化学习</h3>
+<p>
+  <strong>RLVR（Reinforcement Learning with Verifiable Rewards）</strong> 成为推理模型训练的核心范式：
+  通过数学题、代码执行、逻辑验证等<strong>可精确检验正确性</strong>的任务，绕过奖励模型的不精确性，
+  直接使用二元规则奖励驱动 RL 训练。DeepSeek-R1、OpenAI o1/o3、Claude Opus 4 均采用此范式。
+</p>
+
+<h3>12.4 数据飞轮与迭代训练</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["基础模型"] --> B["SFT + 对齐"]
+    B --> C["部署产品"]
+    C --> D["收集用户偏好信号<br>隐式/显式反馈"]
+    D --> E["合成数据生成<br>拒绝采样 / RLAIF"]
+    E --> F["迭代后训练<br>DPO / GRPO"]
+    F --> G["更强的模型<br>（下一代）"]
+    G --> B
+</pre>
+
+<h3>12.5 推理模型（Reasoning Model）的技术路线分化</h3>
+<table>
+  <tr><th>技术路线</th><th>代表</th><th>核心思路</th></tr>
+  <tr>
+    <td><strong>RLVR + 长 CoT</strong></td>
+    <td>DeepSeek-R1, OpenAI o1/o3</td>
+    <td>RL 激励模型生成长链式推理，思维过程可见</td>
+  </tr>
+  <tr>
+    <td><strong>搜索增强推理</strong></td>
+    <td>OpenAI o3（推测）</td>
+    <td>将测试时计算（Test-Time Compute）与 RL 结合，引导搜索</td>
+  </tr>
+  <tr>
+    <td><strong>混合思维模式</strong></td>
+    <td>Claude 3.7/Opus 4</td>
+    <td>用户可切换 standard / extended thinking，灵活分配计算</td>
+  </tr>
+  <tr>
+    <td><strong>蒸馏推理能力</strong></td>
+    <td>Qwen-QwQ, DeepSeek-R1-Distill</td>
+    <td>从大推理模型蒸馏至小模型，保留推理链格式</td>
+  </tr>
+</table>
+
+<!-- ======================== 13. 洞见 ======================== -->
+<h2 id="s13">13. 核心洞见与批判性评注</h2>
+
+<h3>13.1 对齐税（Alignment Tax）仍然存在</h3>
+<p>
+  尽管 RLHF/DPO 大幅改善了模型的有用性和安全性，但<strong>对齐税</strong>（Alignment Tax）——即对齐导致基础能力下降——仍然存在。
+  例如 SFT 之后模型的长文本生成多样性下降，过度 RLHF 后模型可能变得过于谨慎（"sycophancy"问题）。
+</p>
+
+<h3>13.2 奖励 Hacking 是核心挑战</h3>
+<p>
+  PPO-RLHF 的奖励模型是代理目标，当模型被过度优化时，会出现<strong>奖励 Hacking</strong>：
+  生成人类读来感觉好但 RM 打高分、实际质量差的回复（如过长、过多重复、冗余客套）。
+  KL 约束是缓解手段但非根治方案。DPO 通过离线学习部分绕过此问题，但引入了分布偏移风险。
+</p>
+
+<h3>13.3 数据质量 > 算法差异</h3>
+<blockquote>
+  实践中，<strong>高质量的 SFT 数据</strong>带来的增益往往大于从 DPO 切换到 PPO 等算法选择。
+  2024-2025 年，顶尖实验室在后训练上的核心壁垒是<strong>数据飞轮和标注能力</strong>，而非算法本身。
+  Meta 估计从人工标注切换到 AI 生成可降低成本 500×，但数据质量的差距需要大量工程弥补。
+</blockquote>
+
+<h3>13.4 推理能力的涌现与局限</h3>
+<p>
+  DeepSeek-R1-Zero 的实验证明，纯 GRPO 训练可以从零激发 LLM 的自我反思推理能力，这是一个重要的科学发现。
+  但此能力似乎是<strong>大规模模型的涌现特性</strong>——DeepSeek 指出，直接对小模型（7B 以下）用 RL 训练推理往往效果欠佳，
+  蒸馏大模型的推理链效果更好。这暗示推理能力与模型规模之间存在尚未完全理解的关系。
+</p>
+
+<h3>13.5 2025 年后训练的核心矛盾</h3>
+<ul>
+  <li><strong>开放 vs 封闭</strong>：DeepSeek-R1、LLaMA 3、Qwen2.5 开放了权重，但没有开放后训练数据，"开源食谱"仍然稀缺</li>
+  <li><strong>能力 vs 安全</strong>：RLVR 大幅提升推理能力，但对安全对齐的冲击尚待评估（推理模型的边界更难控制）</li>
+  <li><strong>规模 vs 效率</strong>：GPT-4（~78M 算力）vs DeepSeek-V3（~$5.6M 声称）的成本差距，推动了更高效后训练技术的探索</li>
+</ul>
+
+<hr>
+<p style="color:#6c7086; font-size:0.85em;">
+  本报告综合自：InstructGPT 论文 (Ouyang et al., 2022)、DPO 论文 (Rafailov et al., 2023)、
+  SimPO 论文 (Meng et al., 2024)、DeepSeek-R1 技术报告 (2025)、
+  LLaMA 3 技术报告 (Meta, 2024)、Anthropic Constitutional AI、
+  Nathan Lambert "The State of Post-Training 2025"、HuggingFace 技术博客。
+  生成日期：2026-06-26。
+</p>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  // 自动生成目录
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  // 滚动高亮
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

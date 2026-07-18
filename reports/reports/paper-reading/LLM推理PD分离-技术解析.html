@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LLM 推理 PD 分离 — Prefill-Decode 解耦技术深度解析</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+
+    .math-block { background: #2a2a3e; border-radius: 6px; padding: 14px 20px; margin: 1em 0; overflow-x: auto; }
+    .math-block mjx-container[display="true"] { display: block !important; text-align: left !important; margin: 0.4em 0 !important; line-height: 1.6 !important; }
+
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 860px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.95em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.88em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+    .tl-tag.red    { background: #f38ba8; }
+
+    .subtitle { color: #6c7086; font-size: 1em; margin-bottom: 20px; }
+    .info-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+
+    .paper-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin: 1em 0; }
+    .paper-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+    .paper-card h4 { color: var(--heading); font-size: 1em; margin-bottom: 8px; }
+    .tag { display: inline-block; font-size: 0.75em; padding: 2px 8px; border-radius: 10px; margin-right: 4px; margin-bottom: 6px; }
+    .tag-blue { background: #1e3a5f; color: #89b4fa; }
+    .tag-green { background: #1a3a2a; color: #a6e3a1; }
+    .tag-orange { background: #3a2a1a; color: #fab387; }
+    .tag-purple { background: #2a1a3a; color: #cba6f7; }
+    .tag-red { background: #3a1a1a; color: #f38ba8; }
+
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: 600; }
+    .badge-high { background: #1a3a2a; color: #a6e3a1; }
+    .badge-med  { background: #3a2a1a; color: #fab387; }
+    .badge-low  { background: #3a1a1a; color: #f38ba8; }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 1em 0; }
+    .box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; }
+    .box h4 { color: var(--heading); margin-bottom: 8px; }
+    .box.compute { border-left: 4px solid #89b4fa; }
+    .box.memory  { border-left: 4px solid #f38ba8; }
+
+    .result-highlight { background: #1a3a2a; border: 1px solid #a6e3a1; border-radius: 6px; padding: 12px 16px; margin: 0.8em 0; }
+    .result-highlight strong { color: #a6e3a1; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LLM 推理 Prefill-Decode 分离</h1>
+<p class="subtitle">PD 解耦技术深度解析 · DistServe / Splitwise / Mooncake / NVIDIA Dynamo · 2025年6月</p>
+
+<div class="info-box">
+  <p><strong>核心论文</strong>：DistServe (OSDI'24)、Splitwise (ISCA'24)、Mooncake (FAST'25 Best Paper)、Sarathi-Serve</p>
+  <p><strong>覆盖范围</strong>：PD 两阶段本质差异 → 混跑干扰问题 → PD 分离架构 → KV Cache 传输 → 主流框架实现 → 生产实践</p>
+  <p><strong>关键结论</strong>：PD 分离已成为 2025 年大规模 LLM 服务的<strong>工业标准</strong>，DistServe 实现 7.4× goodput 提升，Mooncake 使 Kimi 请求处理量提升 59%–525%</p>
+</div>
+
+<!-- ============ 1. 背景 ============ -->
+<h2 id="s1">1. LLM 推理的两阶段本质</h2>
+
+<p>
+  现代 LLM 的自回归推理由两个性质截然不同的计算阶段组成：
+  <strong>Prefill（预填充）</strong>和 <strong>Decode（解码）</strong>。
+  理解这两个阶段的根本差异是 PD 分离技术的理论基础。
+</p>
+
+<div class="two-col">
+  <div class="box compute">
+    <h4>⚡ Prefill 阶段（计算密集型）</h4>
+    <ul>
+      <li>一次性并行处理所有输入 tokens</li>
+      <li>执行大矩阵乘法（Tensor Core 满载）</li>
+      <li>生成并存储 KV Cache</li>
+      <li>瓶颈：<strong>GPU 算力（Compute-bound）</strong></li>
+      <li>决定指标：<strong>TTFT（Time To First Token）</strong></li>
+      <li>典型算力利用率：>80%（MFU）</li>
+    </ul>
+  </div>
+  <div class="box memory">
+    <h4>🔁 Decode 阶段（内存带宽密集型）</h4>
+    <ul>
+      <li>每次只生成一个 token（自回归）</li>
+      <li>反复读取 KV Cache + 模型权重</li>
+      <li>计算量极小但内存访问量大</li>
+      <li>瓶颈：<strong>GPU 内存带宽（Memory-bound）</strong></li>
+      <li>决定指标：<strong>ITL/TPOT（Inter-Token Latency）</strong></li>
+      <li>典型 MFU：&lt;10%（大量时间等内存）</li>
+    </ul>
+  </div>
+</div>
+
+<h3>1.1 Roofline 模型分析</h3>
+<p>
+  以 A100 80GB GPU 为例（算力 312 TFLOPS FP16，内存带宽 2 TB/s），计算<strong>算术强度阈值</strong>（Ridge Point）：
+</p>
+<div class="math-block">
+$$I_{ridge} = \frac{\text{Peak FLOPS}}{\text{Bandwidth}} = \frac{312 \times 10^{12}}{2 \times 10^{12}} = 156 \; \text{FLOP/byte}$$
+</div>
+<p>
+  Prefill 阶段算术强度约为 $I_{prefill} \approx \frac{2 \cdot B \cdot d^2}{2 \cdot d \cdot B} = d$（$d$ 为隐层维度），
+  对于 LLaMA-2-13B（$d = 5120$）远超 Ridge Point → <strong>计算密集</strong>。<br>
+  Decode 阶段（batch=1）算术强度约为 $I_{decode} \approx \frac{2 \cdot d^2}{2 \cdot d} = d$ 理论上相同，
+  但实际上 batch size 小，矩阵退化为矩阵-向量乘，<strong>硬件利用率极低</strong>（&lt;5%）。
+</p>
+
+<h3>1.2 KV Cache 的核心地位</h3>
+<p>
+  KV Cache 是连接两阶段的核心数据结构。Prefill 阶段产生 KV Cache 并存储于 GPU HBM，Decode 阶段每步都需读取完整 KV Cache。其大小公式：
+</p>
+<div class="math-block">
+$$S_{KV} = 2 \times L \times H \times d_h \times s \times \text{dtype\_bytes}$$
+</div>
+<p>
+  其中 $L$ 为层数，$H$ 为注意力头数，$d_h$ 为头维度，$s$ 为序列长度。
+  以 OPT-66B、512 tokens 为例：$S_{KV} \approx 1.13 \text{ GB}$，是跨节点传输的主要开销来源。
+</p>
+
+<!-- ============ 2. 混跑干扰 ============ -->
+<h2 id="s2">2. 混跑（Colocation）的干扰问题</h2>
+
+<p>
+  传统推理系统（如 Orca、早期 vLLM）将 Prefill 和 Decode <strong>混跑在同一 GPU</strong> 上，
+  通过连续批处理（Continuous Batching）提升吞吐。这在低负载下工作良好，但在高并发时产生严重干扰。
+</p>
+
+<h3>2.1 两类干扰模式</h3>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph Colocation["混跑模式（传统）"]
+        direction TB
+        P1["Prefill: 长 Prompt\n计算密集\n占满 Tensor Core"]
+        D1["Decode: 多个请求\n内存带宽受限\n被 Prefill 阻塞等待"]
+        P1 <-->|"GPU 争抢"| D1
+    end
+    subgraph Effect["干扰后果"]
+        E1["TTFT 升高\n新请求 Prefill 被排队等待"]
+        E2["ITL 升高\n Decode 被 Prefill 抢占 SM"]
+        E3["SLO 违规率上升\n无法独立优化两个指标"]
+    end
+    Colocation --> Effect
+</pre>
+
+<ul>
+  <li>
+    <strong>Prefill 打断 Decode（Stall）</strong>：当有新请求到达需要 Prefill 时，正在进行的 Decode 批次必须等待或被中断，
+    导致 ITL（Token 间延迟）出现"毛刺"（spike），P99 延迟极高。
+  </li>
+  <li>
+    <strong>Decode 拖累 Prefill（Bubble）</strong>：为了避免 Decode 饥饿，调度器限制 Prefill batch size，
+    导致 Prefill 阶段 GPU 算力大量浪费，TTFT 无谓延长。
+  </li>
+</ul>
+
+<h3>2.2 SARATHI-Serve 的局部解：Chunked Prefill</h3>
+<p>
+  <strong>SARATHI-Serve（2023）</strong> 提出将长 Prefill 切成小块（Chunks）插入 Decode 批次，
+  减少干扰但未根本解决资源配置不匹配问题：
+</p>
+<div class="math-block">
+$$\text{Chunked Prefill:} \quad P_{long} \rightarrow \{P_{chunk_1}, P_{chunk_2}, \ldots\} \quad \text{interleaved with Decode}$$
+</div>
+<p>
+  优点：大幅降低 ITL spike，P95 TTFT 改善 40%–60%（32K token 长输入）。
+  缺点：两阶段仍共享 GPU，无法独立扩缩容，资源利用率仍受限。
+</p>
+
+<!-- ============ 3. PD 分离 ============ -->
+<h2 id="s3">3. PD 分离：核心架构与原理</h2>
+
+<h3>3.1 核心思想</h3>
+<blockquote>
+  <strong>将 Prefill 和 Decode 部署在物理隔离的 GPU 实例上</strong>，消除两阶段间的干扰，
+  允许各自独立扩缩容和调优，从而同时满足 TTFT 和 TPOT 的 SLO 约束。
+</blockquote>
+
+<pre class="mermaid">
+flowchart LR
+    Client["Client\n请求到来"] --> Router["KV-aware Router\n请求路由"]
+
+    subgraph Prefill_Cluster["Prefill 集群（计算密集型）"]
+        P1["Prefill GPU 1"]
+        P2["Prefill GPU 2"]
+        P3["Prefill GPU 3"]
+    end
+
+    subgraph KV_Transfer["KV Cache 传输\nNVLink / InfiniBand / RDMA"]
+        KV["KV Cache\n传输层"]
+    end
+
+    subgraph Decode_Cluster["Decode 集群（内存带宽型）"]
+        D1["Decode GPU 1"]
+        D2["Decode GPU 2"]
+        D3["..."]
+        D4["Decode GPU N"]
+    end
+
+    Router --> Prefill_Cluster
+    Prefill_Cluster --> KV_Transfer
+    KV_Transfer --> Decode_Cluster
+    Decode_Cluster --> Client
+</pre>
+
+<h3>3.2 PD 分离的三大核心优势</h3>
+<table>
+  <tr><th>优势</th><th>说明</th><th>量化收益</th></tr>
+  <tr>
+    <td><strong>消除干扰</strong></td>
+    <td>Prefill 和 Decode 各自独占 GPU，互不阻塞</td>
+    <td>ITL P99 下降 40-70%</td>
+  </tr>
+  <tr>
+    <td><strong>独立扩缩容</strong></td>
+    <td>根据负载动态调整 P/D 实例比例（如 1:3 到 1:9）</td>
+    <td>资源利用率提升 2-3×</td>
+  </tr>
+  <tr>
+    <td><strong>异构硬件</strong></td>
+    <td>计算密集型 Prefill 用 H100；内存带宽型 Decode 可用较便宜 GPU 或 Groq LPU</td>
+    <td>TCO 降低 20-50%</td>
+  </tr>
+</table>
+
+<!-- ============ 4. 核心论文 ============ -->
+<h2 id="s4">4. 核心论文深度解析</h2>
+
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">2024 Q1</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">OSDI'24</span><br>
+          <strong>DistServe</strong>：PD 分离奠基之作，Goodput 导向优化，实验 7.4× goodput 提升
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag purple">ISCA'24</span><br>
+          <strong>Splitwise</strong>：成本/功耗视角的 PD 分离，2.35× 吞吐提升或 20% 成本节省
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">同期</span><br>
+          <strong>TetriInfer / DéjàVu</strong>：并行提出类似思路
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024 Q3-Q4</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag green">Moonshot AI</span><br>
+          <strong>Mooncake</strong> v1：KVCache 中心化架构，vLLM 正式集成 Transfer Engine
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag">vLLM v1</span><br>
+          PD 分离成为 vLLM 一级功能，支持 MooncakeConnector
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">DeepSeek</span><br>
+          DeepSeek-V3 生产环境采用 PD 分离（3 Prefill + 9 Decode 节点）
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025 Q1-Q2</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag red">FAST'25 Best Paper</span><br>
+          <strong>Mooncake</strong>：USENIX FAST 2025 最佳论文，KVCache-centric 架构正式确立
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag purple">NVIDIA GTC 2025</span><br>
+          <strong>NVIDIA Dynamo</strong> 发布，PD 分离成为数据中心标准框架
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag green">SGLang</span><br>
+          DeepSeek-R1 96 GPU PD 分离实测：52.3k 输入 TPS
+        </div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025 Q3+</div>
+      <div class="tl-body">
+        <div class="tl-item">
+          <span class="tl-tag">Mooncake</span><br>
+          支持 Kimi K2 部署：128 H200 GPU，224k token/s 预填充，288k token/s 解码
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag orange">GB200 NVL72</span><br>
+          SGLang 测试：3.8× prefill、4.8× decode 相比 H100
+        </div>
+        <div class="tl-item">
+          <span class="tl-tag purple">跨数据中心</span><br>
+          "Prefill-as-a-Service" 概念兴起，KV Cache 跨数据中心传输研究
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>4.1 DistServe（OSDI 2024）</h3>
+
+<div class="paper-card" style="margin: 1em 0; max-width:none;">
+  <h4>DistServe: Disaggregating Prefill and Decoding for Goodput-optimized LLM Serving</h4>
+  <span class="tag tag-blue">OSDI 2024</span>
+  <span class="tag tag-green">UC San Diego / Hao Zhang</span>
+  <span class="tag tag-orange">Goodput 优化</span>
+</div>
+
+<p><strong>核心贡献</strong>：DistServe 首次从 <strong>Goodput（有效吞吐）</strong>视角系统性地定义和解决 PD 分离问题。</p>
+
+<p>Goodput 的定义：在满足 TTFT 和 TPOT SLO 约束下，单位时间单 GPU 处理的请求数：</p>
+<div class="math-block">
+$$\text{Goodput} = \frac{\text{请求数（满足SLO）}}{\text{时间} \times \text{GPU 数量}}$$
+</div>
+
+<p><strong>关键设计</strong>：</p>
+<ul>
+  <li>
+    <strong>独立并行策略搜索</strong>：对 Prefill 实例使用 Tensor Parallelism（TP）处理大矩阵乘；
+    对 Decode 实例使用 Pipeline Parallelism（PP）+ 更多副本，提升内存带宽利用率
+  </li>
+  <li>
+    <strong>节点亲和性放置</strong>：同节点内 Prefill→Decode KV Cache 传输走 NVLINK（600 GB/s 峰值），
+    跨节点走 InfiniBand（800 Gbps），保证传输开销可忽略
+  </li>
+  <li>
+    <strong>Pull-based 调度</strong>：Decode worker 主动从 Prefill worker 拉取 KV Cache，
+    防止 spiky Prefill 工作负载淹没 Decode 队列
+  </li>
+</ul>
+
+<div class="result-highlight">
+  <strong>实验结果</strong>（4节点 32× A100 80GB）：相比 Orca（混跑基线），
+  DistServe 在相同 SLO 约束下实现 <strong>7.4× 更多请求处理量（goodput）</strong>，SLO 达标率提升 12.6×。
+</div>
+
+<p><strong>KV Cache 传输开销分析</strong>：</p>
+<p>
+  OPT-66B + 512 tokens 请求，KV Cache 约 1.13 GB。若平均到达率 10 req/s，需要 <strong>90 Gbps</strong> 带宽。
+  现代 GPU 集群的 InfiniBand（800 Gbps）和 NVLINK（600 GB/s）均远超此需求，传输开销可忽略不计。
+</p>
+
+<h3>4.2 Splitwise（ISCA 2024）</h3>
+
+<div class="paper-card" style="margin: 1em 0; max-width:none;">
+  <h4>Splitwise: Efficient Generative LLM Inference Using Phase Splitting</h4>
+  <span class="tag tag-blue">ISCA 2024</span>
+  <span class="tag tag-purple">Microsoft Research</span>
+  <span class="tag tag-orange">成本/功耗优化</span>
+</div>
+
+<p><strong>与 DistServe 的差异</strong>：Splitwise 从<strong>成本和功耗</strong>视角出发，发现 Prefill 和 Decode 对硬件规格的需求截然不同：</p>
+
+<table>
+  <tr><th>维度</th><th>Prefill 偏好</th><th>Decode 偏好</th></tr>
+  <tr><td>GPU 算力</td><td>越高越好（H100 &gt; A100）</td><td>中等算力即可</td></tr>
+  <tr><td>内存带宽</td><td>中等即可</td><td>越高越好（HBM3 优先）</td></tr>
+  <tr><td>GPU 内存容量</td><td>较少（短暂存 KV Cache）</td><td>较多（需存储全部 KV Cache）</td></tr>
+  <tr><td>最优 GPU 类型</td><td>H100 SXM（高算力）</td><td>A100/H800 或 Groq LPU</td></tr>
+</table>
+
+<div class="result-highlight">
+  <strong>实验结果</strong>：Splitwise 在相同硬件下实现 <strong>2.35× 吞吐提升</strong>，
+  或以 <strong>20% 更低成本</strong>达到相同吞吐，同时降低了数据中心能耗。
+</div>
+
+<h3>4.3 Mooncake（FAST 2025 最佳论文）</h3>
+
+<div class="paper-card" style="margin: 1em 0; max-width:none;">
+  <h4>Mooncake: Trading More Storage for Less Computation — KVCache-centric Architecture</h4>
+  <span class="tag tag-red">FAST 2025 Best Paper</span>
+  <span class="tag tag-green">Moonshot AI / Tsinghua</span>
+  <span class="tag tag-purple">KVCache 中心化</span>
+</div>
+
+<p>
+  Mooncake 是 Kimi（月之暗面）生产推理系统的技术支撑，提出了超越简单 PD 分离的<strong>KVCache-centric（以 KV Cache 为中心）</strong>架构：
+</p>
+
+<pre class="mermaid">
+graph TD
+    subgraph Prefill_Nodes["Prefill 节点"]
+        P1["GPU-A\nPrefill 计算"]
+        P2["GPU-B\nPrefill 计算"]
+    end
+
+    subgraph Mooncake_Store["Mooncake Store（分布式 KVCache 池）"]
+        GPU_MEM["GPU HBM\n高速缓存"]
+        CPU_DRAM["CPU DRAM\n二级缓存"]
+        SSD["NVMe SSD\n三级缓存"]
+        direction TB
+        GPU_MEM <--> CPU_DRAM <--> SSD
+    end
+
+    subgraph Decode_Nodes["Decode 节点"]
+        D1["GPU-C\nDecode 计算"]
+        D2["GPU-D\nDecode 计算"]
+    end
+
+    Prefill_Nodes -->|"Transfer Engine\nRDMA/NVLink"| Mooncake_Store
+    Mooncake_Store -->|"KV Cache 传输"| Decode_Nodes
+</pre>
+
+<p><strong>Mooncake 三大核心创新</strong>：</p>
+
+<ol>
+  <li>
+    <strong>分层 KVCache 存储（Mooncake Store）</strong>：
+    将 GPU HBM、CPU DRAM、NVMe SSD 整合为统一的分布式 KV Cache 池，
+    充分利用 GPU 集群中<strong>闲置的 CPU 内存和 SSD 资源</strong>，
+    大幅扩展有效 KV Cache 容量（"用存储换计算"）
+  </li>
+  <li>
+    <strong>Transfer Engine</strong>：
+    高效 KV Cache 传输引擎，支持 RDMA、NVLink、PCIe 等多种传输通道，
+    支持分层传输（layer-wise）和异步流水线，已被 vLLM、SGLang 官方集成
+  </li>
+  <li>
+    <strong>预测性早拒策略（Prediction-based Early Rejection）</strong>：
+    在高负载场景下，基于历史 trace 预测请求完成可能性，主动拒绝无法在 SLO 内完成的请求，
+    避免资源浪费在注定违反 SLO 的请求上
+  </li>
+</ol>
+
+<div class="result-highlight">
+  <strong>生产实验结果</strong>：
+  <ul>
+    <li>在 NVIDIA A800 集群：Kimi 请求处理量提升 <strong>115%</strong></li>
+    <li>在 NVIDIA H800 集群：Kimi 请求处理量提升 <strong>107%</strong></li>
+    <li>模拟场景（长文本场景）：有效请求容量提升 <strong>59%–525%</strong>（含 SLO 约束）</li>
+    <li>日处理 token 量：生产环境 <strong>千亿 tokens/天</strong>，横跨数千节点</li>
+    <li>Kimi K2（2025 年7月）：128 H200 GPU，Prefill <strong>224k tokens/s</strong>，Decode <strong>288k tokens/s</strong></li>
+  </ul>
+</div>
+
+<p><strong>缓存命中率优化</strong>：Mooncake 通过 Prefix Caching + 全局 KVCache 调度，
+生产 trace 显示系统可实现约 <strong>50% 的 KV Cache 命中率</strong>，大量减少重复 Prefill 计算。</p>
+
+<!-- ============ 5. KV Cache 传输 ============ -->
+<h2 id="s5">5. KV Cache 传输：PD 分离的核心挑战</h2>
+
+<p>
+  KV Cache 传输是 PD 分离的核心工程挑战。Prefill 完成后，必须将 KV Cache 从 Prefill GPU 高效传输到 Decode GPU。
+</p>
+
+<h3>5.1 传输通道与带宽</h3>
+
+<table>
+  <tr><th>传输通道</th><th>带宽</th><th>适用场景</th><th>延迟</th></tr>
+  <tr>
+    <td><strong>NVLink（节点内）</strong></td>
+    <td>600 GB/s 峰值（A100），900 GB/s（H100）</td>
+    <td>同节点 GPU 间传输（最优）</td>
+    <td>微秒级</td>
+  </tr>
+  <tr>
+    <td><strong>InfiniBand（跨节点）</strong></td>
+    <td>800 Gbps（HDR/NDR IB）</td>
+    <td>跨节点 GPU 间，RDMA 直传</td>
+    <td>1–10 μs</td>
+  </tr>
+  <tr>
+    <td><strong>PCIe + 以太网</strong></td>
+    <td>64–128 Gbps</td>
+    <td>低成本集群</td>
+    <td>10–100 μs</td>
+  </tr>
+  <tr>
+    <td><strong>RDMA (GPUDirect)</strong></td>
+    <td>取决于网络</td>
+    <td>GPU 直接读写远端内存，绕过 CPU</td>
+    <td>最低</td>
+  </tr>
+  <tr>
+    <td><strong>跨数据中心</strong></td>
+    <td>100 Gbps 级 WAN</td>
+    <td>"Prefill-as-a-Service"（2025 新研究方向）</td>
+    <td>毫秒级</td>
+  </tr>
+</table>
+
+<h3>5.2 传输带宽需求计算</h3>
+<p>对于规模为 $N_P$ GPU 的 Prefill 集群，对外 KV Cache 传输带宽需求：</p>
+<div class="math-block">
+$$B_{out} = N_P \cdot \Phi_{kv}(L_{avg}) = N_P \cdot \frac{\mathbb{E}[S_{kv}]}{\mathbb{E}[T_{prefill}]}$$
+</div>
+<p>
+  其中 $\Phi_{kv}(L_{avg})$ 为单 Prefill GPU 的 KV Cache 吞吐率（GB/s），
+  以 OPT-66B 为例，10 req/s 场景需要 90 Gbps 带宽，远小于现代集群 IB 带宽。
+</p>
+
+<h3>5.3 Layer-wise 流水线传输</h3>
+<p>
+  Mooncake Transfer Engine 和 NVIDIA NIXL 均支持<strong>逐层（Layer-wise）流水线传输</strong>：
+  Prefill 在计算第 $l$ 层时，同时将第 $l-1$ 层的 KV Cache 传输给 Decode GPU，
+  实现计算与传输的重叠（overlap），进一步降低 Prefill→Decode 的切换延迟。
+</p>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant P as Prefill GPU
+    participant Net as 传输通道
+    participant D as Decode GPU
+
+    P->>P: 计算 Layer 1 KV Cache
+    P->>Net: 传输 Layer 1 KV Cache
+    P->>P: 计算 Layer 2 KV Cache（并行）
+    Net->>D: Layer 1 KV Cache 到达
+    P->>Net: 传输 Layer 2 KV Cache
+    P->>P: 计算 Layer 3 KV Cache（并行）
+    Net->>D: Layer 2 KV Cache 到达
+    Note over P,D: 计算 & 传输完全流水，延迟隐藏
+    D->>D: 开始 Decode（无需等待所有层传输完毕）
+</pre>
+
+<!-- ============ 6. 框架实现 ============ -->
+<h2 id="s6">6. 主流框架的 PD 分离实现</h2>
+
+<h3>6.1 NVIDIA Dynamo（GTC 2025）</h3>
+
+<div class="paper-card" style="margin: 1em 0; max-width:none;">
+  <h4>NVIDIA Dynamo：数据中心级 PD 分离编排框架</h4>
+  <span class="tag tag-red">GTC 2025</span>
+  <span class="tag tag-blue">开源 Apache-2.0</span>
+  <span class="tag tag-orange">DeepSeek-R1: 30× 吞吐提升（Blackwell）</span>
+</div>
+
+<p>NVIDIA Dynamo 是首个将 PD 分离作为<strong>一等公民</strong>的开源推理编排框架，核心组件：</p>
+
+<pre class="mermaid">
+graph LR
+    subgraph Dynamo["NVIDIA Dynamo 架构"]
+        Router["KV-aware Router\n请求路由\n感知 KV Cache 位置"]
+        Planner["GPU Planner\n动态弹性伸缩\n实时负载均衡"]
+        NIXL["NIXL 传输库\n低延迟 KV 传输\nRDMA/NVLink 抽象"]
+
+        subgraph Workers["Worker 层"]
+            PW["Prefill Workers\n(vLLM/SGLang/TRT-LLM)"]
+            DW["Decode Workers\n(vLLM/SGLang/TRT-LLM)"]
+        end
+
+        Router --> PW
+        PW -->|"KV Cache (NIXL)"| DW
+        Planner --> Router
+        NIXL -.-> PW
+        NIXL -.-> DW
+    end
+</pre>
+
+<ul>
+  <li><strong>KV-aware Router</strong>：感知每个 Worker 当前 KV Cache 状态，将请求路由到"缓存命中"概率最高的节点，减少重复 Prefill</li>
+  <li><strong>NIXL（NVIDIA Inference Xfer Library）</strong>：硬件无关的 KV Cache 传输库，支持 NVLink、InfiniBand、CXL、NVMe-oF 等多种通道</li>
+  <li><strong>GPU Planner</strong>：持续 profile GPU 负载，自动调整 P/D Worker 比例（弹性伸缩）</li>
+  <li><strong>兼容性</strong>：支持 vLLM、SGLang、TensorRT-LLM 三大主流推理引擎</li>
+</ul>
+
+<div class="result-highlight">
+  <strong>性能数据</strong>（NVIDIA 官方）：
+  在 NVIDIA Blackwell 上运行 DeepSeek-R1，Dynamo PD 分离模式 vs 传统混跑，
+  requests served 提升最高 <strong>30×</strong>；Baseten 生产实测 KV-aware 路由带来 34%–62% 吞吐增益。
+</div>
+
+<h3>6.2 vLLM PD 分离（v1 + llm-d）</h3>
+
+<p>vLLM v1 引入 PD 分离作为原生功能，通过 <code>kv_transfer_config</code> 配置 KV 传输：</p>
+
+<div class="algo-box">
+  <div class="algo-title">vLLM PD 分离配置示例（Ray Serve + Mooncake）</div>
+  <p><span class="kw">prefill_config:</span></p>
+  <p style="padding-left:1.5em"><span class="var">model_id</span>: <span class="num">meta-llama/Llama-3.1-8B-Instruct</span></p>
+  <p style="padding-left:1.5em"><span class="var">kv_transfer_config</span>:</p>
+  <p style="padding-left:3em"><span class="var">kv_connector</span>: <span class="num">MooncakeConnector</span> <span class="cm"># 或 LMCacheConnectorV1</span></p>
+  <p style="padding-left:3em"><span class="var">kv_role</span>: <span class="num">kv_producer</span> <span class="cm"># Prefill 产生 KV Cache</span></p>
+  <p style="padding-left:3em"><span class="var">kv_port</span>: <span class="num">30200</span></p>
+  <p><span class="kw">decode_config:</span></p>
+  <p style="padding-left:1.5em"><span class="var">kv_transfer_config</span>:</p>
+  <p style="padding-left:3em"><span class="var">kv_connector</span>: <span class="num">MooncakeConnector</span></p>
+  <p style="padding-left:3em"><span class="var">kv_role</span>: <span class="num">kv_consumer</span> <span class="cm"># Decode 消费 KV Cache</span></p>
+  <p><span class="kw">import_path</span>: <span class="num">ray.serve.llm:build_pd_openai_app</span></p>
+</div>
+
+<p><strong>llm-d（Meta + Kubernetes 原生）</strong>：以 Kubernetes Gateway API 和 LeaderWorkerSet 为基础，
+将 PD 分离的 Prefill / Decode Worker 作为独立可伸缩服务，
+实现<strong>多租户、弹性 GPU 集群</strong>下的 PD 分离部署，在 LLaMA4 MoE 模型上表现优秀。</p>
+
+<h3>6.3 SGLang PD 分离</h3>
+
+<p>SGLang 结合 RadixAttention（前缀缓存）和 PD 分离，在长前缀场景下效果尤为突出：</p>
+
+<div class="result-highlight">
+  <strong>SGLang + DeepSeek-R1 实测（96 H100 GPU，3 Prefill 节点 + 9 Decode 节点）</strong>：
+  <ul>
+    <li>输入吞吐：<strong>52,300 token/s</strong>（可能是首个匹配 DeepSeek 官方数据的开源实现）</li>
+    <li>输出吞吐：<strong>22,300 token/s / 节点</strong></li>
+    <li>GB200 NVL72 升级后：Prefill <strong>3.8×</strong>，Decode <strong>4.8×</strong>（vs H100）</li>
+  </ul>
+</div>
+
+<!-- ============ 7. DeepSeek 生产实践 ============ -->
+<h2 id="s7">7. DeepSeek 生产实践：大规模 PD 分离</h2>
+
+<p>
+  DeepSeek 是业界最早在大规模生产环境中部署 PD 分离的团队之一，
+  其 DeepSeek-V3/R1 推理架构已成为业界参考。
+</p>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph DeepSeek_Cluster["DeepSeek 推理集群"]
+        subgraph Prefill_Group["Prefill 组（3 节点 × 8 H800）"]
+            PG1["Prefill Node 1\nEP=small, DP=small\n大 Prompt 并行处理"]
+            PG2["Prefill Node 2"]
+            PG3["Prefill Node 3"]
+        end
+
+        subgraph KV_Transfer["KV 传输（3FS 库 + 千块 SSD 聚合）"]
+            KV_NET["高速 KV 传输网络"]
+        end
+
+        subgraph Decode_Group["Decode 组（9 节点 × 8 H800）"]
+            DG1["Decode Node 1\nEP≈256, DP≈8-16\nGroupGEMM 最大化"]
+            DG2["..."]
+            DG9["Decode Node 9"]
+        end
+    end
+
+    Prefill_Group -->|"KV Cache"| KV_Transfer
+    KV_Transfer --> Decode_Group
+</pre>
+
+<p><strong>DeepSeek 的关键技术决策</strong>：</p>
+
+<table>
+  <tr><th>设计维度</th><th>Prefill 节点</th><th>Decode 节点</th></tr>
+  <tr>
+    <td><strong>并行策略</strong></td>
+    <td>小 EP + 小 DP（高效处理大 Prompt）</td>
+    <td>超大 EP（≈256）+ 高 DP（8-16）</td>
+  </tr>
+  <tr>
+    <td><strong>为什么 EP256？</strong></td>
+    <td>-</td>
+    <td>最大化 MoE 模型的 GroupGEMM 利用率，摊薄 Expert 路由开销</td>
+  </tr>
+  <tr>
+    <td><strong>P:D 比例</strong></td>
+    <td>3 节点</td>
+    <td>9 节点（约 1:3，根据负载动态调整）</td>
+  </tr>
+  <tr>
+    <td><strong>KV 传输</strong></td>
+    <td colspan="2">3FS 库（聚合数千块 SSD + RDMA），提供极高传输带宽</td>
+  </tr>
+</table>
+
+<p>
+  值得注意的是，Decode 阶段使用<strong>超大 Expert Parallelism（EP≈256）</strong>是 MoE 模型特有的优化：
+  更多 GPU 分担 Expert 权重，使每个 Token 的路由延迟降低，但需要高速 All-to-All 通信。
+  DeepSeek 专门开发了 <strong>DeepEP</strong> 库来高效实现 MoE 的 EP 通信。
+</p>
+
+<!-- ============ 8. PD 分离 vs 聚合对比 ============ -->
+<h2 id="s8">8. PD 分离 vs 聚合：技术对比</h2>
+
+<table>
+  <tr>
+    <th>维度</th>
+    <th>混跑/聚合（Colocation）</th>
+    <th>PD 分离（Disaggregation）</th>
+    <th>Chunked Prefill（折中）</th>
+  </tr>
+  <tr>
+    <td><strong>代表系统</strong></td>
+    <td>早期 vLLM、Orca</td>
+    <td>DistServe、Splitwise、Mooncake、Dynamo</td>
+    <td>Sarathi-Serve、vLLM（默认）</td>
+  </tr>
+  <tr>
+    <td><strong>P/D 干扰</strong></td>
+    <td><span class="badge badge-low">严重</span></td>
+    <td><span class="badge badge-high">消除</span></td>
+    <td><span class="badge badge-med">部分缓解</span></td>
+  </tr>
+  <tr>
+    <td><strong>TTFT</strong></td>
+    <td>受 Decode 干扰波动大</td>
+    <td>可独立优化，稳定</td>
+    <td>中等，受 Chunk 调度影响</td>
+  </tr>
+  <tr>
+    <td><strong>ITL P99</strong></td>
+    <td>有毛刺（Prefill 抢占 SM）</td>
+    <td>稳定，无毛刺</td>
+    <td>较稳定，Chunk 大小需调优</td>
+  </tr>
+  <tr>
+    <td><strong>资源利用率</strong></td>
+    <td>GPU 利用率低（&lt;50% 常见）</td>
+    <td>各自接近最优</td>
+    <td>中等</td>
+  </tr>
+  <tr>
+    <td><strong>硬件异构</strong></td>
+    <td><span class="badge badge-low">不支持</span></td>
+    <td><span class="badge badge-high">原生支持</span></td>
+    <td><span class="badge badge-low">不支持</span></td>
+  </tr>
+  <tr>
+    <td><strong>KV Cache 传输</strong></td>
+    <td>无</td>
+    <td>需要高速互联</td>
+    <td>无</td>
+  </tr>
+  <tr>
+    <td><strong>工程复杂度</strong></td>
+    <td><span class="badge badge-high">低</span></td>
+    <td><span class="badge badge-low">高</span></td>
+    <td><span class="badge badge-med">中等</span></td>
+  </tr>
+  <tr>
+    <td><strong>适用场景</strong></td>
+    <td>小规模，延迟要求宽松</td>
+    <td>大规模，严格 SLO</td>
+    <td>中规模，长 Prompt 混合负载</td>
+  </tr>
+</table>
+
+<h3>8.1 什么时候不适合 PD 分离？</h3>
+<ul>
+  <li><strong>短 Prompt 场景</strong>：若大多数请求 Prompt 较短（&lt;512 tokens），Prefill 耗时极短，PD 分离的 KV 传输开销占比上升，收益下降</li>
+  <li><strong>高缓存命中场景</strong>：若系统缓存命中率极高（&gt;80%），Prefill 计算量减少，混跑即可高效运行</li>
+  <li><strong>小模型/单节点</strong>：7B 以下模型在单节点内 NVLink 速度极快，PD 分离的工程复杂度可能不值得</li>
+  <li><strong>资源受限</strong>：PD 分离至少需要两套 GPU 池，成本门槛较高</li>
+</ul>
+
+<!-- ============ 9. 性能数据 ============ -->
+<h2 id="s9">9. 性能数据对比</h2>
+
+<div id="chart-pd" class="echarts-container" style="height:360px"></div>
+<script>
+echarts.init(document.getElementById('chart-pd')).setOption({
+  backgroundColor: '#2a2a3e',
+  title: { text: 'PD 分离各系统 Goodput 提升对比（vs 混跑基线）', textStyle:{color:'#cdd6f4', fontSize:13}, left:'center' },
+  tooltip: { trigger:'axis', axisPointer:{type:'shadow'} },
+  grid: { left:'8%', right:'5%', top:'15%', bottom:'12%' },
+  xAxis: { type:'category', axisLabel:{color:'#cdd6f4'}, data:['DistServe\n(OSDI\'24)','Splitwise\n(ISCA\'24)','Mooncake\n(FAST\'25, 实验)','Mooncake\n(A800生产)','Dynamo\n(Blackwell)','SGLang+R1\n(96 H100)'] },
+  yAxis: { type:'value', name:'倍数提升（×）', nameTextStyle:{color:'#6c7086'}, axisLabel:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#45475a'}} },
+  series:[{
+    name:'Goodput 提升倍数', type:'bar', barWidth:'55%',
+    data:[7.4, 2.35, 6.25, 2.15, 30, 3.5],
+    itemStyle:{ color: function(p){ return ['#89b4fa','#a6e3a1','#cba6f7','#94e2d5','#f38ba8','#fab387'][p.dataIndex]; } },
+    label:{ show:true, position:'top', color:'#cdd6f4', formatter: function(p){ return p.value+'×'; } }
+  }]
+});
+</script>
+<p style="color:#6c7086; font-size:0.85em; margin-top:4px">
+  注：各数据来自各论文/官方博客，测试条件不同，仅供参考。Dynamo 30× 为特定 DeepSeek-R1 + Blackwell 场景。
+</p>
+
+<div id="chart-latency" class="echarts-container" style="height:340px"></div>
+<script>
+echarts.init(document.getElementById('chart-latency')).setOption({
+  backgroundColor: '#2a2a3e',
+  title: { text: 'Chunked Prefill 对 P95 TTFT 的改善（vLLM，50并发，H100）', textStyle:{color:'#cdd6f4', fontSize:13}, left:'center' },
+  tooltip: { trigger:'axis' },
+  legend: { data:['无 Chunked Prefill (ms)','有 Chunked Prefill (ms)'], textStyle:{color:'#cdd6f4'}, bottom:0 },
+  grid: { left:'8%', right:'5%', top:'15%', bottom:'14%' },
+  xAxis: { type:'category', axisLabel:{color:'#cdd6f4'}, data:['1K tokens','8K tokens','32K tokens'] },
+  yAxis: { type:'value', name:'P95 TTFT (ms)', nameTextStyle:{color:'#6c7086'}, axisLabel:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#45475a'}} },
+  series:[
+    { name:'无 Chunked Prefill (ms)', type:'bar', barWidth:'30%', data:[720, 1100, 2800], itemStyle:{color:'#f38ba8'}, label:{show:true, position:'top', color:'#cdd6f4'} },
+    { name:'有 Chunked Prefill (ms)', type:'bar', barWidth:'30%', data:[480, 620, 890], itemStyle:{color:'#a6e3a1'}, label:{show:true, position:'top', color:'#cdd6f4'} }
+  ]
+});
+</script>
+<p style="color:#6c7086; font-size:0.85em; margin-top:4px">数据来源：Spheron vLLM Serving Optimization Benchmark，H100 SXM5，Llama 3.3 70B FP8</p>
+
+<!-- ============ 10. 前沿趋势 ============ -->
+<h2 id="s10">10. 前沿趋势与开放问题</h2>
+
+<h3>10.1 Prefill-as-a-Service（跨数据中心 PD 分离）</h3>
+<p>
+  2025 年末出现了"<strong>Prefill-as-a-Service</strong>"的研究方向：
+  将 Prefill 计算独立为可跨数据中心调用的服务，KV Cache 通过广域网传输给位于不同地理位置的 Decode 集群。
+  主要挑战是广域网带宽有限（100 Gbps 级别），需要高效的 KV Cache 压缩和增量传输技术。
+</p>
+
+<h3>10.2 异构硬件的深度利用</h3>
+<ul>
+  <li><strong>NVIDIA Rubin CPX</strong>：专为 Prefill 计算优化（超高算力密度）</li>
+  <li><strong>Groq LPU</strong>：专为 Decode 设计（极高内存带宽，低延迟自回归生成）</li>
+  <li><strong>多厂商异构</strong>：Gimlet Labs 测试 NVIDIA（Prefill）+ Intel Gaudi 3（Decode）组合，实现 1.7× TCO 改善</li>
+</ul>
+
+<h3>10.3 推理模型（Reasoning Model）的新挑战</h3>
+<blockquote>
+  DeepSeek-R1、Claude Opus 4 等推理模型的<strong>输出长度极长</strong>（数千 token CoT），
+  使得 Decode 计算量大幅增加，P:D 比例需要相应调整（更多 Decode GPU），
+  同时 Decode 阶段的 KV Cache 也会随输出长度增长而膨胀，对内存管理提出更高要求。
+</blockquote>
+
+<h3>10.4 PD 聚合 vs 分离的辩论</h3>
+<p>
+  学界和工业界对"<strong>PD 聚合还是分离更优</strong>"仍有争论：
+</p>
+<ul>
+  <li><strong>支持聚合</strong>（Sarathi-Serve、Agrawal 等）：Chunked Prefill 可以大幅缓解干扰，无需引入 KV 传输的额外复杂度；在中等负载下资源利用率更高</li>
+  <li><strong>支持分离</strong>（DistServe、Splitwise、Mooncake）：在<strong>严格 SLO</strong>约束和<strong>高负载</strong>下，分离是唯一能同时优化 TTFT 和 TPOT 的方法；2025 年已成为大规模生产的事实标准</li>
+  <li><strong>新方向</strong>：统一框架（如 arxiv:2508.01989）尝试自适应决定 per-request 的聚合/分离策略，根据请求 SLO 紧急程度动态选择</li>
+</ul>
+
+<h3>10.5 KVCache 五个时代的演进</h3>
+<p>（来源：Modular "The Five Eras of KVCache"）</p>
+<table>
+  <tr><th>时代</th><th>时期</th><th>核心技术</th></tr>
+  <tr><td>Era 0：无 KVCache</td><td>&lt;2017</td><td>ResNet 等无状态模型，不需要 KV Cache</td></tr>
+  <tr><td>Era 1：连续 KVCache</td><td>2017–2022</td><td>Transformer 引入，顺序分配连续内存</td></tr>
+  <tr><td>Era 2：分页 KVCache</td><td>2023</td><td>vLLM PagedAttention，虚拟内存管理 KV Cache，实现高并发</td></tr>
+  <tr><td>Era 3：异构 KVCache</td><td>2024</td><td>GPU + CPU + SSD 分层存储，Mooncake Store</td></tr>
+  <tr><td>Era 4：分布式 KVCache</td><td>2025+</td><td>跨节点、跨数据中心，全局 KV Cache 池，Prefill-as-a-Service</td></tr>
+</table>
+
+<!-- ============ 11. 洞见 ============ -->
+<h2 id="s11">11. 核心洞见与工程启示</h2>
+
+<h3>11.1 为什么 PD 分离在 2025 年突然成为主流？</h3>
+<blockquote>
+  DistServe 在 2024 年初发表时受到了开源社区的大量质疑，认为引入架构复杂性得不偿失。
+  但到 2025 年，局势骤然反转——几乎所有主流推理框架都将 PD 分离作为首选架构。
+  转折点有三个：① DeepSeek-V3/R1 超长输出序列使 Decode 成为明显瓶颈；
+  ② NVIDIA Dynamo 提供了成熟的开源 PD 分离基础设施，工程复杂度大幅降低；
+  ③ Mooncake/LMCache 提供了生产验证的 KV Cache 传输层。
+  （来源：DistServe Retro，Hao AI Lab）
+</blockquote>
+
+<h3>11.2 P:D 资源比例的工程决策</h3>
+<p>
+  PD 分离的核心工程问题之一是 Prefill 和 Decode 的<strong>资源比例</strong>（P:D 比）。
+  以 DeepSeek-V3 为例采用 3:9（1:3）。一般经验公式：
+</p>
+<div class="math-block">
+$$\frac{N_P}{N_D} \approx \frac{T_{prefill} \times r_{in}}{T_{decode} \times r_{out}}$$
+</div>
+<p>
+  其中 $r_{in}$、$r_{out}$ 为输入/输出 token 速率，$T_{prefill}$、$T_{decode}$ 为单 token 处理时间。
+  对于长输出（推理模型），需要更多 Decode GPU；对于长输入（RAG 场景），需要更多 Prefill GPU。
+</p>
+
+<h3>11.3 KV Cache 传输优先级</h3>
+<ul>
+  <li><strong>优先同节点内传输</strong>（NVLink）：速度最快，延迟最低，首选方案</li>
+  <li><strong>次选跨节点 IB</strong>：800 Gbps IB 足以覆盖大多数场景</li>
+  <li><strong>Layer-wise 流水传输</strong>：可将 KV 传输与 Prefill 计算重叠，几乎消除传输延迟</li>
+  <li><strong>KV Cache 量化</strong>：FP8/INT8 量化 KV Cache 可将传输量减半，是降低带宽需求的重要手段</li>
+</ul>
+
+<h3>11.4 PD 分离的本质：资源专用化</h3>
+<blockquote>
+  PD 分离的本质不仅是"把两个阶段分开"，更是<strong>把计算机体系结构设计原则应用于 LLM 推理</strong>：
+  不同的计算特征应该匹配不同的硬件。正如 CPU 和 GPU 的分工，
+  LLM 推理中的"计算密集型"和"内存带宽密集型"工作负载也应该由专用硬件承担。
+  这一思想将在未来的 AI 芯片设计（NVIDIA Rubin、Groq 等）中进一步深化。
+</blockquote>
+
+<hr>
+<p style="color:#6c7086; font-size:0.85em;">
+  本报告综合自：DistServe (Zhong et al., OSDI 2024)、Splitwise (Patel et al., ISCA 2024)、
+  Mooncake (Qin et al., FAST 2025 Best Paper)、NVIDIA Dynamo 技术博客（GTC 2025）、
+  Hao AI Lab "Disaggregated Inference: 18 Months Later"、BentoML LLM Inference Handbook、
+  Modular "The Five Eras of KVCache"、Ray Serve 官方文档。
+  生成日期：2026-06-26。
+</p>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 'section-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

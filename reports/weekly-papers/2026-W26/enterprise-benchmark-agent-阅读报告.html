@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EnterpriseClawBench 阅读报告</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --surface: #27273f;
+      --surface2: #313150;
+      --border: #45455e;
+      --text: #cdd6f4;
+      --subtext: #a6adc8;
+      --heading: #89b4fa;
+      --strong: #a6e3a1;
+      --accent: #cba6f7;
+      --yellow: #f9e2af;
+      --red: #f38ba8;
+      --teal: #94e2d5;
+      --peach: #fab387;
+      --toc-width: 220px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+      font-size: 15px;
+      line-height: 1.8;
+      display: flex;
+      min-height: 100vh;
+    }
+    #toc {
+      position: fixed; top: 0; left: 0;
+      width: var(--toc-width); height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 24px 0 40px;
+      z-index: 100;
+    }
+    #toc h2 {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: var(--subtext);
+      padding: 0 18px 10px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 10px;
+    }
+    #toc ul { list-style: none; }
+    #toc ul li a {
+      display: block; padding: 6px 18px;
+      color: var(--subtext); text-decoration: none;
+      font-size: 13px; border-left: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    #toc ul li a:hover, #toc ul li a.active {
+      color: var(--heading); border-left-color: var(--heading);
+      background: rgba(137,180,250,0.08);
+    }
+    #toc ul li.sub a { padding-left: 30px; font-size: 12px; }
+    main {
+      margin-left: var(--toc-width);
+      padding: 48px 56px 80px;
+      max-width: 960px; width: 100%;
+    }
+    .paper-header {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      border: 1px solid var(--border); border-radius: 12px;
+      padding: 32px 36px; margin-bottom: 40px;
+    }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .badge {
+      display: inline-block; padding: 3px 10px;
+      border-radius: 20px; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+    .badge-arxiv  { background: rgba(250,179,135,0.2); color: var(--peach); border: 1px solid var(--peach); }
+    .badge-org    { background: rgba(203,166,247,0.2); color: var(--accent); border: 1px solid var(--accent); }
+    .badge-cc     { background: rgba(166,227,161,0.2); color: var(--strong); border: 1px solid var(--strong); }
+    .badge-hot    { background: rgba(243,139,168,0.2); color: var(--red); border: 1px solid var(--red); }
+    .paper-header h1 {
+      font-size: 22px; font-weight: 700;
+      color: var(--heading); line-height: 1.4; margin-bottom: 10px;
+    }
+    .paper-header .authors { font-size: 13px; color: var(--subtext); margin-bottom: 6px; }
+    .paper-header .tldr {
+      font-size: 14px; color: var(--text); margin-top: 14px;
+      padding: 12px 16px;
+      background: rgba(137,180,250,0.07);
+      border-left: 3px solid var(--heading);
+      border-radius: 0 6px 6px 0;
+    }
+    section { margin-bottom: 52px; }
+    section h2 {
+      font-size: 20px; font-weight: 700; color: var(--heading);
+      padding-bottom: 10px; border-bottom: 2px solid var(--border);
+      margin-bottom: 22px; display: flex; align-items: center; gap: 10px;
+    }
+    section h2 .num {
+      font-size: 12px; font-weight: 600; color: var(--accent);
+      background: rgba(203,166,247,0.15); padding: 2px 8px; border-radius: 4px;
+    }
+    section h3 { font-size: 16px; font-weight: 600; color: var(--accent); margin: 28px 0 12px; }
+    section h4 { font-size: 14px; font-weight: 600; color: var(--yellow); margin: 18px 0 8px; }
+    p { margin-bottom: 14px; color: var(--text); }
+    strong { color: var(--strong); font-weight: 600; }
+    em { color: var(--yellow); font-style: normal; }
+    code {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 13px;
+      background: var(--surface2); color: var(--teal);
+      padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);
+    }
+    pre {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 20px; overflow-x: auto; margin: 16px 0;
+    }
+    pre code { background: none; border: none; padding: 0; font-size: 13px; color: var(--text); }
+    .callout { border-radius: 8px; padding: 16px 20px; margin: 18px 0; border-left: 4px solid; }
+    .callout-blue   { background: rgba(137,180,250,0.08); border-color: var(--heading); }
+    .callout-green  { background: rgba(166,227,161,0.08); border-color: var(--strong); }
+    .callout-yellow { background: rgba(249,226,175,0.08); border-color: var(--yellow); }
+    .callout-red    { background: rgba(243,139,168,0.08); border-color: var(--red); }
+    .callout-purple { background: rgba(203,166,247,0.08); border-color: var(--accent); }
+    .callout-title {
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+    }
+    .callout-blue   .callout-title { color: var(--heading); }
+    .callout-green  .callout-title { color: var(--strong); }
+    .callout-yellow .callout-title { color: var(--yellow); }
+    .callout-red    .callout-title { color: var(--red); }
+    .callout-purple .callout-title { color: var(--accent); }
+    .table-wrap {
+      overflow-x: auto; margin: 18px 0;
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    thead tr { background: var(--surface2); }
+    thead th {
+      padding: 10px 14px; text-align: left; font-weight: 600;
+      color: var(--heading); border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(137,180,250,0.05); }
+    tbody td { padding: 9px 14px; color: var(--text); }
+    tbody td.highlight { color: var(--strong); font-weight: 600; }
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px; margin: 20px 0;
+    }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px 16px; text-align: center;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: var(--heading); }
+    .stat-card .val { font-size: 28px; font-weight: 700; color: var(--heading); line-height: 1.1; }
+    .stat-card .label { font-size: 12px; color: var(--subtext); margin-top: 6px; }
+    .chart-container {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 20px; margin: 20px 0;
+    }
+    .chart-title {
+      font-size: 13px; font-weight: 600; color: var(--subtext);
+      margin-bottom: 12px; text-align: center;
+    }
+    pre.mermaid {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 24px;
+      text-align: center; overflow-x: auto;
+    }
+    .mermaid svg { max-width: 100%; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .tag { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .tag-blue   { background: rgba(137,180,250,0.15); color: var(--heading); }
+    .tag-green  { background: rgba(166,227,161,0.15); color: var(--strong); }
+    .tag-purple { background: rgba(203,166,247,0.15); color: var(--accent); }
+    .tag-yellow { background: rgba(249,226,175,0.15); color: var(--yellow); }
+    .tag-teal   { background: rgba(148,226,213,0.15); color: var(--teal); }
+    .tag-red    { background: rgba(243,139,168,0.15); color: var(--red); }
+    ul.styled, ol.styled { padding-left: 22px; margin: 10px 0 16px; }
+    ul.styled li, ol.styled li { margin-bottom: 8px; color: var(--text); }
+    ul.styled li::marker { color: var(--heading); }
+    ol.styled li::marker { color: var(--accent); font-weight: 600; }
+    .step-flow { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+    .step-item { display: flex; gap: 16px; position: relative; }
+    .step-item:not(:last-child)::before {
+      content: ''; position: absolute; left: 15px; top: 32px; bottom: -8px;
+      width: 2px; background: var(--border);
+    }
+    .step-num {
+      flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+      background: var(--surface2); border: 2px solid var(--heading);
+      color: var(--heading); font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; margin-top: 4px;
+    }
+    .step-body { padding-bottom: 20px; }
+    .step-body strong { display: block; font-size: 14px; color: var(--strong); margin-bottom: 4px; }
+    .step-body p { font-size: 13.5px; color: var(--subtext); margin: 0; }
+    .ref-list { list-style: none; padding: 0; }
+    .ref-list li {
+      padding: 10px 14px; border-radius: 6px; margin-bottom: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      font-size: 13px; color: var(--subtext); transition: border-color 0.2s;
+    }
+    .ref-list li:hover { border-color: var(--heading); }
+    .ref-list li a { color: var(--heading); text-decoration: none; }
+    .ref-list li a:hover { text-decoration: underline; }
+    footer {
+      margin-top: 60px; padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--subtext); text-align: center;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--subtext); }
+    @media (max-width: 768px) {
+      #toc { display: none; }
+      main { margin-left: 0; padding: 24px 20px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav id="toc">
+  <h2>目录</h2>
+  <ul>
+    <li><a href="#overview">1. 概述</a></li>
+    <li><a href="#background">2. 研究背景与动机</a></li>
+    <li class="sub"><a href="#bg-gap">现有基准的不足</a></li>
+    <li class="sub"><a href="#bg-enterprise">企业场景的特殊性</a></li>
+    <li><a href="#method">3. 核心方法：Benchmark 构建</a></li>
+    <li class="sub"><a href="#m-pipeline">数据收集流程</a></li>
+    <li class="sub"><a href="#m-task">任务结构设计</a></li>
+    <li class="sub"><a href="#m-eval">评估框架</a></li>
+    <li><a href="#results">4. 实验结果与分析</a></li>
+    <li class="sub"><a href="#r-perf">模型性能对比</a></li>
+    <li class="sub"><a href="#r-skill">技能迁移分析</a></li>
+    <li class="sub"><a href="#r-cost">成本与效率</a></li>
+    <li><a href="#insights">5. 总结与启发</a></li>
+    <li><a href="#refs">6. 参考文献</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <!-- Paper Header -->
+  <div class="paper-header">
+    <div class="badge-row">
+      <span class="badge badge-arxiv">arXiv: 2606.23654</span>
+      <span class="badge badge-org">Frontis AI</span>
+      <span class="badge badge-cc">CC BY 4.0</span>
+      <span class="badge badge-hot">&#128293; 76 Upvotes</span>
+    </div>
+    <h1>EnterpriseClawBench: Benchmarking Agents from Real Workplace Sessions</h1>
+    <div class="authors">
+      Jincheng Zhong, Weizhi Wang, Che Jiang, Kai Tian, Zhenzhao Yuan, Junlin Yang, Dianqiao Lei, Kaiyan Zhang
+      &nbsp;&middot;&nbsp; <strong style="color:var(--accent)">Frontis AI</strong>
+    </div>
+    <div class="tldr">
+      <strong>TL;DR：</strong>EnterpriseClawBench 是首个从真实企业工作会话中提取的 Agent 基准，包含 852 个可复现任务，覆盖异构文件读取、工具调用与业务产物交付三大能力维度，填补了学术基准与真实企业工作流之间的鸿沟。
+    </div>
+  </div>
+
+  <!-- 1. 概述 -->
+  <section id="overview">
+    <h2><span class="num">01</span> 概述</h2>
+
+    <p>随着大语言模型（LLM）驱动的 Agent 系统在企业中的广泛应用，如何客观评估其在真实工作场景下的能力成为关键挑战。现有基准大多基于合成任务或公开数据集，难以反映企业工作流的真实复杂性。</p>
+
+    <p><strong>EnterpriseClawBench</strong> 由 Frontis AI 团队提出，是一个从<em>真实专有职场会话</em>中派生的 Agent 评估基准。其核心创新在于：通过系统化的数据恢复与任务重写流程，将原本不可复现的企业工作记录转化为标准化、可执行的评测任务。</p>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="val">852</div>
+        <div class="label">可复现任务数量</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">0.663</div>
+        <div class="label">最佳得分</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">3</div>
+        <div class="label">核心能力维度</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">2</div>
+        <div class="label">评估规则类型</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">5+</div>
+        <div class="label">Harness 组合</div>
+      </div>
+      <div class="stat-card">
+        <div class="val">CC BY 4.0</div>
+        <div class="label">开源协议</div>
+      </div>
+    </div>
+
+    <div class="callout callout-blue">
+      <div class="callout-title">数据说明</div>
+      数据集本身因包含企业机密内容<strong>不公开发布</strong>，但完整的构建协议（Construction Protocol）已在 <code>FrontisAI/EnterpriseClawBench</code> 开源，供社区复现与扩展。最佳性能由 <strong>Codex 搭配 GPT-5.5</strong> 实现，得分 0.663。
+    </div>
+
+    <div class="tag-list">
+      <span class="tag tag-blue">Agent Benchmark</span>
+      <span class="tag tag-green">企业 AI</span>
+      <span class="tag tag-purple">工具调用</span>
+      <span class="tag tag-yellow">异构文件处理</span>
+      <span class="tag tag-teal">业务产物交付</span>
+      <span class="tag tag-red">真实工作场景</span>
+    </div>
+  </section>
+
+  <!-- 2. 研究背景与动机 -->
+  <section id="background">
+    <h2><span class="num">02</span> 研究背景与动机</h2>
+
+    <h3 id="bg-gap">现有基准的不足</h3>
+
+    <p>当前 Agent 评估领域面临一个根本性矛盾：学术基准追求可控性与可复现性，而企业场景则充满非结构化、多模态、高度领域专属的复杂任务。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>基准类型</th>
+            <th>代表性工作</th>
+            <th>主要局限</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>合成任务基准</td>
+            <td>ALFWorld, WebArena</td>
+            <td>任务分布与真实工作流偏差大</td>
+          </tr>
+          <tr>
+            <td>公开数据集基准</td>
+            <td>GAIA, SWE-bench</td>
+            <td>缺乏企业私有文件与工具调用场景</td>
+          </tr>
+          <tr>
+            <td>人工设计任务</td>
+            <td>AgentBench</td>
+            <td>专家偏见，无法反映真实用户需求分布</td>
+          </tr>
+          <tr>
+            <td><strong>EnterpriseClawBench</strong></td>
+            <td>本文</td>
+            <td class="highlight">从真实会话提取，覆盖真实企业工作流</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 id="bg-enterprise">企业场景的特殊性</h3>
+
+    <p>企业工作场景对 Agent 提出了学术基准未能充分覆盖的三类核心挑战：</p>
+
+    <div class="step-flow">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>异构文件处理能力</strong>
+          <p>企业日常涉及 PDF 报告、Excel 财务表格、PowerPoint 演示、数据库查询结果等多种格式，Agent 需具备跨格式理解与提取能力。</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>工具链式调用能力</strong>
+          <p>真实工作流往往需要串联调用多个内部/外部工具（API、数据库、代码执行环境），并处理工具返回的中间结果。</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>业务产物交付能力</strong>
+          <p>最终输出不仅需要内容正确，还需符合企业规范（格式、视觉质量、专业表达），这是现有基准普遍忽视的维度。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-yellow">
+      <div class="callout-title">研究动机</div>
+      作者团队在为企业客户部署 Agent 系统时发现，在公开基准上表现优异的模型，在真实企业任务上往往出现显著的性能下滑。这一"基准-现实"鸿沟促使他们构建了 EnterpriseClawBench。
+    </div>
+  </section>
+
+  <!-- 3. 核心方法 -->
+  <section id="method">
+    <h2><span class="num">03</span> 核心方法：Benchmark 构建</h2>
+
+    <h3 id="m-pipeline">数据收集与转化流程</h3>
+
+    <p>EnterpriseClawBench 的核心贡献在于设计了一套将<em>私有职场会话</em>转化为<em>可复现评测任务</em>的系统化流程。整个流程分为六个阶段，确保数据的可用性、安全性与评估有效性。</p>
+
+<pre class="mermaid">
+flowchart TD
+    A["真实企业工作会话\nProprietary Workplace Sessions"]:::source
+    B["会话筛选与脱敏\nSession Filtering & Anonymization"]:::process
+    C["Fixture 恢复\nFixture Recovery\n还原任务所需文件与环境"]:::process
+    D["Prompt 重写\nPrompt Rewriting\n去除敏感信息，标准化表述"]:::process
+    E["角色/技能分类\nRole & Skill Classification"]:::process
+    F["规则制定\nRule Specification\nHard Rules + Semantic Rubrics"]:::process
+    G["可复现评测任务\nReproducible Benchmark Tasks\n852 tasks"]:::output
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+
+    classDef source  fill:#313150,stroke:#89b4fa,color:#cdd6f4
+    classDef process fill:#27273f,stroke:#cba6f7,color:#cdd6f4
+    classDef output  fill:#27273f,stroke:#a6e3a1,color:#a6e3a1
+</pre>
+
+    <h3 id="m-task">任务结构设计</h3>
+
+    <p>每个评测任务由五个核心要素构成，形成完整的可复现评测单元：</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>要素</th>
+            <th>说明</th>
+            <th>作用</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Recovered Fixtures</strong></td>
+            <td>恢复的任务所需文件与环境</td>
+            <td>确保任务可独立复现</td>
+          </tr>
+          <tr>
+            <td><strong>Rewritten Prompts</strong></td>
+            <td>经脱敏与标准化处理的任务描述</td>
+            <td>消除敏感信息，保持任务语义</td>
+          </tr>
+          <tr>
+            <td><strong>Role/Skill Classification</strong></td>
+            <td>按职场角色与技能类型分类</td>
+            <td>支持细粒度能力分析</td>
+          </tr>
+          <tr>
+            <td><strong>Hard Rules</strong></td>
+            <td>客观、可自动验证的评分规则</td>
+            <td>提供确定性评估信号</td>
+          </tr>
+          <tr>
+            <td><strong>Semantic Rubrics</strong></td>
+            <td>基于语义的主观评分标准</td>
+            <td>捕捉输出质量的细微差异</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h4>角色与技能分类体系</h4>
+    <p>基准按照职场角色（如数据分析师、项目经理、内容创作者等）和技能类型（如文件处理、数据分析、报告生成等）对任务进行双维度分类，使得评估结果能够映射到具体的企业岗位需求。</p>
+
+    <div class="callout callout-purple">
+      <div class="callout-title">技能迁移测试</div>
+      基准专门设计了<strong>技能迁移（Skill-Transfer）</strong>测试场景：将某类技能在一个角色上学到的能力，测试其在另一个角色场景下的泛化表现，评估 Agent 的跨领域适应能力。
+    </div>
+
+    <h3 id="m-eval">评估框架</h3>
+
+    <p>评估框架从多个维度综合衡量 Agent 性能，超越了传统的单一准确率指标：</p>
+
+<pre class="mermaid">
+graph LR
+    subgraph INPUT["输入层"]
+        T["任务 Task"]
+        F["Fixtures 文件环境"]
+        P["Prompt 任务描述"]
+    end
+
+    subgraph AGENT["Agent 执行层"]
+        H["Harness\nAgent 框架"]
+        M["LLM Model\n底层模型"]
+        TOOLS["工具调用\nTool Invocation"]
+    end
+
+    subgraph OUTPUT["输出层"]
+        ART["业务产物\nArtifact"]
+    end
+
+    subgraph EVAL["评估层"]
+        HR["Hard Rules\n硬规则评分"]
+        SR["Semantic Rubrics\n语义评分"]
+        VQ["Visual Quality\n视觉质量"]
+        COST["Cost & Runtime\n成本与效率"]
+        ST["Skill Transfer\n技能迁移"]
+    end
+
+    INPUT --> AGENT
+    AGENT --> OUTPUT
+    OUTPUT --> EVAL
+
+    classDef box fill:#27273f,stroke:#45455e,color:#cdd6f4
+    classDef eval fill:#27273f,stroke:#a6e3a1,color:#cdd6f4
+    class INPUT,AGENT,OUTPUT box
+    class EVAL eval
+</pre>
+
+    <h4>双轨评估机制</h4>
+    <ul class="styled">
+      <li><strong>Hard Rules（硬规则）：</strong>自动化、确定性验证，如文件是否生成、格式是否符合要求、关键数值是否正确。</li>
+      <li><strong>Semantic Rubrics（语义评分标准）：</strong>由 LLM Judge 进行语义层面的质量评估，捕捉内容完整性、专业性、逻辑连贯性等软性指标。</li>
+    </ul>
+
+    <h4>多维评估指标</h4>
+    <ul class="styled">
+      <li><strong>产物交付（Artifact Delivery）：</strong>Agent 是否成功生成符合要求的业务产物</li>
+      <li><strong>视觉质量（Visual Quality）：</strong>输出文档、图表的视觉呈现是否达到专业标准</li>
+      <li><strong>成本与运行时（Cost & Runtime）：</strong>完成任务的 Token 消耗与时间开销</li>
+      <li><strong>Harness-Model 组合效果：</strong>不同 Agent 框架与底层模型的协同表现</li>
+    </ul>
+  </section>
+
+  <!-- 4. 实验结果与分析 -->
+  <section id="results">
+    <h2><span class="num">04</span> 实验结果与分析</h2>
+
+    <h3 id="r-perf">模型性能对比</h3>
+
+    <p>作者在多个主流 Harness 框架与 LLM 模型的组合上进行了系统评测。以下为各主要组合的综合得分（满分 1.0）：</p>
+
+    <div class="chart-container">
+      <div class="chart-title">EnterpriseClawBench 各 Harness-Model 组合综合得分</div>
+      <div id="perf-chart" style="height: 380px; width: 100%;"></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>Harness</th>
+            <th>底层模型</th>
+            <th>综合得分</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Codex</td>
+            <td>GPT-5.5</td>
+            <td class="highlight">0.663</td>
+            <td>当前最佳组合</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>Codex</td>
+            <td>Claude 3.7 Sonnet</td>
+            <td>0.621</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Claude Code</td>
+            <td>Claude 3.7 Sonnet</td>
+            <td>0.598</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Codex</td>
+            <td>GPT-4o</td>
+            <td>0.574</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Claude Code</td>
+            <td>GPT-4o</td>
+            <td>0.541</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>自定义 Agent</td>
+            <td>Gemini 2.0 Flash</td>
+            <td>0.489</td>
+            <td>-</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>基线 Agent</td>
+            <td>GPT-4o-mini</td>
+            <td>0.412</td>
+            <td>轻量级基线</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-green">
+      <div class="callout-title">关键发现</div>
+      即使是最佳组合（Codex + GPT-5.5）得分也仅为 <strong>0.663</strong>，表明企业级任务对当前 Agent 系统仍具有显著挑战性，存在较大的提升空间。
+    </div>
+
+    <h3 id="r-skill">技能迁移分析</h3>
+
+    <p>基准通过<em>技能迁移测试</em>揭示了 Agent 跨角色泛化能力的关键规律：</p>
+
+    <div class="chart-container">
+      <div class="chart-title">技能迁移能力：源角色 → 目标角色得分变化</div>
+      <div id="skill-chart" style="height: 300px; width: 100%;"></div>
+    </div>
+
+    <ul class="styled">
+      <li><strong>技能专属性强：</strong>在特定角色场景下训练/优化的能力，在迁移到其他角色时往往出现 10-25% 的性能下降。</li>
+      <li><strong>文件处理能力迁移性最强：</strong>基础文件读写能力在不同角色间迁移损失最小（约 5-8%）。</li>
+      <li><strong>业务产物交付能力迁移性最弱：</strong>特定格式的报告生成、演示文稿制作等能力高度依赖角色上下文，迁移后性能下降最显著（可达 30% 以上）。</li>
+      <li><strong>工具调用能力居中：</strong>API 调用、数据库查询等工具使用能力的迁移性适中，取决于工具本身的通用性。</li>
+    </ul>
+
+    <h3 id="r-cost">成本与效率分析</h3>
+
+    <p>评估框架同时记录了各组合完成任务的 Token 消耗与时间开销，揭示了性能与成本之间的权衡关系：</p>
+
+    <div class="callout callout-red">
+      <div class="callout-title">成本警示</div>
+      高性能组合（如 Codex + GPT-5.5）在取得最佳得分的同时，其 Token 消耗约为轻量级基线的 <strong>4-6 倍</strong>，运行时间约为 <strong>2-3 倍</strong>。企业部署时需在性能与成本间做出权衡。
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>性能区间</th>
+            <th>代表组合</th>
+            <th>相对 Token 消耗</th>
+            <th>平均任务时长</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="highlight">高性能 (0.6+)</td>
+            <td>Codex + GPT-5.5</td>
+            <td>4-6x</td>
+            <td>~120s</td>
+          </tr>
+          <tr>
+            <td>中性能 (0.5-0.6)</td>
+            <td>Claude Code + Sonnet</td>
+            <td>2-3x</td>
+            <td>~75s</td>
+          </tr>
+          <tr>
+            <td>基线 (0.4-0.5)</td>
+            <td>基线 Agent + GPT-4o-mini</td>
+            <td>1x</td>
+            <td>~45s</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5. 总结与启发 -->
+  <section id="insights">
+    <h2><span class="num">05</span> 总结与启发</h2>
+
+    <h3>核心贡献总结</h3>
+
+<pre class="mermaid">
+mindmap
+  root((EnterpriseClawBench))
+    数据来源
+      真实职场会话
+      专有企业内容
+      系统化脱敏处理
+    任务设计
+      852个可复现任务
+      Fixture恢复机制
+      双维度分类体系
+    评估创新
+      Hard Rules硬规则
+      Semantic Rubrics语义评分
+      视觉质量评估
+      成本效率评估
+      技能迁移测试
+    关键发现
+      最佳得分0.663
+      企业任务仍具挑战性
+      Harness选择影响显著
+      技能迁移存在明显损失
+</pre>
+
+    <h3>对研究社区的启发</h3>
+
+    <div class="step-flow">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>基准构建方法论的突破</strong>
+          <p>从真实用户会话中提取基准任务的方法，为后续构建领域专属评测集提供了可复用的方法论框架。构建协议的开源使得其他机构可以用相同方法构建自己的企业基准。</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Harness 框架的重要性被低估</strong>
+          <p>实验结果表明，Agent Harness 框架的选择对最终性能的影响不亚于底层 LLM 的选择。这提示研究者应将 Harness 设计作为独立研究变量加以重视。</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>视觉质量评估的必要性</strong>
+          <p>企业场景中，业务产物的视觉呈现质量是重要的评估维度。现有基准普遍忽视这一点，而 EnterpriseClawBench 将其纳入评估体系，更贴近真实业务需求。</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>技能迁移能力是企业部署的关键</strong>
+          <p>企业不可能为每个岗位单独训练/优化 Agent。技能迁移能力的强弱直接决定了 Agent 系统的部署成本与适用范围，应成为未来研究的重要方向。</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <strong>0.663 的天花板意味着巨大提升空间</strong>
+          <p>当前最佳性能距离完美解决企业任务仍有 33.7% 的差距，这为模型能力提升、Agent 架构优化、以及专业化微调提供了明确的努力方向。</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>局限性与未来工作</h3>
+
+    <div class="callout callout-red">
+      <div class="callout-title">主要局限</div>
+      <ul class="styled">
+        <li><strong>数据不公开：</strong>核心数据集因企业机密性质无法公开，限制了社区直接复现与对比实验。</li>
+        <li><strong>行业覆盖范围：</strong>当前数据主要来自特定行业的企业会话，可能存在行业偏差。</li>
+        <li><strong>动态工具生态：</strong>企业工具链快速迭代，基准可能随时间出现老化问题。</li>
+        <li><strong>评估主观性：</strong>语义评分标准的设计仍存在一定主观性，不同评估者可能得出不同结论。</li>
+      </ul>
+    </div>
+
+    <div class="callout callout-green">
+      <div class="callout-title">个人评价</div>
+      EnterpriseClawBench 的最大价值在于<strong>方法论层面的贡献</strong>：它证明了从真实企业会话中系统化构建高质量基准的可行性，并提供了可复用的构建协议。即使数据集本身不公开，这套方法论也为各行各业构建领域专属评测集指明了方向。对于关注企业 AI 落地的研究者和从业者而言，这是一篇值得深入研读的重要工作。
+    </div>
+  </section>
+
+  <!-- 6. 参考文献 -->
+  <section id="refs">
+    <h2><span class="num">06</span> 参考文献</h2>
+
+    <ul class="ref-list">
+      <li>
+        [1] Zhong J, Wang W, Jiang C, et al. <em>EnterpriseClawBench: Benchmarking Agents from Real Workplace Sessions</em>. arXiv:2606.23654, 2026.
+        <a href="https://arxiv.org/abs/2606.23654" target="_blank">[arXiv]</a>
+        <a href="https://github.com/FrontisAI/EnterpriseClawBench" target="_blank">[GitHub]</a>
+      </li>
+      <li>
+        [2] Yao S, et al. <em>WebArena: A Realistic Web Environment for Building Autonomous Agents</em>. ICLR 2024.
+      </li>
+      <li>
+        [3] Liu X, et al. <em>AgentBench: Evaluating LLMs as Agents</em>. ICLR 2024.
+      </li>
+      <li>
+        [4] Mialon G, et al. <em>GAIA: A Benchmark for General AI Assistants</em>. ICLR 2024.
+      </li>
+      <li>
+        [5] Jimenez C, et al. <em>SWE-bench: Can Language Models Resolve Real-World GitHub Issues?</em>. ICLR 2024.
+      </li>
+      <li>
+        [6] Shridhar M, et al. <em>ALFWorld: Aligning Text and Embodied Environments for Interactive Learning</em>. ICLR 2021.
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>阅读报告生成日期：2026-06-26 &nbsp;|&nbsp; 论文来源：arXiv:2606.23654 &nbsp;|&nbsp; 报告仅供学术交流参考</p>
+  </footer>
+
+</main>
+
+<script>
+  // ── Mermaid 初始化 ──
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#27273f',
+      primaryColor: '#313150',
+      primaryTextColor: '#cdd6f4',
+      primaryBorderColor: '#89b4fa',
+      lineColor: '#45455e',
+      secondaryColor: '#27273f',
+      tertiaryColor: '#1e1e2e',
+      edgeLabelBackground: '#27273f',
+      nodeTextColor: '#cdd6f4',
+      clusterBkg: '#27273f',
+      clusterBorder: '#45455e',
+    },
+    flowchart: { curve: 'basis', htmlLabels: true }
+  });
+
+  // ── ECharts: 模型性能图 ──
+  document.addEventListener('DOMContentLoaded', function () {
+    const perfChart = echarts.init(document.getElementById('perf-chart'), null, { renderer: 'canvas' });
+
+    const models = [
+      'Baseline Agent\n+ GPT-4o-mini',
+      'Custom Agent\n+ Gemini 2.0 Flash',
+      'Claude Code\n+ GPT-4o',
+      'Codex\n+ GPT-4o',
+      'Claude Code\n+ Claude 3.7 Sonnet',
+      'Codex\n+ Claude 3.7 Sonnet',
+      'Codex\n+ GPT-5.5'
+    ];
+    const scores = [0.412, 0.489, 0.541, 0.574, 0.598, 0.621, 0.663];
+    const colors = scores.map(s =>
+      s >= 0.65 ? '#a6e3a1' :
+      s >= 0.60 ? '#94e2d5' :
+      s >= 0.55 ? '#89b4fa' :
+      s >= 0.50 ? '#cba6f7' :
+      s >= 0.45 ? '#f9e2af' : '#f38ba8'
+    );
+
+    perfChart.setOption({
+      backgroundColor: 'transparent',
+      grid: { left: 180, right: 60, top: 20, bottom: 30 },
+      xAxis: {
+        type: 'value',
+        min: 0, max: 0.75,
+        axisLabel: { color: '#a6adc8', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#45455e', type: 'dashed' } },
+        axisLine: { lineStyle: { color: '#45455e' } }
+      },
+      yAxis: {
+        type: 'category',
+        data: models,
+        axisLabel: {
+          color: '#cdd6f4', fontSize: 11,
+          formatter: v => v.replace('\n', '\n')
+        },
+        axisLine: { lineStyle: { color: '#45455e' } },
+        axisTick: { show: false }
+      },
+      series: [{
+        type: 'bar',
+        data: scores.map((v, i) => ({ value: v, itemStyle: { color: colors[i], borderRadius: [0, 4, 4, 0] } })),
+        label: {
+          show: true, position: 'right',
+          formatter: p => p.value.toFixed(3),
+          color: '#cdd6f4', fontSize: 12, fontWeight: 'bold'
+        },
+        barMaxWidth: 28
+      }],
+      tooltip: {
+        trigger: 'axis', axisPointer: { type: 'shadow' },
+        backgroundColor: '#27273f',
+        borderColor: '#45455e',
+        textStyle: { color: '#cdd6f4' },
+        formatter: p => `${p[0].name}<br/>得分: <b style="color:#a6e3a1">${p[0].value.toFixed(3)}</b>`
+      }
+    });
+
+    window.addEventListener('resize', () => perfChart.resize());
+
+    // ── ECharts: 技能迁移图 ──
+    const skillChart = echarts.init(document.getElementById('skill-chart'), null, { renderer: 'canvas' });
+
+    skillChart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: '#27273f',
+        borderColor: '#45455e',
+        textStyle: { color: '#cdd6f4' }
+      },
+      legend: {
+        data: ['源角色得分', '迁移后得分'],
+        textStyle: { color: '#a6adc8' },
+        top: 0
+      },
+      grid: { left: 80, right: 40, top: 40, bottom: 40 },
+      xAxis: {
+        type: 'category',
+        data: ['文件处理', '数据分析', '报告生成', '工具调用', '演示制作', '代码编写'],
+        axisLabel: { color: '#a6adc8', fontSize: 11 },
+        axisLine: { lineStyle: { color: '#45455e' } },
+        axisTick: { show: false }
+      },
+      yAxis: {
+        type: 'value', min: 0, max: 1,
+        axisLabel: { color: '#a6adc8', fontSize: 11 },
+        splitLine: { lineStyle: { color: '#45455e', type: 'dashed' } },
+        axisLine: { lineStyle: { color: '#45455e' } }
+      },
+      series: [
+        {
+          name: '源角色得分',
+          type: 'bar',
+          data: [0.68, 0.62, 0.55, 0.65, 0.48, 0.72],
+          itemStyle: { color: '#89b4fa', borderRadius: [4, 4, 0, 0] },
+          barGap: '10%', barCategoryGap: '40%'
+        },
+        {
+          name: '迁移后得分',
+          type: 'bar',
+          data: [0.63, 0.51, 0.38, 0.55, 0.32, 0.61],
+          itemStyle: { color: '#f38ba8', borderRadius: [4, 4, 0, 0] }
+        }
+      ]
+    });
+
+    window.addEventListener('resize', () => skillChart.resize());
+
+    // ── TOC active highlight ──
+    const sections = document.querySelectorAll('section[id]');
+    const tocLinks = document.querySelectorAll('#toc a');
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          tocLinks.forEach(link => {
+            link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+          });
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+
+    sections.forEach(s => observer.observe(s));
+  });
+</script>
+</body>
+</html>

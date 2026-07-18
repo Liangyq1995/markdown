@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多模态模型综合技术研究报告</title>
+  <style>
+    :root {
+      --bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;
+      --heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;
+      --strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #toc a:hover{background:var(--border);}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+    #toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+    main{margin-left:240px;max-width:none;padding:40px 64px;}
+    h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+    h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+    h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+    p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+    ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+    th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+    td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+    code{font-family:'JetBrains Mono','Fira Code',monospace;}
+    p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+    .echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+    .tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+    .tech-card.green{border-left:4px solid var(--strong);}
+    .tech-card.blue{border-left:4px solid var(--heading);}
+    .tech-card.yellow{border-left:4px solid var(--yellow);}
+    .tech-card.purple{border-left:4px solid var(--purple);}
+    .tech-card.red{border-left:4px solid var(--red);}
+    .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:1em 0;}
+    .diff-old{background:#2e1e1e;border:1px solid var(--red);border-radius:6px;padding:14px 18px;}
+    .diff-new{background:#1e2e1e;border:1px solid var(--strong);border-radius:6px;padding:14px 18px;}
+    .diff-label{font-size:.78em;font-weight:700;text-transform:uppercase;margin-bottom:8px;}
+    .diff-label.old{color:var(--red);}.diff-label.new{color:var(--strong);}
+    .timeline-wrap{overflow-x:auto;margin:1em 0;}
+    .timeline{display:flex;gap:0;min-width:900px;}
+    .tl-col{flex:1;display:flex;flex-direction:column;}
+    .tl-period{background:#2a2a3e;border:1px solid var(--border);text-align:center;font-weight:700;color:var(--heading);padding:10px 4px;font-size:.85em;border-radius:6px 6px 0 0;}
+    .tl-body{flex:1;padding:10px 6px;border-left:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);border-radius:0 0 6px 6px;}
+    .tl-item{background:#313244;border-radius:5px;padding:6px 8px;margin-bottom:6px;font-size:.82em;line-height:1.5;}
+    .tl-item:last-child{margin-bottom:0;}
+    .tl-tag{display:inline-block;font-size:.72em;font-weight:700;padding:1px 6px;border-radius:10px;margin-bottom:3px;background:var(--heading);color:#1e1e2e;}
+    .tl-tag.orange{background:#fab387;}.tl-tag.green{background:#a6e3a1;}.tl-tag.purple{background:#cba6f7;}.tl-tag.red{background:#f38ba8;}
+    .badge{display:inline-block;font-size:.75em;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px;vertical-align:middle;}
+    .badge.high{background:#1e3a1e;color:var(--strong);border:1px solid var(--strong);}
+    .badge.medium{background:#3a3a1e;color:var(--yellow);border:1px solid var(--yellow);}
+    .formula-box{background:#2a2a3e;border-radius:6px;padding:14px 18px;margin:.8em 0;overflow-x:auto;}
+    .algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;font-family:'JetBrains Mono',monospace;font-size:.85em;line-height:1.7;}
+    .algo-box .kw{color:#cba6f7;font-weight:700;}
+    .algo-box .cm{color:#6c7086;font-style:italic;}
+    .algo-box .var{color:#94e2d5;}
+    .algo-box .fn{color:#a6e3a1;}
+    .three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:1em 0;}
+    .info-box{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:16px 18px;text-align:center;}
+    .info-box .num{font-size:2em;font-weight:700;color:var(--heading);line-height:1.2;}
+    .info-box .label{font-size:.82em;color:#6c7086;margin-top:4px;}
+    .source-list{font-size:.82em;color:#6c7086;margin-top:.4em;}
+    .source-list a{color:#6c7086;}
+    .step-row{display:flex;align-items:flex-start;margin:.7em 0;gap:10px;}
+    .step-num{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;border-radius:50%;background:var(--heading);color:#1e1e2e;font-weight:700;font-size:.82em;flex-shrink:0;margin-top:3px;}
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>多模态模型综合技术研究报告</h1>
+<p style="color:#6c7086;margin-bottom:.6em">Deep Research · 技术深度版 · 生成日期：2026-06-20</p>
+<table>
+  <tr><th>覆盖范围</th><td>视觉编码器 · 模态对齐器 · 两阶段训练 · 主流模型横向对比 · 幻觉缓解方法 · 自动驾驶应用</td></tr>
+  <tr><th>模型覆盖</th><td>LLaVA 1.0/1.5/1.6 · BLIP-2 · InstructBLIP · Flamingo · CogVLM · InternVL2 · Qwen2.5-VL · EMMA</td></tr>
+</table>
+<hr>
+
+<!-- ===== 一、视觉编码器技术细节 ===== -->
+<h2 id="s1">一、视觉编码器：ViT 与主流变体</h2>
+<p>视觉编码器负责将像素图像转化为语义特征向量，是 MLLM 的感知基础。当前主流选择均基于 Vision Transformer（ViT），但在参数规模、预训练目标和分辨率处理策略上各有差异。</p>
+
+<h3 id="s1-1">1.1 ViT 架构原理</h3>
+<p>ViT 将输入图像 $H \times W$ 切分为 $N$ 个固定大小的 patch（通常 $14 \times 14$ 或 $16 \times 16$ 像素），每个 patch 线性投影为 $D$ 维向量，加上可学习的 2D 位置编码后送入标准 Transformer Encoder。</p>
+<div class="formula-box">
+  <p>图像切分：$N = \dfrac{H \times W}{P^2}$，其中 $P$ 为 patch 边长，$N$ 为 token 数</p>
+  <p>Patch 嵌入：$\mathbf{z}_0 = [\mathbf{x}_{\text{cls}}; \mathbf{x}_p^1 \mathbf{E}; \mathbf{x}_p^2 \mathbf{E}; \cdots; \mathbf{x}_p^N \mathbf{E}] + \mathbf{E}_{\text{pos}}$，$\mathbf{E} \in \mathbb{R}^{(P^2 \cdot C) \times D}$</p>
+</div>
+
+<h3 id="s1-2">1.2 主流视觉编码器对比</h3>
+<table>
+  <tr>
+    <th>编码器</th><th>参数量</th><th>Patch Size</th><th>输入分辨率</th><th>预训练目标</th><th>典型使用模型</th>
+  </tr>
+  <tr>
+    <td><strong>CLIP ViT-L/14</strong></td><td>307M</td><td>14px</td><td>224×224</td><td>对比学习（softmax NCE）</td><td>LLaVA 1.0/1.5，早期 CogVLM</td>
+  </tr>
+  <tr>
+    <td><strong>CLIP ViT-L/14@336</strong></td><td>307M</td><td>14px</td><td><strong>336×336</strong></td><td>对比学习</td><td>LLaVA 1.5/1.6（提升细节分辨率）</td>
+  </tr>
+  <tr>
+    <td><strong>SigLIP-SO400M</strong></td><td>400M</td><td>14px</td><td>224→384</td><td><strong>Sigmoid 二元损失</strong>（逐对，无 softmax）</td><td>LLaVA-NeXT，PaliGemma，Qwen2-VL</td>
+  </tr>
+  <tr>
+    <td><strong>EVA-CLIP-g/14</strong></td><td>1.0B</td><td>14px</td><td>224→336</td><td>对比学习 + MAE 重建</td><td>BLIP-2，InstructBLIP，InternVL</td>
+  </tr>
+  <tr>
+    <td><strong>InternViT-6B</strong></td><td><strong>6B</strong></td><td>14px</td><td>448×448</td><td>对比学习 + 像素级重建</td><td>InternVL 系列（超大视觉编码器路线）</td>
+  </tr>
+  <tr>
+    <td><strong>DFN-ViT-H</strong></td><td>632M</td><td>14px</td><td>378×378</td><td>Data Filtering Networks 筛选</td><td>LLaVA-NeXT 部分实验</td>
+  </tr>
+</table>
+
+<div class="tech-card blue">
+  <h4>SigLIP 与 CLIP 的关键差异</h4>
+  <p>CLIP 使用 InfoNCE 损失，每个 batch 内所有负样本共享 softmax 分母，<strong>要求极大 batch size</strong>（65536）：</p>
+  <div class="formula-box">$$\mathcal{L}_{\text{CLIP}} = -\frac{1}{N}\sum_i \log \frac{\exp(s_{ii}/\tau)}{\sum_j \exp(s_{ij}/\tau)}$$</div>
+  <p>SigLIP 改用逐对 <strong>Sigmoid 二元交叉熵</strong>，正对标签为 +1，负对为 -1，消除 softmax 归一化，对小 batch 更友好：</p>
+  <div class="formula-box">$$\mathcal{L}_{\text{SigLIP}} = -\frac{1}{N^2}\sum_{i,j} \log \sigma\!\left(y_{ij} \cdot (s_{ij} - b)\right), \quad y_{ij} \in \{+1,-1\}$$</div>
+  <p>其中 $b$ 为可学习偏置项，$\sigma$ 为 sigmoid 函数，$s_{ij} = \langle v_i, t_j \rangle / \tau$。</p>
+</div>
+
+<!-- ===== 二、模态对齐器 ===== -->
+<h2 id="s2">二、模态对齐器：Q-Former vs MLP Projector</h2>
+<p>模态对齐器（Modal Aligner）是连接视觉编码器与 LLM 骨干的核心桥梁，其设计直接决定视觉信息的压缩率、对齐质量和训练效率。当前主流方案分为两大流派：Q-Former（重量级查询压缩）和 MLP Projector（轻量直接映射）。</p>
+
+<h3 id="s2-1">2.1 Q-Former（BLIP-2 提出）</h3>
+<div class="tech-card purple">
+  <h4>架构原理</h4>
+  <p>Q-Former 是一个轻量 Transformer，包含 <strong>32 个可学习 Query Token</strong>（$768$ 维），通过跨注意力机制从冻结的视觉编码器输出中提取信息，再将 32 个压缩后的视觉 token 送入 LLM。</p>
+  <pre class="mermaid">
+flowchart LR
+  VE["视觉编码器输出<br>N×D（N≈257）"] -->|Cross-Attn| QF["Q-Former<br>32 learnable queries<br>Self-Attn + Cross-Attn"]
+  TXT["文本输入<br>Tokenized"] -->|Self-Attn| QF
+  QF -->|32 tokens| FC["Linear Layer"] --> LLM["LLM 骨干<br>OPT / Flan-T5"]
+  </pre>
+  <p><strong>参数量：</strong>~188M（独立于视觉编码器和 LLM）</p>
+  <p><strong>压缩率：</strong>从 ViT 输出的 257 个 token 压缩为 <strong>固定 32 个</strong>，大幅降低 LLM 输入长度</p>
+  <p><strong>为什么有效：</strong>32 个 Query 通过竞争性注意力自动学会关注不同视觉区域，实现信息提炼而非无损传递</p>
+</div>
+
+<div class="tech-card yellow">
+  <h4>BLIP-2 两阶段预训练</h4>
+  <div class="step-row"><span class="step-num">1</span><div><strong>阶段一：视觉-语言表示学习</strong>（冻结视觉编码器，训练 Q-Former）<br>联合优化三个目标：图文对比学习（ITC）、图文匹配分类（ITM）、图到文生成（ITG）</div></div>
+  <div class="step-row"><span class="step-num">2</span><div><strong>阶段二：视觉-语言生成学习</strong>（冻结视觉编码器+Q-Former，训练 LLM 接口）<br>将 Q-Former 输出通过全连接层投影到 LLM 输入空间，训练语言生成目标</div></div>
+</div>
+
+<h3 id="s2-2">2.2 MLP Projector（LLaVA 路线）</h3>
+<div class="tech-card green">
+  <h4>架构原理</h4>
+  <p>LLaVA 采用极简设计：将 ViT 输出的每个视觉 token 直接通过 <strong>2 层 MLP（含 GELU 激活）</strong> 投影到 LLM 的词嵌入维度，无任何压缩。</p>
+  <div class="formula-box">
+    <p>$\mathbf{H}_v = \text{MLP}(f_{\text{ViT}}(\mathbf{X}_v))$，其中 MLP：$\mathbb{R}^{D_v} \to \mathbb{R}^{D_{\text{LLM}}}$</p>
+    <p>$\text{MLP}(x) = W_2 \cdot \text{GELU}(W_1 x + b_1) + b_2$</p>
+  </div>
+  <p><strong>参数量：</strong>CLIP ViT-L/14@336 → LLaMA-13B 时约 7.2M 参数，极轻量</p>
+  <p><strong>输出 token 数：</strong>CLIP ViT-L/14@336 输出 576 个 patch token，LLaVA 直接输入 <strong>576 个视觉 token</strong> 给 LLM</p>
+  <p><strong>为什么有效：</strong>更大量的视觉 token 保留了更多空间细节；实验表明 2-layer MLP 显著优于 1-layer（LLaVA 1.5 的主要改进之一）</p>
+</div>
+
+<h3 id="s2-3">2.3 Q-Former vs MLP Projector 对比</h3>
+<table>
+  <tr><th>维度</th><th>Q-Former（BLIP-2）</th><th>MLP Projector（LLaVA）</th></tr>
+  <tr><td><strong>输出 token 数</strong></td><td>固定 32 个</td><td>等于 ViT patch 数（如 576）</td></tr>
+  <tr><td><strong>LLM 输入长度</strong></td><td>短，LLM 计算开销小</td><td>长，LLM 处理 576+ token</td></tr>
+  <tr><td><strong>视觉信息保留</strong></td><td>压缩损失，细节可能丢失</td><td>无损保留，空间细节更好</td></tr>
+  <tr><td><strong>训练复杂度</strong></td><td>高（Q-Former 需两阶段预训练）</td><td>低（端到端，一阶段对齐即可）</td></tr>
+  <tr><td><strong>参数量</strong></td><td>~188M</td><td>~7-10M</td></tr>
+  <tr><td><strong>适用场景</strong></td><td>计算受限、强压缩需求</td><td>细粒度视觉理解、OCR、空间推理</td></tr>
+</table>
+
+<!-- ===== 三、LLaVA 系列架构演进 ===== -->
+<h2 id="s3">三、LLaVA 系列：架构演进与关键技术</h2>
+<p>LLaVA（Large Language and Vision Assistant）是当前最具代表性的开源 VLM 家族，其架构简洁性使它成为后续研究的基线。从 1.0 到 NeXT，每个版本都针对明确的技术瓶颈进行改进。</p>
+
+<h3 id="s3-1">3.1 LLaVA 1.0（2023.04）— 概念验证</h3>
+<div class="tech-card blue">
+  <table>
+    <tr><th>组件</th><th>配置</th></tr>
+    <tr><td>视觉编码器</td><td>CLIP ViT-L/14（224×224，256 patch tokens）</td></tr>
+    <tr><td>对齐器</td><td>单层线性投影（Linear Layer，无激活）</td></tr>
+    <tr><td>LLM</td><td>Vicuna-7B / 13B</td></tr>
+    <tr><td>训练数据（Stage 1）</td><td>CC3M 子集 ~595K 图文对（Alignment）</td></tr>
+    <tr><td>训练数据（Stage 2）</td><td>LLaVA-Instruct-158K（GPT-4 生成的指令数据）</td></tr>
+    <tr><td>训练策略</td><td>Stage 1 冻结 ViT+LLM，仅训 Projector；Stage 2 冻结 ViT，训 Projector+LLM</td></tr>
+  </table>
+  <p style="margin-top:.8em"><strong>局限：</strong>单层线性投影对齐能力弱；输入分辨率仅 224px，细节严重丢失</p>
+</div>
+
+<h3 id="s3-2">3.2 LLaVA 1.5（2023.10）— 两大关键升级</h3>
+<div class="tech-card green">
+  <p><strong>升级 1：Projector 从 Linear → 2-layer MLP + GELU</strong><br>
+  实验表明 2-layer MLP 在 ScienceQA、TextVQA 等基准上相比 Linear 有 3-5% 的提升，原因是非线性映射能更好地拟合视觉-语言的非线性语义边界。</p>
+  <p><strong>升级 2：视觉编码器从 ViT-L/14@224 → ViT-L/14@336</strong><br>
+  输入分辨率从 224×224 提升至 336×336，patch token 数从 256 增至 <strong>576</strong>，对 OCR、文档理解等细粒度任务有明显改善。</p>
+  <table style="margin-top:.8em">
+    <tr><th>组件</th><th>配置</th></tr>
+    <tr><td>视觉编码器</td><td>CLIP ViT-L/14@<strong>336</strong>（576 patch tokens）</td></tr>
+    <tr><td>对齐器</td><td><strong>2-layer MLP + GELU</strong></td></tr>
+    <tr><td>LLM</td><td>Vicuna-7B/13B 或 LLaMA-2-7B/13B</td></tr>
+    <tr><td>训练数据（Stage 1）</td><td>LCS-558K（高质量图文对，替换 CC3M）</td></tr>
+    <tr><td>训练数据（Stage 2）</td><td>LLaVA-665K（混合多源指令数据）</td></tr>
+  </table>
+</div>
+
+<h3 id="s3-3">3.3 LLaVA 1.6 / NeXT（2024.01）— 动态高分辨率</h3>
+<p>LLaVA 1.5 的根本局限在于固定 336×336 输入，对于高分辨率文档/截图仍然模糊。LLaVA-NeXT 引入 <strong>AnyRes（任意分辨率）</strong> 策略：</p>
+<div class="tech-card purple">
+  <h4>AnyRes 动态分辨率处理流程</h4>
+  <div class="step-row"><span class="step-num">1</span><div><strong>选择最优切分网格：</strong>从预定义网格 {1×2, 1×3, 2×1, 2×2} 中选择与原图宽高比最接近的网格</div></div>
+  <div class="step-row"><span class="step-num">2</span><div><strong>图像切割：</strong>将原图 resize 并切割为 $k$ 个子图（最多 4 个），每个子图 336×336</div></div>
+  <div class="step-row"><span class="step-num">3</span><div><strong>全局缩略图：</strong>额外保留一张 336×336 的全局缩略图，保持全局语义</div></div>
+  <div class="step-row"><span class="step-num">4</span><div><strong>拼接 token：</strong>各子图各产生 576 个 token，总视觉 token 数最多达 $576 \times (k+1)$，用 <code>&lt;image_newline&gt;</code> 分隔行</div></div>
+  <table style="margin-top:1em">
+    <tr><th>配置</th><th>LLaVA 1.5</th><th>LLaVA 1.6 / NeXT</th></tr>
+    <tr><td>最大输入分辨率</td><td>336×336</td><td><strong>672×672</strong>（2×2 网格）</td></tr>
+    <tr><td>最大视觉 token 数</td><td>576</td><td><strong>2880</strong>（4子图+全局）</td></tr>
+    <tr><td>LLM 骨干</td><td>Vicuna</td><td>Mistral-7B / LLaMA-3-8B / Yi-34B</td></tr>
+    <tr><td>TextVQA 准确率</td><td>58.2</td><td><strong>67.1</strong>（+8.9%）</td></tr>
+    <tr><td>DocVQA 准确率</td><td>—</td><td><strong>78.2</strong></td></tr>
+  </table>
+</div>
+
+<!-- ===== 四、主流模型横向对比 ===== -->
+<h2 id="s4">四、主流 VLM 横向技术对比</h2>
+<p>以下对比涵盖架构设计、视觉编码器选型、对齐策略、训练配方和关键基准性能，帮助全面理解各模型的技术路线差异。</p>
+
+<h3 id="s4-1">4.1 架构配置总表</h3>
+<table>
+  <tr>
+    <th>模型</th><th>视觉编码器</th><th>对齐器</th><th>LLM 骨干</th><th>视觉 Token 数</th><th>最大输入分辨率</th>
+  </tr>
+  <tr>
+    <td><strong>LLaVA 1.5-13B</strong></td><td>CLIP ViT-L/14@336（307M）</td><td>2-layer MLP</td><td>Vicuna-13B</td><td>576</td><td>336×336</td>
+  </tr>
+  <tr>
+    <td><strong>LLaVA-NeXT-72B</strong></td><td>CLIP ViT-L/14@336（307M）</td><td>2-layer MLP + AnyRes</td><td>Qwen1.5-72B</td><td>最多 2880</td><td>1344×1344</td>
+  </tr>
+  <tr>
+    <td><strong>BLIP-2-13B</strong></td><td>EVA-CLIP-g（1.0B）</td><td>Q-Former（32 tokens）</td><td>Flan-T5-XXL / OPT-6.7B</td><td><strong>32</strong></td><td>224×224</td>
+  </tr>
+  <tr>
+    <td><strong>InstructBLIP-13B</strong></td><td>EVA-CLIP-g（1.0B）</td><td>指令感知 Q-Former</td><td>Vicuna-13B</td><td>32</td><td>224×224</td>
+  </tr>
+  <tr>
+    <td><strong>Flamingo-80B</strong></td><td>NFNet-F6（预训练）</td><td>Perceiver Resampler（64 tokens）</td><td>Chinchilla-70B</td><td>64</td><td>320×320</td>
+  </tr>
+  <tr>
+    <td><strong>CogVLM-17B</strong></td><td>EVA-CLIP-g@224（1.0B）</td><td>Visual Expert（独立 QKV+FFN）</td><td>Vicuna-7B + Visual Expert 层</td><td>256</td><td>490×490</td>
+  </tr>
+  <tr>
+    <td><strong>InternVL2-8B</strong></td><td>InternViT-300M</td><td>MLP + Dynamic Resolution</td><td>InternLM-2.5-7B</td><td>动态</td><td>448×448×tiles</td>
+  </tr>
+  <tr>
+    <td><strong>InternVL2-76B</strong></td><td><strong>InternViT-6B</strong></td><td>MLP Projector</td><td>InternLM-2.5-20B + Hermes 2.0</td><td>动态</td><td>448×448×tiles</td>
+  </tr>
+  <tr>
+    <td><strong>Qwen2-VL-7B</strong></td><td>SigLIP-SO400M</td><td>MLP + Naive Dynamic Resolution</td><td>Qwen2-7B</td><td>动态（无上限）</td><td>任意分辨率</td>
+  </tr>
+  <tr>
+    <td><strong>Qwen2.5-VL-72B</strong></td><td>SigLIP-SO400M + 2D-RoPE</td><td>MLP + Window Attention 压缩</td><td>Qwen2.5-72B</td><td>动态压缩</td><td>任意分辨率</td>
+  </tr>
+</table>
+
+<h3 id="s4-2">4.2 CogVLM 的 Visual Expert 设计</h3>
+<div class="tech-card purple">
+  <h4>核心思想：为视觉 token 建立独立的注意力参数</h4>
+  <p>标准 LLaVA 让视觉 token 和文本 token 共用同一套 QKV 权重，但这两种 token 的语义空间差异极大。CogVLM 为每个 Transformer 层的视觉 token 维护 <strong>独立的 Q/K/V 投影矩阵和 FFN</strong>：</p>
+  <div class="formula-box">
+    <p>文本 token：$\text{Attn}(\mathbf{x}) = \text{softmax}\!\left(\frac{Q_L(\mathbf{x}) K_L(\mathbf{x})^\top}{\sqrt{d}}\right) V_L(\mathbf{x})$</p>
+    <p>视觉 token：$\text{Attn}(\mathbf{v}) = \text{softmax}\!\left(\frac{Q_V(\mathbf{v}) K_V(\mathbf{v})^\top}{\sqrt{d}}\right) V_V(\mathbf{v})$</p>
+  </div>
+  <p>其中 $Q_V, K_V, V_V$ 为视觉专属权重（Visual Expert），与文本权重 $Q_L, K_L, V_L$ 相互独立，无参数共享。</p>
+  <p><strong>代价：</strong>额外引入约 6B 参数（~40% 参数增加）</p>
+  <p><strong>收益：</strong>视觉 token 的深层语义处理更充分，在 NoCaps、TextVQA 等任务上超越 BLIP-2 和 Flamingo</p>
+</div>
+
+<h3 id="s4-3">4.3 Qwen2.5-VL 的原生动态分辨率</h3>
+<div class="tech-card green">
+  <h4>Naive Dynamic Resolution + 2D-RoPE</h4>
+  <p>Qwen2-VL 不预定义任何网格，而是直接对原始分辨率图像提取 patch，通过 <strong>Window Attention</strong> 在视觉编码器内压缩 token 数：</p>
+  <ul>
+    <li><strong>Window Attention 压缩：</strong>将相邻 $2\times2=4$ 个 patch token 合并为 1 个，token 数减少 4 倍，同时保留局部相对位置关系</li>
+    <li><strong>2D-RoPE：</strong>为视觉 token 分配二维旋转位置编码 $(r, c)$（行×列），使模型感知图像的二维空间结构，区别于 LLaVA 的 1D 位置编码</li>
+    <li><strong>视频支持：</strong>扩展为 3D-RoPE $(t, r, c)$，天然支持视频序列的时序建模</li>
+  </ul>
+  <div class="formula-box">
+    <p>2D-RoPE：$\text{PE}(\mathbf{x}, r, c) = \mathbf{x} \cdot R(\theta_r) \cdot R(\theta_c)$，其中 $\theta_r, \theta_c$ 为行列旋转角</p>
+  </div>
+  <p><strong>效果：</strong>同一模型可处理 28×28 缩略图到 7680×3840 超高清图像，无需重新训练</p>
+</div>
+
+<h3 id="s4-4">4.4 主流基准性能对比</h3>
+<div id="chart-mmmu" class="echarts-container" style="height:380px"></div>
+<script>
+echarts.init(document.getElementById('chart-mmmu')).setOption({
+  backgroundColor:'#24243e',
+  title:{text:'主流 VLM 基准性能对比（越高越好）',textStyle:{color:'#cdd6f4',fontSize:13},left:'center',top:8},
+  tooltip:{trigger:'axis'},
+  legend:{data:['MMBench','MMMU','TextVQA','SeedBench'],textStyle:{color:'#cdd6f4'},top:36,itemWidth:14},
+  grid:{top:70,bottom:60,left:140,right:24},
+  xAxis:{type:'value',min:50,max:90,axisLabel:{color:'#6c7086',formatter:'{value}'},axisLine:{lineStyle:{color:'#45475a'}},splitLine:{lineStyle:{color:'#313244'}}},
+  yAxis:{type:'category',data:['LLaVA 1.5-7B','LLaVA 1.5-13B','LLaVA-NeXT-34B','BLIP-2-13B','InstructBLIP-13B','CogVLM-17B','InternVL2-8B','InternVL2-76B','Qwen2.5-VL-7B','Qwen2.5-VL-72B'],axisLabel:{color:'#cdd6f4',fontSize:11},axisLine:{lineStyle:{color:'#45475a'}}},
+  series:[
+    {name:'MMBench',type:'bar',barWidth:6,data:[67.0,70.7,79.3,—,—,63.7,79.4,86.5,83.0,88.3].map(v=>v||null),itemStyle:{color:'#89b4fa'}},
+    {name:'MMMU',type:'bar',barWidth:6,data:[35.3,36.4,51.1,—,—,—,51.2,55.2,58.6,70.5].map(v=>v||null),itemStyle:{color:'#cba6f7'}},
+    {name:'TextVQA',type:'bar',barWidth:6,data:[58.2,61.3,64.9,42.5,50.7,68.8,77.4,84.4,84.9,86.1].map(v=>v||null),itemStyle:{color:'#a6e3a1'}},
+    {name:'SeedBench',type:'bar',barWidth:6,data:[60.5,68.2,75.9,—,—,—,76.2,83.7,77.4,83.9].map(v=>v||null),itemStyle:{color:'#f9e2af'}}
+  ]
+});
+</script>
+
+<!-- ===== 五、两阶段训练策略 ===== -->
+<h2 id="s5">五、MLLM 两阶段训练策略</h2>
+<p>主流 MLLM 采用标准的两阶段训练范式：先通过大规模图文对齐预训练使视觉特征与语言空间对齐，再通过指令数据微调激发指令跟随能力。两阶段在冻结参数、学习率、数据配方上有本质差异。</p>
+
+<pre class="mermaid">
+flowchart TD
+  subgraph stage1["阶段一：视觉语言对齐预训练"]
+    S1A["冻结：视觉编码器 + LLM<br>可训：Projector / Q-Former"]
+    S1B["数据：大规模图文对<br>LCS-558K / CC12M / LAION 子集"]
+    S1C["目标：图文对比 / 图到文生成<br>学习率：1e-3"]
+    S1A --> S1B --> S1C
+  end
+  subgraph stage2["阶段二：视觉指令微调"]
+    S2A["冻结：视觉编码器<br>可训：Projector + LLM"]
+    S2B["数据：多任务指令数据<br>LLaVA-665K / ShareGPT4V / ALLaVA"]
+    S2C["目标：语言建模 CE Loss<br>学习率：2e-5，余弦退火"]
+    S2A --> S2B --> S2C
+  end
+  PRETRAIN["基础模型<br>（独立预训练的 ViT + LLM）"] --> stage1 --> stage2 --> FINAL["最终 MLLM"]
+</pre>
+
+<h3 id="s5-1">5.1 训练数据配方</h3>
+<table>
+  <tr><th>数据集</th><th>规模</th><th>类型</th><th>用途</th><th>使用模型</th></tr>
+  <tr><td><strong>CC3M 子集</strong></td><td>~595K</td><td>图文对</td><td>Stage 1 对齐</td><td>LLaVA 1.0</td></tr>
+  <tr><td><strong>LCS-558K</strong></td><td>558K</td><td>精选图文对</td><td>Stage 1 对齐（替换 CC3M）</td><td>LLaVA 1.5</td></tr>
+  <tr><td><strong>LLaVA-Instruct-158K</strong></td><td>158K</td><td>GPT-4 生成指令</td><td>Stage 2 指令微调</td><td>LLaVA 1.0</td></tr>
+  <tr><td><strong>LLaVA-665K</strong></td><td>665K</td><td>多源指令混合</td><td>Stage 2 指令微调</td><td>LLaVA 1.5</td></tr>
+  <tr><td><strong>ShareGPT4V-100K</strong></td><td>100K</td><td>GPT-4V 生成高质量描述</td><td>高质量对齐预训练</td><td>LLaVA-NeXT 等</td></tr>
+  <tr><td><strong>ALLaVA-4V</strong></td><td>715K</td><td>GPT-4V 生成多轮对话</td><td>Stage 2 增强</td><td>LLaVA 系列</td></tr>
+  <tr><td><strong>LAION-400M 子集</strong></td><td>数十亿级</td><td>网络爬取图文</td><td>CLIP / SigLIP 预训练</td><td>视觉编码器预训练</td></tr>
+</table>
+
+<h3 id="s5-2">5.2 损失函数设计</h3>
+<div class="tech-card blue">
+  <h4>Stage 2 的标准语言建模损失</h4>
+  <p>MLLM 在指令微调阶段通常只对 <strong>回答部分</strong>（Response）计算 CE Loss，问题部分（Question + Context）的 Loss 设为 0，避免让模型记忆提问方式而非学习视觉推理：</p>
+  <div class="formula-box">
+    $$\mathcal{L} = -\sum_{t \in \text{response tokens}} \log P(y_t \mid \mathbf{X}_v, \mathbf{X}_q, y_{\lt t}; \Theta)$$
+  </div>
+  <p>其中 $\mathbf{X}_v$ 为视觉输入，$\mathbf{X}_q$ 为问题文本，$\Theta$ 为可训参数，<code>$y_{\lt t}$</code> 表示 $t$ 时刻之前所有生成 token。</p>
+  <p><strong>注意：</strong><code>y_{\lt t}</code> 此处用 <code>\lt</code> 表示 $\lt$，避免 HTML 解析歧义。</p>
+</div>
+
+<!-- ===== 六、幻觉：成因与缓解方法 ===== -->
+<h2 id="s6">六、幻觉问题：根因分析与具体缓解方法</h2>
+<p>MLLM 幻觉（Hallucination）是指模型生成的文本与图像内容不一致，是当前影响实际部署的最主要可靠性问题。以下从根因分析到具体技术方案，给出系统性梳理。</p>
+
+<h3 id="s6-1">6.1 幻觉根因分类</h3>
+<pre class="mermaid">
+graph TD
+  H["MLLM 幻觉"] --> D["数据层面"]
+  H --> A["架构层面"]
+  H --> T["训练层面"]
+  D --> D1["统计偏置<br>（牛+草地共现→无草也说牛）"]
+  D --> D2["图文对质量差<br>（噪声描述 / 不匹配）"]
+  D --> D3["覆盖度不足<br>（长尾物体、罕见场景）"]
+  A --> A1["视觉信息压缩损失<br>（Q-Former 32 token 丢失细节）"]
+  A --> A2["注意力退化<br>（OPERA：过度依赖文本先验）"]
+  A --> A3["语言先验过强<br>（LLM 的知识覆盖视觉内容）"]
+  T --> T1["SFT 曝光偏置<br>（训练用 GT，推理用自身输出）"]
+  T --> T2["奖励模型偏置<br>（RLHF 奖励流畅性而非事实性）"]
+</pre>
+
+<h3 id="s6-2">6.2 VCD：视觉对比解码</h3>
+<div class="tech-card purple">
+  <h4>Visual Contrastive Decoding（VCD，2024）</h4>
+  <p><strong>核心思想：</strong>幻觉主要来自 LLM 语言先验（不看图也能猜出的内容）。VCD 通过对比"正常视觉输入"和"添加高斯噪声的视觉输入"的输出分布，消除语言先验的影响：</p>
+  <div class="formula-box">
+    $$p_{\text{VCD}}(y \mid \mathbf{X}_v, \mathbf{X}_q) \propto p(y \mid \mathbf{X}_v, \mathbf{X}_q) - \alpha \cdot p(y \mid \mathbf{X}_v^{\text{noisy}}, \mathbf{X}_q)$$
+  </div>
+  <p>其中 $\mathbf{X}_v^{\text{noisy}} = \mathbf{X}_v + \epsilon$（$\epsilon \sim \mathcal{N}(0, \sigma^2 I)$），$\alpha$ 控制对比强度。</p>
+  <p><strong>优点：</strong>无需额外训练，推理时直接应用</p>
+  <p><strong>效果：</strong>在 CHAIR 基准（幻觉评测）上将幻觉率降低约 10-15%</p>
+  <p><strong>缺点：</strong>每次推理需要两次前向传播，速度降低约 60%</p>
+</div>
+
+<h3 id="s6-3">6.3 OPERA：过度信任惩罚</h3>
+<div class="tech-card yellow">
+  <h4>Over-trust Penalty and Retrospective Assistance（OPERA，2024）</h4>
+  <p><strong>问题诊断：</strong>OPERA 发现幻觉往往发生在模型注意力集中于少数"汇聚 token"（Attention Sink）时——模型忽略视觉 token，过度依赖文本上下文中的汇聚词。</p>
+  <p><strong>解决方案：</strong>在 Beam Search 解码时引入两个机制：</p>
+  <ul>
+    <li><strong>Over-Trust Penalty：</strong>检测注意力矩阵中的 Sink 模式，对汇聚程度高的 token 施加对数概率惩罚</li>
+    <li><strong>Retrospective Assistance：</strong>当检测到幻觉风险时，回溯到更早的 Beam 分支重新生成</li>
+  </ul>
+  <div class="formula-box">
+    $$\text{penalty}(t) = \lambda \cdot \max_h \left[\sum_s \mathbf{A}_h[s, t]^2\right], \quad \text{if } \text{SinkScore}(t) > \tau$$
+  </div>
+  <p><strong>效果：</strong>在 CHAIR-S 上降低幻觉率 15-20%，且不需要任何额外训练</p>
+</div>
+
+<h3 id="s6-4">6.4 RLHF-V：人类反馈强化学习</h3>
+<div class="tech-card green">
+  <h4>RLHF-V（2024）— 直接在幻觉行为上施加人类反馈</h4>
+  <p><strong>核心做法：</strong>收集模型在视觉问答任务上的幻觉样本，由人工标注修正，再通过 <strong>Behavior Cloning（BC）+ DDPO</strong>（直接偏好优化的多模态版本）训练奖励模型和策略模型：</p>
+  <div class="step-row"><span class="step-num">1</span><div>人工收集 MLLM 在 5K 图片上的幻觉输出，标注正确答案与错误原因</div></div>
+  <div class="step-row"><span class="step-num">2</span><div>构造偏好对 $(y^+, y^-)$，其中 $y^+$ 为无幻觉回答，$y^-$ 为幻觉回答</div></div>
+  <div class="step-row"><span class="step-num">3</span><div>使用 DPO（Direct Preference Optimization）目标微调：</div></div>
+  <div class="formula-box">
+    $$\mathcal{L}_{\text{DPO}} = -\mathbb{E}\left[\log \sigma\!\left(\beta \log \frac{\pi_\theta(y^+ \mid x)}{\pi_{\text{ref}}(y^+ \mid x)} - \beta \log \frac{\pi_\theta(y^- \mid x)}{\pi_{\text{ref}}(y^- \mid x)}\right)\right]$$
+  </div>
+  <p><strong>效果：</strong>在 MMHal-Bench 上幻觉分降低 34.8%，且不损失指令跟随能力</p>
+</div>
+
+<h3 id="s6-5">6.5 ICD：指令对比解码</h3>
+<div class="tech-card blue">
+  <h4>Instruction Contrastive Decoding（ICD，2024）</h4>
+  <p><strong>思路：</strong>类似 VCD，但对比的是"正常指令"和"干扰指令"。干扰指令通过随机打乱或替换原始问题的关键词构造，能有效放大视觉内容对输出的影响：</p>
+  <div class="formula-box">
+    $$p_{\text{ICD}}(y \mid \mathbf{X}_v, \mathbf{X}_q) \propto (1+\alpha) \cdot p(y \mid \mathbf{X}_v, \mathbf{X}_q) - \alpha \cdot p(y \mid \mathbf{X}_v, \mathbf{X}_q^{\text{perturb}})$$
+  </div>
+  <p>其中 $\mathbf{X}_q^{\text{perturb}}$ 为扰动后的问题（如将"这张图片里有几只猫"改为"这张图片里有几个物体"）。</p>
+  <p><strong>效果：</strong>在 CHAIR 基准上比 VCD 再降低 5-8% 幻觉率，同时推理速度优于 VCD（扰动问题比添加图像噪声更高效）</p>
+</div>
+
+<h3 id="s6-6">6.6 Woodpecker：后处理幻觉修正</h3>
+<div class="tech-card red">
+  <h4>无需重新训练的后处理修正框架</h4>
+  <p>Woodpecker 是一个插件式后处理框架，通过 <strong>事实核查 + 外部工具</strong> 修正 MLLM 的幻觉输出，无需修改模型本身：</p>
+  <div class="step-row"><span class="step-num">1</span><div><strong>关键词提取：</strong>从 MLLM 输出中提取可验证的实体和关系（GPT-4 辅助）</div></div>
+  <div class="step-row"><span class="step-num">2</span><div><strong>视觉验证：</strong>用目标检测器（GLIP/Grounding DINO）在图像中验证实体是否存在</div></div>
+  <div class="step-row"><span class="step-num">3</span><div><strong>问题生成：</strong>针对待验证声明生成是/否问题，送回 VQA 模型二次确认</div></div>
+  <div class="step-row"><span class="step-num">4</span><div><strong>输出修正：</strong>将不一致的声明替换为验证通过的事实</div></div>
+  <p><strong>效果：</strong>在 CHAIR 基准上幻觉率降低约 30%，但由于多次外部调用，延迟高（约 3-5 倍）</p>
+</div>
+
+<h3 id="s6-7">6.7 幻觉缓解方法总结对比</h3>
+<table>
+  <tr><th>方法</th><th>类型</th><th>需要训练</th><th>推理开销</th><th>CHAIR-S 改善</th></tr>
+  <tr><td><strong>VCD</strong></td><td>解码干预</td><td>否</td><td>2× 前向传播</td><td>~10-15%</td></tr>
+  <tr><td><strong>OPERA</strong></td><td>解码干预</td><td>否</td><td>Beam Search 开销</td><td>~15-20%</td></tr>
+  <tr><td><strong>ICD</strong></td><td>解码干预</td><td>否</td><td>1.5× 前向传播</td><td>~15-23%</td></tr>
+  <tr><td><strong>RLHF-V</strong></td><td>训练后对齐</td><td>是（DPO）</td><td>无额外开销</td><td>~34.8%（MMHal）</td></tr>
+  <tr><td><strong>Woodpecker</strong></td><td>后处理修正</td><td>否（依赖外部工具）</td><td>3-5× 延迟</td><td>~30%</td></tr>
+  <tr><td><strong>LURE</strong></td><td>奖励学习</td><td>是（幻觉奖励模型）</td><td>无额外开销</td><td>~25%</td></tr>
+</table>
+
+<!-- ===== 七、EMMA 技术细节 ===== -->
+<h2 id="s7">七、EMMA：端到端多模态自动驾驶技术细节</h2>
+<p class="source-list">来源：<a href="https://waymo.com/blog/2024/10/introducing-emma" target="_blank">Waymo 官方博客</a>、<a href="https://arxiv.org/abs/2410.23262" target="_blank">arXiv:2410.23262</a></p>
+
+<h3 id="s7-1">7.1 统一语言空间的实现细节</h3>
+<div class="tech-card blue">
+  <h4>坐标序列化：将驾驶输出转化为文本</h4>
+  <p>EMMA 将驾驶任务的所有输出序列化为自然语言文本。以轨迹规划为例：</p>
+  <pre><code class="language-plaintext">输入（文本部分）：
+  "导航目标：前方 200m 右转进入高速入口。当前速度：68km/h。"
+
+输出（文本格式的轨迹）：
+  "未来 3 秒轨迹：(0.0, 0.0), (5.2, 0.1), (10.8, 0.6),
+   (16.9, 2.1), (23.5, 4.8), (30.2, 8.9)"
+  "前方目标物体：[car, (15.3m, 1.2m), 65km/h]"</code></pre>
+  <p>通过这种文本序列化，EMMA 将几何坐标、速度向量、3D 边界框等结构化输出全部纳入语言建模框架，实现真正的统一输入输出空间。</p>
+</div>
+
+<h3 id="s7-2">7.2 零样本 VLM 的自动驾驶局限</h3>
+<p>在 nuScenes 基准的详细评测中，零样本 VLM 存在以下系统性缺陷：</p>
+<ul>
+  <li><strong>速度感知错误：</strong>无法从连续帧中准确估计绝对速度，严重影响追车/让行决策</li>
+  <li><strong>空间关系推理弱：</strong>难以从 2D 图像准确估计 3D 深度和横向距离</li>
+  <li><strong>长时序规划不稳定：</strong>规划超过 3 秒的轨迹时一致性显著下降</li>
+  <li><strong>自车坐标系理解差：</strong>不理解"前方 15m 右侧 2m"等以自车为中心的坐标表达</li>
+</ul>
+
+<div id="chart-nuscenes" class="echarts-container" style="height:360px"></div>
+<script>
+echarts.init(document.getElementById('chart-nuscenes')).setOption({
+  backgroundColor:'#24243e',
+  title:{text:'nuScenes 零样本轨迹规划评测：L2 误差 vs 常数速度基线（越低越好）',textStyle:{color:'#cdd6f4',fontSize:13},left:'center',top:8},
+  tooltip:{trigger:'axis'},
+  grid:{top:50,bottom:50,left:145,right:60},
+  xAxis:{type:'value',name:'L2 误差 (m)',nameTextStyle:{color:'#6c7086'},axisLabel:{color:'#6c7086'},axisLine:{lineStyle:{color:'#45475a'}},splitLine:{lineStyle:{color:'#313244'}}},
+  yAxis:{type:'category',data:['LLaMA-3.2-11B','LLaMA-3.2-90B','DeepSeek-VL2-16B','Qwen2.5-VL-7B','DeepSeek-VL2-28B','Qwen2.5-VL-72B','Claude-3.5-Sonnet','GPT-4o','Gemini-2.5-Pro','Claude-3.7-Sonnet','⚡ 常数速度基线','GPT-4.1'],axisLabel:{color:'#cdd6f4',fontSize:11},axisLine:{lineStyle:{color:'#45475a'}}},
+  series:[{
+    type:'bar',
+    data:[2.41,2.18,1.95,1.82,1.74,1.61,1.52,1.41,1.19,1.09,1.10,1.07],
+    itemStyle:{color:(p)=>p.dataIndex===10?'#f38ba8':p.dataIndex===11?'#a6e3a1':'#89b4fa'},
+    label:{show:true,position:'right',color:'#cdd6f4',fontSize:11,formatter:'{c}m'}
+  }],
+  markLine:{data:[{xAxis:1.10,label:{formatter:'常数速度基线 1.10m',color:'#f38ba8'},lineStyle:{color:'#f38ba8',type:'dashed'}}]}
+});
+</script>
+
+<!-- ===== 八、原生多模态范式 ===== -->
+<h2 id="s8">八、原生多模态范式：Chameleon 与 Emu3</h2>
+<p>原生多模态（Native Multimodal）模型摒弃独立视觉编码器，将图像和文本统一 Tokenize 到同一离散词表空间，实现真正的模态融合。</p>
+
+<h3 id="s8-1">8.1 图像离散化：VQ-VAE Tokenizer</h3>
+<div class="tech-card purple">
+  <h4>核心技术：将图像压缩为离散 Token 序列</h4>
+  <p>原生多模态模型的关键基础设施是 <strong>图像 Tokenizer</strong>，通常基于 VQ-VAE（Vector Quantized VAE）或改进版本 VQGAN：</p>
+  <div class="step-row"><span class="step-num">1</span><div><strong>Encoder：</strong>CNN 将图像 $H \times W \times 3$ 下采样为特征图 $\frac{H}{f} \times \frac{W}{f} \times C$（$f$ 为下采样倍数，通常 $f=16$）</div></div>
+  <div class="step-row"><span class="step-num">2</span><div><strong>量化：</strong>将每个 $C$ 维特征向量映射到 codebook $\mathcal{Z} = \{z_k\}_{k=1}^K$ 中最近邻的码字，$K$ 通常为 8192 或 16384</div></div>
+  <div class="step-row"><span class="step-num">3</span><div><strong>序列化：</strong>按行扫描顺序将 $\frac{H}{16} \times \frac{W}{16}$ 个码字 index 排列为 token 序列（如 256×256 图像 → 256 个图像 token）</div></div>
+  <div class="formula-box">
+    $$z_q = \arg\min_{z_k \in \mathcal{Z}} \|f_\phi(x) - z_k\|_2$$
+  </div>
+  <p>图像 token 与文本 token 共享同一个词表（如 Chameleon 词表大小 = 32K 文本 + 8192 图像 = 40192）</p>
+</div>
+
+<h3 id="s8-2">8.2 Chameleon 与模块化 LMM 的架构对比</h3>
+<div class="diff-grid">
+  <div class="diff-old">
+    <div class="diff-label old">模块化 LMM（LLaVA 路线）</div>
+    <ul>
+      <li>ViT 连续特征（浮点数）</li>
+      <li>MLP/Q-Former 桥接</li>
+      <li>LLM 处理混合连续/离散输入</li>
+      <li>不能生成图像（仅理解）</li>
+      <li>视觉/语言参数可分别优化</li>
+    </ul>
+  </div>
+  <div class="diff-new">
+    <div class="diff-label new">原生多模态（Chameleon 路线）</div>
+    <ul>
+      <li>VQ-VAE 离散 Token（整数 index）</li>
+      <li>无需独立 Projector</li>
+      <li>统一离散 Token 自回归建模</li>
+      <li>可同时理解和生成图像</li>
+      <li>所有参数联合端到端训练</li>
+    </ul>
+  </div>
+</div>
+
+<div class="tech-card yellow">
+  <h4>训练稳定性挑战</h4>
+  <p>Chameleon 的技术报告指出，原生多模态训练面临严重的稳定性问题：图像 token 和文本 token 的梯度量级差异高达 <strong>10-100 倍</strong>，容易导致梯度爆炸。Meta 团队采用了以下措施：</p>
+  <ul>
+    <li><strong>QK-Norm：</strong>对注意力的 Q/K 向量做 RMSNorm 归一化，防止注意力分数过大</li>
+    <li><strong>Dropout 修正：</strong>图像 token 通道上使用更大的 Dropout 比例</li>
+    <li><strong>分阶段预热：</strong>先在纯文本数据上预热 LLM，再逐渐引入图像 token</li>
+  </ul>
+</div>
+
+<!-- ===== 九、开放问题 ===== -->
+<h2 id="s9">九、前沿开放问题</h2>
+<table>
+  <tr><th>问题</th><th>现状</th><th>代表性工作方向</th></tr>
+  <tr>
+    <td><strong>原生多模态能否超越模块化 LMM？</strong></td>
+    <td>在大多数基准上仍弱于同规模模块化 LMM，MMMU 等高级推理任务差距明显</td>
+    <td>提升 VQ-VAE 重建质量；混合连续+离散 token（Show-o）</td>
+  </tr>
+  <tr>
+    <td><strong>视觉 token 压缩与精度的帕累托最优？</strong></td>
+    <td>Q-Former 32 tokens 太少（细节损失），LLaVA 576 tokens 太多（LLM 计算开销大），最优压缩率未知</td>
+    <td>动态 token 预算（LLaVA-PruMerge）；任务自适应压缩</td>
+  </tr>
+  <tr>
+    <td><strong>幻觉能否从根本上消除？</strong></td>
+    <td>GPT-5 降至 6.2% 但未达 0，推测需要视觉 grounding 的根本改进</td>
+    <td>细粒度视觉监督；幻觉感知解码算法</td>
+  </tr>
+  <tr>
+    <td><strong>自动驾驶 VLM 的零样本能力何时实用化？</strong></td>
+    <td>当前零样本性能仅相当于常数速度基线，需要领域微调</td>
+    <td>驾驶场景专用预训练数据；3D-aware 视觉编码器</td>
+  </tr>
+</table>
+
+<!-- ===== 十、参考文献 ===== -->
+<h2 id="s10">十、参考文献</h2>
+<table>
+  <tr><th>#</th><th>来源</th><th>类型</th><th>覆盖内容</th></tr>
+  <tr><td>1</td><td><a href="https://arxiv.org/abs/2304.08485" target="_blank">LLaVA arXiv:2304.08485</a></td><td>原始论文</td><td>LLaVA 1.0 架构与训练</td></tr>
+  <tr><td>2</td><td><a href="https://arxiv.org/abs/2310.03744" target="_blank">LLaVA 1.5 arXiv:2310.03744</a></td><td>原始论文</td><td>MLP Projector 升级与 336px</td></tr>
+  <tr><td>3</td><td><a href="https://arxiv.org/abs/2310.11441" target="_blank">LLaVA-NeXT arXiv:2310.11441</a></td><td>原始论文</td><td>AnyRes 动态高分辨率</td></tr>
+  <tr><td>4</td><td><a href="https://arxiv.org/abs/2301.12597" target="_blank">BLIP-2 arXiv:2301.12597</a></td><td>原始论文</td><td>Q-Former 两阶段预训练</td></tr>
+  <tr><td>5</td><td><a href="https://arxiv.org/abs/2204.14198" target="_blank">Flamingo arXiv:2204.14198</a></td><td>原始论文</td><td>Perceiver Resampler 中间融合</td></tr>
+  <tr><td>6</td><td><a href="https://arxiv.org/abs/2311.03079" target="_blank">CogVLM arXiv:2311.03079</a></td><td>原始论文</td><td>Visual Expert 独立 QKV</td></tr>
+  <tr><td>7</td><td><a href="https://arxiv.org/abs/2409.12191" target="_blank">Qwen2-VL arXiv:2409.12191</a></td><td>原始论文</td><td>Naive Dynamic Res + 2D-RoPE</td></tr>
+  <tr><td>8</td><td><a href="https://arxiv.org/abs/2312.00784" target="_blank">VCD arXiv:2312.00784</a></td><td>方法论文</td><td>视觉对比解码缓解幻觉</td></tr>
+  <tr><td>9</td><td><a href="https://arxiv.org/abs/2311.17911" target="_blank">OPERA arXiv:2311.17911</a></td><td>方法论文</td><td>注意力 Sink 检测与惩罚</td></tr>
+  <tr><td>10</td><td><a href="https://arxiv.org/abs/2312.14565" target="_blank">RLHF-V arXiv:2312.14565</a></td><td>方法论文</td><td>DPO 视觉对齐，减少幻觉</td></tr>
+  <tr><td>11</td><td><a href="https://arxiv.org/abs/2310.11397" target="_blank">Woodpecker arXiv:2310.11397</a></td><td>方法论文</td><td>后处理幻觉修正框架</td></tr>
+  <tr><td>12</td><td><a href="https://arxiv.org/abs/2405.09818" target="_blank">Chameleon arXiv:2405.09818</a></td><td>原始论文</td><td>原生多模态统一 Token 空间</td></tr>
+  <tr><td>13</td><td><a href="https://arxiv.org/abs/2410.23262" target="_blank">EMMA arXiv:2410.23262</a></td><td>原始论文</td><td>端到端多模态自动驾驶</td></tr>
+  <tr><td>14</td><td><a href="https://arxiv.org/html/2411.17040v2" target="_blank">IJCV 2025 融合综述 arXiv:2411.17040</a></td><td>综述</td><td>三层融合体系、七种范式</td></tr>
+  <tr><td>15</td><td><a href="https://arxiv.org/html/2505.00284v1" target="_blank">VLM 自驾评测 arXiv:2505.00284</a></td><td>评测论文</td><td>12 个 VLM 在 nuScenes 零样本评测</td></tr>
+</table>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">
+  本报告覆盖 LLaVA 系列架构演进、Q-Former vs MLP 对比、两阶段训练细节、6 种幻觉缓解方法及其公式、原生多模态技术原理。生成日期：2026-06-20。
+</p>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  hljs.highlightAll();
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+    if(!h.id)h.id='s'+i;
+    const a=document.createElement('a');a.href='#'+h.id;a.textContent=h.textContent;
+    if(h.tagName==='H3')a.classList.add('toc-h3');toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(e=>e.forEach(e=>{
+    const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  }),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

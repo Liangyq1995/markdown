@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOPD 阅读报告 — 双重在策略蒸馏与特权幻觉问题</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; } a { color: var(--link); } strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    ul, ol { padding-left: 1.5em; margin: 0.6em 0; } li { margin: 0.3em 0; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>DOPD：双重在策略蒸馏 — 破解"特权幻觉"</h1>
+    <p><span class="tag">知识蒸馏</span><span class="tag orange">On-Policy</span><span class="tag green">LLM+VLM</span><span class="tag purple">Token级路由</span></p>
+    <p style="color:#6c7086;font-size:0.9em;">arXiv: 2606.30626 · 2026-06-29 · 16位作者 · HuggingFace本周 #5 (89 upvotes)</p>
+
+    <table>
+      <tr><th>标题</th><td>DOPD: Dual On-policy Distillation</td></tr>
+      <tr><th>核心问题</th><td>如何解决特权在策略蒸馏中的"特权幻觉"问题，实现优势感知的双重蒸馏</td></tr>
+      <tr><th>适用范围</th><td>LLM 和 VLM 训练</td></tr>
+    </table>
+
+    <h2 id="overview">1. 核心问题与动机</h2>
+    <p>在策略蒸馏（On-Policy Distillation, OPD）通过让学生模型生成轨迹，再用教师模型的密集 token 级信号监督，比离线蒸馏效果更好。一个自然的增强是给教师或学生注入<strong>特权信息（Privileged Information）</strong>——即推理时学生不能访问的额外信息（如完整答案链、oracle上下文）。</p>
+    <p>然而，作者发现了一个严重失效模式——<strong>"特权幻觉"（Privilege Illusion）</strong>：</p>
+    <blockquote>
+      当教师拥有特权信息时，教师与学生之间的差距来自两部分：(1) 真实能力差距（学生可以学习缩小）；(2) 信息不对称差距（学生无法在推理时获得，只能"幻觉"地模仿）。模型混淆两者，导致学习到虚假的特权依赖，而非真实能力提升。
+    </blockquote>
+
+    <h2 id="background">2. 背景与相关工作</h2>
+    <table>
+      <tr><th>方法</th><th>是否在策略</th><th>是否含特权信息</th><th>局限</th></tr>
+      <tr><td>KD（离线蒸馏）</td><td>否</td><td>否</td><td>分布偏移</td></tr>
+      <tr><td>OPD（标准在策略）</td><td>是</td><td>否</td><td>监督信号稀疏</td></tr>
+      <tr><td>Privileged OPD</td><td>是</td><td>是</td><td>特权幻觉问题</td></tr>
+      <tr><td><strong>DOPD（本文）</strong></td><td><strong>是</strong></td><td><strong>是（双重路由）</strong></td><td>—</td></tr>
+    </table>
+    <p>不均匀 token 监督问题同样被现有工作忽视：在一个长轨迹中，只有<strong>少数关键 token</strong>（如推理转折点、答案词）携带真正的学习信号，其余 token 的 KL 损失贡献接近零，甚至引入噪声。</p>
+
+    <h2 id="method">3. DOPD 方法框架</h2>
+    <pre class="mermaid">
+flowchart TD
+    A["学生模型生成轨迹<br>Student On-Policy Trajectory"] --> B["Token级优势计算<br>Advantage Gap Estimation"]
+    B --> C{"优势感知路由<br>Advantage-Aware Router"}
+    C -->|"能力差距主导"| D["特权教师监督<br>Privileged Teacher Loss<br>传递真实能力"]
+    C -->|"信息不对称主导"| E["特权学生监督<br>Privileged Student Loss<br>避免特权幻觉"]
+    C -->|"信号微弱"| F["动态权重衰减<br>Low-Signal Token 降权"]
+    D & E & F --> G["加权梯度更新<br>Weighted Gradient Update"]
+    G --> A
+
+    style C fill:#2a2a3e,stroke:#fab387,stroke-width:2px
+    style D fill:#2a2a3e,stroke:#89b4fa
+    style E fill:#2a2a3e,stroke:#a6e3a1
+    </pre>
+
+    <h3>优势差距（Advantage Gap）计算</h3>
+    <p>对于每个 token $t$ 的位置 $i$，定义优势差距为教师特权策略与学生特权策略的 advantage 之差：</p>
+    <p>$$\Delta A_i = A^{\pi_{T}^{\text{priv}}}(s_i, a_i) - A^{\pi_{S}^{\text{priv}}}(s_i, a_i)$$</p>
+    <p>当 $\Delta A_i \gt 0$ 且主要由能力差距引起时，使用特权教师的 token 级损失；当不对称信息是主要来源时，切换到特权学生策略监督，防止学生学习无法在推理时复现的行为。</p>
+
+    <h3>双重损失目标</h3>
+    <p>DOPD 的总损失为：</p>
+    <p>$$\mathcal{L}_{\text{DOPD}} = \sum_{i} w_i \cdot \left[ \alpha_i \cdot \mathcal{L}_{\text{KL}}(\pi_{T}^{\text{priv}} \| \pi_S) + (1-\alpha_i) \cdot \mathcal{L}_{\text{KL}}(\pi_{S}^{\text{priv}} \| \pi_S) \right]$$</p>
+    <p>其中 $w_i$ 为信号强度权重，$\alpha_i$ 为动态路由系数，由优势差距和相对概率共同决定。</p>
+
+    <h2 id="experiment">5. 实验结果</h2>
+    <table>
+      <tr><th>评测维度</th><th>Vanilla OPD</th><th>DOPD</th><th>提升</th></tr>
+      <tr><td>LLM 推理基准</td><td>基线</td><td><strong>+3.2%</strong></td><td>稳定提升</td></tr>
+      <tr><td>VLM 多模态任务</td><td>基线</td><td><strong>+4.1%</strong></td><td>尤其显著</td></tr>
+      <tr><td>持续学习（continual）</td><td>易遗忘</td><td><strong>更稳定</strong></td><td>灾难性遗忘减少</td></tr>
+      <tr><td>OOD 任务</td><td>基线</td><td><strong>+2.8%</strong></td><td>泛化能力提升</td></tr>
+    </table>
+
+    <h2 id="ablation">6. 消融实验与关键发现</h2>
+    <ul>
+      <li><strong>路由的必要性</strong>：去掉路由机制，仅用单一教师监督，性能下降约2.5%</li>
+      <li><strong>信号权重 $w_i$ 的作用</strong>：不加权的均匀 token 监督引入噪声，加权后提升显著</li>
+      <li><strong>特权学生的角色</strong>：无特权学生策略时，特权幻觉问题复现，特定任务上出现过拟合</li>
+      <li><strong>VLM 的特殊性</strong>：视觉 token 和语言 token 的优势差距分布不同，需要独立路由</li>
+    </ul>
+
+    <h2 id="limitation">7. 局限性</h2>
+    <ul>
+      <li>优势差距的准确估计需要额外的前向计算，增加训练开销约20%</li>
+      <li>路由超参数（$\alpha$ 阈值）对特定任务较敏感</li>
+      <li>特权信息的获取本身在很多实际场景中并不容易</li>
+    </ul>
+
+    <h2 id="insight">8. 核心洞见与读后评注</h2>
+    <blockquote>
+      <strong>关键洞见</strong>：特权信息蒸馏的核心风险在于学生模型学到"依赖特权"而非"具备能力"。DOPD 通过精细区分两类差距来源，让蒸馏只传递真实能力，这是知识蒸馏领域一个重要的理论突破。
+    </blockquote>
+    <p>"特权幻觉"这个概念非常精准地刻画了蒸馏中的一类失效模式，与强化学习中的"reward hacking"有类比之处。两者都是模型找到了"看起来正确"但实际上依赖于不可靠信号的策略。</p>
+    <p>DOPD 的 token 级路由机制对实践有重要启发：在长序列训练中，并非每个位置的监督信号都是等价的。未来的蒸馏方法可以更多地关注"哪些 token 的对齐最重要"这一问题。</p>
+
+    <h2 id="ref">参考文献</h2>
+    <ul>
+      <li>[1] Xinlei Yu et al. <em>DOPD: Dual On-policy Distillation</em>. arXiv:2606.30626, 2026.</li>
+      <li>[2] Hinton et al. <em>Distilling the Knowledge in a Neural Network</em>. NeurIPS Workshop 2014.</li>
+      <li>[3] Agarwal et al. <em>On-Policy Distillation of Language Models</em>. ICML 2024.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id; a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

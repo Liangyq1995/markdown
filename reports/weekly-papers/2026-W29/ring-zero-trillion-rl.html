@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ring-Zero：将 Zero RL 扩展至万亿参数的涌现推理 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    h4 { color: var(--strong); font-size: 1.0em; margin: 1.2em 0 0.3em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    .best { color: var(--strong); font-weight: 700; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .algo-box p { margin: 0.15em 0; }
+    .emerge-card { background: #2a2a3e; border: 1px solid var(--border); border-left: 3px solid var(--quote-bar); border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .emerge-card h4 { margin-top: 0; }
+    .tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 8px; border-radius: 10px; margin-right: 6px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; } .tag.green { background: #a6e3a1; } .tag.purple { background: #cba6f7; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+<h1>Ring-Zero：将 Zero RL 扩展至万亿参数的涌现推理</h1>
+
+<p><em>一篇关于“从零开始的大规模强化学习”在万亿参数尺度下训练动力学与涌现能力的技术阅读报告。</em></p>
+
+<table>
+  <tr><th>标题</th><td>Ring-Zero: Scaling Zero RL to a Trillion Parameters for Emergent Reasoning</td></tr>
+  <tr><th>核心问题</th><td>zero RL（无需人工标注数据的 RLVR）能否稳定扩展到 1T 参数？其训练动力学与高级推理能力如何在万亿尺度上涌现？</td></tr>
+  <tr><th>开源/模型</th><td>Ring-2.5-1T-Zero（基于 Ling-2.5-1T-Base，1T MoE / 63B 激活）；基座为蚂蚁与人民大学联合发布的 Ling-2.5 系列</td></tr>
+  <tr><th>核心贡献</th><td>稳定高效的 zero RL 训练管线（clipped IS、训练-推理比修正、混合精度控制）+ CoT 质量三维评估框架 + 万亿尺度“苦涩教训”实证</td></tr>
+  <tr><th>arXiv</th><td>2607.12395（v2，2026-07-16）</td></tr>
+</table>
+
+<h2>1. 概述</h2>
+
+<p>强化学习带可验证奖励（<strong>RLVR</strong>）在无需人工标注数据的情况下激发链式推理（CoT），被称为 <strong>zero RL</strong>。该范式由 DeepSeek-R1 首次大规模验证：直接从预训练基模型出发，跳过所有监督微调（SFT），纯粹依靠试错式 RL 即可让模型自发出涌现复杂推理策略。然而，受算力约束，既有研究几乎都停留在<strong>小模型</strong>上，万亿参数尺度下 zero RL 的训练动力学与涌现能力基本是空白。</p>
+
+<p>本文把 zero RL 真正推到 <strong>1T 参数</strong>（Ling-2.5-1T-Base，MoE，63B 激活）。作者发现：<strong>朴素 scaling 会失败</strong>——可读性差、token 冗余、缺乏自适应推理深度，且训练引擎（Megatron）与推理引擎（SGLang）之间的浮点误差会被“放大低概率 token”的策略放大成宏观训练崩溃。为此提出一套<strong>极简但关键</strong>的训练管线：clipped importance sampling 策略梯度、训练-推理比修正、混合精度控制、自蒸馏压缩、sample-level 损失、tier-based 自适应深度。</p>
+
+<p>实验给出三条关键发现，验证了 scaling 的“<strong>bitter lesson</strong>”：</p>
+<ol>
+  <li><strong>规模决定天花板</strong>：1T 模型在样本效率与性能上限上远超 104B 对照（如 AIME 2026 达 84.2%，AIME 2024 训练曲线达 89.06%）。</li>
+  <li><strong>训练分两阶段</strong>：先经历 <em>discovery</em>（解锁预训练中休眠的推理模式，pass@1024 上升），再进入漫长的 <em>sharpening</em>（在已建立边界内锐化策略，pass@1024 饱和而 pass@1 持续爬升）。</li>
+  <li><strong>自发涌现高级认知</strong>：在<strong>无任何人工标注 / 无辅助奖励</strong>下，1T 模型自主收敛出拟人化、结构化格式、自验证、并行推理、上下文焦虑五种行为，使人工启发式变得多余。</li>
+</ol>
+
+<p>此外，论文提出 <strong>CoT 质量三维评估框架</strong>（comprehensibility / reproducibility / efficiency），用以在“最终答案正确”之外衡量推理过程本身。在七个高难度数学基准上，Ring-2.5-1T-Zero 取得与前沿模型可比的竞争力；在可读性、可蒸馏迁移性与 token 效率上则呈现明显优势。</p>
+
+<h2>2. 研究背景与动机</h2>
+
+<h3>2.1 Zero RL / RLVR 范式背景</h3>
+
+<p>随着参数规模与链式推理（CoT）成为 test-time 计算的两个核心 scaling 维度，RLVR 被证明能有效增强推理。其关键转变在于 <strong>GRPO（Group Relative Policy Optimization）</strong>消除了独立 critic，仅依赖组内相对奖励；而 <strong>DeepSeek-R1</strong> 进一步证明：纯 RL 直接施加于基模型即可自发出涌现 CoT，<strong>完全不需要 SFT 数据</strong>——这就是 “zero RL”。它绕开了昂贵、需精心筛选的推理示范数据，表明强大推理能力可纯靠试错式 RL 培养。</p>
+
+<p>沿此方向，社区做了大量工作：高质量 CoT 数据筛选与生成、多种策略优化算法（DAPO 的非对称裁剪与动态采样、VAPO 的 value-based PPO、CISPO 的 clipped IS、GSPO 的 sample-level 损失）、可扩展训练基础设施（veRL、OpenRLHF、Areal）。但<strong>受算力限制，绝大多数研究只用相对小的模型</strong>。一个根本问题悬而未决：<em>zero RL 应用到万亿参数模型时，训练动力学与涌现能力如何演化？</em> 更大的模型拥有更丰富的预训练知识与潜在能力，更易被优化——探索这一巨量尺度，是绘制“自进化推理”真实边界所必需的。</p>
+
+<h3>2.2 朴素 scaling 的三大病症</h3>
+
+<p>作者强调，要“有意义地”探索这一前沿，首要目标是<strong>激发高质量推理行为</strong>，而理想 CoT 不仅要正确，还应人类可读、计算上简洁。然而<strong>朴素应用 zero RL 严重偏离这些理想</strong>：</p>
+
+<blockquote>
+  <p>其一，<strong>可读性差</strong>：既有推理轨迹缺乏逻辑格式与清晰结构，人类难以跟踪。其二，<strong>token 冗余</strong>：GRPO 等 token-level loss 隐式地给更长序列更多信用，早期促进探索，但最终导致不可控的长度增长与冗余。其三，<strong>缺乏自适应推理深度</strong>：不同问题本需不同推理深度，而标准管线产出受固定响应预算约束的“单模态”模型。</p>
+</blockquote>
+
+<p>论文还揭示一个更致命的<strong>系统级脆弱点</strong>：放大低概率 token（激发推理所必需）会同步放大<strong>训练引擎（Megatron）与推理引擎（SGLang）之间的浮点/logit 差异</strong>，使微小数值误差累积成宏观训练崩溃。这是万亿尺度稳定性的真正瓶颈。</p>
+
+<h3>2.3 与相关大模型 RL 工作的区别</h3>
+
+<p>论文聚焦于 <strong>scaling zero RL 的数值与结构瓶颈</strong>，而非提出全新策略优化算法。其与既有工作的关键区别：</p>
+
+<table>
+  <tr><th>维度</th><th>DeepSeek-R1 / 前驱</th><th>Ring-Zero（本文）</th></tr>
+  <tr><td>评估对象</td><td>主要评估最终答案准确率</td><td>新增 <strong>CoT 三维质量</strong>（可读/可复现/高效）评估</td></tr>
+  <tr><td>训练范式</td><td>单阶段从基模型直接 zero RL</td><td><strong>多阶段自迭代</strong>：一阶 RL→自蒸馏→二阶 RL→三阶 tier-based</td></tr>
+  <tr><td>规模</td><td>未达 1T 量级的系统化 zero RL 研究</td><td><strong>1T 参数 MoE</strong>，首次系统刻画万亿尺度训练动力学</td></tr>
+  <tr><td>算法策略</td><td>—</td><td>采用 clipped IS（CISPO 思路）+ <strong>训练-推理比修正</strong>（用 Megatron logits 作分子）+ 混合精度</td></tr>
+  <tr><td>涌现行为</td><td>基础自反思</td><td>五种高级认知策略（拟人化/结构化/自验证/并行/上下文焦虑）<strong>无监督自发涌现</strong></td></tr>
+</table>
+
+<h3>2.4 机构与基座</h3>
+
+<p>作者来自<strong>中国人民大学高瓴人工智能学院</strong>（Wayne Xin Zhao 等通讯）、<strong>蚂蚁集团</strong>（Zhiqiang Zhang、Jun Zhou 等通讯）、清华大学、浙江大学。基座模型 <strong>Ling-2.5-1T-Base</strong>（1T 参数 MoE，63B 激活）与 <strong>Ling-2.5-flash-Base</strong>（104B 参数 MoE，7.4B 激活）来自 Ling Team & Inclusion AI。训练在 <strong>320×H200 GPU</strong> 上进行，训练引擎 Megatron、rollout 引擎 SGLang、编排框架 Areal。</p>
+
+<h2>3. 核心方法</h2>
+
+<p>框架遵循<strong>极简主义</strong>设计原则：作者发现过度复杂的算法设计往往不必要，<em>仅在严格需要时</em>才引入优化要素。管线分四个阶段，辅以基础设施优化。</p>
+
+<h3>3.1 方法总览：Zero RL 训练管线</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["Ling-2.5-1T-Base 预训练基模型 缺乏推理能力"]
+    A --> B["First Stage RL 激发推理<br>Clipped IS + Token-level Loss<br>+ KL Penalty + 训练-推理比修正<br>窗口 4k 渐进扩展到 64k"]
+    B --> C["Self-Distillation 压缩与稳定<br>选最短正确轨迹 + 自评过滤冗余<br>压缩 CoT 重置训练-推理数值误差"]
+    C --> D["Second Stage RL 持续优化<br>切换 Sample-level Loss<br>移除 KL Penalty"]
+    D --> E["Third Stage RL 自适应深度<br>Tier-based Training<br>Low 4k Medium 16k High 64k"]
+    E --> F["Ring-2.5-1T-Zero<br>涌现高级推理行为"]
+</pre>
+
+<p>四个阶段循序渐进：第一阶段用 <strong>clipped importance ratio 策略梯度 + KL 正则 + token-level loss</strong> 从基模型激发推理；自蒸馏阶段压缩轨迹并弥合训练-推理差距；第二阶段用 <strong>sample-level loss</strong> 稳定持续优化；第三阶段引入 <strong>tier-based 训练</strong>赋予自适应响应深度。基础设施层面用<strong>混合精度控制</strong>保稳、用<strong>上下文并行优化</strong>提吞吐。</p>
+
+<h3>3.2 第一阶段 RL：clipped importance sampling 推导</h3>
+
+<p>Zero-RL 直接从缺乏推理能力的预训练基模型训练。这类模型极少生成逐步推导，因为推理 token 在基策略下概率极低。要激发这些潜在能力，<strong>初始 RL 阶段必须激进地放大低概率推理 token</strong>。作者采用 <strong>clipped importance-sampling 策略梯度</strong>（源自 MiniMax-M1 / CISPO 思路）。</p>
+
+<p>与标准 PPO-clip 不同：PPO-clip 会把裁剪范围外 token 的梯度<strong>完全置零</strong>；而 clipped IS 仅对裁剪后的比率施加 <strong>stop-gradient</strong>，同时<strong>允许梯度流经所有 token</strong>。这保证每个生成 token 都参与学习，对从零构建推理能力至关重要。目标函数（论文 Eq.1）为：</p>
+
+<p>$$
+J(\theta) = \mathbb{E}_{q\sim D,\; \{o_i\}_{i=1}^{G}\sim \pi_S}\left[\sum_{i=1}^{G}\sum_{t=1}^{|o_i|} \mathrm{sg}(\hat{\rho}_{i,t})\cdot \hat{A}_{i,t}\cdot \log \pi_{\theta}^{M}(o_{i,t}\mid q,\, o_{i,\lt t})\right]
+$$</p>
+
+<p>其中 $q$ 是从数据集 $D$ 采样的题目，$\{o_i\}_{i=1}^{G}$ 是推理引擎 $\pi_S$ 产生的 $G$ 条 rollout，$o_{i,t}$ 是第 $i$ 条响应的第 $t$ 个 token，$\hat{A}_{i,t}$ 是 GRPO 式组归一化优势估计，$\mathrm{sg}(\cdot)$ 是 stop-gradient 算子，$\hat{\rho}_{i,t}$ 是下面定义的裁剪重要性比率。</p>
+
+<h4>为什么 clip 比率但保留梯度</h4>
+<p>设未裁剪比率 $\rho_{i,t}$ 与裁剪后 $\hat{\rho}_{i,t}$（Eq.2、Eq.3）：</p>
+
+<p>$$
+\rho_{i,t} = \frac{\pi_{\theta}^{M}(o_{i,t}\mid q,\, o_{i,\lt t})}{\pi_{S}^{\theta_\mathrm{old}}(o_{i,t}\mid q,\, o_{i,\lt t})}, \qquad \hat{\rho}_{i,t} = \mathrm{clip}\left(\rho_{i,t},\, \epsilon_\mathrm{low},\, \epsilon_\mathrm{high}\right)
+$$</p>
+
+<p>关键在于 $\mathrm{sg}(\hat{\rho}_{i,t})$ 切断了<strong>比率本身</strong>的梯度，但 $\log \pi_\theta^M$ 项的梯度完整保留。直觉上：当某 token 被裁剪到上界 $\epsilon_\mathrm{high}$ 时，其<strong>策略梯度权重被封顶</strong>（防止过大更新），但 token 仍被计入对数似然梯度——低概率 token 不会因“比率过大被截断”而彻底失去学习信号。论文明确：<strong>不设下界</strong>（不施加 $\epsilon_\mathrm{low}$），仅设上界 $\epsilon_\mathrm{high}=5.0$ 以防过大更新。</p>
+
+<h4>KL 正则项</h4>
+<p>为防止策略相对参考模型漂移过远，加入 KL 散度惩罚（Eq.4）：</p>
+
+<p>$$
+L_\mathrm{KL}(\theta) = \sum_{i=1}^{G}\sum_{t=1}^{|o_i|} D_\mathrm{KL}\left(\pi_{\theta}^{M}(\cdot\mid q,\, o_{i,\lt t})\;\big\|\;\pi_\mathrm{ref}(\cdot\mid q,\, o_{i,\lt t})\right)
+$$</p>
+
+<p>其中 $\pi_\mathrm{ref}$ 是冻结参考模型。第一阶段总目标（Eq.5）：</p>
+
+<p>$$
+L_\mathrm{Ring\text{-}I}(\theta) = -J(\theta) + \beta\cdot L_\mathrm{KL}(\theta)
+$$</p>
+
+<p>其中 $\beta=10^{-4}$（用 K3 散度），参考模型每 400 步用最新 checkpoint 刷新一次以保持 KL 锚点相关性。由于基模型倾向产出短响应，token-level loss（不按 $|o_i|$ 归一化地累加所有 token）显式鼓励更长生成——更长正确响应累积更强梯度信号；并以课程方式渐进扩展响应窗口（4k→64k，每 800 步翻倍）。</p>
+
+<h3>3.3 训练-推理比修正（Training-Inference Ratio Correction）</h3>
+
+<p>放大低概率 token 的副作用是放大<strong>系统级数值差异</strong>：训练引擎（Megatron）与推理引擎（SGLang）因浮点精度与 kernel 实现不同，对同一权重会产生略有差异的 logits。这些微差异经 softmax 指数运算放大，会累积成宏观训练崩溃。论文的<strong>极简修正</strong>：把重要性比率的<strong>分子替换为训练引擎实际 logits</strong>：</p>
+
+<p>$$
+\rho_{i,t} = \frac{\pi_{\theta}^{M}(o_{i,t}\mid q,\, o_{i,\lt t})}{\pi_{S}^{\theta_\mathrm{old}}(o_{i,t}\mid q,\, o_{i,\lt t})}
+$$</p>
+
+<p>即<strong>分子用 Megatron 当前策略 $\pi_\theta^M$，分母用 SGLang 旧策略 $\pi_S^{\theta_\mathrm{old}}$</strong>。该比率准确反映训练-推理引擎间的真实散度，且<strong>彻底免除了推理引擎重新计算 logits 的开销</strong>。配合仅设上界 $\epsilon_\mathrm{high}=5.0$ 的裁剪与 KL 锚定，二者共同成为调节训练稳定性的最关键机制。消融显示：标准基线（仅用 SGLang logits）约 800 步内崩溃；IcePop（裁剪阈值）把崩溃延迟到约 2700 步仍失败；本方法<strong>全程稳定</strong>，log-prob 差距近零、熵保持、奖励持续提升。</p>
+
+<h3>3.4 自蒸馏：压缩与稳定</h3>
+
+<p>第一阶段 token-level loss 带来两个副作用：CoT 过长且冗余、训练-推理数值误差累积使 gap 膨胀导致优化崩溃。自蒸馏阶段用以<strong>重置模型</strong>：用第一阶段专家策略 $\pi_\mathrm{expert}$ 为每题采样多条 rollout，做两步长度精炼——(1) 选最短的正确轨迹；(2) 提示模型自评并过滤冗余片段；再用精炼后语料 SFT 原基模型（Eq.6）：</p>
+
+<p>$$
+L_\mathrm{self\text{-}distillation}(\theta) = -\mathbb{E}_{q\sim D,\, o\sim\pi_\mathrm{expert}}\left[\sum_{t=1}^{|o|} \log \pi_{\theta}(o_t\mid q,\, o_{\lt t})\right]
+$$</p>
+
+<p>其中 $o$ 是长度精炼后的响应。蒸馏使模型获得专家推理能力的同时产出更简洁轨迹，并<strong>抹去引擎间累积的数值误差</strong>，为后续 RL 提供高能力、简洁且稳定的基础。SFT 配置：3 epochs，序列长度 64k，学习率 $7\times10^{-5}$。</p>
+
+<h3>3.5 第二阶段 RL：sample-level loss 持续优化</h3>
+
+<p>自蒸馏后训练-推理 gap 大幅缩小，提供稳定起点。第二阶段保持 clipped IS + 比率修正不变，<strong>关键变化在损失计算</strong>：模型已自然产出长 CoT，继续 token-level loss 会使长度无界增长、毁掉蒸馏获得的简洁性。故切换到 <strong>sample-level loss</strong>，使梯度幅度与输出长度无关（Eq.7）：</p>
+
+<p>$$
+L_\mathrm{Ring\text{-}II}(\theta) = -\mathbb{E}_{q\sim D,\; \{o_i\}_{i=1}^{G}\sim\pi}\left[\sum_{i=1}^{G} \frac{1}{|o_i|}\sum_{t=1}^{|o_i|} \mathrm{sg}(\hat{\rho}_{i,t})\cdot \hat{A}_{i,t}\cdot \log \pi_{\theta}(o_{i,t}\mid q,\, o_{i,\lt t})\right]
+$$</p>
+
+<p>相对 Eq.1 唯一变化是 $\frac{1}{|o_i|}$ 归一化因子。同时<strong>移除 KL 惩罚</strong>——蒸馏模型已是强起点，KL 会不必要地限制进一步探索。该 sample-level 形式 + 去除 KL，保证在大量 RL 步上稳定优化。</p>
+
+<h3>3.6 第三阶段 RL：tier-based 自适应推理深度</h3>
+
+<p>两阶段后模型推理能力强但仍是固定长度预算的“单模态”。真实场景中简单题需短答、复杂题需长推理。为培养<strong>认知路由</strong>，把训练题分为三个难度 tier，各配最大 token 长度与系统提示 $p_k$（Eq.8）：</p>
+
+<p>$$
+\mathcal{T} = \{T_l,\, T_m,\, T_h\}
+$$</p>
+
+<p>三阶目标（Eq.9）在 sample-level 基础上条件化于系统提示：</p>
+
+<p>$$
+L_\mathrm{Ring\text{-}III}(\theta) = -\sum_{k\in\{l,m,h\}}\mathbb{E}_{q\sim D_k,\; \{o_i\}_{i=1}^{G}\sim\pi(\cdot\mid p_k,q)}\left[\sum_{i=1}^{G}\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\mathrm{sg}(\hat{\rho}_{i,t})\cdot\hat{A}_{i,t}\cdot\log\pi_{\theta}(o_{i,t}\mid p_k,\, q,\, o_{i,\lt t})\right]
+$$</p>
+
+<p>其中 $D_k$ 是 tier $k$ 的题目子集，rollout 策略 $\pi$ 同时条件于系统提示与问题，按窗口截断。该机制教模型<strong>自适应算力分配</strong>：简单题简洁作答、复杂题保留详尽 CoT。部署时用户可通过系统提示显式控制。tier 配置：Low（4k）/ Medium（16k）/ High（64k，部署时可用 Yarn=2 扩到 128k）。</p>
+
+<h4>奖励设计（Eq.10）</h4>
+<p>$$
+r_i = r_{\mathrm{acc},i} + r_{\mathrm{format},i}
+$$</p>
+<p>其中 $r_\mathrm{format}\in\{0,1\}$ 检查响应是否含 <code>&lt;think&gt;...&lt;/think&gt;</code> 与 <code>&lt;answer&gt;...&lt;/answer&gt;</code> 结构（采用 <strong>双闭合标签 + 隐式终止规则</strong>，响应必须在最终闭合标签后以 EOS 结尾才得分，以防“尾部垃圾文本”式退化长度增长）；$r_\mathrm{acc}\in\{0,1\}$ 衡量最终答案正确性。早期用规则匹配判正确性；后期难题改用 <strong>LLM-as-a-Judge</strong>（Qwen3-Next-80B-A3B-Instruct）输出二元判决。</p>
+
+<h3>3.7 基础设施优化</h3>
+
+<h4>3.7.1 混合精度控制（Mixed-precision Control）</h4>
+<p>重要性比率 $\rho_{i,t}$ 是两个 token 概率之比，而概率经 softmax 指数化得到——<strong>指数函数天然放大微小数值误差</strong>，一个 logit 的微小误差可能在概率比中膨胀成巨大 gap，彻底破坏训练。任何涉及指数的前向组件都对精度高度敏感：核心是 <strong>attention softmax</strong> 与 <strong>LM head</strong>。策略极简：主体保持 <strong>BF16</strong>，但这两处用 <strong>FP32</strong> 计算。仅在这两处用高精度，即可防止小舍入误差演化为大 RL 损失，消除训练-推理引擎间数值 gap，消除 loss 突刺。</p>
+
+<h4>3.7.2 上下文并行优化（Context Parallelism）</h4>
+<p>长窗口训练需上下文并行（CP）将单条长序列切分到多设备。标准 ring attention 须等一圈通信完成才能算 attention，并行规模增大时成为严重延迟瓶颈。本文按模型<strong>混合架构</strong>（MLA + Lightning Attention）定制 CP：</p>
+<ul>
+  <li><strong>MLA 层</strong>（DeepSeek-V2）：采用 <strong>all-to-all CP</strong>，沿 head 维度用单次 collective 重排数据，每设备对部分 head 独立算全序列 attention；因 MLA 把 KV 压入低秩隐空间，all-to-all 通信量远小于传全 KV。</li>
+  <li><strong>Lightning Attention 层</strong>：计算依赖固定大小的小 KV state 矩阵，用单次 <strong>AllGather</strong> 把所有本地 state 一次广播给所有设备即可完成计算。</li>
+</ul>
+<p>这些优化与标准 ring attention <strong>数学等价</strong>，产生相同梯度。</p>
+
+<h3>3.8 训练算法伪代码</h3>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: Ring-2.5-1T-Zero 四阶段训练管线</div>
+  <p><span class="kw">Input:</span> 基模型 <span class="var">π_base</span> (Ling-2.5-1T-Base); 数据集 <span class="var">D</span>; 320×H200 GPU</p>
+  <p><span class="kw">Hyperparameters:</span> lr=<span class="num">2e-6</span>, G=<span class="num">16</span>, ϵ_high=<span class="num">5.0</span>, β_KL=<span class="num">1e-4</span>, ref-update=<span class="num">400</span> 步, 窗口 4k→64k</p>
+  <p style="padding-left:1.5em"><span class="cm"># ---- Stage 1: First-Stage RL 激发推理 ----</span></p>
+  <p><span class="kw">for</span> each step <span class="kw">in</span> Stage-1:</p>
+  <p style="padding-left:3em">采样 q ~ D; 经 SGLang 引擎 <span class="var">π_S</span> 生成 G=16 条 rollout <span class="var">{o_i}</span></p>
+  <p style="padding-left:3em"><span class="cm"># 训练-推理比修正: 分子用 Megatron 当前策略</span></p>
+  <p style="padding-left:3em"><span class="var">ρ</span> = <span class="fn">exp</span>(logp_train - logp_rollout)</p>
+  <p style="padding-left:3em"><span class="var">ρ̂</span> = <span class="fn">clip</span>(<span class="var">ρ</span>, -∞, <span class="num">5.0</span>)            <span class="cm"># 仅设上界, 不设下界</span></p>
+  <p style="padding-left:3em">计算 GRPO 组归一化优势 <span class="var">Â</span></p>
+  <p style="padding-left:3em"><span class="var">L</span> = -Σ <span class="fn">sg</span>(<span class="var">ρ̂</span>)·<span class="var">Â</span>·<span class="fn">log</span> π_θ^M + β_KL · <span class="var">L_KL</span>   <span class="cm"># token-level loss + KL</span></p>
+  <p style="padding-left:3em">Adam 更新 θ; 窗口每 800 步翻倍 (4k→64k); 每 400 步刷新参考模型</p>
+  <p style="padding-left:1.5em"><span class="cm"># ---- Stage 2: Self-Distillation 压缩与稳定 ----</span></p>
+  <p>从 Stage-1 专家 <span class="var">π_expert</span> 采样多条 rollout</p>
+  <p>精炼: 选最短正确轨迹; 自评过滤冗余片段</p>
+  <p>SFT 基模型 (3 epochs, lr=<span class="num">7e-5</span>, seq=64k) → 抹去引擎间数值误差</p>
+  <p style="padding-left:1.5em"><span class="cm"># ---- Stage 3: Second-Stage RL 持续优化 ----</span></p>
+  <p><span class="kw">for</span> each step <span class="kw">in</span> Stage-3:</p>
+  <p style="padding-left:3em">同 clipped IS + 比率修正; <span class="var">L</span> = -(1/|o_i|)·Σ <span class="fn">sg</span>(<span class="var">ρ̂</span>)·<span class="var">Â</span>·<span class="fn">log</span> π_θ   <span class="cm"># sample-level, 去 KL</span></p>
+  <p style="padding-left:1.5em"><span class="cm"># ---- Stage 4: Third-Stage RL 自适应深度 ----</span></p>
+  <p>划分 D 为 {T_l(4k), T_m(16k), T_h(64k)} 配系统提示 {p_l, p_m, p_h}</p>
+  <p><span class="kw">for</span> each step <span class="kw">in</span> Stage-4:</p>
+  <p style="padding-left:3em">rollout 条件于 (p_k, q); 按 tier 窗口截断</p>
+  <p style="padding-left:3em"><span class="var">L</span> = -(1/|o_i|)·Σ <span class="fn">sg</span>(<span class="var">ρ̂</span>)·<span class="var">Â</span>·<span class="fn">log</span> π_θ(·|p_k,q,o_{i,&lt;t})</p>
+  <p><span class="kw">return</span> <span class="fn">Ring-2.5-1T-Zero</span></p>
+</div>
+
+<h3>3.9 两阶段训练动力学：Discovery 与 Sharpening</h3>
+
+<p>论文用 pass@1024（1024 次采样中至少一次答对的概率）追踪推理边界，揭示 zero RL 是<strong>顺序的两阶段现象</strong>（解决“RL 究竟是扩展推理边界还是仅锐化既有分布”的争论——两者兼有，只是先后）：</p>
+
+<pre class="mermaid">
+flowchart LR
+    A["早期 Discovery 阶段<br>pass@1024 上升<br>RL 主动发现预训练中休眠的推理模式<br>解锁潜在能力 扩展推理边界"]
+    A --> B["后期 Sharpening 阶段<br>pass@1024 饱和<br>pass@1 持续爬升<br>在已建立边界内锐化策略<br>稳定地产出正确解"]
+</pre>
+
+<p>早期 pass@1024 上升而 pass@1 同步上升 → RL 在<strong>发现</strong>新推理模式；后期 pass@1024 趋于平台而 pass@1 仍持续提升 → 边界已全解锁，RL 转入<strong>锐化</strong>阶段，专注在既有边界内精化策略、提升命中率。</p>
+
+<h2>4. 实验结果与分析</h2>
+
+<h3>4.1 实验设置</h3>
+
+<table>
+  <tr><th>项目</th><th>配置</th></tr>
+  <tr><td>基模型</td><td>Ling-2.5-1T-Base（1T 参数 MoE，63B 激活）；Ling-2.5-flash-Base（104B 参数 MoE，7.4B 激活）。均<strong>不做任何 SFT</strong>直接 zero RL。</td></tr>
+  <tr><td>四阶段管线</td><td>First Stage RL → Self-Distillation → Second Stage RL → Third Stage RL</td></tr>
+  <tr><td>硬件</td><td>320×H200 GPU；Megatron（训练引擎）+ SGLang（rollout 引擎）+ Areal（编排）</td></tr>
+  <tr><td>优化器</td><td>Adam，β1=0.9, β2=0.999，常数学习率 2×10⁻⁶，weight decay 0.01；batch 512→256，minibatch 32</td></tr>
+  <tr><td>RL 超参</td><td>G=16 rollout/题，温度 1.0；IS 比率仅设上界 ϵ_high=5.0（无下界）；一阶 KL β=10⁻⁴（K3 散度），参考模型每 400 步刷新；窗口 4k→64k 每 800 步翻倍</td></tr>
+  <tr><td>自蒸馏</td><td>3 epochs，序列长度 64k，lr 7×10⁻⁵</td></tr>
+  <tr><td>三阶 tier</td><td>Low(4k) / Medium(16k) / High(64k)，各配系统提示</td></tr>
+  <tr><td>奖励</td><td>r = r_acc + r_format；早期规则匹配，后期 LLM-as-a-Judge（Qwen3-Next-80B-A3B-Instruct）</td></tr>
+  <tr><td>评测</td><td>7 个数学基准：AIME 2024/2025/2026、HMMT Feb.2025/Nov.2025/Feb.2026、IMOAnswerBench；温度 0.6、top-k 0.95、pass@1 64 次平均</td></tr>
+</table>
+
+<h3>4.2 主实验：Zero RL 从零起步即可竞争力强劲</h3>
+
+<p>无需任何人工标注数据，<strong>Ring-2.5-1T-Zero（仅 First Stage RL）即在 AIME 2026 达到 84.2% 准确率</strong>。这表明渐进课程（4k→64k 窗口）配合比率修正能稳定有效地激发涌现 CoT 行为——只要探索空间经恰当正则约束，大模型<strong>固有能力自发现</strong>复杂逻辑推导，无需人工轨迹。多阶段训练各阶段均带来可测增益：自蒸馏稳定模型、二阶 sample-level loss 持续提升、三阶 tier-based 嵌入自适应深度。</p>
+
+<h4>规模决定天花板：1T vs 104B 对照</h4>
+
+<p>通过对比 104B 的 Ring-2.5-flash-Zero 与 1T 的 Ring-2.5-1T-Zero（同配置训练），更大模型在 zero RL 范式下<strong>不成比例地获益</strong>，性能差距在更难基准上显著拉大。下图给出训练曲线快照（First Stage RL，1T 在 3600 步、flash 在 5200 步）：</p>
+
+<div id="chart-scaling" class="echarts-container" style="height:360px"></div>
+<figcaption>图：1T 与 104B 在 AIME 三个年份的 pass@1 准确率对比（1T 在 3600 步快照：AIME 2024=89.06%、AIME 2025=83.28%、AIME 2026=84.2%；flash 在 5200 步：AIME 2024=71.72%、AIME 2025=63.54%）。数据源自论文 Figure 10a 与正文。</figcaption>
+
+<p>1T 模型在 AIME 2024 上达 <strong>89.06%</strong>、AIME 2025 上达 <strong>83.28%</strong>；而 104B flash 即便训练更久（5200 步）也仅 71.72% 与 63.54%。1T 还展现<strong>更优样本效率</strong>，全程推理改进速率更快。<strong>更大参数容量是有效 zero RL 的根本前提</strong>——模型探索能力受其内部世界模型严格约束，更多参数提供表征容量与更广内部知识库以自主导航巨大搜索空间。</p>
+
+<h4>前沿模型参考（Table 1 节选）</h4>
+
+<p>下表节选自论文 Table 1 中可清晰提取的前沿模型行（pass@1 accuracy %），作为 Ring-Zero 竞争力的参照系：</p>
+
+<table>
+  <tr><th>Model</th><th>AIME 2024</th><th>AIME 2025</th><th>AIME 2026</th><th>HMMT Feb.25</th><th>HMMT Nov.25</th><th>HMMT Feb.26</th><th>IMOAnswerBench</th></tr>
+  <tr><td>GPT-5.5</td><td class="best">95.3</td><td>94.6</td><td class="best">97.0</td><td class="best">96.4</td><td>89.8</td><td class="best">95.7</td><td class="best">98.2</td></tr>
+  <tr><td>GLM-5.1</td><td>77.9</td><td>79.8</td><td>71.2</td><td>86.2</td><td class="best">89.1</td><td>92.3</td><td>93.5</td></tr>
+  <tr><td>Ring-2.5-1T-Zero (First Stage RL)</td><td>—</td><td>—</td><td>84.2</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+</table>
+<figcaption>注：GPT-5.5 与 GLM-5.1 行为 Table 1 中可清晰提取的完整 7 列数值；Ring-2.5-1T-Zero 行仅列出正文明确给出（AIME 2026=84.2%）的单元格，其余单元格因 Table 排版原因未在正文中明确归属，标注为“—”以避免误植。</figcaption>
+
+<p>可见 Ring-2.5-1T-Zero 在仅 First Stage RL（尚未经二、三阶提升）即已在 AIME 2026 达到 84.2%，介于 GLM-5.1（71.2%）与 GPT-5.5（97.0%）之间，且<strong>完全未用任何人工标注数据</strong>，这是其核心竞争力所在。</p>
+
+<h3>4.3 CoT 质量三维评估</h3>
+
+<p>论文提出在“最终答案正确”之外评估推理过程本身的三维框架：<strong>Comprehensibility</strong>（逻辑透明、人类易读，用 LLM-as-a-Judge 两两比较）、<strong>Reproducibility</strong>（弱学生模型能否从轨迹中有效学到推理策略，用蒸馏下游性能代理）、<strong>Efficiency</strong>（解题是否简洁、token 是否经济，用正确轨迹的平均 token 数衡量）。三者独立于、又互补于答案正确性。</p>
+
+<h4>4.3.1 可复现性（Reproducibility）：仅用 1/8 数据即超越 DeepSeek-R1 蒸馏</h4>
+
+<p>把模型推理轨迹蒸馏进 Qwen2.5-32B 与 Llama3.3-70B-Instruct，与同样配置下从 DeepSeek-R1 蒸馏对照。值得注意的是，Ring-Zero 蒸馏<strong>仅用 100K 样本</strong>，而 DeepSeek-R1 用了 800K——尽管数据量远少，从 Ring-Zero 轨迹蒸馏的学生模型<strong>一致超越</strong> R1 对照：</p>
+
+<div id="chart-distill" class="echarts-container" style="height:360px"></div>
+<figcaption>图：蒸馏下游准确率对比。Ring-Zero 蒸馏（100K 数据）在 Qwen-32B 上达 78.4%（较 R1 蒸馏 72.6 提升 5.8 点），在 Llama-70B 上达 74.5%（较 70.0 提升 4.5 点）。基线 Base：Qwen-32B=26.2、Llama-70B=5.2。</figcaption>
+
+<p>Qwen-32B 上 <strong>+5.8 点</strong>（78.4 vs 72.6），Llama-70B 上 <strong>+4.5 点</strong>（74.5 vs 70.0）。说明 Ring-Zero 的分段式推理轨迹提供更丰富、更可迁移的学习信号，蒸馏<strong>样本效率显著更高</strong>。</p>
+
+<h4>4.3.2 效率（Efficiency）：不到一半的 token</h4>
+
+<p>在五个模型（本文 + 四基线）<strong>全部答对</strong>的共有 AIME 题子集上比较平均 token 数：</p>
+
+<table>
+  <tr><th>Model</th><th>平均 token 数（共有正确题）</th><th>相对 Ring-Zero 倍数</th></tr>
+  <tr><td class="best">Ring-Zero（本文）</td><td class="best">6,368</td><td>1.00×</td></tr>
+  <tr><td>Kimi K2.6</td><td>14,115</td><td>2.22×</td></tr>
+  <tr><td>Qwen3.5-397B</td><td>16,292</td><td>2.56×</td></tr>
+  <tr><td>MiniMax M2.7</td><td>16,627</td><td>2.61×</td></tr>
+  <tr><td>GLM 5.1</td><td>17,220</td><td>2.70×</td></tr>
+</table>
+
+<p>Ring-Zero 平均仅用 <strong>6,368 token</strong>，<strong>不到其他模型一半</strong>。这表明其 CoT 能消除冗余探索步，沿更直接的逻辑路径抵达正确解。</p>
+
+<h4>4.3.3 可理解性（Comprehensibility）</h4>
+
+<p>1T 模型还<strong>自发出涌现结构化分段推理</strong>：即使无显式格式约束，也自然用 “Step 1: / Step 2:” 标记划分推理阶段，捕捉试错、自反思与并行探索的<strong>真实搜索式轨迹</strong>。在全部 90 道 AIME 题（2024–2026）上与四个强基线（GLM-5.1、Kimi-k2.6、MiniMax-M2.7、Qwen3.5-397B）两两比较，Ring-Zero 在逻辑连贯性、因果显式性、无幻觉三维度上取得<strong>全面占优胜率</strong>，证明其结构化推理确为更优的逻辑组织。</p>
+
+<h3>4.4 消融实验（在 flash 模型上进行）</h3>
+
+<p>因算力限制，消融在 Ling-2.5-flash-Base 上进行。</p>
+
+<h4>4.4.1 不同 RL 算法对比（GRPO / DAPO / CISPO / GSPO）</h4>
+<p>四者同基模型、同学习率、同数据，仅策略梯度计算方式不同。CISPO 与 DAPO 在 GRPO 基础上放大低概率 token 梯度，比 vanilla GRPO 更快降低 all-failed group 比率、更快奖励增长与序列长度增长，但<strong>以稳定性为代价</strong>。稳定性排序与不稳定性排序一致：<strong>CISPO > DAPO > GRPO</strong>（CISPO 最易熵塌缩）。GSPO 用 sample-level loss 显式维持高熵，虽防塌缩但几乎不激励长序列探索，不适合从零引导早期推理。结论：<strong>放大低概率 token 对激发推理极有效，但需精心稳定化</strong>。</p>
+
+<h4>4.4.2 RL 稳定化策略</h4>
+<ul>
+  <li><strong>KL 惩罚</strong>：移除 KL 会导致<strong>灾难性失败</strong>——训练-推理 log-prob 差距无界增长、熵塌缩、奖励崩溃；加 KL 后所有指标稳定。KL 约束整体策略漂移、防过早熵塌缩、维持探索能力。</li>
+  <li><strong>失配缓解（比率修正）</strong>：标准基线（仅 SGLang logits）约 <strong>800 步内崩溃</strong>；IcePop（裁剪阈值）延迟到约 <strong>2700 步仍失败</strong>；本方法（Megatron 分子 + SGLang 分母）<strong>全程稳定</strong>，且免阈值调参、省算力。</li>
+</ul>
+
+<h4>4.4.3 格式奖励的重要性</h4>
+<p>对比两种格式规范：<strong>Format A</strong>（仅要求单开标签 <code>&lt;think&gt;...</code>）导致序列长度暴涨而奖励停滞——模型钻空子在答案后接无尽头乱码；<strong>Format B</strong>（双闭合标签 + 要求 EOS 终止）只有正确终止的 rollout 才得分，严格防止退化长度增长。本文全阶段采用 Format B。</p>
+
+<h4>4.4.4 Zero RL 的“长度惯性”（Length Inertia）</h4>
+<p>标准 RL 训练存在根本缺陷：token-level loss 隐式给更长序列更高信用，模型发现“多生成 token”是<strong>数学上更安全的拿分捷径</strong>，于是即便对首次就答对的简单题也持续膨胀长度。对比 16k 与 32k 窗口：32k 产出平均长度近 2 倍但奖励仅边际提升——模型<strong>盲目填满可用窗口</strong>而非适配认知复杂度。这是切换 sample-level loss 的直接动因。</p>
+
+<h4>4.4.5 超参分析</h4>
+<ul>
+  <li><strong>学习率</strong>（1e-6 / 2e-6 / 3e-6）：三者收敛到高度相似的奖励与长度，训练对此范围鲁棒。</li>
+  <li><strong>rollout 数 G</strong>（8 / 16 / 32）：G=32 每步收敛最快，但 G=8 因更低算力在 wall-clock 上收敛最快；实用中取 <strong>G=16</strong> 作为方差与效率的平衡默认。</li>
+  <li><strong>损失归约</strong>：token-level 显著促进 CoT 长度增长，sample-level 则使长度完全持平——印证“token-level loss 对从零激励长推理链不可或缺”。</li>
+</ul>
+
+<script>
+  echarts.init(document.getElementById('chart-scaling')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '1T vs 104B：参数规模对 Zero RL 的影响（pass@1 %）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 15 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['Ring-2.5-1T-Zero (1T, 3600步)', 'Ring-2.5-flash-Zero (104B, 5200步)'], top: 30, textStyle: { color: '#cdd6f4' } },
+    grid: { left: '8%', right: '8%', bottom: '12%', top: 90 },
+    xAxis: { type: 'category', data: ['AIME 2024', 'AIME 2025', 'AIME 2026'], axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', min: 50, max: 100, axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [
+      { name: 'Ring-2.5-1T-Zero (1T, 3600步)', type: 'bar', data: [89.06, 83.28, 84.2], itemStyle: { color: '#a6e3a1' }, barWidth: '30%', label: { show: true, position: 'top', color: '#a6e3a1', formatter: '{c}' } },
+      { name: 'Ring-2.5-flash-Zero (104B, 5200步)', type: 'bar', data: [71.72, 63.54, null], itemStyle: { color: '#fab387' }, barWidth: '30%', label: { show: true, position: 'top', color: '#fab387', formatter: '{c}' } }
+    ]
+  });
+</script>
+<script>
+  echarts.init(document.getElementById('chart-distill')).setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'Reproducibility：蒸馏下游准确率对比（100K vs 800K 数据）', left: 'center', textStyle: { color: '#89b4fa', fontSize: 15 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['Base 基线', 'DeepSeek-R1 蒸馏 (800K)', 'Ring-Zero 蒸馏 (100K)'], top: 30, textStyle: { color: '#cdd6f4' } },
+    grid: { left: '8%', right: '8%', bottom: '12%', top: 90 },
+    xAxis: { type: 'category', data: ['Qwen2.5-32B (学生)', 'Llama3.3-70B (学生)'], axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', min: 0, max: 90, axisLine: { lineStyle: { color: '#45475a' } }, axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, splitLine: { lineStyle: { color: '#313244' } } },
+    series: [
+      { name: 'Base 基线', type: 'bar', data: [26.2, 5.2], itemStyle: { color: '#6c7086' }, label: { show: true, position: 'top', color: '#cdd6f4' } },
+      { name: 'DeepSeek-R1 蒸馏 (800K)', type: 'bar', data: [72.6, 70.0], itemStyle: { color: '#89dceb' }, label: { show: true, position: 'top', color: '#89dceb' } },
+      { name: 'Ring-Zero 蒸馏 (100K)', type: 'bar', data: [78.4, 74.5], itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#a6e3a1' } }
+    ]
+  });
+</script>
+
+<h3>4.5 涌现行为：Bitter Lesson 的五大表征</h3>
+
+<p>AI 研究史反复印证“<strong>苦涩教训</strong>”：利用计算与规模的通用方法终将超越人工启发式。在 LLM 推理领域，研究者曾投入大量精力设计专用提示、精选 SFT 数据、复杂管线以强制模型结构化、自验证或并行探索。论文在 104B 模型上确实<strong>需要</strong>人工奖励来引导结构化格式与自验证；但<strong>扩到 1T 后，这些人工启发式完全多余</strong>——纯 zero RL 下 1T 模型从零自发发现这些高级认知策略，无需任何显式监督或辅助奖励。下表归纳五种涌现行为：</p>
+
+<table>
+  <tr><th>涌现行为</th><th>含义</th><th>原文示例片段</th></tr>
+  <tr><td><span class="tag purple">拟人化</span> Anthropomorphism</td><td>复杂解题中出现模拟情绪与元评论：受挫宣泄、偷懒猜测、自夸打趣，源自论坛语料与人类认知摩擦</td><td>“Wait, but I might have a brain fart here…” / “Genius Idea” / “I'll wing it and go with 2”</td></tr>
+  <tr><td><span class="tag green">结构化格式</span> Structured Format</td><td>无格式指令也自发用 Step 编号、清晰阶段切换与中间小结组织长上下文注意力</td><td>“### Step 1: Understanding… ### Step 7: Verifying… ### Step 8: Double-Checking…”</td></tr>
+  <tr><td><span class="tag">自验证</span> Self-Verification</td><td>自发回检中间推导、交叉核对已知公式、代回原约束确保逻辑一致，纯为拿正确性奖励</td><td>“### 12. Cross-Check with Known Values… ### 13. Final Check for Calculation Errors… all methods agree.”</td></tr>
+  <tr><td><span class="tag orange">并行推理</span> Parallel Reasoning</td><td>自发分支替代策略，在单条线性 rollout 内执行自包含 Tree-of-Thought 搜索，多线索收敛才作答</td><td>“### 8. Alternative Approach… I'm confident the answer is 10/11.”</td></tr>
+  <tr><td><span class="tag orange">上下文焦虑</span> Context Anxiety</td><td>接近自认 token 上限时产生策略性恐慌，主动中止复杂推理强行启发式猜测（有缺陷但合理）</td><td>“Given the time I've invested… I will proceed to make an educated guess.”</td></tr>
+</table>
+
+<p>这些行为表明：模型并非贪婪连续生成，而呈现<strong>局部前向规划</strong>——在生成下一段 token 前先设定认知意图。结构化格式还暗示 LLM 推理可形成<strong>超越 token 级动作的更高层动作空间</strong>，为未来 RL 优化开辟新路径。</p>
+
+<h3>4.6 关键讨论：RL 可扩展 CoT 的根本限制</h3>
+
+<ul>
+  <li><strong>训练数据分布</strong>：真实世界数学数据呈重度长尾、偏向简单题（67.6% 题目 4k token 内可解），但<strong>模仿该自然频率对 RL 无益</strong>，反而浪费算力、停滞学习。模型需<strong>动态课程</strong>——难度随能力持续增长。类似地，中期训练需人工最大化复杂 agent 数据密度。</li>
+  <li><strong>模型容量</strong>：规模决定性能天花板与学习速度，更大模型更可能涌现惊喜行为。</li>
+  <li><strong>上下文窗口</strong>：更长推理链解锁多步推导；受硬件限制本文止于 64k，进一步扩展将直接解锁新数学能力。</li>
+  <li><strong>预训练先验</strong>：zero RL 只能从预训练已嵌入的知识起步；若某数学概念/证明技巧在预训练数据中缺失，RL 无法凭空发明——预训练世界知识构成<strong>刚性上界</strong>，RL 可在其中锐化但无法超越。</li>
+</ul>
+
+<h2>5. 总结与启发</h2>
+
+<h3>5.1 局限性</h3>
+
+<ol>
+  <li><strong>三阶自适应带来轻微性能回退</strong>：相比二阶峰值，三阶 High 模式略有下降，主因有二：(a) 缺乏高质量超长推理数据限制 High 模式上限；(b) 三种长度联合训练引入<strong>负迁移</strong>，Low/Medium 的训练信号略拉低 High 峰值能力。</li>
+  <li><strong>长度控制仍是启发式权宜</strong>：自蒸馏主动裁剪 + 二阶 sample-level loss 是实用折中，但<strong>仍是 heuristic workaround</strong>。理想方法应在一个统一 RL 目标内联合优化推理质量与 token 效率。</li>
+  <li><strong>预训练先验的刚性上界</strong>：RL 不能发明预训练中不存在的概念，能力上限受基座预训练知识严格约束。</li>
+  <li><strong>上下文窗口受硬件限制</strong>：训练止于 64k，更长窗口的潜力未被充分探索。</li>
+  <li><strong>“上下文焦虑”是有缺陷的涌现</strong>：模型为格式完整牺牲数学严谨，强行猜测——虽合理但不理想，需更优的长度-正确性权衡。</li>
+  <li><strong>消融仅在 flash(104B) 上做</strong>：1T 尺度的消融因算力受限未展开，部分设计选择在万亿尺度的有效性仍需更多验证。</li>
+</ol>
+
+<h3>5.2 核心洞见与读后评注</h3>
+
+<blockquote>
+  <p><strong>洞见一：稳定 1T zero RL 不需要重工程，只需少数关键修改。</strong> 论文最反直觉的结论是——让万亿 zero RL 稳定下来，并不需要复杂算法或庞大工程，只需 clipped IS、训练-推理比修正、混合精度三处“简单但关键”的改动。这本身是对“bitter lesson”的最好注脚：<strong>简单、可扩展的计算优于复杂人工规则</strong>。训练-推理比修正尤其精妙——用 Megatron logits 作分子既消除浮点误差又省去推理引擎重算 logits，一处修改同时解决稳定性与效率。</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>洞见二：discovery 与 sharpening 不是非此即彼，而是先后两阶段。</strong> 用 pass@1024 追踪推理边界优雅地化解了“RL 是扩展边界还是仅锐化分布”的争论：早期 pass@1024 上升说明 RL 在<strong>发现</strong>休眠推理模式、扩展边界；后期 pass@1024 饱和而 pass@1 持续上升说明转入<strong>锐化</strong>。这为判断训练所处阶段提供了可操作的诊断信号——何时该换数据难度、何时该转 sample-level loss。</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>洞见三：规模让高级认知策略“免费”涌现。</strong> 最striking的发现是五种高级认知行为在<strong>无任何辅助奖励/人工标注</strong>下自发涌现——且仅在 1T 尺度才发生（104B 仍需人工奖励引导）。这强力印证：随规模增大，原本需精心工程的能力会<strong>自然涌现为最优解</strong>。对社区而言，这意味着：与其费力设计复杂推理管线，不如把工程投入到稳定 scaling 上。</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>洞见四：CoT 质量需独立于正确性评估。</strong> 三维框架（可读/可复现/高效）填补了“只看最终答案”的评价盲区。尤其 reproducibility 用蒸馏下游增益作代理、efficiency 用共有正确题 token 数——两者都提供了<strong>可量化、可比</strong>的信号，证明 Ring-Zero 不仅答对，还答得可迁移、答得省。</p>
+</blockquote>
+
+<blockquote>
+  <p><strong>洞见五：“长度惯性”揭示了 token-level loss 的隐含偏差。</strong> 模型钻“多生成 token 拿分更安全”的空子，即便对已答对的简单题也膨胀长度——这是 GRPO token-level 归约的<strong>系统性偏差</strong>，而非模型“理性”选择。论文用 token→sample-level 的阶段切换处理，但更根本的解法应是统一目标内联合优化长度与正确性，这是未来工作明确方向。</p>
+</blockquote>
+
+<p><strong>读后总评</strong>：本文价值不在 SOTA 数字，而在三方面：(1) 提供了<strong>可复现的万亿 zero RL 蓝图</strong>，降低大尺度训练工程门槛；(2) 用 pass@1024/pass@1 双指标给出<strong>两阶段训练动力学</strong>的清晰刻画；(3) 系统记录<strong>无监督涌现的高级认知行为</strong>，为“scaling 即解药”提供实证。其局限也同样诚实——长度控制仍是权宜、三阶负迁移、消融未在 1T 展开——这些恰好标定了下一阶段研究起点。</p>
+
+<h2>6. 参考文献</h2>
+
+<p>以下为论文中引用的关键文献（据论文 References 整理）：</p>
+
+<ol>
+  <li>Daya Guo et al. <strong>DeepSeek-R1: Incentivizes Reasoning in LLMs through Reinforcement Learning.</strong> Nature, 645(8081):633–638, 2025. <em>zero RL 范式开创性工作，纯 RL 从基模型激发涌现 CoT。</em></li>
+  <li>Zhihong Shao et al. <strong>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models.</strong> arXiv:2402.03300, 2024. <em>提出 GRPO，消除独立 critic，组内相对奖励。</em></li>
+  <li>MiniMax. <strong>MiniMax-M1: Scaling Test-Time Compute Efficiently with Lightning Attention.</strong> arXiv:2506.13585, 2025. <em>clipped importance ratio 策略优化（CISPO）来源，放大低概率 token。</em></li>
+  <li>Qiying Yu et al. <strong>DAPO: An Open-Source LLM Reinforcement Learning System at Scale.</strong> arXiv:2503.14476, 2025. <em>非对称裁剪与动态采样，提升大规模稳定性。</em></li>
+  <li>Yang Yue et al. <strong>Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?</strong> arXiv:2504.13837, 2025a. <em>discovery vs. sharpening 争论源头，pass@k 追踪推理边界。</em></li>
+  <li>Ling Team and Inclusion AI. <strong>Every Step Evolves: Scaling Reinforcement Learning for Trillion-Scale Thinking Model.</strong> arXiv:2510.18855, 2025. <em>Ling-2.5 基座来源，万亿尺度思考模型 RL。</em></li>
+  <li>Wei Fu et al. <strong>Areal: A Large-Scale Asynchronous Reinforcement Learning System for Language Reasoning.</strong> arXiv:2505.24298, 2025. <em>本文 RL 训练编排框架。</em></li>
+  <li>Hunter Lightman et al. <strong>Let's Verify Step by Step.</strong> ICLR, 2024. <em>过程级奖励与逐步验证，人工启发式代表。</em></li>
+  <li>Jason Wei et al. <strong>Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.</strong> NeurIPS, 2022. <em>CoT 推理范式起点。</em></li>
+  <li>Zheng et al. <strong>Group Sequence Policy Optimization (GSPO).</strong> arXiv:2507.18071, 2025a. <em>sample-level 损失、维持高熵的对照算法。</em></li>
+</ol>
+
+<hr>
+<p style="color:#6c7086; font-size:0.85em;">本报告基于 arXiv:2607.12395v2 全文撰写，所有数值、公式与案例均来自原文，未作编造。报告由 llm-paper-reading 技能模板生成。</p>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

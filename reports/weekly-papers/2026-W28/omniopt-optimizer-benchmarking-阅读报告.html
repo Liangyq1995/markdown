@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OmniOpt 阅读报告：现代优化器的分类、几何与基准</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 240px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 260px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.9em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 6px 10px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    td.best { color: var(--strong); font-weight: 700; }
+    td.sub { color: #f9e2af; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .info-table th { width: 130px; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .pill { display:inline-block; font-size:0.78em; padding:1px 8px; border-radius:10px; background:#313244; color:var(--heading); margin-right:4px; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+<h1>OmniOpt：现代优化器的分类法、几何统一与基准评测</h1>
+
+<table class="info-table">
+  <tr><th>标题</th><td>OmniOpt: Taxonomy, Geometry, and Benchmarking of Modern Optimizers</td></tr>
+  <tr><th>核心问题</th><td>百余种深度学习/LLM 优化器机制碎片化、结论协议敏感、数学表述不统一，缺乏可操作的选型坐标系</td></tr>
+  <tr><th>研究类型</th><td>综述 + 基准评测（Survey &amp; Benchmark），非单一新方法</td></tr>
+  <tr><th>核心贡献</th><td>五阶段元流水线 + LMO 驱动的四轴分解 + 双维分类法 + 跨域基准（60M–1B、4 架构、256–32k 上下文）</td></tr>
+  <tr><th>覆盖规模</th><td>综述 108 种优化器；基准实测 24 种代表性方法</td></tr>
+  <tr><th>作者机构</th><td>上海 AI 实验室、西湖大学、上海交大、上海大学、UCAS、浙大、南科大（OpenDataLab）</td></tr>
+  <tr><th>开源地址</th><td>提供 Code / Website / Hugging Face（论文首页标注）</td></tr>
+</table>
+
+<h2 id="sec-overview">1. 概述</h2>
+<p>OmniOpt 是一篇针对<strong>深度学习/LLM 优化器</strong>的大型综述与基准论文。它不提出单一新优化器，而是把"优化器选择"重构为一个被算力、显存、调参预算、任务多样性共同约束的<strong>系统级多目标决策问题</strong>，并给出一个可操作的"坐标系"来比较、组合、评测优化器。</p>
+
+<p>论文建立在四个相互耦合的组件之上：</p>
+<ol>
+  <li><strong>通用元流水线（Universal Meta-Pipeline）</strong>：把每次参数更新看作一个五阶段结构化变换 $S_0\!-\!S_5$，指出大多数方法只在其中一两个阶段做实质性工作，其余阶段为恒等映射。</li>
+  <li><strong>LMO 数学统一</strong>：用范数约束下的线性最小化预言机（Linear Minimization Oracle）统一 sign 方向、谱正交化方向、Kronecker 预条件方向等不同更新方向。</li>
+  <li><strong>双维分类法（Dual-Dimension Taxonomy）</strong>：A 维按主机制把 108 个优化器归入 5 个族 T1–T5；B 维记录每个方法旨在改善的 6 个可测目标 O1–O6。</li>
+  <li><strong>机制对齐的基准评测</strong>（论文核心）：在统一跨域基准上实例化整个分类法，覆盖语言模型预训练（60M–1B、4 种架构、256–32k 上下文）与 CIFAR100 图像分类，并做 Muon 的机制消融。</li>
+</ol>
+
+<blockquote>核心结论：<strong>不存在普适最优优化器</strong>。最强质量增益来自"对几何敏感的方向映射（Axis III）及其喂入的结构化状态（Axis II）"；对标量自适应矩模板的微调收益甚微。两个经验规律构成设计约束：① 激进状态压缩受梯度有效秩上界约束，长上下文下急剧退化；② 谱矩阵几何是架构条件性的，增益必须在目标拓扑上验证。</blockquote>
+
+<h2 id="sec-bg">2. 研究背景与动机</h2>
+<h3 id="sec-bg-problem">2.1 问题形式化</h3>
+<p>LLM 训练归结为经验风险最小化。给定训练语料 $\mathcal{D}=\{(x_i,y_i)\}_{i=1}^{N}$ 与可训练参数 $\theta\in\mathbb{R}^d$：</p>
+<p>$$\mathcal{L}(\theta)=\min_{\theta\in\mathbb{R}^d}\frac{1}{N}\sum_{i=1}^{N}\ell(\theta;x_i,y_i),$$</p>
+<p>第 $t$ 步收到小批量梯度：</p>
+<p>$$g_t=\frac{1}{|\mathcal{B}_t|}\sum_{i\in\mathcal{B}_t}\nabla_\theta\ell(\theta_t;x_i,y_i),\qquad \mathbb{E}[g_t\mid\theta_t]=\nabla\mathcal{L}(\theta_t),\quad \mathbb{E}[\|g_t-\nabla\mathcal{L}(\theta_t)\|^2]\le\sigma^2.$$</p>
+<p><strong>参数拓扑</strong>是关键：二维矩阵 $W\in\mathbb{R}^{m\times n}$（注意力投影、FFN、embedding）允许 SVD、Kronecker 分解、矩阵正交化、低秩投影；而 bias、norm 增益等向量参数无此几何，通常走逐元素规则。这一拓扑差异正是后续 $S_1$ 路由阶段的依据。</p>
+
+<p><strong>混合精度显存预算</strong>（BF16 前反向 + FP32 主权重）：</p>
+<p>$$M_{\text{train}}\approx \underbrace{4d}_{\text{FP32 主权重}}+\underbrace{2d}_{\text{BF16 模型}}+\underbrace{2d}_{\text{BF16 梯度}}+\underbrace{S_{\text{opt}}d}_{\text{优化器状态}}+M_{\text{act}}.$$</p>
+<p>Adam 存两个 FP32 状态 $m_t,v_t$，每参数额外 8 字节，7B 模型仅 Adam 状态就需约 56 GB。因此状态压缩方法（T4）在固定硬件预算下能改变可行模型/批量规模，绝非纯工程技巧。</p>
+
+<h3 id="sec-bg-newton">2.2 经典优化背景：预条件视角</h3>
+<p>二阶泰勒展开给出局部二次模型与阻尼牛顿更新：</p>
+<p>$$\mathcal{L}(\theta_t+\delta)\approx \mathcal{L}(\theta_t)+g_t^\top\delta+\tfrac{1}{2}\delta^\top H_t\delta,\quad H_t=\nabla^2\mathcal{L}(\theta_t),$$</p>
+<p>$$\theta_{t+1}=\theta_t-\eta_t H_t^{-1}g_t.$$</p>
+<p>这是贯穿全文的<strong>预条件视角</strong>：优化器不仅选择梯度信号，还选择"在何种几何下缩放该信号"。SGD 用 $I$ 替代 $H_t^{-1}$；Adam 用对角二阶矩/Fisher 近似；Shampoo、SOAP 用结构化矩阵因子/特征基；Muon 用极/Gram 诱导的矩阵方向。动量则用 EMA 平滑：</p>
+<p>$$m_t=\beta_1 m_{t-1}+(1-\beta_1)g_t,\quad \theta_{t+1}=\theta_t-\eta_t m_t.$$</p>
+
+<h3 id="sec-bg-motivation">2.3 三重困难与动机</h3>
+<p>论文指出当前优化器文献难以导航的三个原因：</p>
+<ol>
+  <li><strong>机制命名局部化</strong>：论文按局部机制（新矩估计、预条件器、投影、量化器、后处理修正）命名，无法揭示两个优化器是否作用于同一阶段、组件是否正交、是否可组合。</li>
+  <li><strong>经验结论协议敏感</strong>：随模型规模、batch、训练时长、数据-模型比、学习率调度、warmup、权重衰减、调参预算变化，结论会反转——降 loss 的方法可能增显存/墙钟时间/调参负担。</li>
+  <li><strong>数学表述碎片化</strong>：逐元素自适应、矩阵预条件、sign、低秩投影、几何正则化用不同记号与假设分析，难以横向比较。</li>
+</ol>
+
+<p>优化器设计四阶段演进（HTML 卡片时间线）：</p>
+<style>
+  .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+  .timeline { display: flex; gap: 0; min-width: 980px; }
+  .tl-col { flex: 1; display: flex; flex-direction: column; }
+  .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.92em; border-radius: 6px 6px 0 0; }
+  .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+  .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.84em; line-height: 1.5; }
+  .tl-item:last-child { margin-bottom: 0; }
+  .tl-tag { display: inline-block; font-size: 0.72em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+  .tl-tag.orange { background: #fab387; } .tl-tag.green { background: #a6e3a1; } .tl-tag.purple { background: #cba6f7; }
+</style>
+<div class="timeline-wrap"><div class="timeline">
+  <div class="tl-col"><div class="tl-period">Stage Ⅰ · Pre-2013</div><div class="tl-body">
+    <div class="tl-item"><span class="tl-tag">标量基础</span><br>SGD / AdaGrad / RMSProp 奠定随机优化的标量与逐元素自适应范式</div>
+  </div></div>
+  <div class="tl-col"><div class="tl-period">Stage Ⅱ · 2015–2019</div><div class="tl-body">
+    <div class="tl-item"><span class="tl-tag green">默认接口</span><br>Adam / AdamW 成为深度学习事实标准，建立逐元素自适应矩模板</div>
+    <div class="tl-item"><span class="tl-tag purple">矩阵结构萌芽</span><br>Shampoo、AdaFactor 引入矩阵/因子结构</div>
+  </div></div>
+  <div class="tl-col"><div class="tl-period">Stage Ⅲ · 2020–2023</div><div class="tl-body">
+    <div class="tl-item"><span class="tl-tag orange">成本暴露</span><br>规模化训练暴露显存/通信/调参瓶颈，催生 GaLore、8-bit Adam、LAMB 等压缩与鲁棒方法</div>
+  </div></div>
+  <div class="tl-col"><div class="tl-period">Stage Ⅳ · 2024–2026</div><div class="tl-body">
+    <div class="tl-item"><span class="tl-tag">LLM 机制多样化</span><br>Muon / SOAP / Lion / MARS / Schedule-Free / SAM / Sophia 等机制全面分化，T1–T5 五条机制车道并行扩张</div>
+  </div></div>
+</div></div>
+
+<h2 id="sec-meta">3. 核心方法一：通用元流水线（Meta-Pipeline）</h2>
+<p>令 $W_t\in\mathbb{R}^{m\times n}$ 为二维参数张量，$G_t$ 为训练信号，$S_{t-1}$ 为更新前优化器状态。五个内部算子 $S_1$–$S_5$（每个可退化为恒等）把 $G_t$ 变为带符号参数增量：</p>
+<p>$$\Delta_t = S_5\big(S_4(S_3(S_2(S_1(G_t));S_{t-1});S_{t-1});S_{t-1},W_t\big),\quad W_{t+1}=W_t+\Delta_t.\quad(\text{Eq.16})$$</p>
+
+<pre class="mermaid">
+flowchart TD
+    S0["S0 信号获取<br/>FO / 方差缩减 / 曲率增强"] --> S1["S1 参数划分与路由<br/>ρ = R(shape, module-type)"]
+    S1 --> S2["S2 梯度变换<br/>identity / NS正交 / Kronecker / 低秩投影 / sign"]
+    S2 --> S3["S3 状态演化<br/>EMA矩 / 因子状态 / 量化状态 / 多时间尺度"]
+    S3 --> S4["S4 更新重构<br/>逆投影 / 逆旋转 / 恒等"]
+    S4 --> S5["S5 更新定稿<br/>LR / 解耦权重衰减 / 梯度裁剪 / 信任比 / 掩码"]
+    S5 --> W["W_{t+1}"]
+    classDef act fill:#313244,stroke:#89b4fa,color:#cdd6f4;
+    class S0,S1,S2,S3,S4,S5,W act;
+</pre>
+
+<p>各阶段定义：</p>
+<ul>
+  <li><strong>S0 训练信号获取</strong>：标准为一阶反传 $G_t=\nabla_W\mathcal{L}$；可替换为 STORM 式方差缩减 $\tilde{G}_t$，或 Hessian-向量积/Sophia 对角 Hessian 估计 $h_t\approx u\odot(Hu)$。零阶方法作为边界情形，不纳入主 T1–T5 分类。</li>
+  <li><strong>S1 参数划分与路由</strong>：按张量拓扑与模块类型赋路由标签 $\rho^{(i)}=R(\text{shape}(\theta^{(i)}),\text{module-type})$。区分二维矩阵（可做 SVD/Kronecker/低秩）与向量参数（逐元素）。</li>
+  <li><strong>S2 梯度变换</strong>：$\hat{G}_t=\mathcal{T}(G_t;S_{t-1})\in\mathbb{R}^{r\times s}$。代表：(i) 恒等（T1/T4/多数 T5）；(ii) Newton–Schulz 谱正交 $\hat{G}_t=\text{NS}_k(M_t)$ 使 $\hat{G}_t^\top\hat{G}_t\approx I$（Muon）；(iii) Kronecker 预条件（Shampoo）；(iv) 低秩正交投影 $\hat{G}_t=P_t^\top G_t$（GaLore）；(v) sign 离散化 $\hat{G}_t=\text{sign}(\beta_1 m_{t-1}+(1-\beta_1)G_t)$（Lion）。<strong>S2 与 S4 成数学对偶</strong>：凡 S2 引入降维/基旋转，S4 须定义对应返回映射。</li>
+  <li><strong>S3 状态演化</strong>：$S_t=f(S_{t-1},\hat{G}_t)$。Adam 族维护 $m_t=\beta_1 m_{t-1}+(1-\beta_1)\hat{G}_t$，$v_t=\beta_2 v_{t-1}+(1-\beta_2)\hat{G}_t^{\odot 2}$；其余含 Kronecker 因子、行列因子、INT8 量化、多时间尺度 EMA 等。</li>
+  <li><strong>S4 更新重构</strong>：$\hat{\Delta}_t=\mathcal{R}(\tilde{\Delta}_t;S_t)\in\mathbb{R}^{m\times n}$。低秩 $\hat{\Delta}_t=P_t\tilde{\Delta}_t$；Kronecker $\hat{\Delta}_t=Q_L\tilde{\Delta}_t Q_R^\top$（精确，因 $Q_L,Q_R$ 正交）；行列因子为秩 1 外积近似。</li>
+  <li><strong>S5 更新定稿</strong>：</p>
+  <p>$$W_{t+1}^{(l)}=W_t-\eta_t\cdot\phi_t^{(l)}\cdot C\big(\mathcal{F}(\hat{\Delta}_t)\big)-\eta_t\lambda W_t,\quad(\text{Eq.22})$$</p>
+  <p>含全局 LR、层间信任比 $\phi_t^{(l)}$、后处理滤波 $\mathcal{F}$、裁剪 $C$、解耦权重衰减 $\lambda$。代表：AdamW 解耦权重衰减、全局梯度裁剪、Sophia 元素级信任域裁剪、LAMB 层间信任比、Cautious 方向一致性掩码、SAM 对抗扰动。</li>
+</ul>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1：现代优化器更新的通用元流水线</div>
+  <p><span class="kw">Require:</span> 参数 <span class="var">Θ₀</span>, 损失 <span class="var">L</span>, 学习率调度 <span class="var">{η_t}</span>, 初始状态 <span class="var">S₀</span>, 正则系数 <span class="num">λ</span></p>
+  <p><span class="kw">Ensure:</span> 终态参数 <span class="var">Θ_T</span></p>
+  <p><span class="kw">for</span> t = 1, ..., T <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="var">G_t</span> ← <span class="fn">ACQUIRESIGNAL</span>(<span class="var">Θ_{t-1}</span>, <span class="var">L</span>) &nbsp;&nbsp;<span class="cm">▷ S0: FO / VR / 曲率增强</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for each</span> <span class="var">θ_{t-1}^{(i)}</span> <span class="kw">in</span> <span class="var">Θ_{t-1}</span> <span class="kw">do</span></p>
+  <p style="padding-left:3em"><span class="var">g_t^{(i)}</span> ← <span class="fn">SELECT</span>(<span class="var">G_t</span>, <span class="var">θ_{t-1}^{(i)}</span>)</p>
+  <p style="padding-left:3em"><span class="var">ρ^{(i)}</span> ← <span class="fn">ROUTE</span>(<span class="var">θ_{t-1}^{(i)}</span>) &nbsp;&nbsp;<span class="cm">▷ S1 路由</span></p>
+  <p style="padding-left:3em"><span class="var">ĝ_t^{(i)}</span> ← <span class="fn">TRANSFORM</span>(<span class="var">g_t^{(i)}</span>, <span class="var">ρ^{(i)}</span>) &nbsp;&nbsp;<span class="cm">▷ S2 变换</span></p>
+  <p style="padding-left:3em"><span class="var">s_t^{(i)}</span> ← <span class="fn">EVOLVE</span>(<span class="var">s_{t-1}^{(i)}</span>, <span class="var">ĝ_t^{(i)}</span>, <span class="var">ρ^{(i)}</span>) &nbsp;&nbsp;<span class="cm">▷ S3 状态演化</span></p>
+  <p style="padding-left:3em"><span class="var">Δ̂_t^{(i)}</span> ← <span class="fn">RECONSTRUCT</span>(<span class="var">s_t^{(i)}</span>, <span class="var">ρ^{(i)}</span>) &nbsp;&nbsp;<span class="cm">▷ S4 重构</span></p>
+  <p style="padding-left:3em"><span class="var">θ_t^{(i)}</span> ← <span class="fn">FINALIZE</span>(<span class="var">θ_{t-1}^{(i)}</span>, <span class="var">Δ̂_t^{(i)}</span>, <span class="var">η_t</span>, <span class="num">λ</span>, <span class="var">ρ^{(i)}</span>) &nbsp;&nbsp;<span class="cm">▷ S5 定稿</span></p>
+  <p style="padding-left:1.5em"><span class="kw">end for</span></p>
+  <p style="padding-left:1.5em"><span class="var">S_t</span> ← {<span class="var">s_t^{(i)}</span>}_i</p>
+  <p><span class="kw">end for</span></p>
+</div>
+
+<h3 id="sec-meta-identity">3.1 恒等映射原理与代表实例</h3>
+<p><strong>核心推论</strong>：大多数优化器仅在一两个阶段做非平凡设计，其余阶段为恒等或默认。下表给出 5 个代表方法的活跃阶段：</p>
+<table>
+  <tr><th>方法（族）</th><th>活跃阶段</th><th>核心机制</th></tr>
+  <tr><td>AdamW (T1.1)</td><td>S3, S5</td><td>矩 EMA (S3) + 解耦权重衰减 (S5)</td></tr>
+  <tr><td>Muon (T2.1)</td><td>S1, S2</td><td>矩阵路由 (S1) + Newton–Schulz 谱正交 (S2)</td></tr>
+  <tr><td>GaLore (T2.3)</td><td>S1–S4</td><td>低秩投影 (S1/S2) + 子空间 Adam 状态 (S3) + 逆投影 (S4)</td></tr>
+  <tr><td>Lion (T3)</td><td>S2, S3</td><td>动量插值 (S3) 后 sign 离散 (S2)</td></tr>
+  <tr><td>SAM (T5.1)</td><td>S0, S5</td><td>扰动诱导梯度 (S0) + 邻域正则写回 (S5)</td></tr>
+</table>
+<p><strong>组合约束</strong>：不同阶段的机制天然可堆叠（方差缩减信号 S0 可喂 AdamW/Lion/Shampoo；低秩投影 S2/S4 可叠加状态量化 S3/S4；信任比 S5 可包在标准自适应更新外）；而占据同一槽位的机制需显式排序（如低秩投影与谱正交都强作用于 S2，须明确"先投影后正交"还是反之）。</p>
+
+<h2 id="sec-lmo">4. 核心方法二：LMO 几何统一与四轴分解</h2>
+<h3 id="sec-lmo-found">4.1 LMO 基础与范数诱导方向</h3>
+<p>给定凸集 $\mathcal{D}$ 与输入信号 $s$，LMO 定义为：</p>
+<p>$$\text{lmo}_{\mathcal{D}}(s)\in\arg\min_{x\in\mathcal{D}}\langle s,x\rangle.\quad(\text{Eq.24})$$</p>
+<p>当约束集为半径 $\rho$ 的范数球 $\mathcal{D}_\rho=\{x:\|x\|\le\rho\}$，令单位球上最速上升方向为 $u^\sharp(s)\in\arg\max_{\|u\|\le 1}\langle s,u\rangle$，则预言机因式分解为：</p>
+<p>$$\text{lmo}_{\mathcal{D}_\rho}(s)=-\rho\,u^\sharp(s),\qquad \Phi_t(s_t)=u^\sharp(s_t)=-\frac{1}{\rho}\text{lmo}_{\mathcal{D}_\rho}(s_t).\quad(\text{Eq.26-27})$$</p>
+<p>这表明<strong>范数约束 LMO 与最速下降共享同一几何内核</strong>——范数球的形状决定了哪个方向算"最陡"。注意 LMO 只返回方向与边界点、丢弃幅度，故需保留的梯度尺度须通过学习率、半径或预条件器重新引入。</p>
+
+<p>采用无约束方向生成视角 $W_{t+1}=W_t-\eta_t\Phi_t(M_t)$（Eq.28），其中 $M_t$ 是状态估计器交出的有效信号。几种规范范数几何已覆盖大多数优化器：</p>
+<table>
+  <tr><th>范数球</th><th>LMO 方向</th><th>对应优化器</th></tr>
+  <tr><td>欧氏球 $\mathcal{D}_2=\{x:\|x\|_2\le\rho\}$</td><td>$-\rho\,g/\|g\|_2$，归一化梯度</td><td>归一化 SGD</td></tr>
+  <tr><td>最大范数球 $\mathcal{D}_\infty=\{x:\|x\|_\infty\le\rho\}$</td><td>$-\rho\,\text{sign}(g)$，sign 方向</td><td>SignSGD / Lion</td></tr>
+  <tr><td>谱范数球 $\mathcal{D}_{S_\infty}=\{X:\|X\|_{S_\infty}\le\rho\}$</td><td>$-\rho\,UV^\top$（$M=U\Sigma V^\top$），矩阵极方向</td><td>Muon</td></tr>
+  <tr><td>自适应 $\ell_\infty$ 盒</td><td>$-\rho_t\,m_t/\sqrt{v_t}$，动态边界</td><td>Adam</td></tr>
+</table>
+<p>Adam 的关键洞察：定义动态界 $b_{t,i}=|m_{t,i}|/\sqrt{v_{t,i}}$ 与自适应盒 $\mathcal{D}_t^{\text{Adam}}=\{x:|x_i|\le\rho_t b_{t,i}\}$，则：</p>
+<p>$$\text{lmo}_{\mathcal{D}_t^{\text{Adam}}}(m_t)=-\rho_t\frac{m_t}{\sqrt{v_t}}.\quad(\text{Eq.32})$$</p>
+<p>即 Adam 是<strong>自适应约束集上的动态边界 LMO</strong>，而该约束集本身由 Axis II 状态估计器产生。</p>
+
+<h3 id="sec-lmo-muon">4.2 Muon 的双面性：谱 LMO = Gram 预条件</h3>
+<p>取 $M_t\in\mathbb{R}^{m\times n}$（$m\lt n$），用左 Gram Hessian $H_t=M_t M_t^\top$，在理想满秩情形下：</p>
+<p>$$\Phi_t(M_t)=H_t^{-1/2}M_t=(M_t M_t^\top)^{-1/2}M_t,\quad M_t=U_t\Sigma_t V_t^\top\;\Rightarrow\;\Phi_t(M_t)=U_t V_t^\top.\quad(\text{Eq.38})$$</p>
+<p>预条件形式恰好等于谱-LMO 极形式 $UV^\top$。故 Muon 同时是<strong>谱范数 LMO</strong>与<strong>Gram 预条件器</strong>——这正是 Axis III 的"两面"。</p>
+
+<h3 id="sec-fouraxis">4.3 四轴分解（Axis I–IV）</h3>
+<p>把 LMO 视角与预条件视角合并在 Axis III，把矩/二阶矩/方差缩减/投影状态前移到 Axis II，得到主形式：</p>
+<p>$$(M_t,H_t,\mathcal{D}_t)=\text{StateEstimator}_t(g_t,\text{State}_{t-1}),\quad(\text{Eq.33})$$</p>
+<p>$$D_t=\Phi_t(M_t;H_t,\mathcal{D}_t),\quad(\text{Eq.34})\qquad W_{t+1}=\text{Finalize}(W_t,D_t).\quad(\text{Eq.35})$$</p>
+
+<table>
+  <tr><th>轴</th><th>名称</th><th>回答的问题</th><th>代表选择</th></tr>
+  <tr><td>Axis I</td><td>更新域与支撑</td><td>更新在哪个空间表达？</td><td>全参数空间 $\mathbb{R}^d$ / 矩阵空间 $\mathbb{R}^{m\times n}$ / 低秩投影子空间（GaLore 取 $Z_t=Q_L^\top M_t Q_R$，再 $D_t=Q_L\Phi_t(Z_t)Q_R^\top$）</td></tr>
+  <tr><td>Axis II</td><td>状态估计器</td><td>交给几何算子的有效信号是什么？</td><td>SGD：$M_t=g_t,H_t=I$；动量：$M_t=m_t$；Adam：$M_t=m_t,H_t=\text{diag}(v_t)$；MARS：方差缩减 $c_t$ 后再维护矩</td></tr>
+  <tr><td>Axis III</td><td>几何与预条件算子</td><td>状态如何变成方向？</td><td>LMO 面：$\Phi_t(M_t)=-\frac{1}{\rho_t}\text{lmo}_{\mathcal{D}_t}(M_t)$；预条件面：$\Phi_t(M_t)=H_t^{-\alpha}M_t$</td></tr>
+  <tr><td>Axis IV</td><td>定稿与包装</td><td>方向如何写回参数？</td><td>学习率、权重衰减、投影回投、层间路由、刷新调度</td></tr>
+</table>
+
+<p><strong>与元流水线的对齐</strong>：Axis I↔P1、Axis II↔P2、Axis III↔P3、Axis IV↔P4。顺序要点：状态估计器永远在前、几何算子永远在后——Axis II 产生三元组 $(M_t,H_t,\mathcal{D}_t)$，Axis III 消费它生成方向。</p>
+
+<p><strong>GaLore-Adam 的四轴解读</strong>（Axis I 非平凡的最清晰案例）：给定全空间动量 $M_t\in\mathbb{R}^{m\times n}$ 与投影 $Q_L\in\mathbb{R}^{m\times r},Q_R\in\mathbb{R}^{n\times r}$（$r\ll m,n$）：</p>
+<p>$$\bar{M}_t=Q_L^\top M_t Q_R\in\mathbb{R}^{r\times r}\quad(\text{Eq.39, 压缩}),\qquad \bar{D}_t=\frac{\bar{m}_t}{\sqrt{\bar{v}_t}}\quad(\text{Eq.40, 子空间内 Adam 方向}),$$</p>
+<p>$$D_t=Q_L\bar{D}_t Q_R^\top\in\mathbb{R}^{m\times n}\quad(\text{Eq.41, 回投}).$$</p>
+<p>显存从 $O(mn)$ 降到 $O(r^2)$；读作 LMO 是"投影自适应盒"，读作预条件是"投影对角度量"。</p>
+
+<h2 id="sec-taxonomy">5. 核心方法三：双维分类法</h2>
+<h3 id="sec-tax-a">5.1 Dimension A：方法学分类（5 族 15 子类）</h3>
+<p>每优化器赋唯一主族标签，依据是"移除哪个组件会使方法坍缩为更简基线"。</p>
+<table>
+  <tr><th>族</th><th>名称</th><th>主机制（活跃阶段）</th><th>代表方法</th></tr>
+  <tr><td><strong>T1</strong></td><td>逐元素自适应矩与标量控制</td><td>改 S3 元素级状态 + S5 局部缩放</td><td>AdamW, Adan, RAdam, NAdam, AdaBelief, MARS-AdamW, Prodigy, AdEMAMix</td></tr>
+  <tr><td><strong>T2</strong></td><td>矩阵级结构方法</td><td>S1–S4 矩阵路由/变换/结构状态/重构</td><td>Muon, Shampoo, SOAP, GaLore, RMNP, MARS-Shampoo</td></tr>
+  <tr><td><strong>T3</strong></td><td>离散化与方向量化</td><td>S2 不可逆方向离散化，常简化 S3</td><td>SignSGD, Lion, MARS-Lion</td></tr>
+  <tr><td><strong>T4</strong></td><td>状态压缩与结构聚合</td><td>S3/S4 状态表示与梯度生命周期</td><td>AdaFactor, CAME, Adam-mini, APOLLO, 8-bit Adam, Conda</td></tr>
+  <tr><td><strong>T5</strong></td><td>曲率感知与几何正则</td><td>S5 写回/后处理/几何正则</td><td>SAM, Sophia, LAMB, AdamP, Cautious, Magma</td></tr>
+</table>
+<p><strong>边界案例</strong>按主增量机制裁定：Q-GaLore 归 T4.2（量化状态），基础 GaLore 仍 T2.3；Magma/MGUP 归 T5.3（选择性更新掩码）；SAM/Cautious/LAMB 按 wrapper 级贡献归 T5。</p>
+
+<h3 id="sec-tax-b">5.2 Dimension B：效应目标分类（O1–O6）</h3>
+<p>按评测成本（而非机制）组织，因基准可行性取决于如何测量。六个目标不互斥：</p>
+<table>
+  <tr><th>目标</th><th>定义</th><th>测量层</th><th>典型输出</th></tr>
+  <tr><td>O1 收敛效率</td><td>固定预算下 loss 下降/达靶时间</td><td>层1·单次运行</td><td>最终 loss、达靶步数、token 效率</td></tr>
+  <tr><td>O2 单步成本</td><td>相对基线的额外单步计算/同步</td><td>层1·训练中记录</td><td>步时、FLOPs、额外反向次数</td></tr>
+  <tr><td>O3 显存</td><td>优化器状态及关联缓冲显存</td><td>层1·训练中记录</td><td>峰值显存、状态字节数</td></tr>
+  <tr><td>O4 稳定性</td><td>对尖峰/发散/梯度波动的鲁棒性</td><td>层2·日志后处理</td><td>尖峰率、梯度 CV、发散率</td></tr>
+  <tr><td>O5 超参鲁棒性</td><td>对 LR/decay/batch 等的敏感性</td><td>层3·多次运行</td><td>可用 LR 区间、性能方差、调参负担</td></tr>
+  <tr><td>O6 泛化</td><td>训练目标之外的质量</td><td>层2/3·验证与下游</td><td>验证 loss、泛化 gap、下游分数</td></tr>
+</table>
+
+<h3 id="sec-tax-cross">5.3 跨维分析与组合性</h3>
+<p>族 × 目标的先验矩阵（机制先验，非最终结论）：T2 在 O1/O6 有利但 O2 有代价；T4 为 O3 设计但激进压缩伤 O1/O4；T5 常瞄准 O4/O6 但 SAM 式额外梯度评估有明确 O2 成本。</p>
+<p><strong>组合性由"局部性"支配</strong>：作用于不同阶段/不同轴的机制可组合；争用同一槽位的需显式排序。可组合实例：方差缩减（Axis II）可喂任意基础方向 → MARS-AdamW/MARS-Lion/MARS-Shampoo；低秩投影（T2.3）与状态量化（T4.2）改不同对象 → Q-GaLore；后处理滤波（T5.3）可包基础优化器 → Cautious 变体。冲突实例：两个强 S2 矩阵约束（谱正交 vs 低秩投影）须排序；LOMO 式流式更新与需全局梯度统计的方法冲突；SAM 叠加昂贵 Kronecker 预条件不划算。</p>
+
+<h2 id="sec-exp">6. 实验结果与分析</h2>
+<h3 id="sec-exp-setup">6.1 实验设置</h3>
+<ul>
+  <li><strong>优化器集</strong>：24 个代表方法，系统覆盖四轴坐标空间与 T1–T5。</li>
+  <li><strong>Stage 1（广筛）</strong>：C4 + LLaMA 架构，seq=256，四规模 60M/130M/350M/1B（分别训 10k/20k/60k/100k 步），指标为 C4 验证 PPL。</li>
+  <li><strong>Stage 2（泛化）</strong>：迁移到 FineWeb-Edu + 32k 长上下文，340M/1B（~30k 步），4 架构（Transformer++、Gated DeltaNet、DeltaNet、GLA）。</li>
+  <li><strong>视觉</strong>：CIFAR100，三 backbone（ResNet50 / DeiT-S / CAFormer-S12）。</li>
+  <li><strong>严格控制变量</strong>：仅调优化器相关超参（betas、eps、lr、方法专属旋钮如 APOLLO 投影秩/间隔 T），架构/数据/调度固定。</li>
+  <li><strong>分阶段正则</strong>：Stage 1 关闭权重衰减与梯度裁剪以隔离 S2/S3 机制；Stage 2 全开以测真实泛化。</li>
+  <li>指标映射：O1=PPL/CS Avg，O2=单步墙钟时间 T(ms)，O3=优化器状态显存 Mem(GB)，O4=GNormCV，O5=LR 扰动（0.2×/1×/5×），O6=跨场景排序稳定性。</li>
+</ul>
+
+<h3 id="sec-exp-stage1">6.2 Stage 1 广筛（C4, seq=256）</h3>
+<p>下表为 1B 规模的关键指标（按族分组，族内按 PPL 升序；数据源自论文 Table 13）：</p>
+<table>
+  <tr><th>优化器</th><th>族</th><th>1B PPL↓</th><th>Mem(GB)↓</th><th>T(ms)↓</th></tr>
+  <tr><td>AdamW</td><td>T1</td><td>14.48</td><td>4.989</td><td>194.99</td></tr>
+  <tr><td>Adan</td><td>T1</td><td class="sub">14.35</td><td>9.977</td><td>409.98</td></tr>
+  <tr><td>RAdam</td><td>T1</td><td>14.47</td><td>4.989</td><td>244.99</td></tr>
+  <tr><td>MARS-AdamW</td><td>T1</td><td>14.90</td><td>9.977</td><td>357.48</td></tr>
+  <tr><td>MARS-Shampoo</td><td>T2</td><td class="sub">13.72</td><td>7.483</td><td>5147.48</td></tr>
+  <tr><td>Muon</td><td>T2</td><td class="sub">13.72</td><td>2.495</td><td>3792.50</td></tr>
+  <tr><td>RMNP</td><td>T2</td><td>13.87</td><td>2.495</td><td>172.50</td></tr>
+  <tr><td>SOAP</td><td>T2</td><td>14.04</td><td>29.299</td><td>1371.5</td></tr>
+  <tr><td>GaLore</td><td>T2</td><td>14.29</td><td>0.790</td><td>150.79</td></tr>
+  <tr><td>Shampoo</td><td>T2</td><td>14.29</td><td>4.989</td><td>3894.99</td></tr>
+  <tr><td>MARS-Lion</td><td>T3</td><td>15.73</td><td>7.483</td><td>257.48</td></tr>
+  <tr><td>Lion</td><td>T3</td><td>17.02</td><td>2.494</td><td>122.49</td></tr>
+  <tr><td>APOLLO</td><td>T4</td><td class="best">13.53</td><td class="best">0.790</td><td>290.79</td></tr>
+  <tr><td>Conda</td><td>T4</td><td>14.25</td><td>6.317</td><td>626.32</td></tr>
+  <tr><td>8-bit Adam</td><td>T4</td><td>14.53</td><td>2.534</td><td>422.53</td></tr>
+  <tr><td>AdaFactor</td><td>T4</td><td>14.92</td><td class="best">0.004</td><td>560.00</td></tr>
+  <tr><td>AdamP</td><td>T5</td><td>14.57</td><td>4.989</td><td>654.99</td></tr>
+  <tr><td>LAMB</td><td>T5</td><td>16.09</td><td>4.989</td><td>444.99</td></tr>
+  <tr><td>Sophia</td><td>T5</td><td>16.45</td><td>4.989</td><td>204.99</td></tr>
+</table>
+<p><strong>关键发现</strong>：</p>
+<ul>
+  <li><strong>质量</strong>：1B 最佳 PPL 为 APOLLO(13.53)，紧随矩阵结构方法组 MARS-Shampoo/Muon(13.72)、RMNP(13.87)。质量跨族分布。但小规模排序不稳——Muon 领先 60M/130M，APOLLO 仅在 350M/1B 才最强。<strong>优化器质量是尺度依赖的</strong>。</li>
+  <li><strong>运行时</strong>：Lion 在 350M/1B 最快，AdamW 仍是最低廉实用基线；质量导向矩阵方法 SOAP/Muon/MARS-Shampoo/Shampoo 单步开销巨大（Shampoo 达 3894ms）。RMNP 是矩阵族中兼顾质量与速度的例外。</li>
+  <li><strong>显存</strong>：AdaFactor 全规模最低；APOLLO/GaLore 在 1B 远低于 AdamW。但最低显存 ≠ 最佳质量——AdaFactor 极省显存但 PPL 仅中等；<strong>APOLLO 是 Stage 1 最吸引人的显存-质量点</strong>（最低显存同时最佳 1B PPL）。</li>
+</ul>
+
+<p><strong>Pareto 前沿可视化（1B）</strong>——PPL vs 单步时间、PPL vs 显存：</p>
+<div id="chart-pareto" class="echarts-container" style="height:380px"></div>
+<script>
+echarts.init(document.getElementById('chart-pareto')).setOption({
+  backgroundColor: '#2a2a3e',
+  title: { text: 'Stage 1 (1B): PPL vs 单步时间 vs 显存（气泡大小=显存GB）', textStyle:{color:'#cdd6f4',fontSize:13} },
+  grid: { left: 60, right: 30, top: 50, bottom: 60 },
+  legend: { data: ['T1 逐元素','T2 矩阵结构','T3 离散','T4 状态压缩','T5 曲率'], textStyle:{color:'#cdd6f4'}, top: 22 },
+  xAxis: { name:'单步时间 ms (↓)', type:'log', nameTextStyle:{color:'#94e2d5'}, axisLine:{lineStyle:{color:'#45475a'}}, splitLine:{lineStyle:{color:'#313244'}}, axisLabel:{color:'#cdd6f4'} },
+  yAxis: { name:'C4 val PPL (↓)', type:'value', min:13, max:18, nameTextStyle:{color:'#94e2d5'}, axisLine:{lineStyle:{color:'#45475a'}}, splitLine:{lineStyle:{color:'#313244'}}, axisLabel:{color:'#cdd6f4'} },
+  series: [
+    { name:'T1 逐元素', type:'scatter', symbolSize: d=>Math.max(8,Math.log2(d+1)*6), data:[[194.99,14.48,4.989,'AdamW'],[409.98,14.35,9.977,'Adan'],[244.99,14.47,4.989,'RAdam'],[357.48,14.90,9.977,'MARS-AdamW']], itemStyle:{color:'#89b4fa'}, label:{show:true,formatter:p=>p.data[3],position:'top',color:'#cdd6f4',fontSize:9} },
+    { name:'T2 矩阵结构', type:'scatter', symbolSize: d=>Math.max(8,Math.log2(d+1)*6), data:[[172.50,13.87,2.495,'RMNP'],[3792.5,13.72,2.495,'Muon'],[5147.48,13.72,7.483,'MARS-Sh'],[1371.5,14.04,29.299,'SOAP'],[150.79,14.29,0.790,'GaLore'],[3894.99,14.29,4.989,'Shampoo']], itemStyle:{color:'#a6e3a1'}, label:{show:true,formatter:p=>p.data[3],position:'top',color:'#cdd6f4',fontSize:9} },
+    { name:'T3 离散', type:'scatter', symbolSize: d=>Math.max(8,Math.log2(d+1)*6), data:[[122.49,17.02,2.494,'Lion'],[257.48,15.73,7.483,'MARS-Lion']], itemStyle:{color:'#fab387'}, label:{show:true,formatter:p=>p.data[3],position:'top',color:'#cdd6f4',fontSize:9} },
+    { name:'T4 状态压缩', type:'scatter', symbolSize: d=>Math.max(8,Math.log2(d+1)*6), data:[[290.79,13.53,0.790,'APOLLO'],[626.32,14.25,6.317,'Conda'],[422.53,14.53,2.534,'8bitAdam'],[560.0,14.92,0.004,'AdaFactor']], itemStyle:{color:'#cba6f7'}, label:{show:true,formatter:p=>p.data[3],position:'top',color:'#cdd6f4',fontSize:9} },
+    { name:'T5 曲率', type:'scatter', symbolSize: d=>Math.max(8,Math.log2(d+1)*6), data:[[654.99,14.57,4.989,'AdamP'],[444.99,16.09,4.989,'LAMB'],[204.99,16.45,4.989,'Sophia']], itemStyle:{color:'#f38ba8'}, label:{show:true,formatter:p=>p.data[3],position:'top',color:'#cdd6f4',fontSize:9} }
+  ]
+});
+</script>
+<p>左下为优。可清晰看到矩阵族分裂为两个区间：重型（SOAP/Muon/Shampoo）质量高但昂贵，轻型（RMNP/GaLore）贴近效率前沿。APOLLO 兼具最佳 PPL 与低显存，是 Stage 1 局部最优点。</p>
+
+<h3 id="sec-exp-stage2">6.3 Stage 2：跨数据/上下文/架构泛化</h3>
+<p>迁移到 FineWeb-Edu + 32k 长上下文，4 架构 × 2 规模 = 8 场景。因不同架构容量不同，<strong>绝对 PPL 跨架构不可比</strong>，故分析架构内排序及其稳定性（O6 直接代理）。下表节选 WikiText PPL 与 CS Avg（CSAvg 仅列 1B）：</p>
+<table>
+  <tr><th rowspan="2">优化器</th><th colspan="4">WikiText PPL↓ (1B)</th><th colspan="4">CS Avg↑ (1B)</th></tr>
+  <tr><th>Tr++</th><th>GDN</th><th>Delta</th><th>GLA</th><th>Tr++</th><th>GDN</th><th>Delta</th><th>GLA</th></tr>
+  <tr><td>SOAP</td><td class="best">18.72</td><td class="best">19.86</td><td class="best">20.38</td><td class="best">20.62</td><td>57.71</td><td>57.22</td><td>56.49</td><td>57.57</td></tr>
+  <tr><td>RMNP</td><td>19.40</td><td>20.26</td><td>21.06</td><td>22.23</td><td>57.12</td><td>57.30</td><td class="best">57.32</td><td>55.79</td></tr>
+  <tr><td>MARS-AdamW</td><td>18.94</td><td>20.04</td><td>20.67</td><td>21.89</td><td>57.46</td><td class="best">58.18</td><td>56.80</td><td>55.71</td></tr>
+  <tr><td>AdamW</td><td>18.90</td><td>20.33</td><td>20.66</td><td>22.06</td><td>56.55</td><td>57.01</td><td>55.56</td><td>56.69</td></tr>
+  <tr><td>Muon</td><td>19.86</td><td>20.32</td><td>21.18</td><td>21.54</td><td>56.36</td><td>57.20</td><td>56.65</td><td>56.85</td></tr>
+  <tr><td>Lion</td><td>20.26</td><td>20.38</td><td>21.44</td><td>22.40</td><td>55.22</td><td>55.74</td><td>54.22</td><td>53.96</td></tr>
+  <tr><td>Conda</td><td>19.86</td><td>21.07</td><td>21.75</td><td>22.89</td><td>57.24</td><td>57.18</td><td>56.10</td><td>54.95</td></tr>
+  <tr><td>APOLLO</td><td class="sub">25.29</td><td class="sub">29.29</td><td class="sub">25.58</td><td class="sub">27.78</td><td class="sub">53.61</td><td class="sub">53.73</td><td class="sub">53.88</td><td class="sub">52.33</td></tr>
+</table>
+<p><strong>关键发现</strong>：</p>
+<ul>
+  <li><strong>SOAP 是最稳定的跨场景优化器</strong>：8 场景中 7 个 PPL 第一，从未跌出前二。其 Kronecker/Fisher 基预条件跨标准注意力与线性注意力架构均可迁移。</li>
+  <li><strong>MARS-AdamW 是最稳定的 AdamW 式增强</strong>：始终领先 plain AdamW，STORM 式方差缩减（Axis II）改善信号同时保留 AdamW 几何，在两个 GDN 列上 CS Avg 最佳。</li>
+  <li><strong>Muon 表现架构依赖</strong>：标准注意力居中，但在 GLA 上趋顶（340M 上 CS Avg 最佳）。其谱/极方向几何（Axis III）与目标架构参数拓扑存在交互。</li>
+  <li><strong>状态压缩方法泛化最差</strong>：APOLLO 在所有 8 场景 PPL 与 CS Avg 均垫底或近垫底——尽管它是 Stage 1 短上下文冠军。<strong>这是基准中最尖锐的泛化失败</strong>。</li>
+  <li>CS Avg 总体印证 PPL 排序但有信息性偏差：SOAP 在 PPL 上的近独占领先未完全延续到 CS Avg（GDN 上 MARS-AdamW 最佳，Delta 上 RMNP 最佳）。</li>
+</ul>
+
+<h3 id="sec-exp-seqlen">6.4 显存高效优化器的场景敏感性（序列长度消融）</h3>
+<p>固定 C4 + LLaMA，仅变上下文 256→32k，对比 AdamW、Lion、APOLLO（Table 15）。APOLLO 在 256 最佳(13.53)，32k 崩至 35.40，退化 +21.87，约为 AdamW 基线退化(+7.39)的 3 倍；Lion 仅 +6.29。</p>
+<div id="chart-seqlen" class="echarts-container" style="height:340px"></div>
+<script>
+echarts.init(document.getElementById('chart-seqlen')).setOption({
+  backgroundColor: '#2a2a3e',
+  title:{ text:'上下文长度退化对比（C4-LLaMA）', textStyle:{color:'#cdd6f4',fontSize:13} },
+  legend:{ data:['PPL@256','PPL@32k','退化Δ'], textStyle:{color:'#cdd6f4'}, top:24 },
+  grid:{ left:55, right:30, top:60, bottom:40 },
+  xAxis:{ type:'category', data:['APOLLO','Muon','SOAP','AdamW','Lion'], axisLabel:{color:'#cdd6f4'}, axisLine:{lineStyle:{color:'#45475a'}} },
+  yAxis:{ type:'value', name:'PPL', axisLabel:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#313244'}}, axisLine:{lineStyle:{color:'#45475a'}} },
+  series:[
+    { name:'PPL@256', type:'bar', data:[13.53,13.72,14.04,14.48,17.02], itemStyle:{color:'#89b4fa'} },
+    { name:'PPL@32k', type:'bar', data:[35.40,22.54,21.62,21.87,23.31], itemStyle:{color:'#fab387'} },
+    { name:'退化Δ', type:'line', yAxisIndex:0, data:[21.87,8.81,7.58,7.39,6.29], itemStyle:{color:'#f38ba8'}, lineStyle:{width:3}, label:{show:true,color:'#f38ba8'} }
+  ]
+});
+</script>
+<p><strong>框架归因（Axis II）</strong>：APOLLO 用随机投影压缩状态到低维子空间；长上下文下梯度有效秩升高、结构变复杂，固定低维投影按比例丢弃更多信息——短上下文近乎无损的压缩变长上下文有损。Lion(T3) 不压缩状态、仅离散方向（Axis III），故退化跟踪 AdamW。<strong>激进状态压缩的收益受梯度统计的秩与结构上界约束</strong>。</p>
+
+<h3 id="sec-exp-vision">6.5 视觉 backbone 鲁棒性（CIFAR100）</h3>
+<p>固定数据与协议，变 backbone。无优化器统治所有 backbone：AdaBelief 在 ResNet50 最佳(80.53%)，Muon 在 DeiT-S 最佳(77.38%)，Adan 在 CAFormer-S12 最佳(84.89%)。矩阵结构方法偏好 Transformer 架构（Muon 在 DeiT-S 比 AdamW 高 5+ 个点）。MARS-Lion 在 DeiT-S 上崩至 33.70%——单 backbone 评测会严重高估优化器通用性。</p>
+<table>
+  <tr><th>优化器</th><th>ResNet50</th><th>DeiT-S</th><th>CAFormer-S12</th></tr>
+  <tr><td>AdaBelief</td><td class="best">80.53</td><td>70.66</td><td>83.56</td></tr>
+  <tr><td>Muon</td><td>75.25</td><td class="best">77.38</td><td>84.43</td></tr>
+  <tr><td>Adan</td><td>77.08</td><td>76.33</td><td class="best">84.89</td></tr>
+  <tr><td>AdamW</td><td>75.56</td><td>72.15</td><td>82.50</td></tr>
+  <tr><td>MARS-Lion</td><td>77.02</td><td class="sub">33.70</td><td>71.53</td></tr>
+</table>
+
+<h3 id="sec-exp-o4">6.6 稳定性（O4）：梯度范数动力学</h3>
+<p>采用梯度范数变异系数 $\text{GNormCV}=\frac{\text{std}(\|g_t\|)}{\text{mean}(\|g_t\|)}$（Eq.97）作为主 O4 统计，因其尺度无关、捕捉相对波动、暴露软不稳定。<strong>所有运行均无 NaN/Inf 完成，但 GNormCV 跨越两个数量级（~0.32 到 >160）</strong>——"是否发散"判据会把它们全评为同等稳定，而 GNormCV 揭示了隐藏的软不稳定。</p>
+<ul>
+  <li>Muon 获最佳聚合稳定排名（8 场景中均前二），与其谱正交化解耦更新尺度与梯度幅度一致。</li>
+  <li>GLA 是例外：几乎所有优化器 GNormCV 跳到 10–160（AdamW 1B 达 113.7，RMNP 340M 达 121.8），但同为单步尖峰特征（spike rate ~10⁻⁴，最大连续尖峰=1，尾趋势平坦），整体轨迹仍稳定收敛。</li>
+  <li>稳定性强架构依赖，必须从梯度动力学直接测量，不能从最终 PPL 或族归属推断。</li>
+</ul>
+
+<h3 id="sec-exp-o5">6.7 学习率扰动鲁棒性（O5）</h3>
+<p>在 FineWeb-Edu GDN/340M 上对每优化器的调优 LR $\eta_o^\star$ 取 0.2×/1×/5× 三点，敏感度 $s_{\text{LR}}$ 为两次扰动相对 WikiText-PPL 退化的较大者（%）。</p>
+<div id="chart-lr" class="echarts-container" style="height:340px"></div>
+<script>
+echarts.init(document.getElementById('chart-lr')).setOption({
+  backgroundColor: '#2a2a3e',
+  title:{ text:'学习率扰动敏感度 s_LR（越低越鲁棒）', textStyle:{color:'#cdd6f4',fontSize:13} },
+  grid:{ left:60, right:30, top:45, bottom:70 },
+  xAxis:{ type:'category', data:['Lion','MARS-Lion','Adan','SOAP','AdamP','RMNP','Conda','MARS-AdamW','Muon','AdamW','MARS-Sh','APOLLO'], axisLabel:{color:'#cdd6f4',rotate:35}, axisLine:{lineStyle:{color:'#45475a'}} },
+  yAxis:{ type:'value', name:'s_LR (%)', axisLabel:{color:'#cdd6f4'}, splitLine:{lineStyle:{color:'#313244'}}, axisLine:{lineStyle:{color:'#45475a'}} },
+  series:[{ type:'bar', data:[
+    {value:0.7,itemStyle:{color:'#a6e3a1'}},{value:7.7,itemStyle:{color:'#a6e3a1'}},
+    {value:12.6,itemStyle:{color:'#f9e2af'}},{value:14.2,itemStyle:{color:'#f9e2af'}},
+    {value:14.7,itemStyle:{color:'#f9e2af'}},{value:15.0,itemStyle:{color:'#f9e2af'}},
+    {value:21.3,itemStyle:{color:'#f9e2af'}},{value:23.0,itemStyle:{color:'#f9e2af'}},
+    {value:24.2,itemStyle:{color:'#f9e2af'}},{value:27.7,itemStyle:{color:'#f38ba8'}},
+    {value:36.2,itemStyle:{color:'#f38ba8'}},{value:63.3,itemStyle:{color:'#f38ba8'}}
+  ], label:{show:true,color:'#cdd6f4',position:'top',fontSize:9} }]
+});
+</script>
+<p>绿=鲁棒(s&lt;10%)，黄=中等(10%≤s&lt;25%)，红=敏感(s≥25%)。T3（Lion/MARS-Lion）最平坦——sign 方向用 LR 界定每坐标步长，吸收中等 LR 错配；但平坦曲线不应等同强优化器（Lion 调优质量本就弱）。AdamW/MARS-Shampoo/APOLLO 在 5× 侧急剧退化，APOLLO 最敏感——与其整体画像一致（短上下文强、长上下文差、高敏感）。</p>
+
+<h3 id="sec-exp-tier">6.8 分层总结（Tier I/II/III）</h3>
+<table>
+  <tr><th>层</th><th>优化器</th><th>定位</th></tr>
+  <tr><td><strong>Tier I</strong></td><td>Muon, RMNP, AdamW</td><td>主候选：实用基线与机制分析核心。AdamW=默认参考；RMNP=最均衡矩阵方法；Muon=强且机制透明</td></tr>
+  <tr><td><strong>Tier II</strong></td><td>MARS-Lion, MARS-Shampoo, APOLLO, Conda, AdamP, MARS-AdamW, SOAP, Adan, Lion</td><td>场景依赖：有明确优势但受训练regime/上下文/架构/预算强约束</td></tr>
+  <tr><td><strong>Tier III</strong></td><td>RAdam, NAdam, Prodigy, AdaBelief, GaLore, Shampoo, 8-bit Adam, CAME, AdaFactor, Adam-mini, LAMB, Sophia</td><td>诊断性失败案例：弱/被支配/鲁棒性不足，仅诊断价值</td></tr>
+</table>
+<p><strong>选型指南</strong>：通用预训→AdamW 默认；需更佳质量-效率平衡→RMNP；最终质量为王且算力/显存非瓶颈→SOAP（质量天花板）；记忆受限短上下文→AdaFactor（安全低显存）/APOLLO（高回报高风险）；低成本探索→Lion。核心原则：<strong>把方法的主导优势匹配到训练regime的约束瓶颈</strong>。</p>
+
+<h2 id="sec-ablation">7. 消融与关键发现：Muon 机制分解</h2>
+<p>论文以 Muon 为元流水线视角的受控案例，回答三个问题：NS 正交是否真的不可或缺？哪些辅助操作提供增益？子操作能否自由重排？在 C4-LLaMA 350M 上分解（Figure 20）。</p>
+<h3 id="sec-ablation-core">7.1 核心机制、增益与算子序</h3>
+<ul>
+  <li><strong>NS 正交是核心机制</strong>：仅移除 AdamW 二阶矩 $v_t$ 是灾难性的（PPL 17.78→70.74）；加入 NS 正交立即恢复到 16.86，已优于 AdamW。NS 是 Muon 对 AdamW 对角自适应缩放的核心替代。</li>
+  <li><strong>缩放与 Nesterov 是次级增益</strong>：NS 存在后，LR scaling 把 PPL 从 16.86→16.76，加 Nesterov 得完整 Muon 16.60。它们精修正交化方向，不负责从失败 no-$v_t$ 变体的主恢复。</li>
+  <li><strong>最佳增益是几何感知的</strong>：对称双向 LR scaling 达 16.52（最佳单场景），惩罚宽矩阵反而恶化到 16.71；NS 后 Nesterov 达 16.57。</li>
+  <li><strong>算子序受约束</strong>：在正交化空间累积动量→PPL 恶化到 23.01；在原始梯度空间累积→保持 16.60。LR scaling 在 NS 前→恶化到 16.70（谱归一化会吸收/扭曲尺度修正）。权重衰减序在此设置下较不重要。</li>
+</ul>
+
+<h3 id="sec-ablation-cross">7.2 跨尺度与跨架构验证（Table 18）</h3>
+<table>
+  <tr><th>场景</th><th>标准 Muon</th><th>对称 LR 缩放</th><th>NS 后 Nesterov</th><th>两者组合</th><th>最佳配置</th></tr>
+  <tr><td>C4-LLaMA 350M</td><td>16.60</td><td>16.52</td><td>16.57</td><td class="best">16.51</td><td>两者组合</td></tr>
+  <tr><td>C4-LLaMA 1B</td><td>13.72</td><td>13.64</td><td>13.64</td><td class="best">13.58</td><td>两者组合</td></tr>
+  <tr><td>FW-Edu 32k GDN-340M</td><td>24.26</td><td class="best">24.02</td><td>24.12</td><td>24.12</td><td>对称 LR 缩放</td></tr>
+</table>
+<p><strong>标准 Transformer 上两增益可迁移且部分可叠加</strong>（350M: 16.60→16.51；1B: 13.72→13.58），作用机制大致可分。<strong>但在 Gated DeltaNet 上叠加性消失</strong>：两增益单独仍有效，组合不再优于最佳单增益（24.12）。<strong>优化器组件的正交性是架构依赖的</strong>——标准 Transformer 上可分的操作在线性注意力拓扑上会交互。这解释了 Muon 在基准中的角色：非普适最优，但强、可解释，且暴露矩阵结构优化器设计与模型拓扑的交汇点。</p>
+
+<h2 id="sec-summary">8. 总结与启发</h2>
+<h3 id="sec-summary-conclusion">8.1 核心结论</h3>
+<p>论文把每个优化器视为对随机训练信号的结构化变换，证明现代方法是共享五阶段元流水线的稀疏修改；用范数约束 LMO 把 sign、谱正交、Kronecker 预条件、投影更新纳入单一四轴分解；再用双维分类法记录"在哪作用"与"瞄准哪个目标"。<strong>主结论：不存在普适最优优化器，实际问题是把方法的主导优势匹配到训练regime的约束瓶颈</strong>。</p>
+
+<h3 id="sec-summary-insights">8.2 读后评注与启发</h3>
+<ol>
+  <li><strong>受益载体在 Axis II/III，不在标量微调</strong>：最强增益与几何敏感方向映射（Axis III）及喂入它的结构化状态（Axis II）相关。Muon 消融最直观——移除对角二阶矩崩至 70.74，换 NS 正交恢复并超越基线(16.86)。Kronecker 预条件（SOAP）是另一强载体但代价最高。MARS 式方差缩减是可复用的状态估计器改进。<strong>对标量 AdamW 模板的微调（RAdam/NAdam/AdaBelief/Prodigy）在调优 PPL 上几乎无收益</strong>，多数 AdamW 变体经基线重调后优势消失。</li>
+  <li><strong>两条经验规律构成设计约束</strong>：① 激进状态压缩受秩上界约束（APOLLO 256 最佳、32k 最差，退化 +21.87≈3×基线）；② 谱矩阵几何架构条件性（Muon 增益在 GDN 上失去叠加性）。<strong>依赖梯度秩或架构拓扑的收益必须在目标regime验证</strong>。</li>
+  <li><strong>组合性由四轴局部性支配</strong>：不同轴/阶段的机制可堆叠，争用同槽的需显式排序。这把"能否组合"从经验试错提升为可推理的设计准则——四轴坐标可作为实用兼容性测试。</li>
+  <li><strong>评测方法论启示</strong>：① 单场景/单 backbone 评测会严重高估通用性（APOLLO 短上下文冠军→长上下文垫底；MARS-Lion DeiT-S 崩溃）；② "是否发散"不足以判稳定性，GNormCV 揭示软不稳定；③ 调优质量≠超参鲁棒性（Lion 最平坦但质量弱）；④ 必须多目标联合评测（O1–O6 真实权衡）。</li>
+  <li><strong>实践选型决策规则</strong>：识别单次运行的唯一约束瓶颈——稳定性/质量/运行时/显存/跨场景迁移——再匹配方法主导优势。AdamW 默认参考、RMNP 均衡矩阵、SOAP 质量天花板、Muon 强可解释、AdaFactor 安全低显存、APOLLO 高回报高风险、Lion 低成本探索。</li>
+</ol>
+
+<h3 id="sec-summary-limit">8.3 局限性</h3>
+<ul>
+  <li><strong>经验范围</strong>：主要在语言模型预训练（60M–1B、4 架构、256–32k）+ CIFAR100 三 backbone 验证；未覆盖 ImageNet 级视觉与其他模态（计划后续扩展为全跨模态）。</li>
+  <li><strong>机制归因定性</strong>：对 APOLLO 秩有界压缩、Muon-架构交互、MARS 方差缩减的解释是定性的；未提供量化解释度量（如梯度有效秩、预条件基陈旧度、算法内在收益 vs 调参诱导的分解），留作未来工作。</li>
+  <li><strong>协议依赖</strong>：结论绑定严格控制变量协议（仅调优化器超参，架构/数据/调度固定）；许多对 AdamW 的表观改进在基线重调后缩小或消失；O5 仅为局部 LR 诊断；长上下文比较在数据集/架构族上匹配但 token 预算未严格匹配。</li>
+  <li><strong>方法覆盖</strong>：实测 24 个代表方法，但综述文献超 100 种，非每个轴组合都被现有优化器实现或被基准覆盖；族级结论应理解为对所测实例与协议的结论，对 T5"仅在有限regime有竞争力"的判断尤须谨慎。</li>
+</ul>
+
+<h3 id="sec-summary-future">8.4 开放问题</h3>
+<ul>
+  <li><strong>诊断与自适应压缩</strong>：有效秩估计（预测压缩何时变有损）、基陈旧度度量（预测 Kronecker/低秩预条件何时刷新）、内在 vs 协议分解；指向"保留秩随上下文有效秩自适应"的压缩方案。</li>
+  <li><strong>架构感知几何与迁移</strong>：对几何何时迁移的预测性理论，绑定模型/数据的可测属性；按架构与训练中涌现的统计协同设计预条件器（RMNP 为例）。</li>
+  <li><strong>多目标选型</strong>：成本感知比较、Pareto 感知选型、面向前沿指定区域的设计——把单数字排行榜变为多目标问题。</li>
+  <li><strong>组合搜索自动化</strong>：自动搜索轴兼容组合、解析同槽排序、协同设计方差缩减/方向几何/状态压缩。</li>
+  <li><strong>低成本曲率</strong>：T2/T5 曲率方法同样的成本张力，需更廉价稳定的曲率估计以判定其何时成默认工具。</li>
+</ul>
+
+<h2 id="sec-refs">参考文献（节选）</h2>
+<table>
+  <tr><th>方法 / 工作</th><th>在本文中的角色</th></tr>
+  <tr><td>Kingma &amp; Ba, Adam [54]; Loshchilov, AdamW [70]</td><td>逐元素自适应矩模板的奠基者，T1 基线</td></tr>
+  <tr><td>Jordan et al., Muon [48]</td><td>T2.1 代表，Newton–Schulz 谱正交，本文核心消融对象</td></tr>
+  <tr><td>Gupta et al., Shampoo [38]; Shi et al., SOAP</td><td>T2.2 Kronecker/Fisher 预条件，SOAP 为长上下文质量天花板</td></tr>
+  <tr><td>Karakida &amp; Zhao, GaLore [138]</td><td>T2.3 低秩投影，Axis I 非平凡的最清晰案例</td></tr>
+  <tr><td>RMNP [26]</td><td>架构感知的行归一化矩阵方法，Tier I 均衡之选</td></tr>
+  <tr><td>Chen &amp; Li, Lion [19]</td><td>T3 sign 离散化代表，仅一阶矩</td></tr>
+  <tr><td>MARS [128]</td><td>STORM 式方差缩减（Axis II），可喂任意基础方向</td></tr>
+  <tr><td>Sophia [65]; SAM [32]; LAMB</td><td>T5 曲率/几何正则 wrapper，条件性收益</td></tr>
+  <tr><td>AdaFactor; 8-bit Adam; APOLLO; Conda; CAME; Adam-mini</td><td>T4 状态压缩族，APOLLO 为短上下文冠军/长上下文失败案例</td></tr>
+  <tr><td>STORM / SVRG</td><td>方差缩减归属 Axis II 的理论依据</td></tr>
+  <tr><td>C4 [90]; FineWeb-Edu [86,49]; lm-eval-harness [34]; CIFAR100 [55]</td><td>基准数据与评测工具</td></tr>
+  <tr><td>Transformer++ / Gated DeltaNet [122] / DeltaNet [121] / GLA [120]</td><td>Stage 2 四架构，跨架构泛化与稳定性测试</td></tr>
+</table>
+<p style="color:#6c7086;font-size:0.85em">注：以上为论文中引用且对框架/基准有关键作用的工作节选，编号沿用原论文。完整参考文献见 arXiv:2607.04033 原文。</p>
+
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

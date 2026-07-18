@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResearchClawBench | 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { padding-left: 1.6em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+    .badge { display: inline-block; background: var(--heading); color: #1e1e2e; font-size: 0.78em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 0 2px; }
+    .badge.orange { background: #fab387; }
+    .badge.green { background: #a6e3a1; }
+    .badge.purple { background: #cba6f7; }
+    .badge.red { background: #f38ba8; }
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 1em 0; }
+    .info-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; }
+    .info-card .label { font-size: 0.78em; color: #6c7086; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+    .info-card .value { font-size: 1.1em; font-weight: 700; color: var(--strong); }
+    .failure-card { background: #2a2a3e; border-left: 4px solid var(--quote-bar); border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 0.8em 0; }
+    .failure-card h4 { color: #fab387; margin-bottom: 6px; font-size: 1em; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+  <!-- 论文信息表 -->
+  <h1>ResearchClawBench</h1>
+  <p style="color:#6c7086;font-size:0.92em;margin-bottom:1.4em">A Benchmark for End-to-End Autonomous Scientific Research &nbsp;·&nbsp; arXiv 2606.07591 &nbsp;·&nbsp; 2026-06</p>
+
+  <table>
+    <tr><th width="140">标题</th><td>ResearchClawBench: A Benchmark for End-to-End Autonomous Scientific Research</td></tr>
+    <tr><th>核心问题</th><td>当前自主 AI 研究 Agent 能否真正完成端到端的科学发现？距离"目标论文级别"的重新发现还有多远？</td></tr>
+    <tr><th>作者机构</th><td>Wanghan Xu, Shuo Li, Tianlin Ye 等共 50 人；上海人工智能实验室 (Intern Science) 主导，联合上交大、复旦、清华等 15 所机构</td></tr>
+    <tr><th>HuggingFace</th><td>157 upvotes（本周第 5 名，2026-W24）</td></tr>
+    <tr><th>开源地址</th><td>
+      论文主页：<a href="https://internscience.github.io/ResearchClawBench-Home/" target="_blank">internscience.github.io/ResearchClawBench-Home</a><br>
+      代码：<a href="https://github.com/InternScience/ResearchClawBench" target="_blank">github.com/InternScience/ResearchClawBench</a><br>
+      数据集：<a href="https://huggingface.co/datasets/InternScience/ResearchClawBench" target="_blank">HuggingFace · InternScience/ResearchClawBench</a>
+    </td></tr>
+  </table>
+
+  <div class="info-grid" style="margin-top:1.4em">
+    <div class="info-card"><div class="label">任务数量</div><div class="value">40 个任务</div></div>
+    <div class="info-card"><div class="label">科学领域</div><div class="value">10 个领域</div></div>
+    <div class="info-card"><div class="label">最强 Agent</div><div class="value">Claude Code 21.5/100</div></div>
+    <div class="info-card"><div class="label">最强 LLM</div><div class="value">Claude-Opus-4.7 20.7/100</div></div>
+    <div class="info-card"><div class="label">重发现阈值</div><div class="value">50 分（目标论文级别）</div></div>
+    <div class="info-card"><div class="label">LLM 前沿均值</div><div class="value">26.5/100</div></div>
+  </div>
+
+  <!-- 概述 -->
+  <h2>概述</h2>
+  <p>
+    人工智能正在以前所未有的速度渗透科学研究的各个环节。从文献综述、假设生成到实验设计、数据分析，再到最终的论文撰写，AI 编程 Agent（如 Claude Code、Codex CLI、OpenClaw 等）正被越来越多地标榜为"能够自主开展科学研究"的工具。然而，一个根本性的问题始终悬而未决：<strong>这些系统是否真的具备端到端的科学发现能力？</strong>我们如何客观、可重复地衡量这种能力？
+  </p>
+  <p>
+    现有的 AI 科学能力评测体系存在严重碎片化问题。GPQA、MMLU、SciQ 等基准测试聚焦于科学知识的问答与推理，考察的是孤立的知识点，而非完整的研究过程。MLAgentBench、MLE-bench 等基准虽然引入了 Agent 执行循环，但主要局限于机器学习工程领域，缺乏对自然科学多样性的覆盖。PaperBench 要求 Agent 复现已知论文，但目标论文对被评估系统是可见的——这与真实科研场景中"先有问题、后有发现"的逻辑截然相反。
+  </p>
+  <p>
+    ResearchClawBench（RCBench）正是为填补这一空白而生。它的核心设计哲学是：<strong>以真实已发表论文为锚点，但在评估时对系统隐藏目标论文</strong>，要求系统仅凭任务描述、相关文献和原始数据，独立完成"重新发现"。这一设计使评估既有明确的科学锚点（可验证性），又保留了真实研究的开放性（发现空间）。基准涵盖 40 个任务、10 个科学领域，并引入了 ResearchHarness 评估框架，使原生 LLM 也能参与端到端评测。
+  </p>
+  <p>
+    实验结果令人警醒：最强系统（Claude Code）平均分仅 21.5/100，距离"重发现阈值"（50 分）还有相当大的差距；最强 LLM（Claude-Opus-4.7）平均分 20.7，LLM 前沿均值仅 26.5。错误分析表明，失败主要集中在实验协议不匹配（89.5%）、证据不匹配（78.5%）和科学核心缺失（68.0%）三种模式，揭示了当前 AI 自主科研能力的真实边界。
+  </p>
+  <blockquote>
+    RCBench 的核心价值不仅在于提供了一个排行榜，更在于它将"AI 能否做科学"这一模糊问题转化为了可测量、可重复的工程挑战，为未来自主科研系统的迭代提供了清晰的评估坐标。
+  </blockquote>
+
+  <!-- 研究背景 -->
+  <h2>研究背景</h2>
+
+  <h3>自主 AI 科研的发展脉络</h3>
+  <p>
+    AI 辅助科研的探索可以追溯到早期的专家系统，但真正意义上的"自主 AI 科学家"概念在 LLM 时代才开始具备可行性。2024 年，Lu 等人提出的 <strong>The AI Scientist</strong> 展示了 LLM Agent 自动生成论文草稿的可能性；Gottweis 等人的 <strong>AI Co-Scientist</strong> 探索了"科学家在环"的假设演化框架。2026 年，InternAgent-1.5 进一步尝试长时域自主科学发现，Tang 等人的 AI-Researcher 则专注于自主科学创新。与此同时，商业编程 Agent（Claude Code、Codex CLI 等）也开始被广泛用于科学计算任务，形成了"工具型 Agent"与"科研型 Agent"并行发展的格局。
+  </p>
+
+  <h3>现有基准的局限性对比</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>基准</th>
+        <th>真实论文</th>
+        <th>原始数据</th>
+        <th>可执行</th>
+        <th>完整报告</th>
+        <th>领域数</th>
+        <th>开放科研</th>
+        <th>核心局限</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>SciQ / GPQA / HLE</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>4/3/8</td><td>✗</td><td>仅考察静态知识问答，无研究过程</td></tr>
+      <tr><td>ScienceWorld</td><td>✗</td><td>✗</td><td>✓</td><td>✗</td><td>3</td><td>△</td><td>抽象虚拟世界，脱离真实科研场景</td></tr>
+      <tr><td>DiscoveryWorld</td><td>✗</td><td>✗</td><td>✓</td><td>△</td><td>5</td><td>△</td><td>虚拟环境，领域覆盖有限</td></tr>
+      <tr><td>SciCode</td><td>△</td><td>△</td><td>△</td><td>✗</td><td>6</td><td>✗</td><td>聚焦科学代码生成，不含完整研究流程</td></tr>
+      <tr><td>ScienceAgentBench</td><td>✓</td><td>✓</td><td>✓</td><td>✗</td><td>4</td><td>△</td><td>偏重数据分析子任务，无端到端评估</td></tr>
+      <tr><td>MLAgentBench / MLE-bench</td><td>✗</td><td>✓</td><td>✓</td><td>✗</td><td>1</td><td>✗</td><td>仅限机器学习工程，领域极窄</td></tr>
+      <tr><td>PaperBench</td><td>✓</td><td>△</td><td>✓</td><td>△</td><td>1</td><td>△</td><td><strong>目标论文对系统可见</strong>，非真实重发现场景</td></tr>
+      <tr><td>MLGym / AIRS-Bench / MLR-Bench</td><td>△</td><td>△</td><td>✓</td><td>△</td><td>1/1/1</td><td>✓</td><td>主要覆盖 AI/ML 研究，自然科学覆盖不足</td></tr>
+      <tr style="background:#1e3a2e"><td><strong>ResearchClawBench</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>10</strong></td><td><strong>✓</strong></td><td>—</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    ResearchClawBench 的关键创新在于三点：第一，<strong>隐藏目标论文</strong>——系统无法直接"抄答案"，必须真正完成科学推理；第二，<strong>10 个自然科学领域</strong>的广泛覆盖，避免了对单一领域能力的过拟合；第三，<strong>专家策划的 Rubric 评估体系</strong>，将开放式科学输出转化为可量化的加权评分，同时预留了"超越目标论文"的发现空间。
+  </p>
+
+  <!-- 基准设计 -->
+  <h2>基准设计</h2>
+
+  <h3>10 个科学领域的任务分布</h3>
+  <p>RCBench 当前包含 40 个任务，均匀分布在 10 个科学领域，每个领域 4 个任务，覆盖从基础科学（天文、物理、数学）到应用科学（能源、信息、生命）的广泛范围。</p>
+
+  <div id="chart-domain" class="echarts-container" style="height:380px"></div>
+  <script>
+    echarts.init(document.getElementById('chart-domain')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '10 个科学领域任务分布（各 4 任务，共 40 任务）', left: 'center', top: 16, textStyle: { color: '#cdd6f4', fontSize: 14 } },
+      tooltip: { trigger: 'item', formatter: '{b}: {c} 任务 ({d}%)' },
+      legend: { orient: 'vertical', left: '2%', top: 'middle', textStyle: { color: '#cdd6f4', fontSize: 12 } },
+      series: [{
+        type: 'pie',
+        radius: ['38%', '68%'],
+        center: ['62%', '54%'],
+        avoidLabelOverlap: true,
+        label: { show: true, formatter: '{b}\n{c}个', color: '#cdd6f4', fontSize: 11 },
+        labelLine: { lineStyle: { color: '#45475a' } },
+        data: [
+          { value: 4, name: '天文学 Astronomy', itemStyle: { color: '#89b4fa' } },
+          { value: 4, name: '化学 Chemistry', itemStyle: { color: '#a6e3a1' } },
+          { value: 4, name: '地球科学 Earth', itemStyle: { color: '#fab387' } },
+          { value: 4, name: '能源科学 Energy', itemStyle: { color: '#f9e2af' } },
+          { value: 4, name: '信息科学 Information', itemStyle: { color: '#89dceb' } },
+          { value: 4, name: '生命科学 Life', itemStyle: { color: '#cba6f7' } },
+          { value: 4, name: '材料科学 Material', itemStyle: { color: '#f38ba8' } },
+          { value: 4, name: '数学 Math', itemStyle: { color: '#94e2d5' } },
+          { value: 4, name: '神经科学 Neuroscience', itemStyle: { color: '#eba0ac' } },
+          { value: 4, name: '物理学 Physics', itemStyle: { color: '#b4befe' } }
+        ]
+      }]
+    });
+  </script>
+
+  <h3>各领域典型任务场景</h3>
+  <table>
+    <thead>
+      <tr><th>领域</th><th>典型任务场景</th><th>数据类型示例</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><span class="badge">天文学</span></td><td>宇宙学推断、黑洞参数约束、引力波目录分析、哈勃常数测量</td><td>后验分布样本 (.dat)、BAO 数据</td></tr>
+      <tr><td><span class="badge green">化学</span></td><td>分子性质预测、生物分子结构对接、静电相互作用势建模</td><td>SMILES 字符串 (.csv)、分子图结构</td></tr>
+      <tr><td><span class="badge orange">地球科学</span></td><td>冰川质量分析、天气修改评估、海岸风险评估、全球气候预报</td><td>气候模型输出 (NetCDF)、时间序列</td></tr>
+      <tr><td><span class="badge purple">能源科学</span></td><td>电池参数估计、调度优化、绿氢成本分析、校园能源建模</td><td>时序能耗数据、优化约束文件</td></tr>
+      <tr><td><span class="badge">信息科学</span></td><td>多模态建模、细粒度感知、科学计算评分、网络入侵检测</td><td>图像-文本对、网络流量数据</td></tr>
+      <tr><td><span class="badge green">生命科学</span></td><td>水凝胶设计、新抗原疫苗预测、蛋白质复合物搜索、纳米孔信号分析</td><td>FASTA 序列、生物信号序列</td></tr>
+      <tr><td><span class="badge orange">材料科学</span></td><td>交替磁性材料发现、多模态性质建模、原子间势构建、聚合物逆向设计</td><td>晶体结构文件、材料属性表</td></tr>
+      <tr><td><span class="badge purple">数学</span></td><td>算法追踪分析、加速优化算法、多智能体路径规划、几何定理证明</td><td>图结构数据、算法测试用例</td></tr>
+      <tr><td><span class="badge">神经科学</span></td><td>行为分类建模、连接组约束神经网络、EM 图像校对、单细胞轨迹分析</td><td>神经元连接图、单细胞 RNA 矩阵</td></tr>
+      <tr><td><span class="badge red">物理学</span></td><td>纳米团簇量子理论、超导性分析、随机量子电路采样、Floquet-Bloch 态</td><td>量子电路采样数据、ARPES 光谱</td></tr>
+    </tbody>
+  </table>
+
+  <h3>40 个任务的构建方法</h3>
+  <p>
+    RCBench 的任务构建遵循严格的专家策划流程，确保每个任务都具有真实的科学价值和可执行性。
+  </p>
+
+  <pre class="mermaid">
+flowchart LR
+    A["高质量论文筛选\n高影响力期刊\n问题清晰+数据可访问"] --> B["核心问题提取\n改写为可执行任务描述\n不泄露目标答案"]
+    B --> C["数据与文献整理\n原始数据 + 约4篇参考文献\n不含目标论文"]
+    C --> D["Rubric 构建\n关键科学产出\n加权评分标准"]
+    D --> E["交叉验证\n专家复现验证\n修复并过滤样本"]
+    E --> F["标准化任务包\nτ = (q, L, D, p★, A)"]
+  </pre>
+
+  <ol>
+    <li><strong>高质量论文筛选</strong>：领域专家从高影响力期刊中筛选目标论文，标准包括：问题定义清晰、数据公开可访问、具有实际科学价值（涵盖科学、经济、生态、医学等维度）。</li>
+    <li><strong>核心问题提取</strong>：专家识别论文的核心科学问题，并将其改写为可执行的任务描述，确保问题表述不泄露目标答案。</li>
+    <li><strong>数据与文献整理</strong>：收集任务所需的原始数据（NetCDF、CSV、FASTA 等多种格式）和约 4 篇相关参考文献，但不包含目标论文。</li>
+    <li><strong>Rubric 构建</strong>：围绕目标论文的关键科学产出（图表、数值结论、机制解释）构建加权评分标准，每个 Rubric 项包含具体标准、技术关键词和权重。</li>
+    <li><strong>交叉验证</strong>：专家交叉检查任务包，确保任务可重现性（专家自己能按任务描述复现目标论文结果），修复问题并过滤不适合的样本。</li>
+  </ol>
+
+  <h3>Rubric 评估体系设计</h3>
+  <p>
+    每个 Rubric 项围绕目标论文中的具体科学产出构建，分为两种类型：
+  </p>
+  <ul>
+    <li><strong>文本类（Text）</strong>：评估文字形式的科学内容，如数值结论、机制描述、方法步骤等。</li>
+    <li><strong>图像类（Image）</strong>：评估多模态图表证据，如实验结果图、对比曲线、可视化分析等。</li>
+  </ul>
+  <p>
+    评分锚点设计是 RCBench 的一大创新。<strong>50 分被定义为"目标论文级别重发现"的阈值</strong>：低于 50 分意味着未达到目标论文水平，50 分意味着系统恢复了目标结果，高于 50 分则意味着系统的发现超越了目标论文。这一设计使得同一评分空间内既能衡量重发现能力，也能识别真正的新发现。
+  </p>
+
+  <p>以 Astronomy_000 任务为例，Rubric 设计如下：</p>
+  <table>
+    <thead><tr><th>Rubric 项</th><th>具体要求</th><th>权重</th></tr></thead>
+    <tbody>
+      <tr><td>数据摄入</td><td>正确读取后验样本并汇总质量/自旋后验分布，作为观测约束的基础输入</td><td>20%</td></tr>
+      <tr><td>排除曲线生成</td><td>通过积分后验样本（95% 阈值）生成 M33 X-7 超辐射排除曲线</td><td>30%</td></tr>
+      <tr><td>耦合强度上限推导</td><td>利用排除曲线推导玻色子自相互作用耦合强度在相关质量范围内的上限</td><td>50%</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 评估框架 -->
+  <h2>评估框架</h2>
+
+  <h3>端到端评估流程</h3>
+
+  <pre class="mermaid">
+flowchart TD
+    A["任务包输入\nq=任务描述 L=文献 D=原始数据"] --> B["研究执行环境 E"]
+    B --> C{"系统类型"}
+    C -->|"自主 Agent"| D["Claude Code\nCodex CLI / OpenClaw\nARIS Codex / EvoScientist\nNanobot / ResearchClaw"]
+    C -->|"原生 LLM via ResearchHarness"| E["Claude-Opus-4.7 / GPT-5.5\nQwen3.7-Max / GLM-5.1\n等共 17 个 LLM"]
+    D --> F["研究执行循环\n文献阅读 → 数据分析\n实验设计 → 代码执行 → 报告撰写"]
+    E --> F
+    F --> G["输出 y = π + o + r\n实验代码 + 中间结果 + 研究报告"]
+    G --> H["GPT-5.1 担任评判者\n对照专家 Rubric 评分"]
+    H --> I["Rubric 核心得分 0-100\n50 = 目标论文级别重发现"]
+    G --> J["四维补充评估\n完整性 · 深度 · 指令遵循 · 专业性"]
+  </pre>
+
+  <h3>任务形式化定义</h3>
+  <p>RCBench 中的任务被形式化定义为：</p>
+  <p>$$\tau = (q,\, \mathcal{L},\, \mathcal{D},\, p^{*},\, \mathcal{A})$$</p>
+  <p>其中 $q$ 为任务描述，$\mathcal{L}$ 为相关文献集合，$\mathcal{D}$ 为原始数据，$p^{*}$ 为隐藏的目标论文，$\mathcal{A}$ 为围绕目标论文构建的评估产出集合。给定任务 $\tau$ 和可执行环境 $\mathcal{E}$，系统需要生成：</p>
+  <p>$$y = (\pi,\, o,\, r)$$</p>
+  <p>其中 $\pi$ 为实验代码与执行过程，$o$ 为中间结果、图表和输出文件，$r$ 为最终研究报告。基准的核心目标是判断系统能否仅凭 $(q, \mathcal{L}, \mathcal{D})$ 生成高质量研究产出，并使这些产出达到或超越目标论文 $p^{*}$ 的水平。</p>
+
+  <h3>ResearchHarness 系统设计</h3>
+  <p>
+    ResearchHarness 是一个轻量级的工具使用评估框架，使原生 LLM 能够参与 RCBench 评测，而无需完整的 Agent 脚手架。其设计目标是：<strong>最小化框架干预，最大化模型本身能力的体现</strong>。
+  </p>
+  <p>ResearchHarness 遵循简洁的 ReAct 风格循环，通过 OpenAI 兼容 API 和原生工具调用获得工具使用能力。工具集分为三类：</p>
+  <table>
+    <thead><tr><th>类别</th><th>工具列表</th><th>典型用途</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge">网络与检索</span></td><td><code>WebSearch</code>, <code>ScholarSearch</code>, <code>WebFetch</code></td><td>搜索网络（Serper API）、查找学术文献、通过 Jina Reader 获取网页内容</td></tr>
+      <tr><td><span class="badge green">本地文件</span></td><td><code>Glob</code>, <code>Grep</code>, <code>Read</code>, <code>ReadPDF</code>, <code>ReadImage</code>, <code>Write</code>, <code>Edit</code></td><td>文件发现、文本/PDF（MinerU）/图像内容检查、创建和修改工作区文件</td></tr>
+      <tr><td><span class="badge orange">本地执行</span></td><td><code>Bash</code>, <code>TerminalStart</code>, <code>TerminalWrite</code>, <code>TerminalRead</code>, <code>TerminalInterrupt</code>, <code>TerminalKill</code></td><td>一次性命令执行、持久终端会话管理（用于较长的本地工作流）</td></tr>
+    </tbody>
+  </table>
+  <p>
+    ResearchHarness 还支持<strong>自动上下文压缩</strong>：当消息历史接近输入预算时（默认触发阈值为 128k tokens），框架自动将累积的交互历史压缩为紧凑记忆，并以此记忆继续运行，避免长任务中的上下文溢出问题。
+  </p>
+
+  <h3>评分体系：从重发现到新发现</h3>
+  <p>
+    RCBench 的评分体系围绕"重发现-新发现"连续谱设计。50 分是重发现阈值，具体评分区间含义如下：
+  </p>
+  <table>
+    <thead><tr><th>分数区间</th><th>诊断分析任务含义</th><th>目标优化任务含义</th></tr></thead>
+    <tbody>
+      <tr><td>0–20</td><td>标准缺失、仅模糊提及，或缺乏实质性机制/理论分析</td><td>标准缺失、仅模糊提及，或定量结果缺失/根本无效</td></tr>
+      <tr><td>21–40</td><td>有分析尝试，但证据不足、推理有漏洞或关键论点缺失</td><td>提供了定量结果，但方法存在重大缺陷，结果与目标论文偏差大</td></tr>
+      <tr><td>41–50</td><td>分析接近目标论文水平；50 分标志着目标论文级别的重发现</td><td>结果接近目标论文水平；50 分标志着目标论文级别的重发现</td></tr>
+      <tr><td>51–80</td><td>推理比目标论文更完整、更严谨，有更深入分析或新见解</td><td>指标明显超越目标论文，方法更强或定量结果有实质改进</td></tr>
+      <tr><td>81–100</td><td>远超目标论文，提供原创贡献或突破性见解</td><td>结果大幅超越目标论文，达到突破性定量表现或发现</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 实验结果 -->
+  <h2>实验结果</h2>
+
+  <h3>系统评估范围</h3>
+  <p>
+    本次评估涵盖 <strong>7 个自主 Agent</strong> 和 <strong>17 个原生 LLM</strong>（通过 ResearchHarness），共 24 个系统在 40 个任务上的表现，产生 280 次（Agent）+ 680 次（LLM）共计 960 次运行。所有系统在统一协议下运行，最终报告由 GPT-5.1 对照 Rubric 评分。
+  </p>
+
+  <h3>主要得分对比表</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>系统</th><th>类型</th><th>底层模型</th><th>总体</th><th>天文</th><th>化学</th><th>地球</th><th>能源</th><th>信息</th><th>生命</th><th>材料</th><th>数学</th><th>神经</th><th>物理</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:#1e3a2e"><td><strong>Claude Code</strong></td><td>Agent</td><td>Claude-Opus-4.6</td><td><strong>21.5</strong></td><td>30.2</td><td>9.3</td><td>22.7</td><td>21.7</td><td>25.0</td><td>15.6</td><td>25.5</td><td>27.5</td><td>5.5</td><td>32.3</td></tr>
+      <tr><td>Codex CLI</td><td>Agent</td><td>GPT-5.4</td><td>18.4</td><td>26.5</td><td>7.6</td><td>22.2</td><td>23.1</td><td>17.0</td><td>14.4</td><td>13.0</td><td>20.8</td><td>8.6</td><td>31.1</td></tr>
+      <tr><td>OpenClaw</td><td>Agent</td><td>GPT-5.4</td><td>16.6</td><td>28.4</td><td>6.0</td><td>17.3</td><td>22.0</td><td>14.0</td><td>15.7</td><td>14.3</td><td>14.3</td><td>8.3</td><td>27.6</td></tr>
+      <tr><td>ResearchClaw</td><td>Agent</td><td>GPT-5.4</td><td>16.3</td><td>23.1</td><td>8.5</td><td>17.1</td><td>19.0</td><td>12.9</td><td>12.2</td><td>12.8</td><td>12.8</td><td>4.2</td><td>30.1</td></tr>
+      <tr><td>EvoScientist</td><td>Agent</td><td>GPT-5.4</td><td>15.5</td><td>26.0</td><td>4.4</td><td>17.0</td><td>24.0</td><td>14.9</td><td>14.0</td><td>19.3</td><td>14.3</td><td>5.3</td><td>26.3</td></tr>
+      <tr><td>ARIS Codex</td><td>Agent</td><td>Codex/GPT-5.4</td><td>13.6</td><td>21.3</td><td>7.4</td><td>15.1</td><td>13.6</td><td>13.5</td><td>6.0</td><td>7.4</td><td>11.4</td><td>6.9</td><td>24.7</td></tr>
+      <tr><td>Nanobot</td><td>Agent</td><td>GPT-5.4</td><td>12.8</td><td>22.3</td><td>6.2</td><td>14.3</td><td>13.5</td><td>16.4</td><td>13.0</td><td>12.4</td><td>12.1</td><td>3.3</td><td>19.4</td></tr>
+      <tr><td colspan="13" style="color:#6c7086;font-size:0.85em;padding:4px 12px;border-top:2px solid var(--border)">以下为 ResearchHarness LLM 评测结果（17 个模型）</td></tr>
+      <tr style="background:#1e3a2e"><td><strong>Claude-Opus-4.7</strong></td><td>LLM</td><td>—</td><td><strong>20.7</strong></td><td>32.9</td><td>4.2</td><td>22.5</td><td>23.2</td><td>13.9</td><td>12.8</td><td>24.1</td><td>18.9</td><td>9.7</td><td>34.2</td></tr>
+      <tr><td>Claude-Opus-4.6</td><td>LLM</td><td>—</td><td>19.9</td><td>35.1</td><td>7.2</td><td>30.4</td><td>26.0</td><td>12.8</td><td>12.7</td><td>20.0</td><td>22.4</td><td>7.4</td><td>35.0</td></tr>
+      <tr><td>Qwen3.7-Max</td><td>LLM</td><td>—</td><td>18.7</td><td>23.8</td><td>6.9</td><td>14.8</td><td>25.3</td><td>21.8</td><td>10.3</td><td>23.9</td><td>22.3</td><td>7.0</td><td>38.3</td></tr>
+      <tr><td>GLM-5.1</td><td>LLM</td><td>—</td><td>18.2</td><td>29.8</td><td>11.4</td><td>20.6</td><td>20.4</td><td>16.2</td><td>12.2</td><td>18.6</td><td>18.0</td><td>5.9</td><td>28.9</td></tr>
+      <tr><td>Qwen3.6-Plus</td><td>LLM</td><td>—</td><td>18.0</td><td>30.8</td><td>7.7</td><td>16.6</td><td>21.2</td><td>17.7</td><td>12.1</td><td>19.1</td><td>19.1</td><td>4.6</td><td>30.7</td></tr>
+      <tr><td>Kimi-K2.6</td><td>LLM</td><td>—</td><td>18.0</td><td>27.8</td><td>3.1</td><td>22.9</td><td>18.1</td><td>12.8</td><td>13.8</td><td>19.5</td><td>19.5</td><td>8.4</td><td>24.0</td></tr>
+      <tr><td>Gemini-3.5-Flash</td><td>LLM</td><td>—</td><td>17.9</td><td>28.1</td><td>5.5</td><td>24.0</td><td>18.3</td><td>24.1</td><td>13.4</td><td>22.0</td><td>22.0</td><td>2.2</td><td>26.8</td></tr>
+      <tr><td>DeepSeek-V4-Pro</td><td>LLM</td><td>—</td><td>17.1</td><td>25.2</td><td>7.5</td><td>20.1</td><td>21.8</td><td>17.8</td><td>11.8</td><td>17.9</td><td>17.9</td><td>7.7</td><td>28.6</td></tr>
+      <tr><td>GPT-5.5</td><td>LLM</td><td>—</td><td>17.0</td><td>24.0</td><td>10.4</td><td>18.4</td><td>22.7</td><td>12.3</td><td>12.8</td><td>13.1</td><td>13.1</td><td>6.3</td><td>30.9</td></tr>
+      <tr><td>MiMo-V2.5</td><td>LLM</td><td>—</td><td>16.9</td><td>24.4</td><td>4.4</td><td>15.9</td><td>19.5</td><td>9.4</td><td>12.8</td><td>18.2</td><td>18.2</td><td>4.7</td><td>34.7</td></tr>
+      <tr><td>GPT-5.4</td><td>LLM</td><td>—</td><td>15.3</td><td>22.1</td><td>6.9</td><td>18.8</td><td>17.1</td><td>15.7</td><td>14.2</td><td>18.3</td><td>18.3</td><td>4.9</td><td>27.1</td></tr>
+      <tr><td>Grok-4.1</td><td>LLM</td><td>—</td><td>13.5</td><td>28.6</td><td>2.9</td><td>14.9</td><td>11.1</td><td>11.9</td><td>13.2</td><td>16.1</td><td>12.2</td><td>4.8</td><td>25.6</td></tr>
+      <tr><td>Gemini-3.1-Pro</td><td>LLM</td><td>—</td><td>13.3</td><td>19.3</td><td>8.0</td><td>13.8</td><td>12.0</td><td>13.2</td><td>9.4</td><td>15.0</td><td>15.0</td><td>1.6</td><td>29.7</td></tr>
+      <tr><td>Grok-4.3</td><td>LLM</td><td>—</td><td>12.4</td><td>24.7</td><td>3.5</td><td>15.1</td><td>18.8</td><td>9.4</td><td>2.5</td><td>8.5</td><td>8.5</td><td>2.6</td><td>28.2</td></tr>
+    </tbody>
+  </table>
+
+  <h3>各系统总体得分横向柱状图</h3>
+  <div id="chart-scores" class="echarts-container" style="height:620px"></div>
+  <script>
+    var systemNames = [
+      'Claude Code (Agent)', 'Codex CLI (Agent)', 'OpenClaw (Agent)', 'ResearchClaw (Agent)',
+      'EvoScientist (Agent)', 'ARIS Codex (Agent)', 'Nanobot (Agent)',
+      'Claude-Opus-4.7 (LLM)', 'Claude-Opus-4.6 (LLM)', 'Qwen3.7-Max (LLM)',
+      'GLM-5.1 (LLM)', 'Qwen3.6-Plus (LLM)', 'Kimi-K2.6 (LLM)',
+      'Gemini-3.5-Flash (LLM)', 'DeepSeek-V4-Pro (LLM)', 'GPT-5.5 (LLM)',
+      'MiMo-V2.5 (LLM)', 'GPT-5.4 (LLM)', 'Grok-4.1 (LLM)',
+      'Gemini-3.1-Pro (LLM)', 'Grok-4.3 (LLM)'
+    ];
+    var scoreValues = [21.5, 18.4, 16.6, 16.3, 15.5, 13.6, 12.8,
+                       20.7, 19.9, 18.7, 18.2, 18.0, 18.0, 17.9, 17.1, 17.0, 16.9, 15.3, 13.5, 13.3, 12.4];
+    var barColors = scoreValues.map(function(s, i) { return i < 7 ? '#89b4fa' : '#a6e3a1'; });
+    var chartScores = echarts.init(document.getElementById('chart-scores'));
+    chartScores.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '各系统 ResearchClawBench 总体得分（满分 100，50 为重发现阈值）', left: 'center', top: 12, textStyle: { color: '#cdd6f4', fontSize: 13 } },
+      tooltip: { trigger: 'axis', formatter: function(params) { return params[0].name + '<br/>得分: <b>' + params[0].value + '</b>'; } },
+      grid: { left: '2%', right: '10%', top: '10%', bottom: '2%', containLabel: true },
+      xAxis: { type: 'value', max: 55, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a' } }, axisLine: { lineStyle: { color: '#45475a' } } },
+      yAxis: { type: 'category', data: systemNames.slice().reverse(), axisLabel: { color: '#cdd6f4', fontSize: 11 }, axisLine: { lineStyle: { color: '#45475a' } } },
+      series: [{
+        type: 'bar',
+        data: scoreValues.slice().reverse().map(function(v, i) { return { value: v, itemStyle: { color: i >= 14 ? '#89b4fa' : '#a6e3a1' } }; }),
+        label: { show: true, position: 'right', color: '#cdd6f4', fontSize: 11, formatter: '{c}' },
+        markLine: {
+          data: [{ xAxis: 50 }],
+          lineStyle: { color: '#f38ba8', type: 'dashed', width: 2 },
+          label: { formatter: '50 重发现阈值', color: '#f38ba8', position: 'end' },
+          symbol: ['none', 'none']
+        }
+      }]
+    });
+  </script>
+
+  <h3>关键发现</h3>
+  <ul>
+    <li><strong>整体差距显著</strong>：最强系统（Claude Code）平均分 21.5，距离重发现阈值（50 分）仍有约 57% 的差距，表明当前 AI 系统距离可靠的科学重发现还很远。</li>
+    <li><strong>Agent 并不显著优于 LLM</strong>：最强自主 Agent（Claude Code 21.5）与最强 LLM（Claude-Opus-4.7 20.7）得分相近，表明复杂的 Agent 脚手架并未带来决定性优势。</li>
+    <li><strong>任务难度高度一致</strong>：7 个 Agent 在任务级别的相关性中位数为 0.79（范围 0.64–0.86），说明任务难度是客观的，不依赖于特定系统。</li>
+    <li><strong>领域优势各异</strong>：Claude Code 仅在 40 个任务中赢得 14 个最高分；GLM-5.1 领先化学，Gemini-3.5-Flash 领先信息科学，DeepSeek-V4-Pro 领先材料科学。</li>
+    <li><strong>资源投入与得分弱相关</strong>：成本和运行时间与得分仅有弱正相关（成本 $r = 0.66$，$R^2 = 0.44$；运行时 $r = 0.54$，$R^2 = 0.29$），说明"花更多钱"并不能可靠地提升科研质量。</li>
+    <li><strong>物理和天文领域相对较高</strong>：多数系统在物理（~19-38）和天文（~21-35）领域得分较高，而化学（~3-11）和神经科学（~2-10）领域得分普遍偏低。</li>
+  </ul>
+
+  <h3>四维补充评估</h3>
+  <p>除 Rubric 得分外，RCBench 还从四个维度评估报告质量：完整性、深度、指令遵循、专业性。</p>
+  <table>
+    <thead><tr><th>系统</th><th>完整性</th><th>深度</th><th>指令遵循</th><th>专业性</th></tr></thead>
+    <tbody>
+      <tr><td>Claude Code</td><td>44.6</td><td>58.0</td><td>49.0</td><td><strong>76.4</strong></td></tr>
+      <tr><td>Codex CLI</td><td>48.6</td><td><strong>65.9</strong></td><td>50.8</td><td>74.4</td></tr>
+      <tr><td>ARIS Codex</td><td>44.2</td><td>60.9</td><td>43.7</td><td>71.8</td></tr>
+      <tr><td>OpenClaw</td><td>45.5</td><td>56.4</td><td>47.2</td><td>75.0</td></tr>
+      <tr><td>Nanobot</td><td>39.3</td><td>50.1</td><td>43.9</td><td>71.6</td></tr>
+      <tr><td>EvoScientist</td><td>47.1</td><td>59.5</td><td>45.6</td><td>73.5</td></tr>
+      <tr><td>ResearchClaw</td><td><strong>47.4</strong></td><td>62.2</td><td><strong>52.7</strong></td><td>74.8</td></tr>
+    </tbody>
+  </table>
+  <p>
+    值得注意的是，所有系统在<strong>专业性</strong>维度的得分（70+）远高于其他维度，而 Rubric 核心得分却很低（12–22）。这揭示了一个关键矛盾：<strong>模型擅长生成格式规范、表述专业的报告，但无法恢复 Rubric 要求的关键科学证据</strong>。报告的"外表"与"内核"之间存在严重脱节。四维补充评分与 Rubric 核心分的相关性也很弱，进一步证明核心挑战在于科学内容质量，而非报告呈现质量。
+  </p>
+
+  <!-- 失败模式分析 -->
+  <h2>失败模式分析</h2>
+
+  <p>
+    研究者对 7 个自主 Agent 在 40 个任务上的全部 280 次运行进行了系统性错误分析，将细粒度标签归纳为六种错误类型，并统计了每种错误类型在所有运行中的出现比例。
+  </p>
+
+  <div id="chart-errors" class="echarts-container" style="height:300px"></div>
+  <script>
+    echarts.init(document.getElementById('chart-errors')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '280 次 Agent 运行的错误类型分布（各类型出现比例）', left: 'center', top: 12, textStyle: { color: '#cdd6f4', fontSize: 13 } },
+      tooltip: { trigger: 'item', formatter: '{b}: {c}% 的运行出现此错误' },
+      legend: { orient: 'vertical', left: '2%', top: 'middle', textStyle: { color: '#cdd6f4', fontSize: 11 } },
+      series: [{
+        type: 'pie',
+        radius: ['35%', '65%'],
+        center: ['62%', '54%'],
+        label: { show: true, formatter: '{b}\n{c}%', color: '#cdd6f4', fontSize: 10 },
+        data: [
+          { value: 89.5, name: '实验协议不匹配', itemStyle: { color: '#f38ba8' } },
+          { value: 78.5, name: '证据不匹配', itemStyle: { color: '#fab387' } },
+          { value: 68.0, name: '科学核心缺失', itemStyle: { color: '#f9e2af' } },
+          { value: 32.0, name: '目标错位', itemStyle: { color: '#a6e3a1' } },
+          { value: 10.9, name: '可靠性/报告失败', itemStyle: { color: '#89b4fa' } },
+          { value: 1.5,  name: '执行失败', itemStyle: { color: '#cba6f7' } }
+        ]
+      }]
+    });
+  </script>
+
+  <div class="failure-card">
+    <h4>失败模式一：实验协议不匹配（89.5% 的运行出现）</h4>
+    <p>
+      这是最普遍的失败类型，涵盖协议偏差、处理方式差异、基线选择错误和验证设置不当四个子类。Agent 选择了错误的数据处理方法、基线选择、验证设置或实验协议，导致结果与目标论文的方法论不一致。例如，在量子电路采样任务中，Agent 仅计算了线性 XEB，而目标论文还要求 log-XEB、MB 回归和镜像电路推断的多估计器一致性比较。这类失败表明 Agent 对科学方法论的精细理解不足，往往只能捕捉到最直接的分析路径，而忽略了目标论文中更精细的验证步骤。
+    </p>
+  </div>
+
+  <div class="failure-card">
+    <h4>失败模式二：证据不匹配（78.5% 的运行出现）</h4>
+    <p>
+      Agent 生成的图表、数值或结论与目标论文的关键证据不符。这包括：数值结果偏差过大（超出合理误差范围）、图表类型错误（如用折线图代替散点图）、关键对比曲线缺失、结论方向相反等。这类失败往往发生在 Agent 完成了正确的分析方向，但在具体执行细节上出现偏差——"方向对了，但数字错了"。
+    </p>
+  </div>
+
+  <div class="failure-card">
+    <h4>失败模式三：科学核心缺失（68.0% 的运行出现）</h4>
+    <p>
+      Agent 无法识别或重现目标论文的核心科学机制或关键发现。这类失败最为根本——Agent 可能生成了一份完整的报告，但完全错过了论文的核心贡献。例如，在分析大气机制时，Agent 描述了表面现象但未能解释底层物理机制；在材料设计任务中，Agent 找到了可行的候选材料但未能达到目标论文的性能指标。这反映了 AI 系统在识别"什么是科学核心"这一元认知能力上的缺失。
+    </p>
+  </div>
+
+  <div class="failure-card">
+    <h4>其他失败模式</h4>
+    <p>
+      <strong>目标错位（32.0%）</strong>：Agent 解决了一个相关但非等价的问题，偏离了原始任务目标。这通常发生在任务描述存在歧义时，Agent 会选择"更容易"的解读方式。<br>
+      <strong>可靠性/报告失败（10.9%）</strong>：包含无支撑声明、无效证据或报告格式问题。<br>
+      <strong>执行失败（1.5%）</strong>：完全无法生成可用的研究产出（代码崩溃、环境错误等）。执行失败率极低说明当前 Agent 在技术执行层面已相当可靠。
+    </p>
+  </div>
+
+  <blockquote>
+    <strong>关键洞察</strong>：执行失败率极低（1.5%）说明当前 Agent 在技术执行层面已相当可靠。真正的瓶颈在于科学理解层面——Agent 能"跑起来"，但跑出来的结果与目标论文的科学逻辑存在系统性偏差。这是一个认知问题，而非工程问题。
+  </blockquote>
+
+  <h3>案例研究：Physics_002（量子随机电路采样）</h3>
+  <p>
+    以 OpenClaw 在 Physics_002 任务上的表现为例，该任务要求评估任意几何结构上随机量子电路采样（RCS）的计算能力，需要从测量比特串计数和理想分布信息中估算保真度。OpenClaw 是所有 Agent 中该任务得分最高的，但仅获得 27.45/100。
+  </p>
+  <table>
+    <thead><tr><th>Rubric 项</th><th>权重</th><th>目标要求</th><th>OpenClaw 表现</th></tr></thead>
+    <tbody>
+      <tr><td>固定深度 d=12，N 扫描</td><td>20%</td><td>线性 XEB、log-XEB 和 MB 回归一致趋势</td><td>恢复线性 XEB 趋势，但缺少 log-XEB 和多估计器比较</td></tr>
+      <tr><td>N=40 深度缩放</td><td>20%</td><td>不同估计器在不确定性范围内一致</td><td>重现主要线性 XEB 衰减（0.63→0.27-0.30），但缺少多估计器比较</td></tr>
+      <tr><td>N=56 MB 回归</td><td>15%</td><td>MB 回归 + 镜像电路推断 + depth-12 保真度点</td><td>仅绘制简单 MB 命中率，缺少 MB 回归和镜像电路推断</td></tr>
+      <tr><td>门计数模型</td><td>25%</td><td>从门计数预测保真度，传播不确定性形成 1σ 带</td><td><strong>完全缺失</strong>：无门计数曲线，无不确定性传播，无模型预测</td></tr>
+      <tr><td>计数加权线性 XEB</td><td>25%</td><td>N=40 全深度，每深度 50 个电路实例，保真度衰减趋势</td><td>覆盖全部深度，50 个实例，成功重现 XEB 衰减趋势（得分最高项）</td></tr>
+    </tbody>
+  </table>
+  <p>这个案例生动地展示了 Agent 的典型失败模式：<strong>能够抓住最直接的分析路径（线性 XEB），但在需要更深层物理建模（门计数误差传播）和多步骤验证（多估计器一致性）的环节上系统性失败</strong>。</p>
+
+  <!-- 局限性 -->
+  <h2>局限性</h2>
+
+  <p>论文作者明确指出了 ResearchClawBench 当前版本的三项主要局限性：</p>
+
+  <ol>
+    <li>
+      <strong>仅覆盖干实验室研究</strong>：当前任务主要评估基于现有数据、代码和文献的"干实验室"研究，无法评估需要真实实验平台、样本制备或仪器操作的"湿实验室"研究。生命科学、化学等领域中大量重要的科学发现依赖于真实的实验操作，这部分能力目前完全不在评估范围之内。
+    </li>
+    <li>
+      <strong>评分仅针对最终报告</strong>：当前评分主要针对最终研究报告，而非细粒度的研究步骤。这意味着 Agent 在中间过程中的推理质量、假设生成能力、实验设计思路等都无法被直接评估。一个"歪打正着"的 Agent 可能与一个"过程严谨"的 Agent 获得相同的分数。
+    </li>
+    <li>
+      <strong>真正新发现难以评估</strong>：评估真正新颖的科学结论需要比围绕现有目标论文构建的 Rubric 更可靠的评估方法。当 Agent 的输出超越目标论文时，现有 Rubric 框架可能无法准确识别和量化这种"真发现"。这是科学发现评估领域的根本性挑战，目前尚无成熟解决方案。
+    </li>
+  </ol>
+
+  <p>此外，可以补充以下潜在局限性：</p>
+  <ul>
+    <li><strong>任务规模有限</strong>：40 个任务在统计意义上仍然有限，特别是每个领域仅 4 个任务，可能无法充分代表该领域的全部难度分布。</li>
+    <li><strong>评判者偏差风险</strong>：使用 GPT-5.1 作为评判者可能引入系统性偏差，尤其是对于 GPT 系列模型可能存在有利偏向（自我偏好问题）。</li>
+    <li><strong>时效性问题</strong>：基于已发表论文的基准存在时效性问题——随着时间推移，这些论文可能出现在训练数据中，使评估结果失去意义（数据污染风险）。</li>
+    <li><strong>评估成本高</strong>：端到端评估每次运行需要大量计算资源和时间，限制了大规模重复实验和消融研究的可行性。</li>
+  </ul>
+
+  <!-- 总结与启发 -->
+  <h2>总结与启发</h2>
+
+  <h3>核心贡献回顾</h3>
+  <p>
+    ResearchClawBench 通过三项核心贡献推进了自主 AI 科研能力的评估：<strong>40 个真实科学发现任务</strong>（含专家标注 Rubric，覆盖 10 个领域）、<strong>ResearchHarness</strong>（用于 LLM 基线的轻量级评估框架），以及对 7 个自主 Agent 和 17 个原生 LLM 的<strong>系统性横向评估</strong>。这三项贡献共同构成了一个完整的评估生态，既有基准，又有工具，还有基线数据。
+  </p>
+
+  <h3>对 AI 自主研究能力的深层思考</h3>
+  <p>
+    RCBench 的实验结果揭示了当前 AI 自主科研能力的一个深刻悖论：<strong>系统在"表达"层面已经相当成熟，但在"理解"层面仍然严重不足</strong>。几乎所有系统都能生成格式规范、语言流畅的研究报告（专业性得分 70+），但核心科学内容的准确性（Rubric 得分 12–22）却令人担忧。这说明当前 LLM 的能力更接近于"科学写作助手"而非"科学发现引擎"。
+  </p>
+  <p>
+    从失败模式分析来看，<strong>89.5% 的运行出现实验协议不匹配</strong>这一数字尤为值得关注。它意味着 Agent 在面对开放性科学问题时，往往会选择"最直接"的分析路径，而非目标论文所采用的"最正确"的方法论路径。这反映了 AI 系统在科学方法论层面的理解缺陷——不是不会做实验，而是不知道该用哪个实验来验证哪个假设。这种"方法论盲目性"是当前最需要突破的瓶颈。
+  </p>
+  <p>
+    <strong>资源投入与得分的弱相关性</strong>也传递了一个重要信号：当前任务的失败不是因为"算力不够"或"时间不足"，而是因为系统在科学目标理解和实验设计上存在根本性偏差。这意味着简单地增加计算预算、延长推理时间，并不能有效提升自主科研能力。未来的突破方向可能更多在于训练数据质量和科学推理能力的专项强化，而非单纯的规模扩展。
+  </p>
+  <p>
+    对于未来研究方向，RCBench 的结果指向了几个关键突破口：
+  </p>
+  <ul>
+    <li><strong>科学方法论的内化</strong>：如何让 AI 系统真正理解不同科学领域的方法论规范，而非仅仅模仿表面形式？这可能需要专门的科学方法论训练数据和评估机制，例如包含完整实验设计逻辑的合成数据。</li>
+    <li><strong>长程科学推理</strong>：端到端科学研究要求系统在数小时乃至数天的时间跨度内保持一致的科学目标，当前的上下文压缩机制是否足以支撑这种长程推理？如何避免"目标漂移"是关键挑战。</li>
+    <li><strong>多模态科学理解</strong>：科学证据往往以图表、光谱、序列等多模态形式呈现，提升 AI 对科学图像的理解能力是突破证据不匹配瓶颈的关键。</li>
+    <li><strong>科学假设生成与验证的闭环</strong>：真正的科学发现需要"假设-实验-验证"的迭代闭环，当前 Agent 在这一闭环中的哪个环节最为薄弱，值得深入研究。</li>
+    <li><strong>跨领域科学迁移</strong>：不同科学领域的方法论差异巨大，如何构建具有跨领域迁移能力的科研 Agent，而非为每个领域单独优化，是长期挑战。</li>
+  </ul>
+  <p>
+    从更宏观的视角来看，RCBench 的意义在于它将"AI 能否做科学"这一哲学问题转化为了可测量的工程挑战。当前 21.5 分的天花板不是终点，而是起点——它为未来自主科研系统的迭代提供了清晰的坐标系。随着基准的不断扩展（更多领域、更多任务、湿实验室评估），以及 AI 系统在科学方法论理解上的持续进步，我们有理由期待这一数字在未来几年内的显著提升。而当某个系统真正突破 50 分阈值时，那将是 AI 科研能力发展史上真正的里程碑。
+  </p>
+
+  <!-- 参考文献 -->
+  <h2>参考文献</h2>
+  <ul style="font-size:0.9em;line-height:1.9">
+    <li>Xu et al. (2026). <em>ResearchClawBench: A Benchmark for End-to-End Autonomous Scientific Research</em>. arXiv:2606.07591. Shanghai AI Laboratory.</li>
+    <li>Lu et al. (2024). <em>The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery</em>. arXiv:2408.06292.</li>
+    <li>Starace et al. (2025). <em>PaperBench: Evaluating AI's Ability to Replicate AI Research</em>. arXiv:2504.01848.</li>
+    <li>Chan et al. (2025). <em>MLE-bench: Evaluating Machine Learning Agents on Machine Learning Engineering</em>. ICLR 2025, pp. 50466–50494.</li>
+    <li>Huang et al. (2023). <em>MLAgentBench: Evaluating Language Agents on Machine Learning Experimentation</em>. arXiv:2310.03302.</li>
+    <li>Rein et al. (2023). <em>GPQA: A Graduate-Level Google-Proof Q&A Benchmark</em>. arXiv:2311.12022.</li>
+    <li>Jansen et al. (2024). <em>DiscoveryWorld: A Virtual Environment for Developing and Evaluating Automated Scientific Discovery Agents</em>. NeurIPS 2024, pp. 10088–10116.</li>
+    <li>Wang et al. (2022). <em>ScienceWorld: Is Your Agent Smarter Than a 5th Grader?</em> EMNLP 2022, pp. 11279–11298.</li>
+    <li>Tian et al. (2024). <em>SciCode: A Research Coding Benchmark Curated by Scientists</em>. NeurIPS 2024, pp. 30624–30650.</li>
+    <li>Chen et al. (2025). <em>ScienceAgentBench: Toward Rigorous Assessment of Language Agents for Data-Driven Scientific Discovery</em>. ICLR 2025, pp. 96934–96990.</li>
+    <li>Gottweis et al. (2025). <em>Towards an AI Co-Scientist</em>. arXiv:2502.18864.</li>
+    <li>Lupidi et al. (2026). <em>AIRS-Bench: A Suite of Tasks for Frontier AI Research Science Agents</em>. arXiv:2602.06855.</li>
+    <li>Lyu et al. (2026). <em>EvoScientist: Towards Multi-Agent Evolving AI Scientists for End-to-End Scientific Discovery</em>. arXiv:2603.08127.</li>
+    <li>Feng et al. (2026). <em>InternAgent-1.5: A Unified Agentic Framework for Long-Horizon Autonomous Scientific Discovery</em>. arXiv:2602.08990.</li>
+    <li>Phan et al. (2025). <em>Humanity's Last Exam</em>. arXiv:2501.14249.</li>
+    <li>Siegel et al. (2024). <em>CORE-Bench: Fostering the Credibility of Published Research through a Computational Reproducibility Agent Benchmark</em>. arXiv:2409.11363.</li>
+    <li>Nathani et al. (2025). <em>MLGym: A New Framework and Benchmark for Advancing AI Research Agents</em>. arXiv:2502.14499.</li>
+    <li>Tang et al. (2025). <em>AI-Researcher: Autonomous Scientific Innovation</em>. arXiv:2505.18705.</li>
+  </ul>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach(function(h, i) {
+    if (!h.id) h.id = 's' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs = new IntersectionObserver(function(es) {
+    es.forEach(function(e) {
+      const l = toc.querySelector('a[href="#' + e.target.id + '"]');
+      if (l) l.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(function(h) { obs.observe(h); });
+</script>
+</body>
+</html>

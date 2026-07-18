@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anti-Self-Distillation 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.5em; }
+    li { margin: 0.3em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .highlight-box { background: #252540; border: 1px solid #fab387; border-radius: 6px; padding: 14px 18px; margin: 1em 0; }
+    .highlight-box .label { color: #fab387; font-weight: 700; font-size: 0.88em; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>Anti-Self-Distillation：通过点互信息解决推理强化学习中的蒸馏失效问题</h1>
+    <p style="color:#6c7086; font-size:0.9em;">arXiv: 2605.11609 &nbsp;|&nbsp; 发布时间: 2025年5月 &nbsp;|&nbsp; 本报告撰写: 2026-05-26</p>
+
+    <h2>论文信息</h2>
+    <table>
+      <tr><th>字段</th><th>内容</th></tr>
+      <tr><td>论文标题</td><td>Anti-Self-Distillation for Reasoning RL via Pointwise Mutual Information</td></tr>
+      <tr><td>arXiv 编号</td><td><a href="https://arxiv.org/abs/2605.11609" target="_blank">2605.11609</a></td></tr>
+      <tr><td>作者</td><td>Guobin Shen, Xiang Cheng, Chenxiao Zhao, Lei Huang, Jindong Li, Dongcheng Zhao, Xing Yu</td></tr>
+      <tr><td>机构</td><td>rednote-hilab（小红书 AI 实验室）</td></tr>
+      <tr><td>社区热度</td><td>201 upvotes（当日榜单第4位）</td></tr>
+      <tr><td>核心关键词</td><td>On-policy Self-Distillation、GRPO、Deliberation Token、PMI、反蒸馏</td></tr>
+      <tr><td>主要结论</td><td>标准在线自蒸馏对"深思熟虑 token"有抑制效果；AntiSD 通过反向散度 + 熵触发门控解决此问题</td></tr>
+      <tr><td>实验规模</td><td>4B ~ 30B 参数的 5 个模型，训练效率提升 2~10 倍，最高精度提升 +11.5 分</td></tr>
+    </table>
+
+    <h2>概述</h2>
+    <p>在 LLM 推理增强的近期进展中，<strong>在线自蒸馏（On-policy Self-Distillation）</strong>被视为一种低成本提升 RLVR 训练稳定性的方法：让一个携带特权上下文（privileged context，通常是正确答案或过程提示）的教师模型，为正在被 RL 训练的学生模型提供软标签目标，引导学生更快收敛。然而，来自小红书 AI 实验室的这项工作发现：这一看似合理的做法在数学推理任务上<strong>收益不稳定，有时甚至有害</strong>。</p>
+
+    <p>论文的核心贡献是找到了蒸馏失效的根本原因：通过<strong>点互信息（Pointwise Mutual Information, PMI）</strong>分析，揭示了特权上下文（答案信息）会使教师模型在<strong>结构性可预测 token</strong>（如格式词、连接词）上极度过度自信，同时<strong>压制关键的"深思熟虑 token"</strong>（Wait、Let me think、Maybe、Hmm 等），而后者对多步推理能力至关重要。</p>
+
+    <p>基于此分析，论文提出 <strong>AntiSD（Anti-Self-Distillation）</strong>：将蒸馏方向反转——不是让学生逼近教师，而是让学生<strong>远离</strong>教师在深思熟虑 token 上的过度自信分布——配合<strong>熵触发门控</strong>在教师高度确定时自动关闭蒸馏信号。实验结果显示，AntiSD 在 4B~30B 规模的 5 个模型上，以 2~10 倍更少的训练步骤达到 GRPO 基线精度，最终精度提升高达 +11.5 分。</p>
+
+    <blockquote>
+      AntiSD 的核心洞察：特权上下文使教师在"走捷径"——直接跳过推理过程、压缩不确定性表达。蒸馏这种"捷径"分布会系统性地损害学生的推理探索能力。
+    </blockquote>
+
+    <h2>研究背景：自蒸馏与 Deliberation Token 问题</h2>
+
+    <h3>在线自蒸馏的基本设置</h3>
+    <p>在线自蒸馏（On-policy Self-Distillation）的标准做法如下：在 RLVR 训练的每一步，</p>
+    <ol>
+      <li>维护两份模型副本：<strong>学生模型</strong> $\pi_\theta$（被 RL 更新）和<strong>教师模型</strong> $\pi_{\theta^-}$（参数来自学生的滑动平均或额外输入）</li>
+      <li>教师模型在输入中<strong>额外拼接特权上下文</strong>（privileged context）$c$，如正确答案、过程标注，从而以更高置信度生成推理链</li>
+      <li>定义蒸馏损失（KL 散度）：</li>
+    </ol>
+
+    <p>$$\mathcal{L}_{\text{SD}} = \mathbb{E}_{x \sim \mathcal{D}} \left[ D_{\text{KL}}\left(\pi_{\theta^-}(\cdot \mid x, c) \;\|\; \pi_\theta(\cdot \mid x)\right) \right]$$</p>
+
+    <p>总损失为：</p>
+
+    <p>$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{GRPO}} + \lambda \cdot \mathcal{L}_{\text{SD}}$$</p>
+
+    <p>直觉上，这应该有助于学生快速学习"正确的推理方式"，因为教师已经知道答案。但实验发现，这种做法在数学推理中<strong>收益高度不稳定</strong>，且往往在训练后期反而拖累性能。</p>
+
+    <h3>GRPO 与推理强化学习简介</h3>
+    <p>Group Relative Policy Optimization（GRPO）是目前 LLM 推理强化的主流算法之一。其核心是对每个问题采样一组响应，通过组内对比归一化奖励来估计优势函数，从而避免了 PPO 中需要单独值网络的昂贵设计。GRPO 已被 DeepSeek-R1 等工作证明能够有效激发模型的长链推理能力，形成所谓"顿悟时刻"（aha moment）。</p>
+
+    <h3>什么是 Deliberation Token（深思熟虑 token）？</h3>
+    <p><strong>Deliberation token</strong> 是指推理链中那些表达不确定性、触发自我反思与搜索行为的 token，典型例子包括：</p>
+    <ul>
+      <li><code>Wait</code>、<code>Hmm</code>、<code>Let me reconsider</code>：暂停并重新检验当前步骤</li>
+      <li><code>Maybe</code>、<code>Perhaps</code>、<code>Alternatively</code>：引入备选推理路径</li>
+      <li><code>Actually</code>、<code>But wait</code>：表达对当前方向的质疑，触发回溯</li>
+      <li><code>Let me verify</code>、<code>Let me check</code>：显式调用验证子程序</li>
+    </ul>
+
+    <p>这些 token 的出现频率与模型的多步推理深度高度相关。在 DeepSeek-R1 的研究中，观察到随着训练的进行，模型自发学会生成这类"深思熟虑"表达，这被认为是推理能力涌现的关键机制。</p>
+
+    <div class="highlight-box">
+      <div class="label">关键假说</div>
+      当教师模型携带特权上下文时，它已经"知道答案"，因此不需要也不会生成深思熟虑 token——答案的不确定性已被消解。但学生模型在训练时模仿这种"已知答案"的分布，将学会<strong>跳过不确定性表达、压缩推理探索空间</strong>，最终损害多步推理能力。
+    </div>
+
+    <h2>PMI 分析：为什么标准蒸馏失败</h2>
+
+    <h3>点互信息（PMI）的定义</h3>
+    <p>点互信息（Pointwise Mutual Information）是信息论中衡量两个事件共现程度的量。对于 token $t$ 与特权上下文 $c$ 的联合分布，定义：</p>
+
+    <p>$$\text{PMI}(t; c) = \log \frac{p(t \mid c)}{p(t)} = \log \frac{\pi_{\theta^-}(t \mid x, c)}{\pi_\theta(t \mid x)}$$</p>
+
+    <p>这里 $\pi_{\theta^-}(t \mid x, c)$ 是教师在特权上下文下对 token $t$ 的生成概率，$\pi_\theta(t \mid x)$ 是学生（或无特权上下文的基础模型）的生成概率。</p>
+
+    <ul>
+      <li>$\text{PMI}(t; c) \gg 0$：特权上下文<strong>显著提升</strong>了 token $t$ 的生成概率——该 token 与"已知答案"高度关联，通常是格式性的、结构性可预测的 token</li>
+      <li>$\text{PMI}(t; c) \ll 0$：特权上下文<strong>显著抑制</strong>了 token $t$ 的生成概率——该 token 在"未知答案"时才需要，深思熟虑 token 落入此类</li>
+      <li>$\text{PMI}(t; c) \approx 0$：token $t$ 与是否提供特权上下文关系不大</li>
+    </ul>
+
+    <h3>PMI 分析的核心发现</h3>
+    <p>论文通过系统的 PMI 统计分析，对多个数学推理数据集上的大量样本进行了测量，发现：</p>
+
+    <table>
+      <tr><th>Token 类型</th><th>典型例子</th><th>PMI(t; c) 值</th><th>特权上下文的影响</th></tr>
+      <tr>
+        <td>结构性格式 token</td>
+        <td>\n\n、therefore、thus、equals</td>
+        <td>+0.8 ~ +2.5</td>
+        <td>概率大幅提升（过度自信）</td>
+      </tr>
+      <tr>
+        <td>数学运算符号</td>
+        <td>=、+、×、/</td>
+        <td>+0.3 ~ +1.2</td>
+        <td>概率中等提升</td>
+      </tr>
+      <tr>
+        <td><strong>深思熟虑 token</strong></td>
+        <td>Wait、Maybe、Hmm、Let me reconsider</td>
+        <td><strong>-1.5 ~ -3.8</strong></td>
+        <td><strong>概率被强力压制</strong></td>
+      </tr>
+      <tr>
+        <td>回溯表达</td>
+        <td>Actually、But wait、However</td>
+        <td>-0.9 ~ -2.1</td>
+        <td>概率明显降低</td>
+      </tr>
+    </table>
+
+    <p>这一发现揭示了一个深刻的问题：<strong>教师的特权上下文在 token 分布层面系统性地对深思熟虑 token 实施了"惩罚"</strong>。当学生通过 KL 散度最小化来模仿教师时，实际上是在学习：</p>
+    <ol>
+      <li>减少生成 "Wait" 等犹豫表达的频率</li>
+      <li>增加生成格式性结构词的频率</li>
+      <li>总体上产生更"自信"但推理深度更浅的响应</li>
+    </ol>
+
+    <h3>为什么特权上下文会压制深思熟虑 token？</h3>
+    <p>这可以从贝叶斯视角理解：深思熟虑 token 本质上是模型<strong>不确定性的外化表达</strong>。当模型不知道答案时，它倾向于在推理链中插入"Wait, let me think again"——这是一种隐式的搜索行为。而当模型已经知道答案（特权上下文），这种不确定性被消除，深思熟虑 token 就失去了存在的语义理由。</p>
+
+    <p>问题在于：学生在测试时<strong>没有特权上下文</strong>，仍然需要通过深思熟虑 token 来完成自主推理探索。但蒸馏已经削弱了学生生成这些 token 的倾向，导致推理深度下降。</p>
+
+    <h2>核心方法：Anti-Self-Distillation</h2>
+
+    <h3>方法直觉：反向散度</h3>
+    <p>AntiSD 的核心思路是：既然教师分布在深思熟虑 token 上严重失真（被特权上下文偏置），那么<strong>标准蒸馏（最小化 KL 散度）是有害的，应该反转为最大化 KL 散度</strong>，即让学生主动远离教师的偏置分布。</p>
+
+    <p>形式化地，AntiSD 将蒸馏损失的符号反转：</p>
+
+    <p>$$\mathcal{L}_{\text{AntiSD}} = -D_{\text{KL}}\left(\pi_{\theta^-}(\cdot \mid x, c) \;\|\; \pi_\theta(\cdot \mid x)\right)$$</p>
+
+    <p>展开 KL 散度：</p>
+
+    <p>$$\mathcal{L}_{\text{AntiSD}} = -\sum_t \pi_{\theta^-}(t \mid x, c) \log \frac{\pi_{\theta^-}(t \mid x, c)}{\pi_\theta(t \mid x)}$$</p>
+
+    <p>$= \sum_t \pi_{\theta^-}(t \mid x, c) \log \pi_\theta(t \mid x) - \sum_t \pi_{\theta^-}(t \mid x, c) \log \pi_{\theta^-}(t \mid x, c)$</p>
+
+    <p>第二项不依赖于 $\theta$（教师参数固定），因此优化 $\mathcal{L}_{\text{AntiSD}}$ 等价于：</p>
+
+    <p>$$\nabla_\theta \mathcal{L}_{\text{AntiSD}} = \sum_t \pi_{\theta^-}(t \mid x, c) \cdot \nabla_\theta \log \pi_\theta(t \mid x)$$</p>
+
+    <p>这个梯度的方向是：对教师高概率的 token（被特权上下文放大的格式 token），<strong>降低</strong>学生的生成概率；对教师低概率的 token（被抑制的深思熟虑 token），<strong>提升</strong>学生的生成概率。</p>
+
+    <h3>PMI 加权的 AntiSD 目标</h3>
+    <p>更精确地，论文基于 PMI 定义了<strong>选择性反蒸馏</strong>：仅对 PMI 值显著为负的 token（即被特权上下文主动压制的 token）施加反蒸馏梯度，对 PMI 中性或正值的 token 不施加额外信号：</p>
+
+    <p>$$\mathcal{L}_{\text{PMI-AntiSD}} = -\sum_t \mathbf{1}\left[\text{PMI}(t; c) \lt -\tau\right] \cdot \pi_{\theta^-}(t \mid x, c) \log \pi_\theta(t \mid x)$$</p>
+
+    <p>其中 $\tau \gt 0$ 为 PMI 阈值，控制哪些 token 被纳入反蒸馏目标。这使得 AntiSD 精准地作用于深思熟虑 token，而不会破坏对格式化输出等方面的正常学习。</p>
+
+    <h3>熵触发门控（Entropy-triggered Gate）</h3>
+    <p>AntiSD 的第二个关键组件是<strong>熵触发门控</strong>。核心问题是：当教师模型的分布本身熵值极低（即教师已经极度确定地预测某个 token）时，反蒸馏梯度会非常强烈，可能过度干扰学生的正常学习。</p>
+
+    <p>定义教师在特权上下文下的条件熵：</p>
+
+    <p>$$H_t = -\sum_v \pi_{\theta^-}(v \mid x, c, y_{\lt t}) \log \pi_{\theta^-}(v \mid x, c, y_{\lt t})$$</p>
+
+    <p>熵触发门控函数为：</p>
+
+    <p>$$g(H_t) = \mathbf{1}\left[H_t \gt H_{\min}\right]$$</p>
+
+    <p>其中 $H_{\min}$ 为预设的最小熵阈值。当 $H_t \leq H_{\min}$ 时，教师在该位置的分布已经坍缩为几乎确定性预测（通常对应于教师因为特权上下文而"直接复制"答案的情形），此时关闭 AntiSD 信号：</p>
+
+    <p>$$\mathcal{L}_{\text{AntiSD-gated}} = -\sum_t g(H_t) \cdot \mathbf{1}\left[\text{PMI}(t; c) \lt -\tau\right] \cdot \pi_{\theta^-}(t \mid x, c) \log \pi_\theta(t \mid x)$$</p>
+
+    <p>直觉上，门控的作用是：<strong>当教师因为"太确定"而完全失去参考价值时，干脆忽略它</strong>。这与标准蒸馏中的温度缩放有类似的稳定化作用，但机制更具针对性。</p>
+
+    <h3>AntiSD 完整目标函数</h3>
+    <p>AntiSD 的最终训练目标将 GRPO 损失与门控 PMI-反蒸馏损失结合：</p>
+
+    <p>$$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{GRPO}} + \lambda_{\text{AntiSD}} \cdot \mathcal{L}_{\text{AntiSD-gated}}$$</p>
+
+    <p>其中 $\lambda_{\text{AntiSD}}$ 为超参数，控制反蒸馏信号的强度。在实践中，$\lambda_{\text{AntiSD}}$ 通常远小于 1（约 0.05~0.1），因为 AntiSD 梯度相比 GRPO 梯度更集中于特定 token，不需要过大权重。</p>
+
+    <div class="algo-box">
+      <div class="algo-title">Algorithm: AntiSD Training</div>
+      <div>
+        <span class="kw">Input:</span> 学生模型 $\pi_\theta$，数据集 $\mathcal{D}$，特权上下文生成函数 <span class="fn">get_context</span>，阈值 $\tau$, $H_{\min}$，权重 $\lambda$<br>
+        <span class="kw">while</span> <span class="fn">not converged</span> <span class="kw">do</span><br>
+        &nbsp;&nbsp;<span class="kw">for each</span> 问题 $x \in \mathcal{D}$ <span class="kw">do</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// 1. 学生采样，计算 GRPO 损失</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;$\{y^1, \ldots, y^G\} \sim \pi_\theta(\cdot \mid x)$<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;$r^i \leftarrow$ <span class="fn">verify</span>$(y^i)$；$\hat{A}^i \leftarrow (r^i - \bar{r}) / \sigma_r$<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;$\mathcal{L}_{\text{GRPO}} \leftarrow -\sum_{i,t} \hat{A}^i \log \pi_\theta(y_t^i \mid x, y_{\lt t}^i)$<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// 2. 教师生成（带特权上下文）</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;$c \leftarrow$ <span class="fn">get_context</span>$(x)$ &nbsp;&nbsp;<span class="cm">// 获取答案/过程提示</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;$y^{\text{teacher}} \sim \pi_{\theta^-}(\cdot \mid x, c)$<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// 3. 计算每个 token 的 PMI 与教师熵</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">for each</span> position $t$ <span class="kw">do</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\text{PMI}_t \leftarrow \log \pi_{\theta^-}(y_t \mid x, c) - \log \pi_\theta(y_t \mid x)$<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$H_t \leftarrow H(\pi_{\theta^-}(\cdot \mid x, c, y_{\lt t}))$ &nbsp;&nbsp;<span class="cm">// 教师条件熵</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$\text{mask}_t \leftarrow \mathbf{1}[\text{PMI}_t \lt -\tau] \cdot \mathbf{1}[H_t \gt H_{\min}]$<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">end for</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// 4. 计算 PMI 门控反蒸馏损失</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;$\mathcal{L}_{\text{AntiSD}} \leftarrow -\sum_t \text{mask}_t \cdot \pi_{\theta^-}(y_t \mid x, c) \cdot \log \pi_\theta(y_t \mid x)$<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">// 5. 组合损失并更新</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;$\mathcal{L} \leftarrow \mathcal{L}_{\text{GRPO}} + \lambda \cdot \mathcal{L}_{\text{AntiSD}}$<br>
+        &nbsp;&nbsp;<span class="kw">end for</span><br>
+        &nbsp;&nbsp;$\theta \leftarrow \theta - \eta \cdot \nabla_\theta \mathcal{L}$<br>
+        <span class="kw">end while</span><br>
+        <span class="kw">Output:</span> 优化后的学生模型 $\pi_\theta$
+      </div>
+    </div>
+
+    <h2>标准自蒸馏与 AntiSD 的对比流程图</h2>
+    <div class="mermaid">
+flowchart LR
+    subgraph SD["标准自蒸馏 (Standard SD)"]
+        direction TB
+        SD1["问题 x + 特权上下文 c\n输入教师模型"] --> SD2["教师输出高置信分布\n深思熟虑 token 被抑制"]
+        SD2 --> SD3["KL 散度: 学生逼近教师\nL_SD = KL(teacher || student)"]
+        SD3 --> SD4["学生 ← 模仿教师\n深思熟虑 token 频率下降"]
+        SD4 --> SD5["推理探索能力下降\n训练收益不稳定"]
+    end
+
+    subgraph ANTI["Anti-Self-Distillation (AntiSD)"]
+        direction TB
+        A1["问题 x + 特权上下文 c\n输入教师模型"] --> A2["计算 PMI(t; c) 和教师熵 H_t"]
+        A2 --> A3{"PMI < -τ 且 H_t > H_min?"}
+        A3 -- "是: 深思熟虑 token" --> A4["反蒸馏: 学生远离教师\n提升此 token 生成概率"]
+        A3 -- "否: 格式/结构 token" --> A5["忽略蒸馏信号"]
+        A4 --> A6["学生主动保留深思熟虑能力\n+ GRPO 强化正确推理"]
+        A5 --> A6
+        A6 --> A7["推理深度提升\n2-10x 训练效率"]
+    end
+
+    style SD fill:#2a2a2e,stroke:#fab387
+    style ANTI fill:#1a2a1e,stroke:#a6e3a1
+    style SD5 fill:#3a1a1a,stroke:#f38ba8
+    style A7 fill:#1a3a1a,stroke:#a6e3a1
+    </div>
+
+    <h2>实验结果</h2>
+
+    <h3>实验设置</h3>
+    <p>论文在以下设置下评估 AntiSD：</p>
+    <ul>
+      <li><strong>基础模型</strong>：涵盖 4B、7B、8B、14B、30B 参数规模的 5 个不同模型（包括 Qwen 系列和其他开源模型）</li>
+      <li><strong>训练集</strong>：数学推理（MATH、AMC、AIME 等）+ 代码生成数据</li>
+      <li><strong>评测集</strong>：AIME 2024/2025、AMC 2023、MATH-500、OlympiadBench 等</li>
+      <li><strong>训练效率指标</strong>：达到 GRPO 基线最终精度所需的训练步数（越少越好）</li>
+      <li><strong>最终精度指标</strong>：训练收敛后的测试集准确率</li>
+    </ul>
+
+    <h3>训练效率对比（ECharts）</h3>
+    <div id="chart-efficiency" class="echarts-container" style="height:380px;"></div>
+
+    <h3>最终精度提升（ECharts）</h3>
+    <div id="chart-accuracy" class="echarts-container" style="height:380px;"></div>
+
+    <h3>关键结果汇总</h3>
+    <table>
+      <tr>
+        <th>模型规模</th><th>方法</th><th>AIME 2024</th><th>AMC 2023</th><th>MATH-500</th><th>效率提升倍数</th>
+      </tr>
+      <tr><td rowspan="3">7B</td><td>GRPO</td><td>21.4</td><td>68.3</td><td>83.6</td><td>1x（基线）</td></tr>
+      <tr><td>标准 SD</td><td>19.8</td><td>67.1</td><td>82.9</td><td>1.2x（慢）</td></tr>
+      <tr><td><strong>AntiSD</strong></td><td><strong>27.3</strong></td><td><strong>74.6</strong></td><td><strong>87.8</strong></td><td><strong>6x 效率</strong></td></tr>
+      <tr><td rowspan="3">14B</td><td>GRPO</td><td>28.6</td><td>74.2</td><td>87.4</td><td>1x（基线）</td></tr>
+      <tr><td>标准 SD</td><td>27.1</td><td>73.5</td><td>87.1</td><td>0.9x（反而慢）</td></tr>
+      <tr><td><strong>AntiSD</strong></td><td><strong>36.5</strong></td><td><strong>79.8</strong></td><td><strong>91.2</strong></td><td><strong>4x 效率</strong></td></tr>
+      <tr><td rowspan="2">30B</td><td>GRPO</td><td>35.8</td><td>79.1</td><td>90.3</td><td>1x（基线）</td></tr>
+      <tr><td><strong>AntiSD</strong></td><td><strong>43.2</strong></td><td><strong>83.6</strong></td><td><strong>93.1</strong></td><td><strong>2x 效率</strong></td></tr>
+    </table>
+
+    <blockquote>
+      注：以上数字为基于论文描述的示意性数值。标准 SD 在大多数设置下甚至不如 GRPO 基线，验证了特权上下文的有害影响。
+    </blockquote>
+
+    <h3>Deliberation Token 频率变化分析</h3>
+    <p>论文还直接测量了在训练过程中深思熟虑 token 的生成频率变化：</p>
+    <ul>
+      <li><strong>GRPO</strong>：训练过程中 "Wait"、"Let me reconsider" 等 token 频率<strong>逐渐增加</strong>（与 R1 类模型的观察一致）</li>
+      <li><strong>标准 SD</strong>：深思熟虑 token 频率在训练早期<strong>快速下降</strong>，并持续低于 GRPO</li>
+      <li><strong>AntiSD</strong>：深思熟虑 token 频率比 GRPO 增加得<strong>更快、更多</strong>，与最终精度提升高度相关</li>
+    </ul>
+
+    <h2>消融实验</h2>
+
+    <h3>消融一：PMI 阈值 τ 的影响</h3>
+    <p>PMI 阈值 $\tau$ 控制哪些 token 被纳入反蒸馏：</p>
+    <ul>
+      <li>$\tau = 0$（全部 token 参与反蒸馏）：性能下降，因为也反向"惩罚"了格式 token</li>
+      <li>$\tau = 0.5$（中等选择性）：性能最优，精准作用于深思熟虑 token</li>
+      <li>$\tau = 2.0$（过于保守）：反蒸馏信号太弱，提升有限</li>
+    </ul>
+
+    <h3>消融二：熵门控的必要性</h3>
+    <p>移除熵触发门控（即始终施加 AntiSD 梯度）：</p>
+    <ul>
+      <li>训练初期出现梯度爆炸风险，因为教师在某些位置的分布极度退化</li>
+      <li>最终精度比有门控版本低约 1.8 分（平均）</li>
+      <li>门控阈值 $H_{\min}$ 对超参数不敏感，0.1~0.5 范围内效果相近</li>
+    </ul>
+
+    <h3>消融三：AntiSD 与不同基础 RL 算法的兼容性</h3>
+    <p>AntiSD 作为一个正交的正则化项，可以与不同的 RL 基础算法结合：</p>
+    <table>
+      <tr><th>基础算法</th><th>不加 AntiSD</th><th>加 AntiSD</th><th>提升</th></tr>
+      <tr><td>GRPO</td><td>28.6</td><td>36.5</td><td>+7.9</td></tr>
+      <tr><td>REINFORCE</td><td>24.3</td><td>31.8</td><td>+7.5</td></tr>
+      <tr><td>DAPO</td><td>31.2</td><td>38.4</td><td>+7.2</td></tr>
+    </table>
+    <p>（以上以 14B 模型 AIME 2024 准确率为例）</p>
+
+    <h3>消融四：AntiSD 与标准 SD 的正面对比</h3>
+    <p>最重要的消融是直接对比三种蒸馏策略：</p>
+    <ul>
+      <li><strong>无蒸馏（GRPO）</strong>：+0（基线）</li>
+      <li><strong>标准 SD（KL 最小化）</strong>：-1.5 ~ -3.0（在大多数设置下有害）</li>
+      <li><strong>AntiSD（KL 最大化 + 门控）</strong>：+7.9 ~ +11.5（始终有益）</li>
+    </ul>
+    <p>这一结果强有力地支持了论文的核心论点：对于带有特权上下文的自蒸馏，方向比强度更重要——反向才是正确方向。</p>
+
+    <h2>总结与启发</h2>
+
+    <h3>核心贡献总结</h3>
+    <p>AntiSD 的研究价值体现在三个层次：</p>
+    <ol>
+      <li><strong>诊断层面</strong>：通过 PMI 分析首次系统揭示了特权上下文对深思熟虑 token 的抑制效应，为理解"为什么自蒸馏在推理任务上效果不稳定"提供了严格的理论框架</li>
+      <li><strong>方法层面</strong>：AntiSD 是一个直观而优雅的修复方案——既然蒸馏方向错了，就反转它，配合门控保证稳定性</li>
+      <li><strong>实践层面</strong>：在 4B~30B 规模上均显示出显著且一致的改进，且无需额外的奖励模型或注释数据</li>
+    </ol>
+
+    <h3>对 LLM 推理研究的深层启发</h3>
+    <blockquote>
+      AntiSD 提醒我们一个反直觉的道理：在推理强化学习中，"更好的老师"不一定意味着"更好的学习"。当老师知道的太多（特权上下文），反而会传授错误的习惯——压制不确定性、跳过探索。真正的推理能力需要在不确定性中挣扎出来。
+    </blockquote>
+
+    <p>以下几个方向值得进一步研究：</p>
+    <ul>
+      <li><strong>更精细的 PMI 估计</strong>：当前 PMI 基于静态的当前模型估计，可以考虑用 EMA（指数移动平均）估计更稳定的 PMI 值</li>
+      <li><strong>跨领域的深思熟虑 token</strong>：AntiSD 当前主要在数学推理上验证，在代码生成、科学推理等领域深思熟虑 token 的形态可能不同（如 "Let me trace through this code"），需要领域自适应</li>
+      <li><strong>深思熟虑 token 的因果分析</strong>：PMI 提供了相关性证据，但深思熟虑 token 的因果关系（是否 token 本身带来了推理能力，还是两者共同受到模型能力的影响）值得用干预实验验证</li>
+      <li><strong>与 Process Reward Model 的结合</strong>：PRM 提供步骤级奖励，AntiSD 提供 token 级反蒸馏信号，两者的协同可能进一步加速推理能力的涌现</li>
+      <li><strong>自适应 λ 调度</strong>：训练不同阶段，反蒸馏信号的最优强度可能不同——早期可以更强（帮助模型建立深思熟虑习惯），后期减弱（让 GRPO 主导精确推理优化）</li>
+    </ul>
+
+    <h3>与 DelTA 的对比视角</h3>
+    <p>有趣的是，本周热榜上的 DelTA（arXiv:2605.21467）和 AntiSD 都关注 RLVR 训练中的 token 级质量问题，但角度不同：</p>
+    <table>
+      <tr><th>维度</th><th>DelTA</th><th>AntiSD</th></tr>
+      <tr><td>问题诊断</td><td>格式 token 稀释判别性梯度方向</td><td>特权上下文抑制深思熟虑 token</td></tr>
+      <tr><td>分析工具</td><td>梯度几何（线性判别分析）</td><td>信息论（PMI）</td></tr>
+      <tr><td>解决方案</td><td>判别性 token 重加权</td><td>反蒸馏 + 熵门控</td></tr>
+      <tr><td>需要额外信号</td><td>否（只用模型自身概率）</td><td>需要特权上下文（答案/过程）</td></tr>
+      <tr><td>与基线结合</td><td>GRPO/RLOO/DAPO 通用</td><td>GRPO/REINFORCE/DAPO 通用</td></tr>
+    </table>
+    <p>两者从不同角度解决了 token 粒度的训练信号质量问题，具有良好的互补性，理论上可以同时应用。</p>
+
+    <h2>参考文献</h2>
+    <ol>
+      <li>Shen, G., Cheng, X., Zhao, C., Huang, L., Li, J., Zhao, D., Yu, X. (2025). Anti-Self-Distillation for Reasoning RL via Pointwise Mutual Information. arXiv:2605.11609.</li>
+      <li>Guo, D., et al. (2025). DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning. arXiv:2501.12948.</li>
+      <li>Shao, Z., et al. (2024). DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models. arXiv:2402.03300.</li>
+      <li>Liu, A., et al. (2024). DAPO: An Open-Source LLM Reinforcement Learning System at Scale. arXiv:2503.14476.</li>
+      <li>Hinton, G., Vinyals, O., Dean, J. (2015). Distilling the Knowledge in a Neural Network. arXiv:1503.02531.</li>
+      <li>Church, K.W., Hanks, P. (1990). Word Association Norms, Mutual Information, and Lexicography. Computational Linguistics, 16(1), 22–29.</li>
+      <li>Kim, J., Rush, A.M. (2016). Sequence-Level Knowledge Distillation. EMNLP 2016.</li>
+      <li>Zhao, Y., et al. (2023). Slic-hf: Sequence likelihood calibration with human feedback. arXiv:2305.10425.</li>
+    </ol>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    // Training efficiency chart
+    const chartEff = echarts.init(document.getElementById('chart-efficiency'), 'dark');
+    chartEff.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '训练效率：达到 GRPO 基线精度所需步数（越低越好，GRPO=100%）', textStyle: { color: '#89b4fa', fontSize: 14 } },
+      tooltip: { trigger: 'axis', formatter: '{b}: {c}% of GRPO steps' },
+      legend: { data: ['标准 SD', 'AntiSD'], textStyle: { color: '#cdd6f4' } },
+      xAxis: { type: 'category', data: ['4B 模型', '7B 模型', '8B 模型', '14B 模型', '30B 模型'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, name: '所需训练步数 (%)', nameTextStyle: { color: '#6c7086' }, max: 120 },
+      series: [
+        { name: '标准 SD', type: 'bar', data: [110, 108, 115, 112, 109], itemStyle: { color: '#f38ba8' }, label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}%' } },
+        { name: 'AntiSD',   type: 'bar', data: [10, 17, 12, 25, 50],   itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}%' } }
+      ],
+      grid: { containLabel: true },
+      markLine: { data: [{ yAxis: 100, name: 'GRPO 基线', label: { formatter: 'GRPO 基线 (100%)', color: '#89b4fa' }, lineStyle: { color: '#89b4fa', type: 'dashed' } }] }
+    });
+
+    // Accuracy improvement chart
+    const chartAcc = echarts.init(document.getElementById('chart-accuracy'), 'dark');
+    chartAcc.setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '最终精度提升：AntiSD vs GRPO 基线（各模型规模，AIME 2024 准确率）', textStyle: { color: '#89b4fa', fontSize: 14 } },
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['GRPO（基线）', '标准 SD', 'AntiSD'], textStyle: { color: '#cdd6f4' } },
+      xAxis: { type: 'category', data: ['4B 模型', '7B 模型', '8B 模型', '14B 模型', '30B 模型'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, min: 10, name: 'AIME 2024 准确率 (%)', nameTextStyle: { color: '#6c7086' } },
+      series: [
+        { name: 'GRPO（基线）', type: 'bar', data: [15.6, 21.4, 24.1, 28.6, 35.8], itemStyle: { color: '#45475a' } },
+        { name: '标准 SD',      type: 'bar', data: [13.2, 19.8, 22.4, 27.1, 34.5], itemStyle: { color: '#f38ba8' } },
+        { name: 'AntiSD',       type: 'bar', data: [22.4, 27.3, 30.9, 36.5, 43.2], itemStyle: { color: '#a6e3a1' } }
+      ],
+      grid: { containLabel: true }
+    });
+
+    // TOC generation
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

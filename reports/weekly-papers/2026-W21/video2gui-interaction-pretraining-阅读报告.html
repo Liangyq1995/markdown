@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video2GUI: 从网络视频合成大规模GUI交互轨迹 — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --bg-card: #24273a;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --pink: #f38ba8;
+      --mauve: #cba6f7;
+      --yellow: #f9e2af;
+      --teal: #94e2d5;
+      --peach: #fab387;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.85;
+    }
+
+    /* ── TOC ── */
+    #toc {
+      position: fixed; top: 0; left: 0;
+      width: 220px; height: 100vh;
+      background: var(--bg-nav);
+      overflow-y: auto; padding: 20px 12px;
+      font-size: 12.5px;
+      border-right: 1px solid var(--border);
+      z-index: 100;
+    }
+    #toc h2 {
+      color: var(--heading); font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 14px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    #toc a {
+      display: block; color: var(--text); text-decoration: none;
+      padding: 3px 8px; border-radius: 4px; margin-bottom: 2px;
+      transition: background 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 18px; font-size: 11.5px; opacity: 0.78; }
+
+    /* ── Main ── */
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+
+    h1 { color: var(--heading); font-size: 1.85em; margin-bottom: 10px; line-height: 1.3; }
+    h2 {
+      color: var(--heading); font-size: 1.35em;
+      margin: 2.2em 0 0.7em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+    }
+    h3 { color: var(--heading); font-size: 1.08em; margin: 1.5em 0 0.45em; }
+    h4 { color: var(--mauve); font-size: 0.98em; margin: 1.2em 0 0.3em; }
+    p { margin: 0.65em 0; }
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    strong { color: var(--strong); }
+    em { color: var(--yellow); font-style: normal; }
+
+    blockquote {
+      border-left: 3px solid var(--quote-bar);
+      padding: 10px 18px; margin: 1.2em 0;
+      background: #2a2a3e; border-radius: 0 6px 6px 0;
+    }
+    blockquote p { margin: 0.3em 0; }
+
+    table { border-collapse: collapse; width: 100%; margin: 1.1em 0; font-size: 0.92em; }
+    th {
+      background: #2a2a3e; color: var(--heading);
+      padding: 9px 14px; text-align: left;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    td { padding: 7px 14px; border: 1px solid var(--border); vertical-align: top; }
+    tr:nth-child(even) td { background: #232336; }
+    tr:hover td { background: #2a2a3e; }
+
+    pre {
+      background: var(--bg-code); border-radius: 8px;
+      padding: 18px; overflow-x: auto;
+      margin: 1.1em 0; font-size: 0.87em;
+      border: 1px solid var(--border);
+    }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    p code, li code, td code {
+      background: var(--bg-code); padding: 2px 6px;
+      border-radius: 3px; font-size: 0.86em;
+      color: var(--teal);
+    }
+
+    figure { margin: 1.5em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+    figcaption { color: #6c7086; font-size: 0.84em; margin-top: 8px; }
+
+    .mermaid {
+      background: #1e1f2e; border-radius: 8px;
+      padding: 20px; margin: 1.2em 0;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    .echarts-container { margin: 1.2em 0; border-radius: 8px; overflow: hidden; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.2em 0; }
+
+    ul, ol { padding-left: 1.6em; margin: 0.6em 0; }
+    li { margin: 0.3em 0; }
+
+    .badge {
+      display: inline-block; font-size: 0.75em; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px; margin: 0 3px;
+      vertical-align: middle;
+    }
+    .badge-blue { background: #1e3a5f; color: var(--heading); }
+    .badge-green { background: #1a3a2a; color: var(--strong); }
+    .badge-orange { background: #3a2a1e; color: var(--peach); }
+    .badge-purple { background: #2a1e3a; color: var(--mauve); }
+
+    /* ── Paper info table ── */
+    .info-table { width: 100%; border-collapse: collapse; margin: 1.2em 0; }
+    .info-table th {
+      width: 130px; background: #1e3a5f; color: var(--heading);
+      padding: 9px 14px; border: 1px solid var(--border);
+      font-weight: 600; font-size: 0.9em;
+    }
+    .info-table td { background: #24273a; padding: 9px 14px; border: 1px solid var(--border); }
+
+    /* ── Timeline ── */
+    .timeline {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      margin: 1.5em 0; padding: 0;
+    }
+    .timeline-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px 20px;
+      flex: 1 1 200px; min-width: 180px; max-width: 240px;
+      position: relative; overflow: hidden;
+    }
+    .timeline-card::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 100%; height: 3px;
+    }
+    .timeline-card.era-2020::before { background: #6c7086; }
+    .timeline-card.era-2022::before { background: #89b4fa; }
+    .timeline-card.era-2023::before { background: #cba6f7; }
+    .timeline-card.era-2024::before { background: #a6e3a1; }
+    .timeline-card.era-2025::before { background: #fab387; }
+    .timeline-card.era-2026::before { background: #f38ba8; }
+    .timeline-year {
+      font-size: 0.78em; font-weight: 700; letter-spacing: 0.05em;
+      color: #6c7086; margin-bottom: 6px; text-transform: uppercase;
+    }
+    .timeline-title { color: var(--heading); font-weight: 600; font-size: 0.95em; margin-bottom: 5px; }
+    .timeline-desc { color: var(--text); font-size: 0.83em; line-height: 1.55; opacity: 0.85; }
+
+    /* ── Highlight box ── */
+    .highlight-box {
+      background: linear-gradient(135deg, #1a2a4a 0%, #1e1e2e 100%);
+      border: 1px solid #89b4fa44;
+      border-left: 4px solid var(--heading);
+      border-radius: 8px; padding: 16px 20px; margin: 1.2em 0;
+    }
+    .highlight-box.green {
+      background: linear-gradient(135deg, #1a3a2a 0%, #1e1e2e 100%);
+      border-color: #a6e3a144;
+      border-left-color: var(--strong);
+    }
+    .highlight-box.orange {
+      background: linear-gradient(135deg, #3a2a1a 0%, #1e1e2e 100%);
+      border-color: #fab38744;
+      border-left-color: var(--peach);
+    }
+    .highlight-box .box-title {
+      font-weight: 700; font-size: 0.92em; margin-bottom: 8px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .highlight-box.green .box-title { color: var(--strong); }
+    .highlight-box .box-title { color: var(--heading); }
+    .highlight-box.orange .box-title { color: var(--peach); }
+
+    /* ── Stat cards ── */
+    .stat-row {
+      display: flex; gap: 16px; margin: 1.4em 0; flex-wrap: wrap;
+    }
+    .stat-card {
+      flex: 1; min-width: 150px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 18px 20px; text-align: center;
+    }
+    .stat-card .stat-num {
+      font-size: 2em; font-weight: 700;
+      color: var(--heading); line-height: 1.1;
+    }
+    .stat-card .stat-label {
+      font-size: 0.82em; color: #6c7086;
+      margin-top: 4px; line-height: 1.4;
+    }
+
+    /* ── Step blocks ── */
+    .step-list { margin: 1em 0; }
+    .step-item {
+      display: flex; gap: 16px; align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .step-num {
+      flex-shrink: 0; width: 32px; height: 32px;
+      background: var(--heading); color: #1e1e2e;
+      border-radius: 50%; display: flex;
+      align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9em;
+    }
+    .step-content { flex: 1; }
+    .step-content strong { color: var(--heading); }
+
+    /* ── Two-col layout ── */
+    .two-col { display: flex; gap: 24px; margin: 1em 0; flex-wrap: wrap; }
+    .two-col > div { flex: 1; min-width: 260px; }
+
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0.8em 0; }
+    .tag {
+      background: #2a2a3e; border: 1px solid var(--border);
+      border-radius: 20px; padding: 3px 12px;
+      font-size: 0.82em; color: var(--teal);
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$']],
+        displayMath: [['$$','$$']]
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目 录</h2></nav>
+
+  <main>
+
+    <!-- ═══════════════════════════════════════════════
+         TITLE
+    ═══════════════════════════════════════════════ -->
+    <h1>Video2GUI：从未标注网络视频合成大规模 GUI 交互轨迹用于泛化智能体预训练</h1>
+
+    <blockquote>
+      <p>
+        <strong>论文标题</strong>：Video2GUI: Synthesizing Large-Scale Interaction Trajectories for Generalized GUI Agent Pretraining &nbsp;|&nbsp;
+        <strong>会议</strong>：<span class="badge badge-blue">ICML 2026</span>
+        <span class="badge badge-green">Accepted</span> &nbsp;|&nbsp;
+        <strong>arXiv</strong>：<a href="https://arxiv.org/abs/2605.14747" target="_blank">2605.14747</a> &nbsp;|&nbsp;
+        <strong>Upvotes</strong>：<span class="badge badge-orange">144 ⬆</span>
+      </p>
+      <p>
+        <strong>GitHub</strong>：<a href="https://github.com/WeiminXiong/Video2GUI" target="_blank">WeiminXiong/Video2GUI</a> &nbsp;|&nbsp;
+        <strong>项目页</strong>：<a href="https://weiminxiong.github.io/Video2GUI/" target="_blank">weiminxiong.github.io/Video2GUI</a>
+      </p>
+    </blockquote>
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 1: 论文信息表
+    ═══════════════════════════════════════════════ -->
+    <h2 id="paper-info">1. 论文信息一览</h2>
+
+    <table class="info-table">
+      <tr><th>标题</th><td>Video2GUI: Synthesizing Large-Scale Interaction Trajectories for Generalized GUI Agent Pretraining</td></tr>
+      <tr><th>作者（8位）</th><td>Weimin Xiong, Shuhao Gu, Bowen Ye, Zihao Yue, Lei Li, Feifan Song, Sujian Li, Hao Tian</td></tr>
+      <tr><th>机构</th><td>北京大学（Peking University）、小米 LLM-Core、香港大学（HKU）、中国人民大学</td></tr>
+      <tr><th>发表期刊/会议</th><td>ICML 2026（已接收）</td></tr>
+      <tr><th>arXiv ID</th><td><a href="https://arxiv.org/abs/2605.14747">2605.14747</a>（2026年5月投递）</td></tr>
+      <tr><th>Upvotes</th><td>144（HuggingFace Papers 当日第一）</td></tr>
+      <tr><th>核心贡献</th><td>Video2GUI 自动化流程 + WildGUI 数据集（12M 轨迹，1500+ 应用）</td></tr>
+      <tr><th>主要结果</th><td>在 Qwen2.5-VL 和 Mimo-VL 上预训练后，6 项 GUI 基准提升 5–20%；ScreenSpot-Pro 绝对提升 +15.7，OSWorld-G 绝对提升 +26.4</td></tr>
+      <tr><th>开源状态</th><td>数据集和流程均承诺开源（Apache 2.0）</td></tr>
+    </table>
+
+    <div class="stat-row">
+      <div class="stat-card">
+        <div class="stat-num">500M</div>
+        <div class="stat-label">原始视频元数据条目</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">4.2M</div>
+        <div class="stat-label">高质量 GUI 教程视频<br>（约 30 万小时）</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">12.7M</div>
+        <div class="stat-label">WildGUI 交互轨迹总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">124M</div>
+        <div class="stat-label">截图/帧图像总数</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num">1500+</div>
+        <div class="stat-label">覆盖应用与网站数量</div>
+      </div>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 2: 核心问题与动机
+    ═══════════════════════════════════════════════ -->
+    <h2 id="motivation">2. 核心问题与动机</h2>
+
+    <p>
+      近年来，多模态大语言模型（MLLM）的快速发展推动了 <strong>GUI 智能体</strong>（Graphical User Interface Agents）的研究热潮。GUI 智能体能够理解并操作图形界面，自动完成桌面软件、移动 App、网页浏览等任务，在办公自动化、无障碍辅助、软件测试等领域具有巨大潜力。然而，训练一个真正泛化的 GUI 智能体面临着一个根本性瓶颈：<strong>大规模、多样化的训练数据极度匮乏</strong>。
+    </p>
+
+    <h3>2.1 数据稀缺问题的三个维度</h3>
+
+    <div class="highlight-box">
+      <div class="box-title">问题一：标注成本极高</div>
+      <p>
+        现有 GUI 训练数据集（如 Mind2Web、AITW、GUIDelines 等）主要依赖人工标注——招募人员操作软件、记录每一步操作并填写结构化标签。每条高质量的多步骤轨迹往往需要数分钟到数十分钟的人工投入，且需要有经验的标注员才能确保准确性。这导致数据规模严重受限。
+      </p>
+    </div>
+
+    <div class="highlight-box orange">
+      <div class="box-title">问题二：领域覆盖极窄</div>
+      <p>
+        由于标注成本约束，现有数据集往往聚焦于少数预设的应用或网站，例如 Mind2Web 仅覆盖约 137 个网站，AITW 局限于 Android 平台的特定应用。这种领域偏差使得在这些数据上训练的模型对新应用、新界面的泛化能力极差。真实世界中存在数以百万计的应用与网站，任何小规模数据集都难以涵盖其中哪怕万分之一的多样性。
+      </p>
+    </div>
+
+    <div class="highlight-box green">
+      <div class="box-title">问题三：互联网上存在未被利用的海量资源</div>
+      <p>
+        与此同时，YouTube 等视频平台上存在数以亿计的 GUI 教程视频——从"如何在 Photoshop 中抠图"到"Excel 数据透视表使用教程"——这些视频包含了真实、多样的 GUI 操作演示，但全部未被结构化利用。Video2GUI 正是为填补这一空白而生。
+      </p>
+    </div>
+
+    <h3>2.2 研究核心问题</h3>
+    <blockquote>
+      <p>
+        <em>能否自动地从未经标注的互联网教程视频中，提取出可用于 GUI 智能体预训练的结构化交互轨迹，从而构建覆盖广泛、规模巨大的训练数据集？</em>
+      </p>
+    </blockquote>
+
+    <p>
+      Video2GUI 对这个问题给出了肯定答案：通过精心设计的三阶段流水线，将"500 亿视频元数据"转化为"1270 万条高质量 GUI 交互轨迹"，成本接近于零，且覆盖 1500+ 真实应用。
+    </p>
+
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 3: 背景与相关工作
+    ═══════════════════════════════════════════════ -->
+    <h2 id="background">3. 背景与相关工作</h2>
+
+    <p>
+      GUI 智能体的研究演进可以大致分为若干阶段，从早期基于规则的脚本自动化，到如今由大模型驱动的端到端智能体。理解这一演进脉络，有助于把握 Video2GUI 所解决问题的历史位置与技术价值。
+    </p>
+
+    <h3>3.1 GUI 智能体发展历程</h3>
+
+    <div class="timeline">
+      <div class="timeline-card era-2020">
+        <div class="timeline-year">2020 及以前</div>
+        <div class="timeline-title">规则脚本时代</div>
+        <div class="timeline-desc">RPA（Robotic Process Automation）工具、Selenium、Appium 等脚本方案。硬编码 UI 路径，脆弱、不可泛化，需大量工程维护。</div>
+      </div>
+      <div class="timeline-card era-2022">
+        <div class="timeline-year">2022</div>
+        <div class="timeline-title">早期 LLM 驱动智能体</div>
+        <div class="timeline-desc">Mind2Web、WebGUM 探索将网页 DOM 树传入 LLM 决策。AITW 首次构建大规模 Android 任务数据集（约 715k 演示）。</div>
+      </div>
+      <div class="timeline-card era-2023">
+        <div class="timeline-year">2023</div>
+        <div class="timeline-title">纯视觉 GUI 理解兴起</div>
+        <div class="timeline-desc">CogAgent、GPT-4V 展示纯截图驱动的 GUI 理解。WebArena、OSWorld 建立标准化评估基准。SeeClick 提出 GUI grounding 预训练范式。</div>
+      </div>
+      <div class="timeline-card era-2024">
+        <div class="timeline-year">2024</div>
+        <div class="timeline-title">专用 GUI MLLM 爆发</div>
+        <div class="timeline-desc">Qwen2-VL、InternVL2、MiniGPT-v2 等通用模型竞相优化 GUI 能力。GUI-World、ScreenSpot 等多粒度基准涌现。数据合成开始受到关注。</div>
+      </div>
+      <div class="timeline-card era-2025">
+        <div class="timeline-year">2025</div>
+        <div class="timeline-title">预训练数据工程聚焦</div>
+        <div class="timeline-desc">Qwen2.5-VL、Mimo-VL 在 GUI 任务上达到新高。AndroidControl、CAGUI、ScreenSpot-Pro 基准提出更高挑战。数据瓶颈成为核心制约。</div>
+      </div>
+      <div class="timeline-card era-2026">
+        <div class="timeline-year">2026 — Video2GUI</div>
+        <div class="timeline-title">视频挖掘 + 大规模预训练</div>
+        <div class="timeline-desc">从互联网视频自动提取 12.7M 轨迹构建 WildGUI，在多基准实现 5–20% 提升。ICML 2026 接收。</div>
+      </div>
+    </div>
+
+    <h3>3.2 现有 GUI 数据集对比</h3>
+
+    <p>
+      下表对比了主流 GUI 训练/评测数据集的关键维度，可以看出 WildGUI 在规模和覆盖范围上具有显著优势：
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>数据集</th>
+          <th>年份</th>
+          <th>规模</th>
+          <th>平台</th>
+          <th>应用/域覆盖</th>
+          <th>标注方式</th>
+          <th>用途</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>AITW</strong></td>
+          <td>2022</td>
+          <td>~715k 演示</td>
+          <td>Android</td>
+          <td>少数 App</td>
+          <td>众包人工</td>
+          <td>训练</td>
+        </tr>
+        <tr>
+          <td><strong>Mind2Web</strong></td>
+          <td>2023</td>
+          <td>~2.3k 任务</td>
+          <td>Web</td>
+          <td>137 网站</td>
+          <td>人工标注</td>
+          <td>训练/评测</td>
+        </tr>
+        <tr>
+          <td><strong>OSWorld</strong></td>
+          <td>2024</td>
+          <td>369 任务</td>
+          <td>Desktop</td>
+          <td>多 OS 应用</td>
+          <td>人工设计</td>
+          <td>评测</td>
+        </tr>
+        <tr>
+          <td><strong>WebArena</strong></td>
+          <td>2023</td>
+          <td>812 任务</td>
+          <td>Web</td>
+          <td>5 网站</td>
+          <td>人工设计</td>
+          <td>评测</td>
+        </tr>
+        <tr>
+          <td><strong>ScreenSpot-Pro</strong></td>
+          <td>2025</td>
+          <td>~1k 任务</td>
+          <td>跨平台</td>
+          <td>专业软件</td>
+          <td>人工标注</td>
+          <td>评测</td>
+        </tr>
+        <tr>
+          <td><strong>GUI-World</strong></td>
+          <td>2024</td>
+          <td>~12k 样本</td>
+          <td>跨平台</td>
+          <td>多应用</td>
+          <td>人工+合成</td>
+          <td>训练/评测</td>
+        </tr>
+        <tr>
+          <td><strong>AndroidControl</strong></td>
+          <td>2024</td>
+          <td>~15k 轨迹</td>
+          <td>Android</td>
+          <td>~100 App</td>
+          <td>众包标注</td>
+          <td>训练/评测</td>
+        </tr>
+        <tr style="background: #1a3a2a;">
+          <td><strong>WildGUI（本文）</strong></td>
+          <td>2026</td>
+          <td><strong>12.7M 轨迹</strong></td>
+          <td><strong>Web/Mobile/Desktop</strong></td>
+          <td><strong>1,500+</strong></td>
+          <td><strong>全自动</strong></td>
+          <td><strong>预训练</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      WildGUI 的轨迹数量比现有最大训练集（AITW）高出约 <strong>17 倍</strong>，且无需任何人工标注，覆盖应用数量更是超出同类数据集一个数量级。
+    </p>
+
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 4: Video2GUI 框架总览
+    ═══════════════════════════════════════════════ -->
+    <h2 id="framework">4. Video2GUI 框架总览</h2>
+
+    <p>
+      Video2GUI 是一个完全自动化的三阶段流水线，将互联网上的海量 GUI 教程视频转化为可用于预训练的结构化交互轨迹。整体设计遵循"从粗到细"（coarse-to-fine）的核心哲学：先用低成本方法大幅缩小候选集，再逐步提升处理精度。
+    </p>
+
+    <pre class="mermaid">
+flowchart TD
+    A["🌐 互联网视频平台<br>（YouTube 等）<br><b>500M 条视频元数据</b>"]
+
+    subgraph STAGE_A ["Stage A — 由粗到细视频过滤"]
+        B["粗粒度过滤<br>Coarse Filtering<br>基于元数据：标题/描述/标签<br>Qwen2.5-7B 分类器<br>（DeepSeek-V3 标注训练）"]
+        C["<b>~20M 候选视频</b>"]
+        D["细粒度过滤<br>Fine Filtering<br>指令清晰度、主题相关性<br>屏幕录制质量评估"]
+        E["<b>4.2M 高质量 GUI 教程视频</b><br>（约 30 万小时）"]
+        B --> C --> D --> E
+    end
+
+    subgraph STAGE_B ["Stage B — VLM 驱动轨迹提取"]
+        F["视频分段<br>≤4 分钟一段"]
+        G["Gemini-3-Pro 处理<br>滑动窗口 + 历史上下文<br>输出：指令-轨迹对 (u⁽ᵏ⁾, e⁽ᵏ⁾)"]
+        H["<b>原始交互轨迹</b><br>任务指令 + 动作时间戳 + 动作描述"]
+        F --> G --> H
+    end
+
+    subgraph STAGE_C ["Stage C — 动作空间定位"]
+        I["三帧输入<br>{ o(t−0.5s), o(t), o(t+0.5s) }"]
+        J["低级指令匹配<br>VLM 边界框预测"]
+        K["动作坐标 b_t = (x₁,y₁,x₂,y₂)<br>精度 &gt;95%（人工验证）"]
+        I --> J --> K
+    end
+
+    subgraph DATASET ["WildGUI 数据集"]
+        L["📦 12.7M 交互轨迹<br>124M 截图帧<br>覆盖 1,500+ 应用/网站<br>Web / Mobile / Desktop 全平台"]
+    end
+
+    subgraph PRETRAIN ["下游预训练"]
+        M["Qwen2.5-VL-7B<br>Mimo-VL-7B<br>两阶段预训练策略"]
+        N["GUI Grounding ↑ +15.7~+26.4<br>Action Prediction ↑ 5~20%<br>6 项基准达到/超越 SOTA"]
+        M --> N
+    end
+
+    A --> STAGE_A
+    STAGE_A --> STAGE_B
+    STAGE_B --> STAGE_C
+    STAGE_C --> DATASET
+    DATASET --> PRETRAIN
+
+    style STAGE_A fill:#1a2a4a,stroke:#89b4fa,color:#cdd6f4
+    style STAGE_B fill:#1a3a2a,stroke:#a6e3a1,color:#cdd6f4
+    style STAGE_C fill:#2a1e3a,stroke:#cba6f7,color:#cdd6f4
+    style DATASET fill:#3a2a1a,stroke:#fab387,color:#cdd6f4
+    style PRETRAIN fill:#2a1a1a,stroke:#f38ba8,color:#cdd6f4
+    </pre>
+
+    <p>
+      上图展示了从 500M 原始视频元数据到最终 WildGUI 数据集的完整流水线，以及数据集用于预训练后的性能提升效果。三个核心阶段各司其职：<strong>Stage A</strong> 负责筛选高质量视频、<strong>Stage B</strong> 负责理解视频内容并提取结构化轨迹、<strong>Stage C</strong> 负责将抽象动作与屏幕坐标精确对齐。
+    </p>
+
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 5: 关键技术详解
+    ═══════════════════════════════════════════════ -->
+    <h2 id="technical">5. 关键技术详解</h2>
+
+    <p>
+      Video2GUI 的技术核心在于三个相互协作的子系统：视频质量过滤、VLM 驱动的轨迹提取、以及动作空间定位。下面逐一深入分析每个模块的设计动机、实现方法与效果。
+    </p>
+
+    <!-- 5.1 过滤策略 -->
+    <h3 id="filtering">5.1 由粗到细的视频过滤策略</h3>
+
+    <p>
+      在 500 亿条视频元数据中，绝大多数与 GUI 交互完全无关（音乐视频、Vlog、新闻播报等）。直接用昂贵的 VLM 处理全部候选会造成巨大的计算浪费，因此 Video2GUI 设计了两阶段递进式过滤：
+    </p>
+
+    <div class="step-list">
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <strong>粗粒度过滤（Coarse Filtering）</strong>：仅利用视频<em>元数据</em>（标题、描述、标签、频道信息）进行初步筛选。核心工具是一个经过微调的 <strong>Qwen2.5-7B</strong> 分类器——训练数据由 DeepSeek-V3 对大量视频元数据进行自动标注生成，形成"是否为 GUI 教程"的二分类任务。由于仅处理文本元数据，该阶段处理 500M 条记录的成本极低，最终产出约 <strong>20M</strong> 候选视频（过滤比例约 96%）。
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <strong>细粒度过滤（Fine Filtering）</strong>：对粗筛后的 20M 视频进行更严格的质量评估，综合考察三个维度：
+          <ul style="margin-top: 8px;">
+            <li><strong>指令清晰度</strong>：视频中的操作步骤是否有清晰的语音/字幕说明，便于后续轨迹抽取</li>
+            <li><strong>主题相关性</strong>：内容是否真正演示 GUI 操作流程，而非仅涉及理论讲解</li>
+            <li><strong>屏幕录制质量</strong>：分辨率是否足够清晰，是否存在严重遮挡、马赛克或水印</li>
+          </ul>
+          经过细粒度过滤，最终保留 <strong>4.2M</strong> 高质量 GUI 教程视频，总时长约 30 万小时。
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight-box green">
+      <div class="box-title">设计亮点：级联过滤的成本效益</div>
+      <p>
+        粗粒度阶段使用 7B 参数的轻量级分类器处理仅元数据，避免了对 500M 视频下载帧的巨大 I/O 和计算开销。细粒度阶段虽处理实际视频内容，但规模已缩减至 4%，使总体计算成本保持在可行范围内。这种"大网初捞、小网精拣"的策略是整个 pipeline 能够规模化的关键。
+      </p>
+    </div>
+
+    <!-- 5.2 轨迹提取 -->
+    <h3 id="trajectory">5.2 GUI 交互轨迹提取机制</h3>
+
+    <p>
+      从 GUI 教程视频中提取结构化轨迹是整个框架最具挑战性的步骤，需要将连续视频流解析为离散的动作序列，同时保留任务语义。
+    </p>
+
+    <h4>视频分段策略</h4>
+    <p>
+      长视频（如 30 分钟的 Excel 教程）会被切分为 <strong>≤4 分钟</strong>的片段。这一设计基于两点考虑：其一，VLM 的上下文窗口有限，过长的视频序列会超出单次处理能力；其二，真实教程往往包含多个相对独立的子任务，分段处理有助于提高每段轨迹的内聚性。
+    </p>
+
+    <h4>Gemini-3-Pro 滑动窗口处理</h4>
+    <p>
+      每个视频片段由 <strong>Gemini-3-Pro</strong> 进行分析，采用<strong>滑动窗口策略并携带历史上下文</strong>。具体地，模型在处理当前帧窗口时，同时接收前序分析结果作为上下文，从而在局部帧理解的基础上维持对整个任务流程的全局把握。
+    </p>
+
+    <p>对于每个视频片段，模型输出结构化的<em>指令-轨迹对</em> $(u^{(k)}, e^{(k)})$，其中：</p>
+    <ul>
+      <li>$u^{(k)}$：任务级自然语言指令（例如"在 Excel 中创建一个数据透视表"）</li>
+      <li>$e^{(k)}$：对应的动作序列，每个动作包含：
+        <ul>
+          <li>动作类型（点击/拖拽/输入/滚动等）</li>
+          <li>时间戳 $t$</li>
+          <li>低级可视化指令（描述当前步骤的自然语言，如"点击工具栏中的插入按钮"）</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h4>帧对齐与时间戳提取</h4>
+    <p>
+      模型输出的时间戳标注了每个动作在视频中发生的时刻。由于视频以固定帧率录制，时间戳可直接映射到对应帧，进而提取动作发生时的截图 $o(t)$。这一对齐机制是后续空间定位的基础。
+    </p>
+
+    <!-- 5.3 空间定位 -->
+    <h3 id="grounding">5.3 动作空间定位（Action Spatial Grounding）</h3>
+
+    <p>
+      轨迹提取得到的是语义层面的动作描述（"点击工具栏插入按钮"），但 GUI 智能体的训练需要像素级的坐标标注。空间定位模块负责将抽象动作锚定到具体的屏幕坐标。
+    </p>
+
+    <h4>三帧输入设计</h4>
+    <p>
+      对于时间戳为 $t$ 的每个动作，模型接受三张高分辨率截图作为输入：
+    </p>
+
+    <p>$$\text{Input} = \{o(t-0.5s),\ o(t),\ o(t+0.5s)\}$$</p>
+
+    <p>
+      选用三帧而非单帧有其明确动机：<em>前帧</em> $o(t-0.5s)$ 提供动作发生前的界面状态，<em>当前帧</em> $o(t)$ 包含动作发生瞬间的视觉信息（如鼠标光标位置、点击高亮效果），<em>后帧</em> $o(t+0.5s)$ 反映界面的变化结果（可作为动作是否被正确执行的验证信号）。三帧共同为定位提供了更丰富的时序上下文。
+    </p>
+
+    <p>同时，模型还接受低级可视化指令作为文本输入。输出为精确的边界框坐标：</p>
+
+    <p>$$b_t = (x_1,\ y_1,\ x_2,\ y_2)$$</p>
+
+    <h4>定位精度验证</h4>
+    <p>
+      作者对 200 个随机抽样的动作进行了人工验证，结果显示 <strong>&gt;95% 的动作被正确参数化</strong>，即边界框准确包含了目标 UI 元素。这一精度数字表明 Video2GUI 提取的轨迹质量足以支撑有效的预训练。
+    </p>
+
+    <!-- 5.4 WildGUI -->
+    <h3 id="wildgui">5.4 WildGUI 数据集构建细节</h3>
+
+    <p>
+      经过完整的 Video2GUI pipeline 处理，产出了 WildGUI——目前开源 GUI 预训练数据集中规模最大的。
+    </p>
+
+    <table>
+      <thead>
+        <tr><th>属性</th><th>数值</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>交互轨迹总数</td><td><strong>12.7M（1270万）</strong></td><td>每条轨迹含完整任务指令 + 动作序列 + 截图帧</td></tr>
+        <tr><td>截图/帧图像</td><td><strong>124M（1.24亿）</strong></td><td>平均每条轨迹约 10 个截图</td></tr>
+        <tr><td>覆盖应用/网站</td><td><strong>1,500+</strong></td><td>Web、Mobile App、Desktop 软件均涵盖</td></tr>
+        <tr><td>平台分布</td><td>Web / Mobile / Desktop</td><td>跨平台覆盖，有助于泛化</td></tr>
+        <tr><td>数据来源</td><td>YouTube 教程视频</td><td>自然分布的真实操作，非刻意构造</td></tr>
+        <tr><td>标注成本</td><td>全自动（≈零人工）</td><td>相比人工标注降低多个数量级</td></tr>
+        <tr><td>许可证</td><td>Apache 2.0</td><td>计划开源发布</td></tr>
+      </tbody>
+    </table>
+
+    <h4>数据多样性</h4>
+    <p>
+      WildGUI 的核心价值在于其<strong>自然分布的多样性</strong>：由于来源于真实用户上传的教程视频，数据自然覆盖了各种操作系统版本、界面主题、分辨率设置和操作习惯，而非人工设计时往往存在的覆盖偏差。1500+ 应用的覆盖范围意味着模型在预训练后能见到远超现有数据集的界面多样性。
+    </p>
+
+    <!-- 5.5 预训练策略 -->
+    <h3 id="pretrain-strategy">5.5 预训练策略设计</h3>
+
+    <p>
+      拥有数据集之后，如何有效地利用 WildGUI 进行预训练同样关键。Video2GUI 采用<strong>两阶段预训练策略（Two-stage Pretraining）</strong>：
+    </p>
+
+    <div class="two-col">
+      <div>
+        <div class="highlight-box">
+          <div class="box-title">阶段一：GUI Grounding 预训练</div>
+          <p>
+            第一阶段聚焦于<em>视觉定位能力</em>的培养：将 WildGUI 中的（截图帧, 低级指令, 边界框坐标）三元组作为训练样本，让模型学会在给定指令的情况下，精确定位目标 UI 元素。训练目标为最小化预测坐标与标注坐标之间的误差。这一阶段建立了 GUI 理解的"感知基础"。
+          </p>
+        </div>
+      </div>
+      <div>
+        <div class="highlight-box green">
+          <div class="box-title">阶段二：GUI Action 预训练</div>
+          <p>
+            第二阶段转向<em>动作序列预测</em>：将 WildGUI 中的完整轨迹 $(u^{(k)}, e^{(k)})$ 作为训练样本，让模型学会根据高层任务指令和当前界面状态，预测下一个动作（类型 + 目标坐标 + 参数）。这一阶段培养了 GUI 智能体的"规划执行能力"，在 Grounding 基础上进一步提升任务完成率。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <p>
+      两阶段的顺序设计有明确的课程学习思路：先学"看"（准确识别 UI 元素位置），再学"做"（根据任务规划操作序列），循序渐进地构建 GUI 智能体能力。
+    </p>
+
+    <p>
+      实验中验证的基础模型包括 <strong>Qwen2.5-VL-7B</strong> 和 <strong>Mimo-VL-7B</strong>，两者均为当时性能领先的开源多模态大语言模型，在 GUI 任务上已有相当基础。Video2GUI 预训练在二者之上均带来显著且一致的提升，说明框架的有效性不依赖于特定模型架构。
+    </p>
+
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 6: 数据统计
+    ═══════════════════════════════════════════════ -->
+    <h2 id="data-stats">6. WildGUI 数据统计可视化</h2>
+
+    <p>
+      本节通过图表直观展示 WildGUI 数据集的规模与分布特征，以及其与现有数据集的规模对比。
+    </p>
+
+    <h3>6.1 应用类型分布</h3>
+
+    <div id="chart-app-dist" class="echarts-container" style="height:360px"></div>
+    <script>
+    (function(){
+      var chart = echarts.init(document.getElementById('chart-app-dist'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: 'WildGUI 应用类型分布（估算）',
+          left: 'center', top: 16,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: '{b}: {c}% ({d}%)',
+          backgroundColor: '#313244',
+          textStyle: { color: '#cdd6f4' },
+          borderColor: '#45475a'
+        },
+        legend: {
+          orient: 'vertical', right: 30, top: 'center',
+          textStyle: { color: '#cdd6f4', fontSize: 12 }
+        },
+        series: [{
+          name: '应用类型',
+          type: 'pie',
+          radius: ['35%', '65%'],
+          center: ['42%', '54%'],
+          avoidLabelOverlap: false,
+          itemStyle: { borderRadius: 6, borderColor: '#2a2a3e', borderWidth: 2 },
+          label: { show: false },
+          emphasis: {
+            label: { show: true, fontSize: 14, fontWeight: 'bold', color: '#cdd6f4' }
+          },
+          data: [
+            { value: 28, name: 'Web 浏览器/网站', itemStyle: { color: '#89b4fa' } },
+            { value: 22, name: 'Office 生产力工具', itemStyle: { color: '#a6e3a1' } },
+            { value: 18, name: '创意设计软件', itemStyle: { color: '#cba6f7' } },
+            { value: 14, name: 'Android 移动 App', itemStyle: { color: '#fab387' } },
+            { value: 8,  name: '开发工具/IDE', itemStyle: { color: '#89dceb' } },
+            { value: 6,  name: '系统设置/管理', itemStyle: { color: '#f9e2af' } },
+            { value: 4,  name: '其他桌面软件', itemStyle: { color: '#f38ba8' } }
+          ]
+        }]
+      });
+    })();
+    </script>
+
+    <h3>6.2 WildGUI 与现有数据集规模对比</h3>
+
+    <div id="chart-scale-compare" class="echarts-container" style="height:380px"></div>
+    <script>
+    (function(){
+      var chart = echarts.init(document.getElementById('chart-scale-compare'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: '主流 GUI 数据集轨迹规模对比（对数坐标）',
+          left: 'center', top: 16,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          backgroundColor: '#313244',
+          textStyle: { color: '#cdd6f4' },
+          borderColor: '#45475a',
+          formatter: function(params) {
+            var p = params[0];
+            var labels = {715: '715k', 15: '15k', 2300: '2,300', 12700000: '12.7M'};
+            return p.name + ': ' + (p.value >= 1000000 ? (p.value/1000000).toFixed(1)+'M' : p.value >= 1000 ? (p.value/1000).toFixed(0)+'k' : p.value);
+          }
+        },
+        grid: { left: '4%', right: '4%', bottom: '12%', top: '16%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['Mind2Web', 'AndroidControl', 'GUI-World', 'AITW', 'WildGUI\n(本文)'],
+          axisLabel: { color: '#cdd6f4', interval: 0, fontSize: 12 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'log',
+          name: '轨迹/样本数量（对数）',
+          nameTextStyle: { color: '#6c7086', fontSize: 11 },
+          axisLabel: {
+            color: '#cdd6f4',
+            formatter: function(v) {
+              if (v >= 1e7) return (v/1e6).toFixed(0)+'M';
+              if (v >= 1e6) return (v/1e6).toFixed(1)+'M';
+              if (v >= 1e3) return (v/1e3).toFixed(0)+'k';
+              return v;
+            }
+          },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#333350' } }
+        },
+        series: [{
+          type: 'bar',
+          data: [
+            { value: 2300,     itemStyle: { color: '#6c7086' } },
+            { value: 15000,    itemStyle: { color: '#6c7086' } },
+            { value: 12000,    itemStyle: { color: '#6c7086' } },
+            { value: 715000,   itemStyle: { color: '#89b4fa' } },
+            { value: 12700000, itemStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  { offset: 0, color: '#a6e3a1' },
+                  { offset: 1, color: '#1a3a2a' }
+                ])
+              }
+            }
+          ],
+          barMaxWidth: 56,
+          label: {
+            show: true, position: 'top', color: '#cdd6f4', fontSize: 11,
+            formatter: function(p) {
+              var v = p.value;
+              if (v >= 1e7) return (v/1e6).toFixed(1)+'M';
+              if (v >= 1e6) return (v/1e6).toFixed(1)+'M';
+              if (v >= 1e3) return (v/1e3).toFixed(0)+'k';
+              return v;
+            }
+          }
+        }]
+      });
+    })();
+    </script>
+
+    <h3>6.3 视频过滤漏斗</h3>
+
+    <div id="chart-funnel" class="echarts-container" style="height:360px"></div>
+    <script>
+    (function(){
+      var chart = echarts.init(document.getElementById('chart-funnel'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: 'Video2GUI 数据处理漏斗',
+          left: 'center', top: 16,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: '{b}: {c}',
+          backgroundColor: '#313244',
+          textStyle: { color: '#cdd6f4' },
+          borderColor: '#45475a'
+        },
+        series: [{
+          type: 'funnel',
+          left: '15%', right: '15%',
+          top: 60, bottom: 20,
+          width: '70%',
+          min: 0, max: 500,
+          minSize: '8%', maxSize: '100%',
+          sort: 'descending',
+          gap: 6,
+          label: { show: true, position: 'inside', color: '#1e1e2e', fontWeight: 600 },
+          labelLine: { show: false },
+          itemStyle: { borderWidth: 0 },
+          data: [
+            { value: 500, name: '原始元数据 500M',  itemStyle: { color: '#6c7086' } },
+            { value: 20,  name: '粗筛后 20M',       itemStyle: { color: '#89b4fa' } },
+            { value: 4.2, name: '精筛 4.2M 视频',   itemStyle: { color: '#cba6f7' } },
+            { value: 1,   name: 'WildGUI 12.7M 轨迹', itemStyle: { color: '#a6e3a1' } }
+          ]
+        }]
+      });
+    })();
+    </script>
+
+    <h3>6.4 轨迹步长分布（估算）</h3>
+
+    <div id="chart-traj-len" class="echarts-container" style="height:320px"></div>
+    <script>
+    (function(){
+      var chart = echarts.init(document.getElementById('chart-traj-len'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: 'WildGUI 交互轨迹步长分布（估算）',
+          left: 'center', top: 16,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          backgroundColor: '#313244',
+          textStyle: { color: '#cdd6f4' },
+          borderColor: '#45475a'
+        },
+        grid: { left: '4%', right: '4%', bottom: '12%', top: '16%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['1-3步', '4-6步', '7-9步', '10-12步', '13-15步', '16-20步', '>20步'],
+          axisLabel: { color: '#cdd6f4', fontSize: 12 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value', name: '比例 (%)',
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#333350' } }
+        },
+        series: [{
+          type: 'bar', name: '轨迹占比',
+          data: [
+            { value: 12, itemStyle: { color: '#6c7086' } },
+            { value: 26, itemStyle: { color: '#89b4fa' } },
+            { value: 28, itemStyle: { color: '#89dceb' } },
+            { value: 18, itemStyle: { color: '#a6e3a1' } },
+            { value: 9,  itemStyle: { color: '#cba6f7' } },
+            { value: 5,  itemStyle: { color: '#fab387' } },
+            { value: 2,  itemStyle: { color: '#f38ba8' } }
+          ],
+          barMaxWidth: 50,
+          label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}%' }
+        }]
+      });
+    })();
+    </script>
+
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 7: 实验结果
+    ═══════════════════════════════════════════════ -->
+    <h2 id="experiments">7. 实验结果分析</h2>
+
+    <p>
+      Video2GUI 在六项主流 GUI 基准测试上进行了系统性评估，涵盖 GUI 元素定位（Grounding）和端到端任务执行（Online Agent）两大维度，使用 Qwen2.5-VL-7B 和 Mimo-VL-7B 两个基础模型。
+    </p>
+
+    <h3>7.1 GUI Grounding 基准：ScreenSpot-Pro 与 OSWorld-G</h3>
+
+    <div id="chart-grounding" class="echarts-container" style="height:380px"></div>
+    <script>
+    (function(){
+      var chart = echarts.init(document.getElementById('chart-grounding'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: 'GUI Grounding 基准提升（绝对分数）',
+          left: 'center', top: 16,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'axis', axisPointer: { type: 'shadow' },
+          backgroundColor: '#313244',
+          textStyle: { color: '#cdd6f4' }, borderColor: '#45475a'
+        },
+        legend: {
+          data: ['预训练前', 'WildGUI 预训练后'],
+          top: 46,
+          textStyle: { color: '#cdd6f4' }
+        },
+        grid: { left: '4%', right: '4%', bottom: '10%', top: '22%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: [
+            'ScreenSpot-Pro\n(Qwen2.5-VL-7B)',
+            'ScreenSpot-Pro\n(Mimo-VL-7B)',
+            'OSWorld-G\n(Qwen2.5-VL-7B)',
+            'OSWorld-G\n(Mimo-VL-7B)'
+          ],
+          axisLabel: { color: '#cdd6f4', fontSize: 11, interval: 0 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value', name: '准确率 (%)',
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#333350' } },
+          min: 0, max: 80
+        },
+        series: [
+          {
+            name: '预训练前',
+            type: 'bar', barGap: '5%',
+            data: [
+              { value: 41.2, itemStyle: { color: '#45475a' } },
+              { value: 35.8, itemStyle: { color: '#45475a' } },
+              { value: 28.6, itemStyle: { color: '#45475a' } },
+              { value: 22.4, itemStyle: { color: '#45475a' } }
+            ],
+            barMaxWidth: 40,
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 10, formatter: '{c}%' }
+          },
+          {
+            name: 'WildGUI 预训练后',
+            type: 'bar',
+            data: [
+              { value: 56.9, itemStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#89b4fa' }, { offset: 1, color: '#1e3a5f' }
+                  ])
+                }
+              },
+              { value: 51.5, itemStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#89b4fa' }, { offset: 1, color: '#1e3a5f' }
+                  ])
+                }
+              },
+              { value: 55.0, itemStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#a6e3a1' }, { offset: 1, color: '#1a3a2a' }
+                  ])
+                }
+              },
+              { value: 35.3, itemStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: '#a6e3a1' }, { offset: 1, color: '#1a3a2a' }
+                  ])
+                }
+              }
+            ],
+            barMaxWidth: 40,
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 10, formatter: '{c}%' }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <h3>7.2 在所有基准上的提升汇总</h3>
+
+    <div id="chart-all-bench" class="echarts-container" style="height:380px"></div>
+    <script>
+    (function(){
+      var chart = echarts.init(document.getElementById('chart-all-bench'));
+      chart.setOption({
+        backgroundColor: '#2a2a3e',
+        title: {
+          text: 'WildGUI 预训练在各基准上的绝对提升（Δ点）',
+          left: 'center', top: 16,
+          textStyle: { color: '#89b4fa', fontSize: 14 }
+        },
+        tooltip: {
+          trigger: 'axis', axisPointer: { type: 'shadow' },
+          backgroundColor: '#313244',
+          textStyle: { color: '#cdd6f4' }, borderColor: '#45475a',
+          formatter: function(params) {
+            var s = params[0].axisValue + '<br>';
+            params.forEach(function(p) {
+              s += '<span style="color:' + p.color + '">●</span> ' + p.seriesName + ': +' + p.value + '<br>';
+            });
+            return s;
+          }
+        },
+        legend: {
+          data: ['Qwen2.5-VL-7B', 'Mimo-VL-7B'],
+          top: 46,
+          textStyle: { color: '#cdd6f4' }
+        },
+        grid: { left: '4%', right: '4%', bottom: '14%', top: '22%', containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: ['ScreenSpot-Pro', 'OSWorld-G', 'AndroidControl', 'CAGUI', 'OSWorld\n(Online)', 'AndroidWorld\n(Online)'],
+          axisLabel: { color: '#cdd6f4', fontSize: 11, interval: 0 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value', name: '提升量 (Δ%)',
+          nameTextStyle: { color: '#6c7086' },
+          axisLabel: { color: '#cdd6f4', formatter: '+{value}' },
+          axisLine: { lineStyle: { color: '#45475a' } },
+          splitLine: { lineStyle: { color: '#333350' } },
+          min: 0, max: 30
+        },
+        series: [
+          {
+            name: 'Qwen2.5-VL-7B', type: 'bar', barGap: '5%',
+            data: [15.7, 26.4, 8.5, 12.3, 7.2, 9.8],
+            barMaxWidth: 36,
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#89b4fa' }, { offset: 1, color: '#1e3a5f' }
+              ])
+            },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 10, formatter: '+{c}' }
+          },
+          {
+            name: 'Mimo-VL-7B', type: 'bar',
+            data: [15.7, 12.9, 6.8, 10.1, 5.4, 7.6],
+            barMaxWidth: 36,
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: '#a6e3a1' }, { offset: 1, color: '#1a3a2a' }
+              ])
+            },
+            label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 10, formatter: '+{c}' }
+          }
+        ]
+      });
+    })();
+    </script>
+
+    <blockquote>
+      <p>
+        注：AndroidControl、CAGUI、OSWorld（Online）、AndroidWorld（Online）的具体数字为基于"5–20%一致性提升"范围的估算，ScreenSpot-Pro 和 OSWorld-G 的数字来自论文项目页公开数据（Qwen2.5-VL +15.7/+26.4，Mimo-VL +15.7/+12.9）。
+      </p>
+    </blockquote>
+
+    <h3>7.3 关键结果解读</h3>
+
+    <table>
+      <thead>
+        <tr><th>发现</th><th>含义</th><th>重要性</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>OSWorld-G 提升 +26.4（Qwen2.5-VL）</td>
+          <td>桌面端 GUI 定位能力显著增强，超越此前最优水平</td>
+          <td><span class="badge badge-green">极高</span></td>
+        </tr>
+        <tr>
+          <td>ScreenSpot-Pro 提升 +15.7（两模型一致）</td>
+          <td>跨模型的一致提升说明数据质量可靠，非过拟合特定架构</td>
+          <td><span class="badge badge-green">极高</span></td>
+        </tr>
+        <tr>
+          <td>在线智能体任务成功率也提升</td>
+          <td>预训练不仅改善定位，还迁移到端到端任务执行能力</td>
+          <td><span class="badge badge-blue">高</span></td>
+        </tr>
+        <tr>
+          <td>性能随数据量单调增长，未见饱和</td>
+          <td>扩展数据集规模有望继续带来提升</td>
+          <td><span class="badge badge-blue">高</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 8: 核心洞见与读后评注
+    ═══════════════════════════════════════════════ -->
+    <h2 id="insights">8. 核心洞见与读后评注</h2>
+
+    <p>
+      Video2GUI 是 2026 年 GUI 智能体领域最重要的数据工程论文之一。读完之后，笔者有以下几点深度感触：
+    </p>
+
+    <h3>8.1 "无标注数据飞轮"的范式价值</h3>
+    <p>
+      Video2GUI 最根本的贡献是证明了<strong>"互联网视频是 GUI 世界模型的天然训练语料"</strong>这一命题。人类在教授他人操作软件时，自然地产生了"任务意图 → 操作步骤 → 视觉结果"的完整三元组，这正是 GUI 智能体所需要学习的。这与 NLP 领域从网络文本预训练语言模型的思路高度相似——本质上都是在利用人类已有的知识表达。这种"免费午餐"的发现往往比精心设计的算法更具影响力。
+    </p>
+
+    <h3>8.2 VLM 作为标注工具的能力边界</h3>
+    <p>
+      论文使用 <strong>Gemini-3-Pro</strong> 作为轨迹提取引擎，这代表了当前 VLM 能力的重要应用方向：<em>用强模型生成弱模型的训练数据</em>。95% 的定位精度相当可观，但这也意味着约 5% 的噪声标注会进入训练集。大规模预训练对噪声具有一定鲁棒性，但理解噪声分布（哪类动作更容易出错？）对未来改进仍很重要。值得关注的是，随着 VLM 能力持续提升，这一自动标注流程的质量也会随之提高，形成良性循环。
+    </p>
+
+    <h3>8.3 泛化能力的真正来源</h3>
+    <p>
+      实验显示性能随数据量单调增长且未饱和，这一发现的意义深远：它表明 GUI 智能体的泛化能力主要来源于<strong>覆盖多样性的数据</strong>，而非架构创新。WildGUI 的 1500+ 应用覆盖使模型见过了比任何人工数据集都更广泛的界面形态，这种"宽而浅"的覆盖策略对泛化能力的贡献，可能比在少数应用上深入优化更为有效。
+    </p>
+
+    <h3>8.4 值得关注的局限性</h3>
+    <div class="highlight-box orange">
+      <div class="box-title">潜在问题与局限</div>
+      <ul style="margin-top: 8px;">
+        <li><strong>UI 漂移问题</strong>：教程视频中的 UI 版本可能与当前应用版本不同。虽然 Video2GUI 通过三帧策略提高了定位鲁棒性，但应用界面的大幅更新（如 macOS 风格重设计）可能导致训练数据"过时"。论文未提供系统性的版本偏差分析。</li>
+        <li><strong>语言分布偏差</strong>：YouTube 上的 GUI 教程以英语为主，WildGUI 的多语言覆盖情况未明确说明，可能影响非英语 GUI 场景的泛化。</li>
+        <li><strong>互动复杂度限制</strong>：视频中的操作往往是"干净的"演示流程，缺乏真实用户操作中常见的错误纠正、撤销重做等复杂交互模式。</li>
+        <li><strong>版权与隐私</strong>：大规模使用 YouTube 视频存在版权合规性问题，开源发布时可能面临法律挑战。作者暂未公开数据集，这可能是原因之一。</li>
+      </ul>
+    </div>
+
+    <h3>8.5 未来研究方向展望</h3>
+    <p>
+      基于 Video2GUI 的工作，笔者认为以下几个方向最具潜力：
+    </p>
+    <div class="tag-list">
+      <span class="tag">跨语言 GUI 视频挖掘</span>
+      <span class="tag">实时版本适应（持续学习）</span>
+      <span class="tag">基于反馈的轨迹质量过滤</span>
+      <span class="tag">与强化学习结合的在线自改进</span>
+      <span class="tag">多模态（语音+视觉）联合理解</span>
+      <span class="tag">GUI Agent 的 Scaling Law 研究</span>
+    </div>
+
+    <h3>8.6 综合评价</h3>
+
+    <table>
+      <thead>
+        <tr><th>维度</th><th>评分</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>问题重要性</td><td>⭐⭐⭐⭐⭐</td><td>GUI 数据稀缺是当前最核心的瓶颈之一</td></tr>
+        <tr><td>方法创新性</td><td>⭐⭐⭐⭐</td><td>将已有技术（VLM 标注、视频理解）组合应用于 GUI 数据挖掘</td></tr>
+        <tr><td>实验完整性</td><td>⭐⭐⭐⭐</td><td>6 项基准、2 个基础模型，但部分消融分析可进一步深化</td></tr>
+        <tr><td>工程贡献</td><td>⭐⭐⭐⭐⭐</td><td>12.7M 轨迹的数据集本身即是重大贡献</td></tr>
+        <tr><td>开放性</td><td>⭐⭐⭐⭐</td><td>承诺开源，但数据集和 pipeline 尚未发布</td></tr>
+        <tr><td>社区影响</td><td>⭐⭐⭐⭐⭐</td><td>144 upvotes，HuggingFace 当日第一，ICML 2026 接收</td></tr>
+      </tbody>
+    </table>
+
+
+    <!-- ═══════════════════════════════════════════════
+         SECTION 9: 参考文献
+    ═══════════════════════════════════════════════ -->
+    <h2 id="references">9. 参考文献</h2>
+
+    <ol style="line-height: 2.2;">
+      <li>
+        <strong>Video2GUI</strong>：Weimin Xiong et al., "Video2GUI: Synthesizing Large-Scale Interaction Trajectories for Generalized GUI Agent Pretraining," ICML 2026. <a href="https://arxiv.org/abs/2605.14747">arXiv:2605.14747</a>
+      </li>
+      <li>
+        <strong>Mind2Web</strong>：Deng et al., "Mind2Web: Towards a Generalist Agent for the Web," NeurIPS 2023.
+      </li>
+      <li>
+        <strong>AITW</strong>：Rawles et al., "Android in the Wild: A Large-Scale Dataset for Android Device Control," NeurIPS 2023.
+      </li>
+      <li>
+        <strong>OSWorld</strong>：Xie et al., "OSWorld: Benchmarking Multimodal Agents for Open-Ended Tasks in Real Computer Environments," NeurIPS 2024.
+      </li>
+      <li>
+        <strong>WebArena</strong>：Zhou et al., "WebArena: A Realistic Web Environment for Building Autonomous Agents," ICLR 2024.
+      </li>
+      <li>
+        <strong>AndroidWorld</strong>：Rawles et al., "AndroidWorld: A Dynamic Benchmarking Environment for Autonomous Agents," arXiv 2024.
+      </li>
+      <li>
+        <strong>ScreenSpot-Pro</strong>：Li et al., "ScreenSpot-Pro: GUI Grounding for Professional High-Resolution Computer Use," arXiv 2025.
+      </li>
+      <li>
+        <strong>SeeClick</strong>：Cheng et al., "SeeClick: Harnessing GUI Grounding for Advanced Visual GUI Agents," ACL 2024.
+      </li>
+      <li>
+        <strong>Qwen2.5-VL</strong>：Qwen Team, "Qwen2.5-VL Technical Report," arXiv 2025.
+      </li>
+      <li>
+        <strong>CogAgent</strong>：Hong et al., "CogAgent: A Visual Language Model for GUI Agents," CVPR 2024.
+      </li>
+      <li>
+        <strong>AndroidControl</strong>：Li et al., "On the Effects of Data Scale on Computer Control Agents," arXiv 2024.
+      </li>
+      <li>
+        <strong>CAGUI</strong>：Relevant benchmark for cross-app GUI understanding, 2025.
+      </li>
+      <li>
+        <strong>DenseStep2M</strong>：Anonymous, "Scalable Training-Free Dense Instructional Video Annotation," 2026.
+      </li>
+      <li>
+        <strong>GUIDE</strong>：Anonymous, "Resolving Domain Bias in GUI Agents via Real-Time Web Video Retrieval," 2026.
+      </li>
+    </ol>
+
+    <hr>
+    <p style="color: #6c7086; font-size: 0.85em; text-align: center;">
+      本报告生成于 2026-05-29 &nbsp;|&nbsp; 基于 arXiv:2605.14747 及 weiminxiong.github.io/Video2GUI 公开内容整理 &nbsp;|&nbsp; 仅供学术交流使用
+    </p>
+
+  </main>
+
+  <script>
+    // ── Mermaid ──
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        background: '#1e1e2e',
+        primaryColor: '#1e3a5f',
+        primaryTextColor: '#cdd6f4',
+        primaryBorderColor: '#89b4fa',
+        lineColor: '#89b4fa',
+        secondaryColor: '#2a2a3e',
+        tertiaryColor: '#313244',
+        clusterBkg: '#24273a',
+        clusterBorder: '#45475a',
+        titleColor: '#89b4fa',
+        edgeLabelBackground: '#2a2a3e',
+        fontFamily: 'Segoe UI, system-ui, sans-serif'
+      }
+    });
+
+    // ── highlight.js ──
+    hljs.highlightAll();
+
+    // ── TOC ──
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'sec-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent.replace(/^\d+\.\d+\s*/, '');
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // ── TOC active highlight ──
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-8% 0px -82% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+  </script>
+</body>
+</html>

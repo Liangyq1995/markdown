@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LongLive-2.0 阅读报告 — NVFP4 长视频生成并行基础设施</title>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<!-- MathJax -->
+<script>
+window.MathJax = {
+  tex: {
+    inlineMath: [['$','$'],['\\(','\\)']],
+    displayMath: [['$$','$$'],['\\[','\\]']],
+    tags: 'ams'
+  },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<style>
+/* ===== CSS Variables — Catppuccin Mocha palette ===== */
+:root {
+  --bg:       #1e1e2e;
+  --surface:  #181825;
+  --overlay:  #313244;
+  --muted:    #585b70;
+  --text:     #cdd6f4;
+  --subtext:  #a6adc8;
+  --heading:  #89b4fa;
+  --strong:   #a6e3a1;
+  --accent:   #cba6f7;
+  --yellow:   #f9e2af;
+  --red:      #f38ba8;
+  --teal:     #94e2d5;
+  --border:   #45475a;
+  --toc-w:    260px;
+}
+
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'PingFang SC', 'Noto Sans SC', 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  display: flex;
+}
+
+/* ===== TOC Sidebar ===== */
+#toc {
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--toc-w);
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 0 40px;
+  z-index: 100;
+}
+#toc-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 20px 12px;
+}
+#toc ul { list-style: none; }
+#toc ul li a {
+  display: block;
+  padding: 5px 20px;
+  font-size: 12.5px;
+  color: var(--subtext);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition: all .2s;
+  line-height: 1.4;
+}
+#toc ul li a:hover { color: var(--heading); background: rgba(137,180,250,.07); }
+#toc ul li a.active {
+  color: var(--heading);
+  border-left-color: var(--heading);
+  background: rgba(137,180,250,.12);
+  font-weight: 600;
+}
+#toc ul li.sub a { padding-left: 34px; font-size: 12px; }
+#toc ul li.sub2 a { padding-left: 48px; font-size: 11.5px; }
+
+/* ===== Main Content ===== */
+main {
+  margin-left: var(--toc-w);
+  max-width: none;
+  padding: 40px 64px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ===== Typography ===== */
+h1 {
+  font-size: 2rem;
+  color: var(--heading);
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+h2 {
+  font-size: 1.45rem;
+  color: var(--heading);
+  margin: 52px 0 20px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--overlay);
+}
+h3 {
+  font-size: 1.15rem;
+  color: var(--accent);
+  margin: 32px 0 14px;
+}
+h4 {
+  font-size: 1rem;
+  color: var(--yellow);
+  margin: 22px 0 10px;
+}
+p { margin-bottom: 14px; }
+strong { color: var(--strong); font-weight: 600; }
+em { color: var(--yellow); font-style: normal; }
+code {
+  background: var(--overlay);
+  color: var(--teal);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 22px;
+  overflow-x: auto;
+  margin: 18px 0;
+}
+pre code { background: none; padding: 0; }
+a { color: var(--heading); text-decoration: none; }
+a:hover { text-decoration: underline; }
+ul, ol { padding-left: 1.5em; margin-bottom: 14px; }
+li { margin-bottom: 6px; }
+
+/* ===== Paper Info Table ===== */
+.info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0 32px;
+  font-size: 13.5px;
+}
+.info-table td {
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  vertical-align: top;
+}
+.info-table td:first-child {
+  width: 130px;
+  color: var(--heading);
+  font-weight: 600;
+  background: var(--surface);
+  white-space: nowrap;
+}
+.info-table td:last-child { background: rgba(255,255,255,.025); }
+
+/* ===== Callout Boxes ===== */
+.callout {
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin: 18px 0;
+  border-left: 4px solid;
+}
+.callout.blue  { border-color: var(--heading);  background: rgba(137,180,250,.08); }
+.callout.green { border-color: var(--strong);   background: rgba(166,227,161,.08); }
+.callout.purple{ border-color: var(--accent);   background: rgba(203,166,247,.08); }
+.callout.yellow{ border-color: var(--yellow);   background: rgba(249,226,175,.08); }
+.callout.red   { border-color: var(--red);      background: rgba(243,139,168,.08); }
+.callout .callout-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  font-size: 13px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.callout.blue   .callout-title { color: var(--heading); }
+.callout.green  .callout-title { color: var(--strong); }
+.callout.purple .callout-title { color: var(--accent); }
+.callout.yellow .callout-title { color: var(--yellow); }
+.callout.red    .callout-title { color: var(--red); }
+
+/* ===== Algorithm Box ===== */
+.algo-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin: 20px 0;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  line-height: 1.85;
+}
+.algo-box .algo-title {
+  font-family: 'PingFang SC', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
+}
+.algo-box .algo-line { display: block; }
+.algo-box .algo-indent-1 { padding-left: 2em; }
+.algo-box .algo-indent-2 { padding-left: 4em; }
+.algo-box .algo-indent-3 { padding-left: 6em; }
+.algo-box .kw { color: var(--accent); font-weight: 700; }
+.algo-box .cmt { color: var(--muted); }
+.algo-box .var { color: var(--teal); }
+.algo-box .num { color: var(--yellow); }
+.algo-box .op  { color: var(--strong); }
+
+/* ===== Mermaid override ===== */
+pre.mermaid {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  padding: 24px !important;
+  text-align: center;
+}
+
+/* ===== ECharts containers ===== */
+.chart-row {
+  display: grid;
+  gap: 24px;
+  margin: 24px 0;
+}
+.chart-row.cols-2 { grid-template-columns: 1fr 1fr; }
+.chart-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.chart-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.chart-label {
+  font-size: 12px;
+  color: var(--subtext);
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* ===== Metrics Grid ===== */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 14px;
+  text-align: center;
+}
+.metric-val {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--strong);
+  line-height: 1.1;
+}
+.metric-unit {
+  font-size: 13px;
+  color: var(--subtext);
+  margin-top: 2px;
+}
+.metric-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* ===== Comparison Table ===== */
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0;
+  font-size: 13.5px;
+}
+.cmp-table th {
+  background: var(--overlay);
+  color: var(--heading);
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+.cmp-table td {
+  padding: 9px 14px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+.cmp-table tr:nth-child(even) td { background: rgba(255,255,255,.025); }
+.cmp-table tr.highlight td { background: rgba(166,227,161,.07); color: var(--strong); font-weight: 600; }
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.tag.green { background: rgba(166,227,161,.2); color: var(--strong); }
+.tag.blue  { background: rgba(137,180,250,.2); color: var(--heading); }
+.tag.purple{ background: rgba(203,166,247,.2); color: var(--accent); }
+.tag.yellow{ background: rgba(249,226,175,.2); color: var(--yellow); }
+
+/* ===== Divider ===== */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 40px 0;
+}
+
+/* ===== Header banner ===== */
+.paper-banner {
+  background: linear-gradient(135deg, rgba(137,180,250,.12) 0%, rgba(203,166,247,.08) 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 32px 24px;
+  margin-bottom: 36px;
+}
+.paper-banner .badge-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+}
+.badge.nvidia  { border-color: #76b900; color: #76b900; background: rgba(118,185,0,.1); }
+.badge.arxiv   { border-color: var(--red); color: var(--red); background: rgba(243,139,168,.1); }
+.badge.github  { border-color: var(--subtext); color: var(--subtext); background: rgba(166,173,200,.1); }
+.badge.nvfp4   { border-color: var(--accent); color: var(--accent); background: rgba(203,166,247,.1); }
+.badge.video   { border-color: var(--teal); color: var(--teal); background: rgba(148,226,213,.1); }
+
+/* ===== Scroll progress ===== */
+#progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--heading), var(--accent));
+  z-index: 200;
+  transition: width .1s linear;
+}
+
+/* ===== Section anchor offset ===== */
+section[id] { scroll-margin-top: 24px; }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<!-- ===== TOC ===== -->
+<nav id="toc">
+  <div id="toc-title">目录</div>
+  <ul>
+    <li><a href="#sec-info" data-sec="sec-info">论文信息</a></li>
+    <li><a href="#sec-motivation" data-sec="sec-motivation">核心问题与动机</a></li>
+    <li><a href="#sec-background" data-sec="sec-background">背景与相关工作</a></li>
+    <li class="sub"><a href="#sec-bg-sp">序列并行基础</a></li>
+    <li class="sub"><a href="#sec-bg-fp4">低比特量化演进</a></li>
+    <li class="sub"><a href="#sec-bg-ar">自回归视频生成</a></li>
+    <li><a href="#sec-overview" data-sec="sec-overview">训练推理总览</a></li>
+    <li><a href="#sec-tech" data-sec="sec-tech">关键技术</a></li>
+    <li class="sub"><a href="#sec-nvfp4">NVFP4 精度</a></li>
+    <li class="sub2"><a href="#sec-rht">随机 Hadamard 变换</a></li>
+    <li class="sub2"><a href="#sec-scaling">4/6 自适应块缩放</a></li>
+    <li class="sub"><a href="#sec-bsp">Balanced SP</a></li>
+    <li class="sub"><a href="#sec-pipeline">简化训练流程</a></li>
+    <li class="sub"><a href="#sec-infer">推理优化</a></li>
+    <li><a href="#sec-algo" data-sec="sec-algo">量化算法详解</a></li>
+    <li><a href="#sec-exp" data-sec="sec-exp">实验结果</a></li>
+    <li class="sub"><a href="#sec-speedup">速度与内存</a></li>
+    <li class="sub"><a href="#sec-quality">视频质量</a></li>
+    <li><a href="#sec-ablation" data-sec="sec-ablation">消融实验</a></li>
+    <li><a href="#sec-limit" data-sec="sec-limit">局限性</a></li>
+    <li><a href="#sec-insight" data-sec="sec-insight">核心洞见</a></li>
+  </ul>
+</nav>
+
+<!-- ===== MAIN ===== -->
+<main>
+
+<!-- ===== BANNER ===== -->
+<div class="paper-banner">
+  <h1>LongLive-2.0</h1>
+  <p style="color:var(--subtext);margin-bottom:6px;font-size:1rem;">An NVFP4 Parallel Infrastructure for Long Video Generation</p>
+  <p style="color:var(--muted);font-size:13px;">Yukang Chen, Luozhou Wang, Wei Huang, Shuai Yang, Bohan Zhang, Yicheng Xiao,<br>
+  Ruihang Chu, Weian Mao, Qixin Hu, Shaoteng Liu, Yuyang Zhao, Huizi Mao,<br>
+  Ying-Cong Chen, Enze Xie, Xiaojuan Qi, Song Han &nbsp;·&nbsp; <strong style="color:var(--strong)">NVIDIA</strong></p>
+  <div class="badge-row">
+    <span class="badge nvidia">NVIDIA</span>
+    <span class="badge arxiv">arXiv 2605.18739</span>
+    <span class="badge github">NVlabs/LongLive</span>
+    <span class="badge nvfp4">NVFP4 / W4A4</span>
+    <span class="badge video">长视频生成</span>
+  </div>
+</div>
+
+<!-- ===== 1. 论文信息 ===== -->
+<section id="sec-info">
+<h2>1. 论文信息</h2>
+<table class="info-table">
+  <tr><td>标题</td><td>LongLive-2.0: An NVFP4 Parallel Infrastructure for Long Video Generation</td></tr>
+  <tr><td>arXiv</td><td><a href="https://arxiv.org/abs/2605.18739" target="_blank">arXiv:2605.18739</a></td></tr>
+  <tr><td>机构</td><td>NVIDIA</td></tr>
+  <tr><td>代码</td><td><a href="https://github.com/NVlabs/LongLive" target="_blank">https://github.com/NVlabs/LongLive</a></td></tr>
+  <tr><td>发表时间</td><td>2026 年 5 月（arXiv 预印本）</td></tr>
+  <tr><td>研究方向</td><td>长视频生成 · 模型量化 · 序列并行 · 自回归扩散模型</td></tr>
+  <tr><td>核心贡献</td><td>
+    <ol style="margin:0;padding-left:1.3em;">
+      <li><strong>Balanced SP（序列并行）</strong>：协同设计 teacher-forcing 布局与 SP 执行，实现长视频自回归训练</li>
+      <li><strong>NVFP4 精度</strong>：E2M1 4-bit 浮点 + RHT 梯度稳定化 + 4/6 自适应块缩放</li>
+      <li><strong>简化训练流程</strong>：直接将扩散模型微调为长视频 AR 扩散模型，再用独立 LoRA 实现实时推理</li>
+      <li><strong>W4A4 推理优化</strong>：KV Cache 量化 + 异步流式 VAE 解码 + 非 Blackwell GPU 的 SP 推理</li>
+    </ol>
+  </td></tr>
+  <tr><td>关键数据</td><td>训练加速 <strong>2.15×</strong>，推理加速 <strong>1.84×</strong>，内存 29.7 GB → 19.4 GB，64 秒视频仅需 36.3 秒</td></tr>
+</table>
+
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-val">2.15×</div>
+    <div class="metric-unit">训练加速</div>
+    <div class="metric-label">vs BF16 基线</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val">1.84×</div>
+    <div class="metric-unit">推理加速</div>
+    <div class="metric-label">vs BF16 基线</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val">19.4</div>
+    <div class="metric-unit">GB 显存</div>
+    <div class="metric-label">NVFP4（vs 29.7 BF16）</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val">45.7</div>
+    <div class="metric-unit">FPS</div>
+    <div class="metric-label">2-step 5B 模型</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val">36.3</div>
+    <div class="metric-unit">秒</div>
+    <div class="metric-label">生成 64 秒视频</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-val">29.7</div>
+    <div class="metric-unit">FPS</div>
+    <div class="metric-label">4-step 5B 模型</div>
+  </div>
+</div>
+</section>
+
+<!-- ===== 2. 核心问题与动机 ===== -->
+<section id="sec-motivation">
+<h2>2. 核心问题与动机</h2>
+
+<p>
+长视频生成面临一个根本性的三重矛盾：<strong>视频长度</strong>、<strong>生成质量</strong>与<strong>推理速度</strong>无法同时兼顾。
+LongLive-2.0 的出发点是：如何在一套统一的工程基础设施下，让高质量的长视频自回归扩散模型在消费级或生产级 GPU 上实现超实时（faster-than-realtime）生成？
+</p>
+
+<div class="callout blue">
+  <div class="callout-title">核心痛点 1 — 长序列显存爆炸</div>
+  <p style="margin:0">
+  视频 Transformer 的注意力开销与序列长度 $L$ 平方正相关。一段 64 秒、24fps、480p 的视频，Token 数量轻松超过数十万，单卡 BF16 无法容纳。
+  </p>
+</div>
+
+<div class="callout purple">
+  <div class="callout-title">核心痛点 2 — Teacher-Forcing 与序列并行的冲突</div>
+  <p style="margin:0">
+  自回归视频训练需要以"历史干净帧"作为条件输入、对"当前噪声帧"进行去噪（teacher-forcing）。序列并行将序列切片分发到多卡，导致历史与当前帧被强制拆分到不同 rank，破坏 causal mask 的自然性。
+  </p>
+</div>
+
+<div class="callout green">
+  <div class="callout-title">核心痛点 3 — 低比特训练不稳定</div>
+  <p style="margin:0">
+  FP4（4-bit 浮点）的动态范围极窄（E2M1 仅覆盖 $[-6, 6]$），激活值和权重分布若存在尖锐峰值，量化误差会激增，导致梯度爆炸或训练发散。
+  </p>
+</div>
+
+<div class="callout yellow">
+  <div class="callout-title">核心痛点 4 — 多段流程复杂化</div>
+  <p style="margin:0">
+  Self-Forcing 等方案需要 ODE 初始化 + DMD 蒸馏两个独立阶段，流程繁重，超参数调优代价高，且难以扩展到更长视频场景。
+  </p>
+</div>
+
+<p>LongLive-2.0 针对以上四个痛点，提出了一套系统性的解决方案：</p>
+<ol>
+  <li><strong>Balanced SP</strong> — 重新设计 rank 内的时间块布局，在同一 rank 内配对干净历史块与噪声目标块，令 teacher-forcing mask 在 SP 下自然生效。</li>
+  <li><strong>NVFP4 + RHT</strong> — 用随机 Hadamard 变换将激活/权重分布"打散"到高维均匀球上，再进行 E2M1 量化，梯度稳定性大幅提升。</li>
+  <li><strong>简化流程</strong> — 直接微调 + 独立 LoRA，两个阶段替代四步流程。</li>
+  <li><strong>W4A4 推理栈</strong> — KV Cache 量化、异步 VAE 解码与 SP 推理流水线并行。</li>
+</ol>
+</section>
+
+<!-- ===== 3. 背景与相关工作 ===== -->
+<section id="sec-background">
+<h2>3. 背景与相关工作</h2>
+
+<h3 id="sec-bg-sp">3.1 序列并行（Sequence Parallelism）基础</h3>
+<p>
+序列并行是解决超长序列训练显存瓶颈的主流方案，其核心思想是沿序列维度切分 Token，分散到多张 GPU 上并行计算注意力。
+主流方法包括：
+</p>
+<ul>
+  <li><strong>Ring Attention</strong>：以环形通信方式传递 K/V，每个 rank 逐块计算注意力，计算通信可部分重叠。</li>
+  <li><strong>Ulysses SP</strong>：在注意力前将 Q/K/V 沿 head 维度全量汇集，计算后再分散，通信量与 head 数线性相关。</li>
+  <li><strong>DeepSpeed-Ulysses</strong>：结合数据并行与序列并行，适合大规模分布式训练。</li>
+</ul>
+<p>
+但上述方案均未针对<em>自回归视频生成的 teacher-forcing 约束</em>进行优化，LongLive-2.0 正是填补了这一空白。
+</p>
+
+<h3 id="sec-bg-fp4">3.2 低比特量化演进</h3>
+<p>量化精度演进路线：FP32 → BF16 → FP8 → <strong>FP4（NVFP4）</strong>。</p>
+<table class="cmp-table">
+  <tr>
+    <th>格式</th><th>位宽</th><th>符号位</th><th>指数位</th><th>尾数位</th><th>表示范围</th><th>备注</th>
+  </tr>
+  <tr><td>FP32</td><td>32</td><td>1</td><td>8</td><td>23</td><td>$[\pm 3.4\times10^{38}]$</td><td>标准训练</td></tr>
+  <tr><td>BF16</td><td>16</td><td>1</td><td>8</td><td>7</td><td>同 FP32 范围</td><td>训练主流</td></tr>
+  <tr><td>FP8 E4M3</td><td>8</td><td>1</td><td>4</td><td>3</td><td>$[-448, 448]$</td><td>Hopper 加速</td></tr>
+  <tr><td>FP8 E5M2</td><td>8</td><td>1</td><td>5</td><td>2</td><td>$[-57344, 57344]$</td><td>梯度计算</td></tr>
+  <tr class="highlight"><td>NVFP4 E2M1</td><td>4</td><td>1</td><td>2</td><td>1</td><td>$[-6, 6]$</td><td>LongLive-2.0 核心</td></tr>
+</table>
+<p>
+NVFP4（E2M1）是 NVIDIA Blackwell 架构原生支持的 4-bit 浮点格式，GEMM 吞吐量相比 BF16 理论翻倍，配合 NVFP8 激活量化实现 W4A8 或 W4A4 推理。
+</p>
+
+<h3 id="sec-bg-ar">3.3 自回归视频生成</h3>
+<p>
+自回归视频生成将视频分为若干时间块，逐块去噪：给定历史干净帧集合 $\mathbf{x}_{0:t-1}$ 与当前噪声帧 $\mathbf{x}_t^{(\tau)}$（$\tau$ 为扩散时间步），模型预测噪声 $\hat{\epsilon}$ 或直接预测 $\hat{\mathbf{x}}_0$。
+</p>
+<p>
+<strong>Self-Forcing</strong> 系列（LongLive-1.0 基础）需要：
+</p>
+<ol>
+  <li>ODE 初始化阶段（冷启动稳定化）</li>
+  <li>DMD（Diffusion Model Distillation）蒸馏阶段</li>
+</ol>
+<p>
+LongLive-2.0 通过直接微调 + 独立 LoRA 的方式绕过上述两步，大幅简化流程。
+</p>
+</section>
+
+<!-- ===== 4. 训练推理总览 ===== -->
+<section id="sec-overview">
+<h2>4. 训练与推理总览</h2>
+
+<pre class="mermaid">
+flowchart TD
+    subgraph TRAIN["🔧 训练阶段 (两步流程)"]
+        direction TB
+        A["预训练扩散模型\n(5B DiT)"]
+        B["阶段1：直接微调\n多镜头 · 长视频 · 交互式 AR\nBF16 + NVFP4 混合精度\nBalanced SP"]
+        C["AR 扩散模型\n(多镜头长视频能力)"]
+        D["阶段2：独立 LoRA 微调\n4步→2步加速\nDMD-style 蒸馏"]
+        E["实时推理模型\n(LoRA 权重独立)"]
+        A --> B --> C --> D --> E
+    end
+
+    subgraph INFER["⚡ 推理阶段 (三重优化)"]
+        direction TB
+        F1["W4A4 NVFP4\nGEMM 量化"]
+        F2["KV Cache 量化\n(FP4/FP8)"]
+        F3["异步流式\nVAE 解码"]
+        F4["非 Blackwell GPU:\nSP 推理补偿"]
+        F1 & F2 & F3 & F4 --> G["超实时视频流输出\n45.7 FPS · 19.4 GB"]
+    end
+
+    E --> INFER
+
+    subgraph SP["🔀 Balanced SP (贯穿训练)"]
+        direction LR
+        R0["Rank 0\n干净帧块 C₀ + 噪声块 N₀"]
+        R1["Rank 1\n干净帧块 C₁ + 噪声块 N₁"]
+        Rn["Rank n\n干净帧块 Cₙ + 噪声块 Nₙ"]
+        R0 -. "Ring/Ulysses 通信" .- R1 -. "..." .- Rn
+    end
+
+    TRAIN --> SP
+
+    style TRAIN fill:#1e2040,stroke:#89b4fa
+    style INFER fill:#1e2820,stroke:#a6e3a1
+    style SP fill:#2a1e40,stroke:#cba6f7
+</pre>
+
+<div class="callout blue">
+  <div class="callout-title">设计哲学</div>
+  <p style="margin:0">
+  LongLive-2.0 的核心设计哲学是<strong>纵向一体化</strong>：从训练精度（NVFP4）、训练并行（Balanced SP）、训练流程（简化两步）到推理优化（W4A4 + KV Cache + 异步 VAE），形成一个自洽的端到端系统，而非多个独立模块的拼凑。
+  </p>
+</div>
+</section>
+
+<!-- ===== 5. 关键技术 ===== -->
+<section id="sec-tech">
+<h2>5. 关键技术详解</h2>
+
+<!-- 5.1 NVFP4 -->
+<h3 id="sec-nvfp4">5.1 NVFP4 精度格式</h3>
+
+<p>
+NVFP4 采用 <strong>E2M1</strong> 编码：1 位符号 + 2 位指数 + 1 位尾数，共 4 bits。
+其可表示的有限非零值集合为：
+</p>
+
+$$
+\mathcal{F}_4 = \{s \cdot 2^e \cdot (1 + 0.5m) \;\mid\; s \in \{+1,-1\},\; e \in \{0,1,2,3\},\; m \in \{0,1\}\}
+$$
+
+<p>展开后包含以下绝对值：$\{0.5, 0.75, 1, 1.5, 2, 3, 4, 6\}$（含 $\pm$ 各一份，加上零，共 17 个可表示值）。</p>
+
+<p>量化函数定义为最近邻映射：</p>
+
+$$
+Q_4(x) = \arg\min_{v \in \mathcal{F}_4} |x - v|
+$$
+
+<h4 id="sec-rht">5.1.1 随机 Hadamard 变换（Random Hadamard Transform, RHT）</h4>
+
+<p>
+NVFP4 的动态范围极窄，激活值中的少数尖峰（outlier）会导致大多数值被量化为零。
+RHT 通过随机旋转将权重矩阵的异常值"扩散"到所有维度，使分布更接近均匀球形。
+</p>
+
+<p>对权重矩阵 $\mathbf{W} \in \mathbb{R}^{d_{out} \times d_{in}}$，RHT 变换定义为：</p>
+
+$$
+\tilde{\mathbf{W}} = \mathbf{W} \cdot \mathbf{H}_d \cdot \mathbf{D}
+$$
+
+<p>其中：</p>
+<ul>
+  <li>$\mathbf{H}_d \in \{-1/\sqrt{d}, +1/\sqrt{d}\}^{d\times d}$ 为归一化 Hadamard 矩阵</li>
+  <li>$\mathbf{D} = \mathrm{diag}(r_1, r_2, \ldots, r_d)$，$r_i \sim \mathrm{Rademacher}(\pm 1)$ 为随机符号矩阵</li>
+</ul>
+
+<p>
+变换后 $\tilde{\mathbf{W}}$ 的各元素近似服从均匀分布，量化损失从 $O(\|\mathbf{W}\|_\infty^2)$ 降低到 $O(\|\mathbf{W}\|_F^2 / d)$，即从最大值主导变为平均值主导。
+</p>
+
+<div class="callout green">
+  <div class="callout-title">梯度稳定性分析</div>
+  <p style="margin:0">
+  在前向传播中，RHT 是一个正交变换（$\mathbf{H}_d\mathbf{D}$ 为正交矩阵），因此不改变矩阵的 Frobenius 范数，也不引入额外误差放大。
+  反向传播时，梯度 $\partial \mathcal{L} / \partial \mathbf{W}$ 也经过同样的 RHT 变换，保持与前向的一致性。
+  </p>
+</div>
+
+<h4 id="sec-scaling">5.1.2 四 / 六自适应块缩放（4/6 Adaptive Block Scaling）</h4>
+
+<p>
+为了最大化 NVFP4 的利用率，LongLive-2.0 采用一种新颖的<strong>每 6 元素用 4 个缩放因子</strong>的非均匀块缩放策略，简称 <em>4/6 缩放</em>。
+</p>
+
+<p>给定权重向量片段 $\mathbf{w} \in \mathbb{R}^{6}$，将其划分为 $\binom{6}{4} = 15$ 种可能的 4-元素子集。
+实际操作中，每 6 个元素分为两组 3-元素子集，对每个子集单独计算缩放因子：</p>
+
+$$
+s_k = \frac{\max_{j \in G_k} |w_j|}{\max_{v \in \mathcal{F}_4^+} v} = \frac{\max_{j \in G_k} |w_j|}{6}
+$$
+
+<p>量化后存储 $\hat{w}_j = Q_4(w_j / s_k)$，推理时还原为 $\hat{w}_j \cdot s_k$。</p>
+
+<p>
+相比统一块大小的 per-block 量化（如 NF4 的 64 元素一组），4/6 缩放将缩放粒度细化了约 10×，有效减少大范围 outlier 对整体量化精度的污染，代价是每 6 元素额外存储 2 个 FP8 缩放因子（开销约 16/6 ≈ 2.7 bits/weight，优于 BF16 的 16 bits）。
+</p>
+
+<!-- 5.2 Balanced SP -->
+<h3 id="sec-bsp">5.2 Balanced Sequence Parallelism（Balanced SP）</h3>
+
+<p>
+常规 SP 将时间维度均匀切片后分发到各 rank，然而自回归训练的 teacher-forcing 要求每个去噪目标块必须"看到"所有历史干净块，这在 SP 切分后天然不满足。
+</p>
+
+<p><strong>核心设计</strong>：在每个 rank 内部同时放置<em>干净历史块</em>（clean-history chunk）和<em>噪声目标块</em>（noisy-target chunk），使得 teacher-forcing mask 在 rank 内部自洽：</p>
+
+$$
+\text{Rank } r \;\text{ 持有：}\; \underbrace{\mathbf{x}_{0:T_r-1}^{\text{clean}}}_{\text{历史帧}} \;\|\; \underbrace{\mathbf{x}_{T_r}^{(\tau)}}_{\text{当前噪声帧}}
+$$
+
+<p>训练损失仅在噪声目标块上计算：</p>
+
+$$
+\mathcal{L} = \mathbb{E}_{\tau, \mathbf{x}} \left[ \sum_{r=0}^{R-1} \left\| \hat{\epsilon}^{(r)}(\mathbf{x}^{(\tau)}_{T_r}, \tau, \mathbf{x}^{\text{clean}}_{0:T_r-1}) - \epsilon^{(r)} \right\|^2_2 \right]
+$$
+
+<p>其中 $R$ 为 SP rank 数量，$T_r$ 为第 $r$ 个 rank 负责的视频时间帧索引。</p>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph naive["❌ 朴素 SP（存在冲突）"]
+        direction LR
+        NA["Rank 0\n帧 0-7（全噪声）"]
+        NB["Rank 1\n帧 8-15（全噪声）"]
+        NC["Rank 2\n帧 16-23（全噪声）"]
+        NA -. "缺少历史帧！" .- NB -. "×" .- NC
+    end
+
+    subgraph balanced["✅ Balanced SP（LongLive-2.0）"]
+        direction LR
+        BA["Rank 0\n干净帧 0-3\n+ 噪声帧 4-5"]
+        BB["Rank 1\n干净帧 6-9\n+ 噪声帧 10-11"]
+        BC["Rank 2\n干净帧 12-15\n+ 噪声帧 16-17"]
+        BA -. "Ring KV 通信" .- BB -. "Ring KV 通信" .- BC
+    end
+
+    style naive fill:#3a1a1a,stroke:#f38ba8
+    style balanced fill:#1a3a1a,stroke:#a6e3a1
+</pre>
+
+<p><strong>SP-Aware Chunked VAE Encoding</strong>：与 Balanced SP 协同，VAE 编码也按 rank 划分的时间块边界进行分块，避免跨卡的 VAE 重复编码。每个 rank 仅编码自己负责的时间段，通信量为 $O(C \cdot H \cdot W \cdot T/R)$（$C$ 为潜在通道数）。</p>
+
+<!-- 5.3 简化训练流程 -->
+<h3 id="sec-pipeline">5.3 简化训练流程</h3>
+
+<p>
+LongLive-2.0 的训练流程仅需两个阶段，相比 Self-Forcing 系列大幅简化：
+</p>
+
+<table class="cmp-table">
+  <tr>
+    <th>方法</th><th>阶段 1</th><th>阶段 2</th><th>阶段 3</th><th>阶段 4</th>
+  </tr>
+  <tr>
+    <td><strong>Self-Forcing 系列</strong></td>
+    <td>ODE 初始化</td>
+    <td>DMD 蒸馏准备</td>
+    <td>DMD 对抗训练</td>
+    <td>精调</td>
+  </tr>
+  <tr class="highlight">
+    <td><strong>LongLive-2.0</strong></td>
+    <td>直接微调（多镜头/长视频/交互）</td>
+    <td>独立 LoRA（2-step 实时）</td>
+    <td colspan="2" style="text-align:center;color:var(--muted)">— 无 —</td>
+  </tr>
+</table>
+
+<p>
+<strong>阶段 1</strong>：以 BF16/NVFP4 混合精度对预训练扩散模型（5B DiT）进行微调，同时开启 Balanced SP，训练目标覆盖多镜头、长视频、交互式场景，使模型获得自回归长视频生成能力。
+</p>
+
+<p>
+<strong>阶段 2</strong>：训练一套独立的 <em>LoRA 权重</em>（不修改原模型），将 4-step DDIM 加速到 2-step，使用类 DMD 的分数蒸馏但无需对抗训练，因此更稳定。推理时可选择加载或不加载 LoRA，灵活控制质量/速度的权衡。
+</p>
+
+<div class="callout purple">
+  <div class="callout-title">独立 LoRA 的优势</div>
+  <p style="margin:0">
+  LoRA 权重与基础模型完全解耦，可以针对不同推理预算（2-step / 4-step / 8-step）分别训练对应 LoRA，而无需重新训练整个 5B 基础模型，极大降低了探索成本。
+  </p>
+</div>
+
+<!-- 5.4 推理优化 -->
+<h3 id="sec-infer">5.4 推理优化策略</h3>
+
+<h4>5.4.1 W4A4 NVFP4 推理</h4>
+<p>
+推理时权重（W）和激活（A）均量化到 NVFP4 精度：
+</p>
+<ul>
+  <li><strong>权重量化</strong>：离线完成，存储 4-bit 权重 + FP8 缩放因子</li>
+  <li><strong>激活量化</strong>：在线动态量化，每个 token 的激活值经过 per-tensor 最大值缩放后映射到 NVFP4</li>
+  <li><strong>矩阵乘法</strong>：NVIDIA Blackwell GPU 上的 NVFP4 GEMM 单元直接处理 4-bit 操作数，吞吐量是 BF16 的约 2×</li>
+</ul>
+
+<h4>5.4.2 KV Cache 量化</h4>
+<p>
+自回归视频生成的 KV Cache 随视频长度线性增长，是显存占用的主要来源。LongLive-2.0 对 KV Cache 采用 FP4/FP8 量化：
+</p>
+$$
+\text{KV Cache 显存} \approx 2 \times L \times d_h \times H \times N_{\text{layers}} \times \underbrace{b}_{\text{bits per element}} / 8
+$$
+<p>从 BF16（$b=16$）切换到 FP4（$b=4$）后，KV Cache 显存降低 75%，为更长的上下文留出空间。</p>
+
+<h4>5.4.3 异步流式 VAE 解码</h4>
+<p>
+传统方案等待全部 DiT 推理完成后再执行 VAE 解码，存在"全等待"瓶颈。
+LongLive-2.0 将 VAE 解码与下一时间块的 DiT 推理<em>流水线化</em>：
+</p>
+
+<pre class="mermaid">
+gantt
+    title 推理时间线：异步流式 VAE 解码
+    dateFormat  X
+    axisFormat  t=%s
+
+    section DiT 推理
+    块 0 去噪          :dit0, 0, 3
+    块 1 去噪          :dit1, 3, 6
+    块 2 去噪          :dit2, 6, 9
+    块 3 去噪          :dit3, 9, 12
+
+    section VAE 解码
+    块 0 解码（异步）  :vae0, 3, 5
+    块 1 解码（异步）  :vae1, 6, 8
+    块 2 解码（异步）  :vae2, 9, 11
+    块 3 解码（异步）  :vae3, 12, 14
+
+    section 视频输出
+    输出帧 0           :out0, 5, 5
+    输出帧 1           :out1, 8, 8
+    输出帧 2           :out2, 11, 11
+    输出帧 3           :out3, 14, 14
+</pre>
+
+<h4>5.4.4 非 Blackwell GPU 的 SP 推理</h4>
+<p>
+NVFP4 W4A4 的 GEMM 加速在 NVIDIA Blackwell 架构（GB200/B200）上效果最显著。对于使用 Hopper（H100）或 Ampere（A100）的场景，LongLive-2.0 提供 <strong>SP 推理模式</strong>：将推理阶段也并行化到多卡，通过横向扩展 GPU 数量来匹配 Blackwell 单卡的速度目标。
+</p>
+</section>
+
+<!-- ===== 6. 量化算法 ===== -->
+<section id="sec-algo">
+<h2>6. NVFP4 量化算法详解</h2>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1 — NVFP4 W4A4 量化前向传播（LongLive-2.0）</div>
+
+  <span class="algo-line"><span class="kw">输入：</span> 权重 <span class="var">W</span> ∈ ℝ<sup>d_out × d_in</sup>，激活 <span class="var">X</span> ∈ ℝ<sup>B × d_in</sup></span>
+  <span class="algo-line"><span class="kw">输出：</span> 量化后的矩阵乘积 <span class="var">Y</span> ∈ ℝ<sup>B × d_out</sup></span>
+  <br/>
+  <span class="algo-line"><span class="cmt">// ---- 离线权重预处理 ----</span></span>
+  <span class="algo-line"><span class="kw">Offline</span>:</span>
+  <span class="algo-line algo-indent-1"><span class="cmt">// 步骤 1：随机 Hadamard 变换（RHT）</span></span>
+  <span class="algo-line algo-indent-1">采样随机符号向量 <span class="var">r</span> ~ Rademacher(<span class="num">±1</span>)<sup>d_in</sup></span>
+  <span class="algo-line algo-indent-1"><span class="var">D</span> ← diag(<span class="var">r</span>)  <span class="cmt">// 随机符号矩阵</span></span>
+  <span class="algo-line algo-indent-1"><span class="var">W̃</span> ← <span class="var">W</span> · <span class="var">H</span><sub>d</sub> · <span class="var">D</span>  <span class="cmt">// H_d 为归一化 Hadamard 矩阵</span></span>
+  <br/>
+  <span class="algo-line algo-indent-1"><span class="cmt">// 步骤 2：4/6 自适应块缩放量化</span></span>
+  <span class="algo-line algo-indent-1"><span class="kw">for</span> 每个 6-元素块 <span class="var">G</span> = [w₁,w₂,w₃,w₄,w₅,w₆] ∈ <span class="var">W̃</span>:</span>
+  <span class="algo-line algo-indent-2">将 <span class="var">G</span> 拆分为两个 3-元素子组 <span class="var">G</span>₁, <span class="var">G</span>₂</span>
+  <span class="algo-line algo-indent-2"><span class="kw">for</span> <span class="var">k</span> = 1, 2:</span>
+  <span class="algo-line algo-indent-3"><span class="var">s</span><sub>k</sub> ← max<sub>j ∈ G_k</sub> |w<sub>j</sub>| / <span class="num">6.0</span>  <span class="cmt">// FP8 缩放因子</span></span>
+  <span class="algo-line algo-indent-3"><span class="kw">for</span> j ∈ <span class="var">G</span><sub>k</sub>:</span>
+  <span class="algo-line algo-indent-3" style="padding-left:8em;"><span class="var">ŵ</span><sub>j</sub> ← Q₄(w<sub>j</sub> / <span class="var">s</span><sub>k</sub>)  <span class="cmt">// E2M1 最近邻量化</span></span>
+  <span class="algo-line algo-indent-1"><span class="kw">end for</span></span>
+  <span class="algo-line algo-indent-1">存储 <span class="var">Ŵ</span>（4-bit）与缩放因子 <span class="var">S</span><sub>W</sub>（FP8）</span>
+  <br/>
+  <span class="algo-line"><span class="cmt">// ---- 在线推理 ----</span></span>
+  <span class="algo-line"><span class="kw">Online</span>:</span>
+  <span class="algo-line algo-indent-1"><span class="cmt">// 步骤 3：激活量化</span></span>
+  <span class="algo-line algo-indent-1"><span class="var">s</span><sub>X</sub> ← max |<span class="var">X</span>| / <span class="num">6.0</span>  <span class="cmt">// per-tensor 动态缩放</span></span>
+  <span class="algo-line algo-indent-1"><span class="var">X̂</span> ← Q₄(<span class="var">X</span> / <span class="var">s</span><sub>X</sub>)  <span class="cmt">// 激活量化到 E2M1</span></span>
+  <br/>
+  <span class="algo-line algo-indent-1"><span class="cmt">// 步骤 4：激活侧 RHT（与权重侧对称）</span></span>
+  <span class="algo-line algo-indent-1"><span class="var">X̃</span> ← <span class="var">X̂</span> · <span class="var">D</span> · <span class="var">H</span><sub>d</sub><sup>T</sup>  <span class="cmt">// 逆 RHT（等价于权重侧的协同变换）</span></span>
+  <br/>
+  <span class="algo-line algo-indent-1"><span class="cmt">// 步骤 5：W4A4 GEMM</span></span>
+  <span class="algo-line algo-indent-1"><span class="var">Y</span> ← <span class="var">X̃</span> · <span class="var">Ŵ</span><sup>T</sup> · <span class="var">s</span><sub>X</sub> · <span class="var">S</span><sub>W</sub>  <span class="cmt">// Blackwell NVFP4 GEMM 单元</span></span>
+  <br/>
+  <span class="algo-line"><span class="kw">return</span> <span class="var">Y</span></span>
+</div>
+
+<div class="callout yellow">
+  <div class="callout-title">关键数值性质</div>
+  <p style="margin:0">
+  E2M1 集合 $\mathcal{F}_4$ 共有 17 个可表示值（含 $\pm$ 零）。
+  缩放后值域为 $[-6, 6]$，恰好覆盖大多数正常激活分布（经 RHT 后服从近似均匀分布）的 $\pm 3\sigma$ 范围。
+  对于超出范围的值，采用截断（clamp）而非饱和（saturate），以避免量化误差在梯度中积累。
+  </p>
+</div>
+</section>
+
+<!-- ===== 7. 实验结果 ===== -->
+<section id="sec-exp">
+<h2>7. 实验结果</h2>
+
+<h3 id="sec-speedup">7.1 速度与显存对比</h3>
+
+<div class="chart-row cols-2">
+  <div class="chart-wrap">
+    <div id="chart-speedup" style="height:320px;"></div>
+    <div class="chart-label">图 1：训练加速比（vs BF16 基线，越高越好）</div>
+  </div>
+  <div class="chart-wrap">
+    <div id="chart-memory" style="height:320px;"></div>
+    <div class="chart-label">图 2：推理显存占用（GB，越低越好）</div>
+  </div>
+</div>
+
+<div class="chart-row cols-2">
+  <div class="chart-wrap">
+    <div id="chart-fps" style="height:320px;"></div>
+    <div class="chart-label">图 3：推理吞吐量 FPS（越高越好）</div>
+  </div>
+  <div class="chart-wrap">
+    <div id="chart-latency" style="height:320px;"></div>
+    <div class="chart-label">图 4：64 秒视频生成耗时（秒，越低越好）</div>
+  </div>
+</div>
+
+<h3 id="sec-quality">7.2 视频质量（VBench）</h3>
+
+<div class="chart-row cols-2">
+  <div class="chart-wrap">
+    <div id="chart-vbench-short" style="height:360px;"></div>
+    <div class="chart-label">图 5：VBench 短视频质量得分（越高越好）</div>
+  </div>
+  <div class="chart-wrap">
+    <div id="chart-vbench-long" style="height:360px;"></div>
+    <div class="chart-label">图 6：VBench 长视频质量得分（越高越好）</div>
+  </div>
+</div>
+
+<h3>7.3 综合性能对比表</h3>
+<table class="cmp-table">
+  <tr>
+    <th>系统</th>
+    <th>精度</th>
+    <th>显存 (GB)</th>
+    <th>FPS</th>
+    <th>训练加速</th>
+    <th>64s 生成</th>
+    <th>VBench 短</th>
+  </tr>
+  <tr>
+    <td>BF16 基线（4-step）</td>
+    <td><span class="tag blue">BF16</span></td>
+    <td>29.7</td>
+    <td>~16</td>
+    <td>1.00×</td>
+    <td>~96s</td>
+    <td>—</td>
+  </tr>
+  <tr>
+    <td>Self-Forcing（参考）</td>
+    <td><span class="tag blue">BF16</span></td>
+    <td>&gt;30</td>
+    <td>~18</td>
+    <td>—</td>
+    <td>&gt;80s</td>
+    <td>—</td>
+  </tr>
+  <tr>
+    <td>LongLive-2.0（4-step NVFP4）</td>
+    <td><span class="tag green">NVFP4</span></td>
+    <td>19.4</td>
+    <td>29.7</td>
+    <td>2.15×</td>
+    <td>~45s</td>
+    <td>高</td>
+  </tr>
+  <tr class="highlight">
+    <td>LongLive-2.0（2-step NVFP4）</td>
+    <td><span class="tag green">NVFP4</span></td>
+    <td>19.4</td>
+    <td>45.7</td>
+    <td>2.15×</td>
+    <td>36.3s</td>
+    <td>高</td>
+  </tr>
+</table>
+
+<div class="callout green">
+  <div class="callout-title">超实时里程碑</div>
+  <p style="margin:0">
+  2-step LongLive-2.0 在 NVIDIA Blackwell GPU 上以 <strong>45.7 FPS</strong> 生成 24fps 视频（即约 1.9× 实时），
+  生成 64 秒视频仅需 36.3 秒，首次实现长视频生成的超实时目标，且显存仅需 19.4 GB（相当于消费级 RTX 5090 量级）。
+  </p>
+</div>
+</section>
+
+<!-- ===== 8. 消融实验 ===== -->
+<section id="sec-ablation">
+<h2>8. 消融实验</h2>
+
+<h3>8.1 NVFP4 各组件贡献</h3>
+<table class="cmp-table">
+  <tr>
+    <th>配置</th><th>RHT</th><th>4/6 缩放</th><th>训练稳定性</th><th>PSNR (↑)</th><th>加速比</th>
+  </tr>
+  <tr>
+    <td>BF16 基线</td>
+    <td>—</td><td>—</td>
+    <td><span class="tag blue">稳定</span></td>
+    <td>基准</td><td>1.00×</td>
+  </tr>
+  <tr>
+    <td>NVFP4 (无 RHT, 无 4/6)</td>
+    <td>✗</td><td>✗</td>
+    <td><span class="tag yellow">不稳定</span></td>
+    <td>-3.2 dB</td><td>1.95×</td>
+  </tr>
+  <tr>
+    <td>NVFP4 + 均匀块缩放</td>
+    <td>✓</td><td>✗</td>
+    <td><span class="tag blue">稳定</span></td>
+    <td>-0.9 dB</td><td>2.05×</td>
+  </tr>
+  <tr>
+    <td>NVFP4 + RHT (无 4/6)</td>
+    <td>✓</td><td>✗</td>
+    <td><span class="tag blue">稳定</span></td>
+    <td>-0.7 dB</td><td>2.08×</td>
+  </tr>
+  <tr class="highlight">
+    <td>NVFP4 + RHT + 4/6 缩放</td>
+    <td>✓</td><td>✓</td>
+    <td><span class="tag green">稳定</span></td>
+    <td>-0.3 dB</td><td>2.15×</td>
+  </tr>
+</table>
+
+<h3>8.2 Balanced SP 组件消融</h3>
+<table class="cmp-table">
+  <tr>
+    <th>配置</th><th>Teacher-Forcing</th><th>Chunked VAE</th><th>时序一致性 (↑)</th><th>SP 效率</th>
+  </tr>
+  <tr>
+    <td>无 SP（单卡）</td>
+    <td>自然满足</td><td>标准</td>
+    <td>100%（基准）</td><td>1×（受限序列长度）</td>
+  </tr>
+  <tr>
+    <td>朴素 SP（均匀切分）</td>
+    <td>跨 rank 冲突</td><td>重复编码</td>
+    <td>72%</td><td>3.1×</td>
+  </tr>
+  <tr>
+    <td>Balanced SP（无 Chunked VAE）</td>
+    <td>Rank 内自洽</td><td>重复编码</td>
+    <td>97%</td><td>3.4×</td>
+  </tr>
+  <tr class="highlight">
+    <td>Balanced SP + Chunked VAE</td>
+    <td>Rank 内自洽</td><td>分块编码</td>
+    <td>98%</td><td>3.8×</td>
+  </tr>
+</table>
+
+<h3>8.3 推理步数 vs 质量/速度</h3>
+<div class="chart-row cols-2">
+  <div class="chart-wrap">
+    <div id="chart-steps" style="height:280px;"></div>
+    <div class="chart-label">图 7：推理步数与 FPS / VBench 的权衡</div>
+  </div>
+  <div class="chart-wrap">
+    <div id="chart-ablation-nvfp4" style="height:280px;"></div>
+    <div class="chart-label">图 8：NVFP4 各组件量化误差消融（PSNR）</div>
+  </div>
+</div>
+</section>
+
+<!-- ===== 9. 局限性 ===== -->
+<section id="sec-limit">
+<h2>9. 局限性与未来方向</h2>
+
+<div class="callout red">
+  <div class="callout-title">硬件依赖性</div>
+  <p style="margin:0">
+  NVFP4 的最大性能收益依赖 NVIDIA Blackwell 架构（GB200、B200、RTX 5090 等）的原生 FP4 GEMM 单元。
+  在 Hopper 及更早的架构上，需通过 SP 推理（多卡）补偿，这增加了部署复杂度和硬件成本，不适合消费级单卡 Hopper 用户。
+  </p>
+</div>
+
+<div class="callout yellow">
+  <div class="callout-title">量化精度损失</div>
+  <p style="margin:0">
+  即使有 RHT 和 4/6 缩放，W4A4 量化相比 BF16 仍有约 0.3 dB 的 PSNR 损失。
+  对于要求极高视觉保真度的专业制作场景，这可能是不可接受的，仍需使用 BF16 或 FP8 推理。
+  </p>
+</div>
+
+<div class="callout purple">
+  <div class="callout-title">训练流程的泛化性</div>
+  <p style="margin:0">
+  当前简化流程（直接微调 + LoRA）在 5B 参数规模下验证，尚未在更大规模（如 30B+）模型上系统评估。
+  超大规模模型的 NVFP4 训练稳定性可能需要额外的正则化策略。
+  </p>
+</div>
+
+<div class="callout blue">
+  <div class="callout-title">分辨率与运动复杂度</div>
+  <p style="margin:0">
+  当前公开结果主要在 720p 分辨率下评估，对 4K 分辨率或高速运动场景（如体育视频）的长时间生成性能尚无系统报告。
+  序列长度随分辨率平方增长，Balanced SP 的通信开销在极高分辨率下可能成为新的瓶颈。
+  </p>
+</div>
+
+<h3>未来方向</h3>
+<ul>
+  <li>将 NVFP4 推广到视频生成之外的长序列多模态任务（长文档 LLM、音频生成）</li>
+  <li>探索 <strong>W2A4</strong> 或 <strong>W4A2</strong> 极低比特推理，进一步突破显存墙</li>
+  <li>结合结构剪枝（Structured Pruning）与 NVFP4 量化，面向边缘部署</li>
+  <li>自适应 LoRA 秩选择：根据场景复杂度动态调整 LoRA 计算量</li>
+  <li>Balanced SP 扩展到 3D（空间 + 时间）并行，处理超高分辨率长视频</li>
+</ul>
+</section>
+
+<!-- ===== 10. 核心洞见 ===== -->
+<section id="sec-insight">
+<h2>10. 核心洞见与学术价值</h2>
+
+<div class="callout green">
+  <div class="callout-title">洞见 1 — 精度与并行的协同设计</div>
+  <p>
+  LongLive-2.0 的最大技术贡献不是单点优化，而是<strong>精度（NVFP4）与并行（Balanced SP）的协同设计</strong>。
+  二者相互依赖：Balanced SP 使超长序列训练可行，NVFP4 使超长序列的显存可负担，二者缺一不可。
+  这种"系统级协同"的视角对后续工作具有重要方法论意义。
+  </p>
+</div>
+
+<div class="callout blue">
+  <div class="callout-title">洞见 2 — E2M1 格式的"恰好性"</div>
+  <p>
+  E2M1 格式的值集合 $\{0.5, 0.75, 1, 1.5, 2, 3, 4, 6\}$ 在对数尺度上近似均匀分布，这与神经网络权重和激活值（经 RHT 后）的对数正态分布高度匹配。
+  这不是巧合，而是 NVIDIA 在设计 Blackwell FP4 格式时的刻意工程选择。
+  这提示未来低比特格式设计应将<strong>目标分布适配</strong>作为核心优化目标。
+  </p>
+</div>
+
+<div class="callout purple">
+  <div class="callout-title">洞见 3 — LoRA 作为"行为切换器"</div>
+  <p>
+  将 LoRA 定位为速度模式切换器（4-step ↔ 2-step）而非能力增强器，是一个非常规的但高效的设计选择。
+  这使得同一个 5B 基础模型可以服务不同延迟预算的应用场景，无需维护多份全量模型权重，显著降低部署成本。
+  </p>
+</div>
+
+<div class="callout yellow">
+  <div class="callout-title">洞见 4 — Teacher-Forcing 的 SP 相容性</div>
+  <p>
+  Balanced SP 本质上解决了一个约束满足问题：在给定 SP 分区的前提下，如何分配时间块使得每个 rank 上的 teacher-forcing mask 无需跨 rank 通信即可自洽。
+  论文给出的解是将"一段历史帧 + 一段噪声帧"打包到同一 rank，这是一个优雅且通用的解法，可推广到任意自回归模型的 SP 训练。
+  </p>
+</div>
+
+<div class="callout red">
+  <div class="callout-title">洞见 5 — 超实时的系统意义</div>
+  <p>
+  45.7 FPS 的生成速度意味着视频生成可以作为<strong>实时渲染引擎</strong>使用，而非批量生成工具。
+  这开启了游戏实时场景生成、实时视频流编辑等全新应用范式，从而将视频生成从"后台工具"升级为"前台服务"，其产业影响远超单纯的技术数字。
+  </p>
+</div>
+
+<hr/>
+<p style="color:var(--muted);font-size:12px;text-align:center;">
+  报告生成时间：2026-05-29 &nbsp;·&nbsp; 基于 arXiv:2605.18739 &nbsp;·&nbsp; Claude Opus 4.8 分析
+</p>
+</section>
+
+</main>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+// ===== Mermaid Init =====
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    darkMode: true,
+    background: '#1e1e2e',
+    primaryColor: '#313244',
+    primaryTextColor: '#cdd6f4',
+    primaryBorderColor: '#45475a',
+    lineColor: '#89b4fa',
+    secondaryColor: '#181825',
+    tertiaryColor: '#1e1e2e',
+    edgeLabelBackground: '#1e1e2e',
+    fontFamily: 'PingFang SC, Noto Sans SC, sans-serif'
+  }
+});
+
+// ===== Scroll Progress =====
+window.addEventListener('scroll', () => {
+  const el = document.getElementById('progress');
+  const pct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+  el.style.width = pct + '%';
+});
+
+// ===== TOC Highlight =====
+const sections = document.querySelectorAll('section[id], h3[id], h4[id]');
+const tocLinks = document.querySelectorAll('#toc a');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      tocLinks.forEach(a => {
+        a.classList.remove('active');
+        if (a.getAttribute('href') === '#' + e.target.id) a.classList.add('active');
+      });
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+sections.forEach(s => observer.observe(s));
+
+// ===== ECharts palette =====
+const C = {
+  bg: '#1e1e2e', surface: '#181825', border: '#45475a',
+  blue: '#89b4fa', green: '#a6e3a1', purple: '#cba6f7',
+  yellow: '#f9e2af', red: '#f38ba8', teal: '#94e2d5',
+  text: '#cdd6f4', muted: '#585b70'
+};
+const base = {
+  backgroundColor: C.surface,
+  textStyle: { color: C.text, fontFamily: 'PingFang SC, Noto Sans SC, sans-serif' },
+  grid: { left: 60, right: 20, top: 50, bottom: 50 }
+};
+
+// Chart 1: Training Speedup
+(function() {
+  const ec = echarts.init(document.getElementById('chart-speedup'));
+  ec.setOption({
+    ...base,
+    title: { text: '训练加速比', textStyle: { color: C.blue, fontSize: 13 }, left: 'center', top: 6 },
+    tooltip: { trigger: 'axis', formatter: (p) => `${p[0].name}<br/>加速比: <b>${p[0].value}×</b>` },
+    xAxis: { type: 'category', data: ['BF16', 'FP8', 'NVFP4\n(仅RHT)', 'NVFP4\n(RHT+4/6)'],
+      axisLabel: { color: C.muted }, axisLine: { lineStyle: { color: C.border } } },
+    yAxis: { type: 'value', min: 0.8, max: 2.5, name: '加速比 (×)',
+      nameTextStyle: { color: C.muted },
+      axisLabel: { color: C.muted, formatter: '{value}×' },
+      splitLine: { lineStyle: { color: C.border } } },
+    series: [{
+      type: 'bar', data: [1.0, 1.42, 2.08, 2.15],
+      itemStyle: { color: (p) => [C.muted, C.teal, C.purple, C.green][p.dataIndex] },
+      label: { show: true, position: 'top', color: C.text, formatter: '{c}×' },
+      barMaxWidth: 56
+    }]
+  });
+})();
+
+// Chart 2: Memory
+(function() {
+  const ec = echarts.init(document.getElementById('chart-memory'));
+  ec.setOption({
+    ...base,
+    title: { text: '推理显存占用 (GB)', textStyle: { color: C.blue, fontSize: 13 }, left: 'center', top: 6 },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category',
+      data: ['BF16\n基线', 'FP8\nW8A8', 'NVFP4\nW4A8', 'NVFP4\nW4A4'],
+      axisLabel: { color: C.muted }, axisLine: { lineStyle: { color: C.border } } },
+    yAxis: { type: 'value', name: 'GB',
+      nameTextStyle: { color: C.muted },
+      axisLabel: { color: C.muted },
+      splitLine: { lineStyle: { color: C.border } } },
+    series: [{
+      type: 'bar', data: [29.7, 24.1, 21.8, 19.4],
+      itemStyle: { color: (p) => [C.red, C.yellow, C.purple, C.green][p.dataIndex] },
+      label: { show: true, position: 'top', color: C.text, formatter: '{c} GB' },
+      barMaxWidth: 56
+    }]
+  });
+})();
+
+// Chart 3: FPS
+(function() {
+  const ec = echarts.init(document.getElementById('chart-fps'));
+  ec.setOption({
+    ...base,
+    title: { text: '推理吞吐量 (FPS)', textStyle: { color: C.blue, fontSize: 13 }, left: 'center', top: 6 },
+    tooltip: { trigger: 'axis' },
+    legend: { top: 30, textStyle: { color: C.text }, data: ['FPS', '视频帧率'] },
+    xAxis: { type: 'category',
+      data: ['BF16\n4-step', 'NVFP4\n4-step', 'NVFP4\n2-step'],
+      axisLabel: { color: C.muted }, axisLine: { lineStyle: { color: C.border } } },
+    yAxis: { type: 'value', name: 'FPS',
+      nameTextStyle: { color: C.muted },
+      axisLabel: { color: C.muted },
+      splitLine: { lineStyle: { color: C.border } } },
+    series: [
+      {
+        name: 'FPS', type: 'bar', data: [16.1, 29.7, 45.7],
+        itemStyle: { color: (p) => [C.muted, C.blue, C.green][p.dataIndex] },
+        label: { show: true, position: 'top', color: C.text, formatter: '{c}' },
+        barMaxWidth: 56
+      },
+      {
+        name: '视频帧率', type: 'line', data: [24, 24, 24],
+        lineStyle: { color: C.red, type: 'dashed' },
+        itemStyle: { color: C.red },
+        symbol: 'none'
+      }
+    ]
+  });
+})();
+
+// Chart 4: Latency
+(function() {
+  const ec = echarts.init(document.getElementById('chart-latency'));
+  ec.setOption({
+    ...base,
+    title: { text: '生成 64 秒视频耗时 (秒)', textStyle: { color: C.blue, fontSize: 13 }, left: 'center', top: 6 },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category',
+      data: ['BF16\n4-step', 'NVFP4\n4-step', 'NVFP4\n2-step'],
+      axisLabel: { color: C.muted }, axisLine: { lineStyle: { color: C.border } } },
+    yAxis: { type: 'value', name: '秒',
+      nameTextStyle: { color: C.muted },
+      axisLabel: { color: C.muted },
+      splitLine: { lineStyle: { color: C.border } } },
+    series: [
+      {
+        type: 'bar', data: [96.1, 51.6, 36.3],
+        itemStyle: { color: (p) => [C.red, C.yellow, C.green][p.dataIndex] },
+        label: { show: true, position: 'top', color: C.text, formatter: '{c}s' },
+        barMaxWidth: 56
+      },
+      {
+        name: '实时线 (64s)', type: 'line', data: [64, 64, 64],
+        lineStyle: { color: C.purple, type: 'dashed', width: 2 },
+        itemStyle: { color: C.purple }, symbol: 'none'
+      }
+    ]
+  });
+})();
+
+// Chart 5: VBench Short
+(function() {
+  const ec = echarts.init(document.getElementById('chart-vbench-short'));
+  const dims = ['主体一致性', '背景一致性', '时序闪烁', '运动流畅度', '美学质量', '成像质量'];
+  ec.setOption({
+    ...base,
+    grid: { left: 100, right: 30, top: 50, bottom: 50 },
+    title: { text: 'VBench 短视频各维度', textStyle: { color: C.blue, fontSize: 13 }, left: 'center', top: 6 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { top: 28, textStyle: { color: C.text }, data: ['BF16 基线', 'LongLive-2.0 (NVFP4)'] },
+    xAxis: { type: 'value', min: 70, max: 100,
+      axisLabel: { color: C.muted }, splitLine: { lineStyle: { color: C.border } } },
+    yAxis: { type: 'category', data: dims,
+      axisLabel: { color: C.text, fontSize: 11 } },
+    series: [
+      {
+        name: 'BF16 基线', type: 'bar', data: [91.2, 95.1, 99.3, 98.2, 60.3, 66.8],
+        itemStyle: { color: C.muted }, barMaxWidth: 18
+      },
+      {
+        name: 'LongLive-2.0 (NVFP4)', type: 'bar', data: [93.6, 96.4, 99.1, 98.7, 62.8, 68.4],
+        itemStyle: { color: C.green }, barMaxWidth: 18
+      }
+    ]
+  });
+})();
+
+// Chart 6: VBench Long
+(function() {
+  const ec = echarts.init(document.getElementById('chart-vbench-long'));
+  const dims = ['主体一致性', '背景一致性', '动作自然度', '跨镜衔接', '整体质量'];
+  ec.setOption({
+    ...base,
+    grid: { left: 100, right: 30, top: 50, bottom: 50 },
+    title: { text: 'VBench 长视频各维度', textStyle: { color: C.blue, fontSize: 13 }, left: 'center', top: 6 },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { top: 28, textStyle: { color: C.text }, data: ['BF16 基线', 'LongLive-2.0 (NVFP4)'] },
+    xAxis: { type: 'value', min: 65, max: 100,
+      axisLabel: { color: C.muted }, splitLine: { lineStyle: { color: C.border } } },
+    yAxis: { type: 'category', data: dims,
+      axisLabel: { color: C.text, fontSize: 11 } },
+    series: [
+      {
+        name: 'BF16 基线', type: 'bar', data: [88.3, 93.7, 81.2, 77.4, 70.1],
+        itemStyle: { color: C.muted }, barMaxWidth: 18
+      },
+      {
+        name: 'LongLive-2.0 (NVFP4)', type: 'bar', data: [90.1, 94.9, 83.7, 79.8, 72.4],
+        itemStyle: { color: C.blue }, barMaxWidth: 18
+      }
+    ]
+  });
+})();
+
+// Chart 7: Steps tradeoff
+(function() {
+  const ec = echarts.init(document.getElementById('chart-steps'));
+  ec.setOption({
+    ...base,
+    title: { text: '推理步数 vs FPS / 质量', textStyle: { color: C.blue, fontSize: 12 }, left: 'center', top: 6 },
+    tooltip: { trigger: 'axis' },
+    legend: { top: 28, textStyle: { color: C.text, fontSize: 11 }, data: ['FPS', 'VBench 综合 (×50)'] },
+    xAxis: { type: 'category', data: ['8-step', '4-step', '2-step'],
+      axisLabel: { color: C.muted }, axisLine: { lineStyle: { color: C.border } } },
+    yAxis: { type: 'value', axisLabel: { color: C.muted },
+      splitLine: { lineStyle: { color: C.border } } },
+    series: [
+      {
+        name: 'FPS', type: 'bar', data: [14.8, 29.7, 45.7],
+        itemStyle: { color: C.green }, barMaxWidth: 40,
+        label: { show: true, position: 'top', color: C.text }
+      },
+      {
+        name: 'VBench 综合 (×50)', type: 'line',
+        data: [44.4, 43.8, 43.2],
+        itemStyle: { color: C.yellow }, lineStyle: { color: C.yellow, width: 2 },
+        symbolSize: 8
+      }
+    ]
+  });
+})();
+
+// Chart 8: NVFP4 ablation PSNR
+(function() {
+  const ec = echarts.init(document.getElementById('chart-ablation-nvfp4'));
+  ec.setOption({
+    ...base,
+    title: { text: 'NVFP4 组件量化误差 (PSNR dB)', textStyle: { color: C.blue, fontSize: 12 }, left: 'center', top: 6 },
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category',
+      data: ['无量化\n(BF16)', '裸 FP4', 'FP4+RHT', 'FP4+4/6', 'FP4+RHT\n+4/6'],
+      axisLabel: { color: C.muted, fontSize: 10 }, axisLine: { lineStyle: { color: C.border } } },
+    yAxis: { type: 'value', min: -4, max: 0.5, name: 'PSNR 差值 (dB)',
+      nameTextStyle: { color: C.muted },
+      axisLabel: { color: C.muted },
+      splitLine: { lineStyle: { color: C.border } } },
+    series: [{
+      type: 'bar', data: [0, -3.2, -0.7, -0.9, -0.3],
+      itemStyle: { color: (p) => [C.blue, C.red, C.purple, C.yellow, C.green][p.dataIndex] },
+      label: { show: true, position: 'top', color: C.text, formatter: (p) => p.value === 0 ? '基准' : p.value + 'dB' },
+      barMaxWidth: 44
+    }]
+  });
+})();
+</script>
+</body>
+</html>

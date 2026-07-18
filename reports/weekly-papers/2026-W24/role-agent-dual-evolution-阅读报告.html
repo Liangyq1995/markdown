@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Role-Agent: Dual-Role Evolution | 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .badge { display: inline-block; background: #313244; border: 1px solid var(--border); border-radius: 12px; padding: 2px 10px; font-size: 0.82em; margin: 2px 3px; color: var(--text); }
+    .badge.blue { border-color: var(--heading); color: var(--heading); }
+    .badge.green { border-color: var(--strong); color: var(--strong); }
+    .badge.orange { border-color: #fab387; color: #fab387; }
+    .highlight-row td { background: #2a3a2a !important; }
+    .best { color: var(--strong); font-weight: 700; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Role-Agent: Bootstrapping LLM Agents via Dual-Role Evolution</h1>
+<p>
+  <span class="badge blue">arXiv 2606.10917</span>
+  <span class="badge blue">2026年6月</span>
+  <span class="badge green">HuggingFace 75 Upvotes · 本周第8名</span>
+  <span class="badge orange">AMAP, Alibaba Group</span>
+  <span class="badge orange">USTC</span>
+</p>
+
+<h2>论文信息</h2>
+<table>
+  <tr><th>标题</th><td>Role-Agent: Bootstrapping LLM Agents via Dual-Role Evolution</td></tr>
+  <tr><th>作者</th><td>Xucong Wang, Ziyu Ma, Shidong Yang, Tongwen Huang, Pengkun Wang, Yong Wang, Xiangxiang Chu</td></tr>
+  <tr><th>机构</th><td>AMAP, Alibaba Group；University of Science and Technology of China（USTC）</td></tr>
+  <tr><th>核心问题</th><td>如何让单个 LLM 同时扮演 Agent 与 Environment 两个角色，实现无需额外模型的自举式共同进化，突破静态环境中稀疏、非针对性反馈的瓶颈</td></tr>
+  <tr><th>主要方法</th><td>World-In-Agent（WIA）：预测未来状态作为过程奖励；Agent-In-World（AIW）：从失败轨迹提取失败模式并检索相似任务重塑训练分布</td></tr>
+  <tr><th>主要结果</th><td>在 ALFWorld、WebShop、Search-QA 等多基准上平均增益超 4%，优于 GiGPO 等强基线</td></tr>
+  <tr><th>开源地址</th><td><a href="https://github.com/AMAP-ML/roleagent" target="_blank">https://github.com/AMAP-ML/roleagent</a></td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2606.10917" target="_blank">https://arxiv.org/abs/2606.10917</a></td></tr>
+</table>
+
+<h2>概述</h2>
+<p>
+  大型语言模型（LLM）Agent 在复杂任务上展现出强大能力，但其训练面临一个根本性困境：<strong>环境反馈稀疏且缺乏针对性</strong>。传统静态环境只能提供最终成功/失败的二值奖励，无法揭示 Agent 在哪些中间步骤上出现了偏差，也无法针对 Agent 的薄弱点动态调整训练任务。构建合成自适应环境虽然可以缓解这一问题，但需要额外的环境模型、任务生成器或调度机制，大幅增加了部署复杂度。
+</p>
+<p>
+  Role-Agent 提出了一个极具吸引力的解决思路：<strong>让同一个 LLM 同时扮演 Agent 和 Environment 两个角色</strong>，通过双角色自举共同进化（Bootstrapped Co-evolution）来突破上述限制。这一设计的核心直觉在于：一个足够强大的 LLM 不仅能够执行任务，还能够理解环境动力学、预测行动后果、分析失败原因，并为自身设计更有针对性的训练数据。
+</p>
+<p>
+  具体而言，Role-Agent 包含两个协同组件：<strong>WIA（World-In-Agent）</strong>让 LLM 在每次行动后预测未来状态，通过预测状态与实际状态的对齐程度构建过程奖励，鼓励环境感知推理；<strong>AIW（Agent-In-World）</strong>让同一个 LLM 充当环境角色，从失败轨迹中识别失败模式，检索具有相似失败模式的任务，并将其重新注入训练集，使 Agent 能够针对性地练习历史弱项。
+</p>
+<p>
+  这一框架的优雅之处在于：无需引入额外模型，仅凭单个 LLM 的角色切换，就能在 Agent 侧和 Environment 侧同时实现自我改进，形成一个闭环的自举进化系统。在多个基准上的实验验证了这一方法的有效性，平均增益超过 4%，尤其在需要稳定记忆和多步规划的复杂组合任务上表现更为突出。
+</p>
+
+<h2>研究背景</h2>
+<h3>LLM Agent 训练的核心挑战</h3>
+<p>LLM Agent 的训练面临三大核心挑战：</p>
+<ul>
+  <li><strong>稀疏奖励问题</strong>：在开放世界任务（如家居导航、网购、多跳问答）中，奖励通常仅在轨迹末尾给出（成功/失败），中间步骤缺乏信用分配依据。</li>
+  <li><strong>静态环境局限</strong>：传统环境将任务集视为固定分布，无法根据 Agent 当前的能力缺陷动态调整训练难度，导致 Agent 在已掌握任务上过度训练，而忽视真正的薄弱点。</li>
+  <li><strong>探索效率低下</strong>：缺乏环境感知的 Agent 往往采用随机探索策略，在状态空间庞大的任务中收敛缓慢，甚至陷入重复失败的循环。</li>
+</ul>
+
+<h3>自举学习方法谱系对比</h3>
+<table>
+  <tr>
+    <th>方法</th>
+    <th>核心机制</th>
+    <th>是否需要人工标注</th>
+    <th>环境是否自适应</th>
+    <th>额外模型</th>
+    <th>代表工作</th>
+  </tr>
+  <tr>
+    <td>SFT / 模仿学习</td>
+    <td>模仿专家轨迹</td>
+    <td>是（专家数据）</td>
+    <td>否</td>
+    <td>无</td>
+    <td>YOLA</td>
+  </tr>
+  <tr>
+    <td>RLHF</td>
+    <td>人类偏好反馈训练奖励模型</td>
+    <td>是（偏好标注）</td>
+    <td>否</td>
+    <td>奖励模型</td>
+    <td>InstructGPT</td>
+  </tr>
+  <tr>
+    <td>RLAIF</td>
+    <td>AI 生成偏好替代人工标注</td>
+    <td>否</td>
+    <td>否</td>
+    <td>评判 LLM</td>
+    <td>Constitutional AI</td>
+  </tr>
+  <tr>
+    <td>PPO / GRPO</td>
+    <td>组内相对优势估计</td>
+    <td>否（环境奖励）</td>
+    <td>否</td>
+    <td>Critic 网络（PPO）</td>
+    <td>DeepSeek-R1, GRPO</td>
+  </tr>
+  <tr>
+    <td>GiGPO</td>
+    <td>状态分组优势估计</td>
+    <td>否</td>
+    <td>否</td>
+    <td>无</td>
+    <td>Feng et al., 2025</td>
+  </tr>
+  <tr>
+    <td>Self-Play</td>
+    <td>Agent 自我对弈</td>
+    <td>否</td>
+    <td>部分</td>
+    <td>对手模型</td>
+    <td>AlphaGo, SPaR</td>
+  </tr>
+  <tr>
+    <td>Self-Evolving Agent</td>
+    <td>Agent 自主发现缺陷并更新</td>
+    <td>否</td>
+    <td>部分</td>
+    <td>多角色 LLM</td>
+    <td>EvolveR, MAE, AgentEvolver</td>
+  </tr>
+  <tr class="highlight-row">
+    <td><strong>Role-Agent（本文）</strong></td>
+    <td><strong>单 LLM 双角色自举共进化</strong></td>
+    <td><strong>否</strong></td>
+    <td><strong>是（动态调整分布）</strong></td>
+    <td><strong>无（角色切换）</strong></td>
+    <td><strong>Wang et al., 2026</strong></td>
+  </tr>
+</table>
+
+<h3>相关工作定位</h3>
+<p>
+  <strong>Agentic RL（ARL）</strong>：将完整的多轮交互轨迹纳入 RL 框架，代表方法包括 PPO、RLOO、GRPO、DAPO、GSPO 和 GPG。这些方法依赖最终结果奖励，过程信用分配能力有限。
+</p>
+<p>
+  <strong>过程奖励模型（PRM）</strong>：DeepSeekMath、StepSearch 等工作尝试为每个步骤分配信用，但通常需要额外训练奖励模型。Role-Agent 的 WIA 通过状态预测对齐实现免监督的过程奖励，是一种轻量级的替代方案。
+</p>
+<p>
+  <strong>自进化 Agent</strong>：EvolveR 提出自包含生命周期，MAE 实例化 Proposer/Solver/Judge 三角色，AgentEvolver 利用自我提问和自我归因。这些工作的辅助角色主要停留在 Agent 侧，而 Role-Agent 实现了真正的 Agent-Environment 双侧共同进化。
+</p>
+
+<h2>Role-Agent 框架</h2>
+<h3>整体架构</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["单个 LLM<br>（Qwen2.5-1.5/3/7B-Instruct）"] --> B["Agent 角色"]
+    A --> C["Environment 角色"]
+
+    B --> D["执行动作 a_t<br>基于策略 π_θ(a_t | s_t, x)"]
+    D --> E["WIA: 预测未来状态<br>ŝ_{t,h} ~ π(· | a_t, x_pre)"]
+    E --> F["计算预测得分<br>r̃_{t,h} = LMS(ŝ_{t,h}, s_{t+h})"]
+    F --> G["调制奖励<br>R_t = R_task(1 + R_pre)"]
+
+    C --> H["AIW: 分析失败轨迹<br>提取失败模式与反思"]
+    H --> I["存储失败模式库 M<br>（ENTITY_CONFUSION, etc.）"]
+    I --> J["检索相似失败任务<br>更新训练分布 p_D"]
+
+    G --> K["状态分组<br>hash(s_t) 去重"]
+    K --> L["计算状态级优势 A_S<br>与轨迹级优势 A_E"]
+    L --> M["GRPO 风格策略更新<br>A = A_S + α·A_E"]
+    J --> M
+    M --> A
+</pre>
+
+<h3>双角色设计哲学</h3>
+<p>
+  Role-Agent 的核心设计哲学来源于一个简洁的问题：<strong>能否用单个 LLM 同时充当 Agent 和 Environment，实现无需额外模型的自举共进化？</strong>
+</p>
+<p>
+  这一设计的合理性基于以下观察：（1）足够强大的 LLM 本身就内化了大量关于世界动力学的知识，具备预测行动后果的能力；（2）LLM 的语言理解能力使其能够分析失败轨迹、识别错误模式；（3）通过角色切换而非角色分离，避免了引入额外模型带来的分布偏移和部署复杂度。
+</p>
+<blockquote>
+  <strong>关键洞见</strong>：传统 self-play 需要两个独立模型相互对弈；Role-Agent 通过提示词工程（prompt engineering）实现同一模型的角色切换，将"外部对手"内化为"内部视角"，是一种更轻量、更紧凑的自举范式。
+</blockquote>
+
+<h3>形式化问题设置</h3>
+<p>给定任务提示 $x \in \mathcal{X}$，Agent 在每步 $t$ 基于当前状态 $s_t$ 和策略 $\pi_\theta(a_t | s_t, x)$ 生成动作 $a_t \in \mathcal{A}$。环境提供下一状态 $s_{t+1}$ 和即时奖励 $r_t$，生成轨迹：</p>
+<p>$$\tau = \{(s_t, a_t, r_t)\}_{t=1}^{T}$$</p>
+<p>批量轨迹记为 $\mathcal{T} = \{\tau_i\}_{i=1}^{N}$。在稀疏奖励场景中，过程级奖励 $r_t$ 通常被轨迹级奖励 $R_E(\tau_i)$（如最终是否达成目标）所替代。</p>
+
+<h2>WIA 组件：World-In-Agent</h2>
+<h3>核心思想</h3>
+<p>
+  WIA 受到世界模型（World Model）研究的启发，将环境动力学内化到 Agent 中。其核心机制是：在每次行动后，Agent 不仅执行动作，还被要求<strong>预测该动作在未来 $H$ 步内将导致的环境状态</strong>。预测状态与实际状态的对齐程度被用作过程奖励，鼓励 Agent 发展出对环境的精细感知能力。
+</p>
+
+<h3>状态预测机制</h3>
+<p>在轨迹 rollout 的每步 $t$，Agent 生成动作 $a_t$ 后，用增强提示 $x_{pre}$ 预测未来 $H$ 步的状态：</p>
+<p>$$\hat{s}_{t,h} \sim \pi(\cdot \mid a_t, x_{pre}), \quad h \in \{1, \ldots, H\}$$</p>
+<p>步骤 $t$ 的预测集合为 $\mathcal{E}_{pre,t} = \{\hat{s}_{t,h} \mid 1 \leq h \leq H\}$，全轨迹预测集合为：</p>
+<p>$$\mathcal{E}_{pre} = \{\mathcal{E}_{pre,t} \mid 1 \leq t \leq T\}$$</p>
+<p>使用<strong>最长公共子序列（LMS，Longest Matching Subsequence）</strong>度量预测状态与真实状态的文本相似度，得到预测奖励矩阵 $\tilde{r} \in \mathbb{R}^{T \times H}$：</p>
+<p>$$\tilde{r}_{t,h} = \text{LMS}(\hat{s}_{t,h},\, s_{t+h}), \quad \tilde{r}_{t,h} \in [0, 1]$$</p>
+
+<h3>奖励调制公式</h3>
+<p>任务奖励和预测奖励分别定义为：</p>
+<p>$$R_{task}(a_t) = \sum_{k=t}^{T} \gamma^{k-t} r_k, \qquad R_{pre}(a_t) = \sum_{h=1}^{H} \gamma^{h-1} \tilde{r}_{t,h}$$</p>
+<p>最终调制奖励采用乘法组合（而非加法），确保预测奖励不能独立引入额外信用：</p>
+<p>$$\boxed{R_t = R_{task}(a_t) \cdot \bigl(1 + R_{pre}(a_t)\bigr)}$$</p>
+<p>
+  这一设计遵循两个原则：（a）准确的状态预测保留并放大原始信用，反映可靠的环境感知；（b）不准确的预测削弱优势信号，降低那些碰运气获得高回报的动作的信用。乘法结构确保预测奖励仅调制任务奖励非零的动作，防止失败轨迹仅因合理的状态预测而获得奖励。
+</p>
+<p>预测奖励与结果奖励的相关性实验（200 条 ALFWorld rollout，Qwen2.5-3B-Instruct）显示：点二列相关系数为 0.41（$p \lt 0.01$），且平均预测奖励从初始化时的约 0.60 上升到收敛时的 0.70 以上，表明状态预测质量随训练持续提升。</p>
+
+<h3>状态分组与状态级优势</h3>
+<p>受 GiGPO 启发，WIA 进一步引入状态分组机制。通过哈希映射识别批次中的非重复状态集合 $\mathcal{O} = \{s^\dagger_o\}_{o=1}^{|\mathcal{O}|}$，将相同状态下的动作分组：</p>
+<p>$$\mathcal{G} = \bigl\{\{(s_t, a_t) \mid \text{hash}(s_t^{(i)}) = \text{hash}(s^\dagger_o)\} \mid s^\dagger_o \in \mathcal{O}\bigr\}$$</p>
+<p>每个动作 $a_t^{(o)}$ 的状态级优势为：</p>
+<p>$$A_S(a_t^{(o)}) = \frac{R_t^{(o)} - \text{avg}(\{R_t^{(o)} \mid (s_t^{(o)}, a_t^{(o)}) \in \mathcal{G}^{(o)}\})}{\text{std}(\{R_t^{(o)} \mid (s_t^{(o)}, a_t^{(o)}) \in \mathcal{G}^{(o)}\})}$$</p>
+<p>最终优势将状态级与轨迹级优势以系数 $\alpha$ 混合：</p>
+<p>$$A(a_t^{(i)}) = A_S(a_o^{(i)}) + \alpha \cdot A_E(\tau_i)$$</p>
+<p>策略优化目标（GRPO 风格）为：</p>
+<p>$$\mathcal{J}_{ours}(\theta) = \frac{1}{N} \sum_{i=1}^{N} \frac{1}{|\tau_i|} \sum_{t=1}^{|\tau_i|} \min\!\left(\rho_{\theta,t}^{(i)} A(a_t^{(i)}),\; \text{clip}(\rho_{\theta,t}^{(i)}, 1 \pm \epsilon) A(a_t^{(i)})\right) - \beta D_{KL}[\pi_\theta \| \pi_{ref}]$$</p>
+<p>其中 $\rho_{\theta,t}^{(i)} = \pi_\theta(a_t^{(i)} \mid s_t^{(i)}, y_{\lt t}^{(i)}) / \pi_{old}(a_t^{(i)} \mid s_t^{(i)}, y_{\lt t}^{(i)})$ 为重要性采样比率。</p>
+
+<h3>WIA 交互时序图</h3>
+<pre class="mermaid">
+sequenceDiagram
+    participant Agent as Agent LLM
+    participant Env as Environment
+    participant WIA as WIA 模块
+
+    Agent->>Env: 执行动作 a_t
+    Env-->>Agent: 返回真实状态 s_{t+1}
+    Agent->>WIA: 用提示 x_pre 预测未来 H 步状态
+    WIA-->>Agent: 预测状态集合 {ŝ_{t,h}}
+    WIA->>WIA: 计算 LMS(ŝ_{t,h}, s_{t+h}) = r̃_{t,h}
+    WIA->>WIA: 聚合预测奖励 R_pre(a_t)
+    WIA->>WIA: 调制奖励 R_t = R_task × (1 + R_pre)
+    WIA-->>Agent: 返回调制后奖励 R_t
+    Agent->>Agent: 状态分组，计算状态级优势 A_S
+    Agent->>Agent: 混合优势 A = A_S + α·A_E
+    Agent->>Agent: GRPO 策略更新
+</pre>
+
+<h2>AIW 组件：Agent-In-World</h2>
+<h3>核心思想</h3>
+<p>
+  AIW 解决了另一个关键问题：<strong>环境如何根据 Agent 的能力动态调整自身？</strong>传统静态训练集无法针对 Agent 的历史失败模式进行有针对性的练习。AIW 让同一个 LLM 充当环境角色，通过分析失败轨迹、建立失败模式库、检索相似任务，动态调整训练数据分布，使 Agent 能够反复练习其薄弱点。
+</p>
+
+<h3>失败模式分析</h3>
+<p>对每条失败轨迹，将完整交互序列、任务描述和目标输入 LLM，提示其进行结构化失败分析，输出包含以下字段的反思：</p>
+<ul>
+  <li><code>DOMINANT_TYPE</code>：主要失败类型（如 ENTITY_CONFUSION、MISSING_PRECONDITION）</li>
+  <li><code>DETAIL</code>：1-2 句话解释根本原因</li>
+  <li><code>CRITICAL_STEP</code>：失败变得不可逆的关键步骤</li>
+  <li><code>CORE_LESSON</code>：可推广的决策规则</li>
+  <li><code>RETRIEVAL_QUERY</code>：用于检索相似失败任务的查询</li>
+</ul>
+
+<p>在 ALFWorld 训练中，AIW 识别出 11 种独特失败模式：</p>
+<table>
+  <tr><th>数据集</th><th>失败模式（部分）</th></tr>
+  <tr><td>ALFWorld</td><td>repetitive_exploration, wrong_target_location, wrong_receptacle, premature_give_up, missing_precondition, entity_confusion, navigation_loop</td></tr>
+  <tr><td>WebShop</td><td>irrelevant_query, wrong_product_selection, wrong_attribute_selection, premature_purchase, excessive_browsing, price_constraint_violation</td></tr>
+  <tr><td>Search QA</td><td>wrong_answer, insufficient_retrieval, irrelevant_retrieval_query, information_misinterpretation, hallucinated_answer, premature_answer</td></tr>
+</table>
+
+<h3>失败模式识别伪代码</h3>
+<div class="algo-box">
+  <div class="algo-title">Algorithm: AIW — 失败模式分析与任务检索</div>
+  <p><span class="kw">Input:</span> 失败轨迹集合 <span class="var">F</span>，任务池 <span class="var">D</span>，失败模式库 <span class="var">M</span> ← ∅</p>
+  <p><span class="kw">Output:</span> 更新后的训练分布 <span class="var">p_D</span></p>
+  <br>
+  <p><span class="kw">for each</span> 失败轨迹 <span class="var">τ_fail</span> <span class="kw">in</span> <span class="var">F</span> <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤1：用 LLM 分析失败轨迹，提取结构化反思</span></p>
+  <p style="padding-left:1.5em"><span class="var">reflection</span> ← <span class="fn">LLM_analyze</span>(<span class="var">τ_fail</span>, task_desc, objective)</p>
+  <p style="padding-left:1.5em"><span class="cm">// 包含 DOMINANT_TYPE, CORE_LESSON, RETRIEVAL_QUERY</span></p>
+  <br>
+  <p style="padding-left:1.5em"><span class="cm">// 步骤2：以失败模式为 key 去重存储（不是每条轨迹都存）</span></p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> <span class="var">reflection.DOMINANT_TYPE</span> <span class="kw">not in</span> <span class="var">M</span> <span class="kw">then</span></p>
+  <p style="padding-left:3em"><span class="fn">M.store</span>(<span class="var">reflection</span>, <span class="var">τ_fail</span>, task_info)</p>
+  <p style="padding-left:1.5em"><span class="kw">end if</span></p>
+  <p><span class="kw">end for</span></p>
+  <br>
+  <p><span class="cm">// 步骤3：用 LLM 检索与当前失败模式相似的历史任务</span></p>
+  <p><span class="kw">for each</span> 失败模式 <span class="var">mode</span> <span class="kw">in</span> <span class="var">M</span> <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="var">similar_tasks</span> ← <span class="fn">LLM_retrieve</span>(<span class="var">mode.RETRIEVAL_QUERY</span>, <span class="var">M</span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// 基于错误模式检索，而非表面文本相似度</span></p>
+  <p><span class="kw">end for</span></p>
+  <br>
+  <p><span class="cm">// 步骤4：将检索到的任务重新注入训练集，调整采样分布</span></p>
+  <p><span class="var">p_D</span> ← <span class="fn">update_distribution</span>(<span class="var">D</span>, <span class="var">similar_tasks</span>)</p>
+  <p><span class="kw">return</span> <span class="var">p_D</span></p>
+</div>
+
+<h3>任务检索与数据重塑的优势</h3>
+<p>
+  AIW 的检索策略与简单的随机失败任务回放（random failed-task replay）或基于任务文本的检索（task-text retrieval）有本质区别：<strong>AIW 基于底层错误模式进行检索</strong>，能够连接表面不同但共享同一程序性弱点的任务。例如，"将干净的叉子放入抽屉"和"将切好的苹果放在柜台上"表面上完全不同，但它们都涉及 ENTITY_CONFUSION 模式（Agent 混淆了相似对象），因此在 AIW 中会被归入同一失败模式桶，相互检索。
+</p>
+<p>
+  在 ALFWorld 训练中，失败模式库的规模从第 15 步的 996 条快速增长到第 150 步的 3931 条，随后趋于饱和——这表明任务被快速分配到失败模式桶，随后每个模式的积累逐渐放缓，库趋于充分填充。
+</p>
+
+<h2>训练流程</h2>
+<h3>完整自举进化循环</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["初始化策略 π_θ<br>任务分布 p_D，失败模式库 M ← ∅"] --> B
+
+    B["从 p_D 采样批次任务 {q_i}"] --> C
+
+    C["Agent 角色：执行 rollout<br>生成轨迹 τ_i = {(s_t, a_t, r_t)}"] --> D
+
+    D["WIA：预测未来 H 步状态<br>ŝ_{t,h} ~ π(· | a_t, x_pre)"] --> E
+
+    E["计算预测得分<br>r̃_{t,h} = LMS(ŝ_{t,h}, s_{t+h})"] --> F
+
+    F["调制奖励<br>R_t = R_task × (1 + R_pre)"] --> G
+
+    G["状态分组 + 计算状态级优势 A_S<br>混合优势 A = A_S + α·A_E"] --> H
+
+    H["GRPO 风格策略更新 π_θ"] --> I
+
+    I["AIW：分析失败轨迹<br>提取失败模式 → 存入库 M"] --> J
+
+    J["AIW：检索相似失败任务<br>更新训练分布 p_D"] --> K
+
+    K{"达到最大训练步数？"}
+    K -- 否 --> B
+    K -- 是 --> L["返回优化后的策略 π_θ"]
+</pre>
+
+<h3>超参数配置</h3>
+<table>
+  <tr><th>超参数</th><th>值</th><th>说明</th></tr>
+  <tr><td>学习率</td><td>1e-6</td><td>AdamW 优化器</td></tr>
+  <tr><td>训练批大小</td><td>16/16/256</td><td>ALFWorld/WebShop/Search-QA</td></tr>
+  <tr><td>clip ratio low/high</td><td>0.2 / 0.28</td><td>GRPO 裁剪范围</td></tr>
+  <tr><td>KL 系数 β</td><td>1e-3</td><td>KL 散度惩罚强度</td></tr>
+  <tr><td>rollout 温度</td><td>0.9</td><td>训练时采样温度</td></tr>
+  <tr><td>最大交互步数 T_max</td><td>50 / 15 / 4</td><td>ALFWorld / WebShop / Search-QA</td></tr>
+  <tr><td>状态相似度阈值</td><td>0.9</td><td>LMS 相似度，用于状态分组</td></tr>
+  <tr><td>预测步数 H</td><td>5% × T_max</td><td>最优值，超过此值性能下降</td></tr>
+  <tr><td>优势混合系数 α</td><td>1.0</td><td>轨迹级与状态级优势平衡点</td></tr>
+  <tr><td>反思生成温度</td><td>0.5</td><td>AIW 失败模式分析温度</td></tr>
+  <tr><td>group size</td><td>8</td><td>GRPO/RLOO 组大小</td></tr>
+  <tr><td>总训练轮次</td><td>150</td><td>所有实验统一</td></tr>
+  <tr><td>硬件</td><td>8× NVIDIA H20</td><td>单节点</td></tr>
+</table>
+
+<h2>实验结果</h2>
+<h3>多基准综合性能对比（ECharts）</h3>
+<div id="chart-main" class="echarts-container" style="height:380px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-main');
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '各方法在 ALFWorld / WebShop 上的平均成功率 (%)', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 14 } },
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    legend: { data: ['ALFWorld (1.5B)', 'WebShop (1.5B)', 'ALFWorld (7B)', 'WebShop (7B)'], bottom: 0, textStyle: { color: '#cdd6f4' } },
+    grid: { left: '3%', right: '4%', bottom: '12%', top: '12%', containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: ['GRPO', 'GiGPO', 'Role-Agent'],
+      axisLabel: { color: '#cdd6f4', fontSize: 13 }
+    },
+    yAxis: { type: 'value', min: 50, max: 100, axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'ALFWorld (1.5B)', type: 'bar', data: [72.8, 86.7, 90.9], barGap: '5%', itemStyle: { color: '#89b4fa' }, label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 } },
+      { name: 'WebShop (1.5B)', type: 'bar', data: [56.8, 65.0, 71.9], itemStyle: { color: '#89dceb' }, label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 } },
+      { name: 'ALFWorld (7B)', type: 'bar', data: [77.6, 90.8, 93.8], itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 } },
+      { name: 'WebShop (7B)', type: 'bar', data: [66.1, 72.8, 77.1], itemStyle: { color: '#fab387' }, label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 } }
+    ]
+  });
+})();
+</script>
+
+<h3>ALFWorld 各任务类型详细结果（Qwen2.5-1.5B）</h3>
+<div id="chart-alf" class="echarts-container" style="height:350px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-alf');
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'ALFWorld 各子任务成功率 (%, Qwen2.5-1.5B)', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 13 } },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['GRPO', 'GiGPO', 'Role-Agent'], bottom: 0, textStyle: { color: '#cdd6f4' } },
+    grid: { left: '3%', right: '4%', bottom: '12%', top: '14%', containLabel: true },
+    xAxis: { type: 'category', data: ['Pick', 'Look', 'Clean', 'Heat', 'Cool', 'Pick2', 'All'], axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', min: 0, max: 100, axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'GRPO', type: 'bar', data: [85.3, 53.7, 84.5, 78.2, 59.7, 53.5, 72.8], itemStyle: { color: '#89b4fa' } },
+      { name: 'GiGPO', type: 'bar', data: [94.4, 67.5, 94.8, 94.4, 79.8, 76.4, 86.7], itemStyle: { color: '#cba6f7' } },
+      { name: 'Role-Agent', type: 'bar', data: [95.8, 78.3, 95.0, 97.0, 87.5, 91.7, 90.9], itemStyle: { color: '#a6e3a1' } }
+    ]
+  });
+})();
+</script>
+
+<h3>ALFWorld 与 WebShop 完整数值结果</h3>
+<table>
+  <tr>
+    <th>类型</th><th>方法</th>
+    <th>Pick</th><th>Look</th><th>Clean</th><th>Heat</th><th>Cool</th><th>Pick2</th>
+    <th>ALFWorld All</th><th>WebShop Score</th><th>WebShop Succ.</th>
+  </tr>
+  <tr><td>闭源</td><td>GPT-4o</td><td>75.3</td><td>60.8</td><td>31.2</td><td>56.7</td><td>21.6</td><td>49.8</td><td>48.0</td><td>31.8</td><td>23.7</td></tr>
+  <tr><td>闭源</td><td>Gemini-2.5-Pro</td><td>92.8</td><td>63.3</td><td>62.1</td><td>69.0</td><td>26.6</td><td>58.7</td><td>60.3</td><td>42.5</td><td>35.9</td></tr>
+  <tr><td>Prompt (1.5B)</td><td>ReAct</td><td>17.4</td><td>20.5</td><td>15.7</td><td>6.2</td><td>7.7</td><td>2.0</td><td>12.8</td><td>40.1</td><td>11.3</td></tr>
+  <tr><td>Prompt (1.5B)</td><td>Reflexion</td><td>35.3</td><td>22.2</td><td>21.7</td><td>13.6</td><td>19.4</td><td>3.7</td><td>21.8</td><td>55.8</td><td>21.9</td></tr>
+  <tr><td>RL (1.5B)</td><td>GRPO</td><td>85.3</td><td>53.7</td><td>84.5</td><td>78.2</td><td>59.7</td><td>53.5</td><td>72.8</td><td>75.8</td><td>56.8</td></tr>
+  <tr><td>RL (1.5B)</td><td>GiGPO</td><td>94.4</td><td>67.5</td><td>94.8</td><td>94.4</td><td>79.8</td><td>76.4</td><td>86.7</td><td>83.1</td><td>65.0</td></tr>
+  <tr class="highlight-row"><td>RL (1.5B)</td><td><strong>Role-Agent</strong></td><td><span class="best">95.8</span></td><td><span class="best">78.3</span></td><td><span class="best">95.0</span></td><td><span class="best">97.0</span></td><td><span class="best">87.5</span></td><td><span class="best">91.7</span></td><td><span class="best">90.9</span></td><td><span class="best">87.7</span></td><td><span class="best">71.9</span></td></tr>
+  <tr><td>RL (7B)</td><td>GRPO</td><td>90.8</td><td>66.1</td><td>89.3</td><td>74.7</td><td>72.5</td><td>64.7</td><td>77.6</td><td>79.3</td><td>66.1</td></tr>
+  <tr><td>RL (7B)</td><td>GiGPO</td><td>97.7</td><td>82.7</td><td>98.8</td><td>83.7</td><td>89.3</td><td>79.2</td><td>90.8</td><td>84.4</td><td>72.8</td></tr>
+  <tr class="highlight-row"><td>RL (7B)</td><td><strong>Role-Agent</strong></td><td><span class="best">98.3</span></td><td><span class="best">93.7</span></td><td><span class="best">98.5</span></td><td><span class="best">88.9</span></td><td><span class="best">90.0</span></td><td><span class="best">92.8</span></td><td><span class="best">93.8</span></td><td><span class="best">88.0</span></td><td><span class="best">77.1</span></td></tr>
+</table>
+
+<h3>Search-QA 结果</h3>
+<div id="chart-search" class="echarts-container" style="height:350px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-search');
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: 'Search-Augmented QA 各数据集 Accuracy (%, Qwen2.5-3B)', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 13 } },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['Search-R1', 'ZeroSearch', 'GiGPO', 'Role-Agent'], bottom: 0, textStyle: { color: '#cdd6f4' } },
+    grid: { left: '3%', right: '4%', bottom: '12%', top: '14%', containLabel: true },
+    xAxis: { type: 'category', data: ['NQ', 'TriviaQA', 'PopQA', 'HotpotQA', '2Wiki', 'MuSiQue', 'Bamboogle', 'Avg'], axisLabel: { color: '#cdd6f4' } },
+    yAxis: { type: 'value', min: 0, max: 75, axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'Search-R1', type: 'bar', data: [34.1, 54.5, 37.8, 32.4, 31.9, 10.3, 26.4, 32.5], itemStyle: { color: '#89b4fa' } },
+      { name: 'ZeroSearch', type: 'bar', data: [41.4, 57.4, 44.8, 27.4, 30.0, 9.8, 11.1, 31.7], itemStyle: { color: '#cba6f7' } },
+      { name: 'GiGPO', type: 'bar', data: [42.0, 59.5, 42.4, 36.9, 37.0, 12.6, 64.1, 42.1], itemStyle: { color: '#89dceb' } },
+      { name: 'Role-Agent', type: 'bar', data: [40.1, 60.4, 49.8, 38.8, 45.2, 17.8, 68.4, 45.8], itemStyle: { color: '#a6e3a1' } }
+    ]
+  });
+})();
+</script>
+
+<table>
+  <tr><th>方法</th><th>NQ†</th><th>TriviaQA*</th><th>PopQA*</th><th>HotpotQA†</th><th>2Wiki*</th><th>MuSiQue*</th><th>Bamboogle*</th><th><strong>Avg</strong></th></tr>
+  <tr><td>R1-Instruct</td><td>27.0</td><td>53.7</td><td>19.9</td><td>23.7</td><td>29.2</td><td>7.2</td><td>29.3</td><td>27.1</td></tr>
+  <tr><td>Search-R1</td><td>34.1</td><td>54.5</td><td>37.8</td><td>32.4</td><td>31.9</td><td>10.3</td><td>26.4</td><td>32.5</td></tr>
+  <tr><td>ZeroSearch</td><td>41.4</td><td>57.4</td><td>44.8</td><td>27.4</td><td>30.0</td><td>9.8</td><td>11.1</td><td>31.7</td></tr>
+  <tr><td>GiGPO</td><td>42.0</td><td>59.5</td><td>42.4</td><td>36.9</td><td>37.0</td><td>12.6</td><td>64.1</td><td>42.1</td></tr>
+  <tr class="highlight-row"><td><strong>Role-Agent</strong></td><td>40.1</td><td><span class="best">60.4</span></td><td><span class="best">49.8</span></td><td><span class="best">38.8</span></td><td><span class="best">45.2</span></td><td><span class="best">17.8</span></td><td><span class="best">68.4</span></td><td><span class="best">45.8</span></td></tr>
+</table>
+<p>† 域内数据集；* 域外数据集。Role-Agent 在多跳 QA 上增益更为显著（2Wiki +8.2%，MuSiQue +5.2%），体现了双角色共进化赋予 Agent 的多步检索与推理能力。</p>
+
+<h3>稳定性分析（三次运行均值 ± 标准差）</h3>
+<table>
+  <tr><th>方法</th><th>ALFWorld</th><th>WebShop</th></tr>
+  <tr><td>GRPO (1.5B)</td><td>72.8 ± 1.5</td><td>56.8 ± 0.7</td></tr>
+  <tr><td>GiGPO (1.5B)</td><td>86.7 ± 0.6</td><td>65.0 ± 1.1</td></tr>
+  <tr class="highlight-row"><td><strong>Role-Agent (1.5B)</strong></td><td><span class="best">90.9 ± 0.8</span></td><td><span class="best">71.9 ± 0.9</span></td></tr>
+  <tr><td>GRPO (7B)</td><td>77.6 ± 1.0</td><td>66.1 ± 0.9</td></tr>
+  <tr><td>GiGPO (7B)</td><td>90.8 ± 0.5</td><td>72.8 ± 1.8</td></tr>
+  <tr class="highlight-row"><td><strong>Role-Agent (7B)</strong></td><td><span class="best">93.8 ± 0.8</span></td><td><span class="best">77.1 ± 0.6</span></td></tr>
+</table>
+
+<h2>消融实验</h2>
+<h3>各组件贡献分析</h3>
+<div id="chart-ablation" class="echarts-container" style="height:350px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-ablation');
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: { text: '消融实验：各组件对性能的贡献 (Qwen2.5-1.5B)', left: 'center', textStyle: { color: '#cdd6f4', fontSize: 13 } },
+    tooltip: { trigger: 'axis' },
+    legend: { data: ['ALFWorld', 'WebShop', '平均'], bottom: 0, textStyle: { color: '#cdd6f4' } },
+    grid: { left: '3%', right: '4%', bottom: '12%', top: '14%', containLabel: true },
+    xAxis: { type: 'category', data: ['GiGPO (基线)', '- w/o AIW', '- w/o WIA预测奖励', 'Role-Agent (完整)'], axisLabel: { color: '#cdd6f4', interval: 0 } },
+    yAxis: { type: 'value', min: 60, max: 95, axisLabel: { color: '#cdd6f4', formatter: '{value}%' }, splitLine: { lineStyle: { color: '#45475a' } } },
+    series: [
+      { name: 'ALFWorld', type: 'bar', data: [86.7, 87.5, 88.0, 90.9], itemStyle: { color: '#89b4fa' }, label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 } },
+      { name: 'WebShop', type: 'bar', data: [65.0, 66.9, 68.3, 71.9], itemStyle: { color: '#fab387' }, label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 } },
+      { name: '平均', type: 'bar', data: [75.9, 77.2, 78.2, 81.4], itemStyle: { color: '#a6e3a1' }, label: { show: true, position: 'top', color: '#cdd6f4', fontSize: 11 } }
+    ]
+  });
+})();
+</script>
+
+<table>
+  <tr><th>方法</th><th>ALFWorld</th><th>WebShop</th><th>平均</th></tr>
+  <tr><td>GiGPO（基线）</td><td>86.7</td><td>65.0</td><td>75.9</td></tr>
+  <tr><td>Role-Agent — w/o AIW</td><td>87.5</td><td>66.9</td><td>77.2</td></tr>
+  <tr><td>Role-Agent — w/o 预测奖励（WIA）</td><td>88.0</td><td>68.3</td><td>78.2</td></tr>
+  <tr class="highlight-row"><td><strong>Role-Agent（完整）</strong></td><td><span class="best">90.9</span></td><td><span class="best">71.9</span></td><td><span class="best">81.4</span></td></tr>
+</table>
+
+<h3>关键发现</h3>
+<ul>
+  <li><strong>AIW 的贡献更为显著</strong>：移除 AIW 导致 WebShop 上 5.0% 的性能下降（71.9% → 66.9%），凸显了针对性环境反馈在动态数据分布调整中的关键作用。没有 AIW，Agent 缺乏对关键失败模式的迭代练习。</li>
+  <li><strong>WIA 提供互补增益</strong>：移除预测奖励导致平均下降 3.2%，证明 WIA 赋予 Agent 的隐式世界先验能够增强每步的决策能力。</li>
+  <li><strong>两个组件互补而非冗余</strong>：两个消融变体均优于 GiGPO 基线，说明 WIA 和 AIW 各自提供了超越状态分组信用分配的独立增益。</li>
+</ul>
+
+<h3>超参数敏感性分析</h3>
+<table>
+  <tr><th>超参数</th><th>取值</th><th>ALFWorld</th><th>WebShop</th><th>平均</th></tr>
+  <tr><td rowspan="3">优势混合系数 α</td><td>0.5</td><td>89.5</td><td>71.0</td><td>80.2</td></tr>
+  <tr class="highlight-row"><td><strong>1.0（默认）</strong></td><td><span class="best">90.9</span></td><td><span class="best">71.9</span></td><td><span class="best">81.4</span></td></tr>
+  <tr><td>2.0</td><td>86.0</td><td>65.4</td><td>75.7</td></tr>
+  <tr><td rowspan="3">预测步数 H</td><td>5% × T_max（默认）</td><td>90.9</td><td>71.9</td><td>81.4</td></tr>
+  <tr><td>10% × T_max</td><td>90.2</td><td>68.5</td><td>79.3</td></tr>
+  <tr><td>20% × T_max</td><td>75.6</td><td>62.3</td><td>69.0</td></tr>
+</table>
+<p>
+  <strong>$\alpha = 1.0$</strong> 提供了轨迹级与状态级优势的最佳平衡。$\alpha$ 过小会削弱全局任务完成信号，过大则稀释细粒度状态级信用分配。<strong>$H$ 的选择</strong>需在信息丰富度与上下文窗口占用之间权衡：$H$ 过大导致预测占据过多上下文，削弱 Agent 对动作规划的专注度，并可能引发奖励黑客（reward hacking）。
+</p>
+
+<h2>总结与启发</h2>
+<h3>核心贡献回顾</h3>
+<p>
+  Role-Agent 提出了一个简洁而有力的框架：<strong>单个 LLM 通过角色切换实现 Agent 与 Environment 的自举共同进化</strong>。WIA 将世界动力学内化为过程奖励，AIW 将失败经验转化为有针对性的训练数据，两者协同作用，在多个基准上实现了超越强基线 4% 以上的平均增益。
+</p>
+
+<h3>对 Self-Play 与 Bootstrapping 的深层思考</h3>
+<p>
+  Role-Agent 的设计触及了 AI 训练中一个深刻的哲学问题：<strong>自我改进的边界在哪里？</strong>传统 self-play（如 AlphaGo）需要两个独立模型相互竞争，通过外部对手提供改进信号。Role-Agent 将这一范式推进到极致——用同一个模型扮演所有角色，通过提示词工程实现视角切换。这一方法的成功表明，LLM 内化的世界知识已经足够丰富，可以为自身提供有意义的对抗性反馈。
+</p>
+<p>
+  然而，这也引出了一个值得警惕的问题：<strong>自我评估的偏差（Self-Evaluation Bias）</strong>。当同一个模型既是学生又是老师时，其固有的偏见和盲点可能会被循环强化而非纠正。Role-Agent 通过两个机制部分缓解了这一问题：（1）WIA 的过程奖励基于客观的状态对齐度（LMS 分数），而非主观评判；（2）AIW 的失败模式识别依赖于真实交互历史中的失败信号，而非模型的主观臆测。但论文作者也承认，使用更强的冻结环境 LLM 可以提升 AIW 组件的质量，这暗示当前单模型设计存在能力上限。
+</p>
+<p>
+  从 Bootstrapping 的角度看，Role-Agent 的训练动力学非常有趣：早期阶段 Role-Agent 表现不如 GiGPO，但随着失败模式库的积累和训练分布的动态调整，它逐渐超越并拉开差距。这种"慢热"特性是自举系统的典型行为——需要足够的失败经验积累才能建立有效的自我改进循环。
+</p>
+<p>
+  <strong>对未来研究的启发</strong>：Role-Agent 的成功为以下方向提供了实证支持：（1）<strong>轻量级过程奖励</strong>：无需训练独立 PRM，通过状态预测对齐即可获得有意义的过程信号；（2）<strong>失败驱动的课程学习</strong>：基于错误模式而非难度分级的课程设计，能够更精准地定位 Agent 的薄弱点；（3）<strong>单模型多角色范式</strong>：随着 LLM 能力的提升，越来越多的辅助角色（评判者、环境、教师）可以被内化到单个模型中，降低系统复杂度。
+</p>
+<p>
+  <strong>局限性</strong>：当前评估局限于文本环境；状态分组的相似度阈值来自先前研究，限制了跨任务泛化；更强的冻结环境 LLM 虽能提升 AIW 质量，但会引入额外外部知识，影响对比公平性。多模态和实时具身场景的扩展是重要的未来方向。
+</p>
+
+<h2>参考文献</h2>
+<ul>
+  <li>Guo et al., 2025. DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning. <em>arXiv:2501.12948</em></li>
+  <li>Feng et al., 2025. Group-in-Group Policy Optimization for LLM Agent Training (GiGPO). <em>arXiv:2505.10978</em></li>
+  <li>Shridhar et al., 2020. ALFWorld: Aligning Text and Embodied Environments for Interactive Learning. <em>arXiv:2010.03768</em></li>
+  <li>Yao et al., 2022a. WebShop: Towards Scalable Real-World Web Interaction with Grounded Language Agents. <em>NeurIPS 2022</em></li>
+  <li>Yao et al., 2022b. ReAct: Synergizing Reasoning and Acting in Language Models. <em>ICLR 2023</em></li>
+  <li>Shinn et al., 2023. Reflexion: Language Agents with Verbal Reinforcement Learning. <em>NeurIPS 2023</em></li>
+  <li>Schulman et al., 2017. Proximal Policy Optimization Algorithms. <em>arXiv:1707.06347</em></li>
+  <li>Rafailov et al., 2023. Direct Preference Optimization: Your Language Model is Secretly a Reward Model. <em>NeurIPS 2023</em></li>
+  <li>Chu et al., 2026. GPG: A Simple and Strong Reinforcement Learning Baseline for Model Reasoning. <em>ICLR 2026</em></li>
+  <li>Zhai et al., 2025. AgentEvolver: Towards Efficient Self-Evolving Agent System. <em>arXiv:2511.10395</em></li>
+  <li>Wu et al., 2025. EvolveR: Self-Evolving LLM Agents through an Experience-Driven Lifecycle. <em>arXiv:2510.16079</em></li>
+  <li>Chen et al., 2025b. Multi-Agent Evolve: LLM Self-Improve through Co-Evolution (MAE). <em>arXiv:2510.23595</em></li>
+  <li>Jin et al., 2025. Search-R1: Training LLMs to Reason and Leverage Search Engines with RL. <em>arXiv:2503.09516</em></li>
+  <li>Sun et al., 2025. ZeroSearch: Incentivize the Search Capability of LLMs without Searching. <em>arXiv:2505.04588</em></li>
+  <li>Wang et al., 2025b. StepSearch: Igniting LLMs Search Ability via Step-wise Proximal Policy Optimization. <em>arXiv:2505.15107</em></li>
+  <li>Yang et al., 2018. HotpotQA: A Dataset for Diverse, Explainable Multi-hop Question Answering. <em>EMNLP 2018</em></li>
+  <li>Li et al., 2025. CodeI/O: Condensing Reasoning Patterns via Code Input-Output Prediction. <em>arXiv:2502.07316</em></li>
+  <li>Gu et al., 2024. Is Your LLM Secretly a World Model of the Internet? <em>arXiv:2411.06559</em></li>
+</ul>
+
+</main>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+    if (!h.id) h.id = 's' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs = new IntersectionObserver(es => es.forEach(e => {
+    const l = toc.querySelector('a[href="#' + e.target.id + '"]');
+    if (l) l.classList.toggle('active', e.isIntersecting);
+  }), { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+</script>
+</body>
+</html>

@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>verl RL 算法全景分析报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --purple: #cba6f7;
+      --yellow: #f9e2af;
+      --red: #f38ba8;
+      --teal: #94e2d5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 16px 10px; font-size: 12.5px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 1px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 18px; font-size: 11.5px; opacity: 0.85; }
+    #toc a.toc-h4 { padding-left: 30px; font-size: 11px; opacity: 0.7; }
+    main { margin-left: 246px; max-width: none; padding: 40px 60px 80px; }
+    h1 { color: var(--heading); font-size: 2em; margin-bottom: 10px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2.2em 0 0.7em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--purple); font-size: 1.12em; margin: 1.6em 0 0.5em; }
+    h4 { color: var(--teal); font-size: 1.02em; margin: 1.2em 0 0.4em; }
+    p { margin: 0.65em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    em { color: var(--yellow); font-style: normal; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.91em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 9px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #262636; }
+    td.center { text-align: center; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.87em; line-height: 1.6; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.87em; }
+    ul, ol { margin: 0.5em 0 0.5em 1.5em; }
+    li { margin-bottom: 4px; }
+    .mermaid { background: #2a2a3e; border-radius: 8px; padding: 20px; margin: 1.2em 0; text-align: center; overflow-x: auto; }
+    .echarts-container { margin: 1.2em 0; border-radius: 8px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.2em 0; }
+    .badge { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 0 2px; vertical-align: middle; }
+    .badge-blue { background: var(--heading); color: #1e1e2e; }
+    .badge-green { background: var(--strong); color: #1e1e2e; }
+    .badge-orange { background: var(--quote-bar); color: #1e1e2e; }
+    .badge-purple { background: var(--purple); color: #1e1e2e; }
+    .badge-red { background: var(--red); color: #1e1e2e; }
+    .badge-teal { background: var(--teal); color: #1e1e2e; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; margin: 1.2em 0; font-size: .88em; line-height: 2.0; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: var(--purple); font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: var(--teal); }
+    .algo-box .fn  { color: var(--strong); }
+    .algo-box .num { color: var(--yellow); }
+    .algo-box .op  { color: var(--red); }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 1.2em 0; }
+    .card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .card h4 { color: var(--heading); margin: 0 0 8px; font-size: 1em; }
+    .card p { font-size: 0.88em; margin: 4px 0; }
+    .card .tag { font-size: 0.75em; color: #6c7086; }
+    .formula-box { background: #1e1e2e; border: 1px solid var(--border); border-left: 3px solid var(--purple); border-radius: 0 6px 6px 0; padding: 12px 18px; margin: 1em 0; }
+    .impl-box { background: #1a2a1a; border: 1px solid #2a4a2a; border-left: 3px solid var(--strong); border-radius: 0 6px 6px 0; padding: 12px 18px; margin: 1em 0; }
+    .impl-box .impl-title { color: var(--strong); font-weight: 700; font-size: 0.88em; margin-bottom: 8px; }
+    .info-table table { font-size: 0.9em; }
+    .info-table td:first-child { color: var(--heading); font-weight: 600; width: 130px; }
+    .section-header { display: flex; align-items: center; gap: 12px; margin: 2em 0 0.8em; }
+    .section-num { background: var(--heading); color: #1e1e2e; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9em; flex-shrink: 0; }
+    /* Timeline */
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 800px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.88em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.83em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.73em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 3px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+    .tl-tag.red    { background: #f38ba8; }
+    .check { color: var(--strong); } .cross { color: var(--red); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>📋 目录</h2></nav>
+<main>
+
+<h1>🚀 verl RL 算法全景分析报告</h1>
+<p style="color:#6c7086; font-size:0.9em">基于 verl 源码 <code>verl/trainer/ppo/core_algos.py</code> + 算法原论文 | 2026-07-02</p>
+
+<div class="info-table" style="margin:1.2em 0">
+<table>
+  <tr><th>框架版本</th><td>verl main branch（含 11 种优势估计器 + 10 种策略损失函数）</td></tr>
+  <tr><th>核心文件</th><td><code>verl/trainer/ppo/core_algos.py</code>（约 2500 行）</td></tr>
+  <tr><th>算法总数</th><td>14 个主流算法变体（PPO / GRPO / RLOO / ReMax / REINFORCE++ / DAPO / GSPO / DPPO / GPG / OPO / OTB / GDPO / CISPO / SAPO/GMPO）</td></tr>
+  <tr><th>报告目标</th><td>覆盖每个算法的理论推导、关键公式、verl 代码实现细节和对比分析</td></tr>
+</table>
+</div>
+
+<hr>
+
+<!-- ========== 1. 算法分类概览 ========== -->
+<h2 id="overview">1. 算法分类总览</h2>
+
+<p>verl 将 RL 算法实现分为两个正交维度：<strong>优势估计器（Advantage Estimator）</strong> 负责计算每个 token/序列的优势值 $\hat{A}$，<strong>策略损失函数（Policy Loss）</strong> 负责把优势值转化为梯度信号。两者可以灵活组合配置。</p>
+
+<style>
+.dim-wrap { display: flex; align-items: stretch; gap: 0; margin: 1.2em 0; }
+.dim-col  { flex: 1; background: #1e1e2e; border: 1.5px solid var(--border); border-radius: 8px; padding: 0 0 10px; min-width: 0; }
+.dim-col-ae  { border-color: #89b4fa; }
+.dim-col-pl  { border-color: #cba6f7; }
+.dim-col-title { font-weight: 700; font-size: 0.88em; padding: 10px 14px 8px; border-bottom: 1px solid var(--border); margin-bottom: 6px; }
+.dim-col-ae .dim-col-title { color: #89b4fa; }
+.dim-col-pl .dim-col-title { color: #cba6f7; }
+.dim-item { margin: 5px 10px; background: #2a2a3e; border-radius: 5px; padding: 5px 10px; font-size: 0.83em; line-height: 1.4; }
+.dim-item strong { color: #94e2d5; font-size: 0.95em; }
+.dim-item span   { color: #6c7086; font-size: 0.88em; }
+.dim-arrow { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 14px; gap: 4px; flex-shrink: 0; }
+.dim-arrow .arr-line { width: 2px; flex: 1; background: var(--border); }
+.dim-arrow .arr-mid  { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.dim-arrow .arr-label { font-size: 0.75em; color: #6c7086; white-space: nowrap; writing-mode: vertical-rl; letter-spacing: 0.05em; }
+.dim-arrow .arr-head  { color: #89b4fa; font-size: 1.2em; }
+</style>
+<div class="dim-wrap">
+  <!-- 左列：优势估计器 -->
+  <div class="dim-col dim-col-ae">
+    <div class="dim-col-title">🎯 优势估计器 &nbsp;<code style="font-size:0.85em">adv_estimator</code></div>
+    <div class="dim-item"><strong>GAE</strong> <span>— Generalized Advantage Estimation</span></div>
+    <div class="dim-item"><strong>GRPO</strong> <span>— Group Relative PO</span></div>
+    <div class="dim-item"><strong>GRPO Vectorized</strong> <span>— CUDA 向量化版</span></div>
+    <div class="dim-item"><strong>REINFORCE++</strong> <span>— 全局 Batch 归一化</span></div>
+    <div class="dim-item"><strong>REINFORCE++ Baseline</strong> <span>— 组内去均值 + 全局白化</span></div>
+    <div class="dim-item"><strong>ReMax</strong> <span>— Greedy Decoding Baseline</span></div>
+    <div class="dim-item"><strong>RLOO</strong> <span>— Leave-One-Out</span></div>
+    <div class="dim-item"><strong>OPO</strong> <span>— 长度加权最优基线</span></div>
+    <div class="dim-item"><strong>GPG</strong> <span>— Group Policy Gradient</span></div>
+    <div class="dim-item"><strong>OTB</strong> <span>— Optimal Token Baseline</span></div>
+    <div class="dim-item"><strong>GDPO</strong> <span>— Decoupled Normalization</span></div>
+    <div class="dim-item"><strong>GRPO PassK</strong> <span>— Pass@k 专用</span></div>
+  </div>
+
+  <!-- 中间箭头 -->
+  <div class="dim-arrow">
+    <div class="arr-line"></div>
+    <div class="arr-mid">
+      <span class="arr-label">灵活组合配置</span>
+      <span class="arr-head">→</span>
+    </div>
+    <div class="arr-line"></div>
+  </div>
+
+  <!-- 右列：策略损失函数 -->
+  <div class="dim-col dim-col-pl">
+    <div class="dim-col-title">📉 策略损失函数 &nbsp;<code style="font-size:0.85em">policy_loss.loss_mode</code></div>
+    <div class="dim-item"><strong>vanilla</strong> <span>— PPO Clipped Surrogate（标准/双侧 Clip）</span></div>
+    <div class="dim-item"><strong>gspo</strong> <span>— Group Sequence PO（序列级比率）</span></div>
+    <div class="dim-item"><strong>dppo_tv</strong> <span>— Divergence PPO（TV 散度 Mask）</span></div>
+    <div class="dim-item"><strong>dppo_kl</strong> <span>— Divergence PPO（Binary KL Mask）</span></div>
+    <div class="dim-item"><strong>sapo</strong> <span>— Smooth Adaptive PO（sigmoid 门控）</span></div>
+    <div class="dim-item"><strong>gpg</strong> <span>— Direct Policy Gradient（无 clip）</span></div>
+    <div class="dim-item"><strong>clip_cov</strong> <span>— Clip + 协方差选择性屏蔽</span></div>
+    <div class="dim-item"><strong>kl_cov</strong> <span>— KL + 协方差高值 token 修正</span></div>
+    <div class="dim-item"><strong>geo_mean</strong> <span>— GMPO 几何均值序列比率</span></div>
+    <div class="dim-item"><strong>cispo</strong> <span>— Clipped IS + Stop Gradient</span></div>
+  </div>
+</div>
+
+<h3>算法谱系时间线</h3>
+<div class="timeline-wrap">
+  <div class="timeline">
+    <div class="tl-col">
+      <div class="tl-period">2017</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">基础</span><br><strong>PPO</strong><br>Schulman et al.<br>Clipped surrogate + GAE</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2023</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag orange">LLM RL</span><br><strong>ReMax</strong><br>Greedy decoding baseline，去掉 critic</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2024</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">核心</span><br><strong>GRPO</strong><br>DeepSeekMath，Group 归一化</div>
+        <div class="tl-item"><span class="tl-tag green">简化</span><br><strong>RLOO</strong><br>Leave-One-Out 基线</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025 Q1</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag">改进</span><br><strong>REINFORCE++</strong><br>全局归一化</div>
+        <div class="tl-item"><span class="tl-tag orange">DAPO</span><br>解耦 Clip + 动态采样</div>
+        <div class="tl-item"><span class="tl-tag green">Dr.GRPO</span><br>消除长度偏差</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025 Q2</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag purple">GPG</span><br>极简 RL，无 clip/KL/critic</div>
+        <div class="tl-item"><span class="tl-tag">OPO</span><br>长度加权最优基线</div>
+        <div class="tl-item"><span class="tl-tag red">CISPO</span><br>Stop Grad IS clip</div>
+        <div class="tl-item"><span class="tl-tag orange">GDPO</span><br>多 reward 解耦归一化</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2025 Q3</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag purple">GSPO</span><br>序列级重要性比，Qwen3 基座</div>
+        <div class="tl-item"><span class="tl-tag green">SAPO</span><br>软门控，连续 trust region</div>
+        <div class="tl-item"><span class="tl-tag">GMPO</span><br>几何均值策略优化</div>
+      </div>
+    </div>
+    <div class="tl-col">
+      <div class="tl-period">2026</div>
+      <div class="tl-body">
+        <div class="tl-item"><span class="tl-tag orange">DPPO</span><br>TV/KL 散度直接 trust region</div>
+        <div class="tl-item"><span class="tl-tag">OTB</span><br>最优 token 级基线</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ========== 2. PPO ========== -->
+<h2 id="ppo">2. PPO — Proximal Policy Optimization</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>Proximal Policy Optimization Algorithms (Schulman et al., 2017)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/1707.06347">arxiv.org/abs/1707.06347</a></td></tr>
+  <tr><th>核心思想</th><td>Clipped Surrogate Objective + GAE 估计优势，避免策略更新过大</td></tr>
+  <tr><th>verl 配置</th><td><code>algorithm.adv_estimator: gae</code> + <code>policy_loss.loss_mode: vanilla</code></td></tr>
+</table></div>
+
+<h3>2.1 理论推导</h3>
+
+<h4>广义优势估计（GAE）</h4>
+<p>PPO 使用 Actor-Critic 架构，Critic（价值网络）输出状态价值 $V(s_t)$，Actor（策略网络）根据 GAE 估计的优势值更新策略。</p>
+
+<p>TD 误差（delta）：</p>
+<p>$$\delta_t = r_t + \gamma V(s_{t+1}) - V(s_t)$$</p>
+
+<p>GAE 优势估计（$\lambda \in [0,1]$ 控制偏差-方差权衡）：</p>
+<p>$$\hat{A}_t^{GAE(\gamma, \lambda)} = \sum_{l=0}^{\infty} (\gamma\lambda)^l \delta_{t+l}$$</p>
+
+<p>当 $\lambda=0$：纯 TD 误差（高偏差，低方差）；当 $\lambda=1$：蒙特卡罗回报（低偏差，高方差）。</p>
+
+<h4>Clipped Surrogate Objective</h4>
+<p>重要性采样比率：$r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\theta_{old}}(a_t|s_t)}$</p>
+
+<p>$$L^{CLIP}(\theta) = \hat{E}_t\left[\min\left(r_t(\theta)\hat{A}_t,\; \text{clip}(r_t(\theta), 1-\epsilon, 1+\epsilon)\hat{A}_t\right)\right]$$</p>
+
+<h4>Dual-Clip PPO 扩展（verl）</h4>
+<p>当 $\hat{A}_t \lt 0$ 时，额外加一个下界 $c \gt 1$ 防止比率过大（来自 <a href="https://arxiv.org/abs/1912.09729">Ye et al., 2019</a>）：</p>
+<p>$$L^{DC}(\theta) = \hat{E}_t\left[\min\left(\max\left(r_t\hat{A}_t,\; c\hat{A}_t\right),\; \text{clip}(r_t, 1-\epsilon, 1+\epsilon)\hat{A}_t\right) \cdot \mathbf{1}[\hat{A}_t \gt 0] + \ldots\right]$$</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: PPO + GAE (verl 实现逻辑)</div>
+  <p><span class="kw">Input:</span> <span class="var">prompt q</span>, 参数 <span class="num">γ, λ, ε, n</span></p>
+  <p><span class="kw">for each</span> 训练步 <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Rollout 阶段</span></p>
+  <p style="padding-left:1.5em">采样 <span class="num">n</span> 条响应 <span class="var">o</span> ~ <span class="var">π_old</span>(<span class="var">·|q</span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// GAE 计算</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">t</span> = <span class="var">T-1</span> <span class="kw">downto</span> <span class="num">0</span></p>
+  <p style="padding-left:3em"><span class="var">δ_t</span> = <span class="var">r_t</span> + <span class="num">γ</span> · <span class="var">V(s_{t+1})</span> - <span class="var">V(s_t)</span></p>
+  <p style="padding-left:3em"><span class="var">A_t</span> = <span class="var">δ_t</span> + (<span class="num">γλ</span>) · <span class="var">A_{t+1}</span></p>
+  <p style="padding-left:1.5em"><span class="var">Returns</span> = <span class="var">A</span> + <span class="var">V</span>  <span class="cm">// for Critic update</span></p>
+  <p style="padding-left:1.5em"><span class="fn">masked_whiten</span>(<span class="var">A</span>, <span class="var">response_mask</span>)  <span class="cm">// 归一化</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="num">ppo_epochs</span> 次 <span class="kw">do</span></p>
+  <p style="padding-left:3em">计算 <span class="var">r_t</span> = <span class="fn">exp</span>(<span class="var">log_prob</span> - <span class="var">old_log_prob</span>)</p>
+  <p style="padding-left:3em"><span class="var">L</span> = <span class="op">-</span><span class="fn">min</span>(<span class="var">r_t·A_t</span>, <span class="fn">clip</span>(<span class="var">r_t</span>, <span class="num">1-ε, 1+ε</span>)·<span class="var">A_t</span>)</p>
+  <p style="padding-left:3em">更新 Actor 和 Critic</p>
+</div>
+
+<h3>2.2 verl 实现细节</h3>
+
+<h4>① Rollout 阶段 — Trainer 端数据准备</h4>
+<div class="impl-box">
+  <div class="impl-title">🔧 ray_trainer.py — 数据准备流程</div>
+  <p><strong>Step 1 — 生成响应：</strong><code>async_rollout_manager.generate_sequences(batch)</code> 返回 <code>batch.batch["responses"]</code>（token ids）和 <code>batch.batch["rollout_log_probs"]</code>。</p>
+  <p><strong>Step 2 — 计算旧策略 log prob：</strong><code>_compute_old_log_prob(batch)</code> 调用 Actor Worker 做一次前向推断，返回 <code>batch.batch["old_log_probs"]</code>，形状 <code>(bs, response_length)</code>。</p>
+  <p><strong>Step 3 — 计算 Critic 价值：</strong><code>_compute_values(batch)</code> 调用 Critic Worker，返回 <code>batch.batch["values"]</code>，形状 <code>(bs, response_length)</code>——每个 token 位置的状态价值估计 $V(s_t)$。</p>
+  <p><strong>Step 4 — 构建 token_level_rewards：</strong>若 <code>use_kl_in_reward=True</code>，调用 <code>apply_kl_penalty()</code>：<br>
+  <code>kld = old_log_probs - ref_log_prob</code>（token 级 KL）<br>
+  <code>token_level_rewards = rm_scores - β × kld</code>，KL 系数 β 由 <code>kl_ctrl.value</code> 控制（Fixed 或 Adaptive）；<br>
+  否则直接 <code>token_level_rewards = rm_scores</code>（来自 Rule-based 或 Reward Model）。</p>
+</div>
+
+<h4>② 优势计算 — compute_advantage() 内部</h4>
+<div class="impl-box">
+  <div class="impl-title">🔧 core_algos.py — compute_gae_advantage_return()</div>
+  <p>输入：<code>token_level_rewards</code> (bs, T)，<code>values</code> (bs, T)，<code>response_mask</code> (bs, T)，<code>γ, λ</code>。</p>
+  <p><strong>关键设计——EOS 后 token 的处理：</strong>反向循环时，当 <code>response_mask[:, t] = 0</code>（EOS 后的 padding），verl 不更新 <code>nextvalues</code> 和 <code>lastgaelam</code>，直接继承上一步的值。这确保 padding token 不参与 TD error 计算，但时序依赖链不断裂：</p>
+  <pre style="margin:4px 0"><code class="language-python">nextvalues = values[:, t] * mask[:, t] + (1 - mask[:, t]) * nextvalues
+lastgaelam  = lastgaelam_ * mask[:, t] + (1 - mask[:, t]) * lastgaelam</code></pre>
+  <p>输出：<code>advantages = masked_whiten(GAE_adv, response_mask)</code>（全局 whitening），<code>returns = advantages + values</code>（供 Critic 训练）。</p>
+  <p>结果写入 <code>data.batch["advantages"]</code> 和 <code>data.batch["returns"]</code>。</p>
+</div>
+
+<h4>③ Actor 更新 — losses.py 内部</h4>
+<div class="impl-box">
+  <div class="impl-title">🔧 workers/utils/losses.py — compute_actor_loss()</div>
+  <p>Actor 更新时，数据被切成 <code>ppo_mini_batch_size</code> 大小的 mini-batch，重复 <code>ppo_epochs</code> 轮。每轮：<br>
+  1. Actor 前向推断，返回当前 log_prob<br>
+  2. 读取 <code>loss_mode = config.policy_loss.get("loss_mode", "vanilla")</code><br>
+  3. 从 <code>POLICY_LOSS_REGISTRY</code> 查表：<code>policy_loss_fn = get_policy_loss_fn("vanilla")</code><br>
+  4. 调用 <code>compute_policy_loss_vanilla(old_log_prob, log_prob, advantages, response_mask, ...)</code>：<br>
+  &nbsp;&nbsp;&nbsp;• <code>ratio = exp(log_prob - old_log_prob)</code>（形状 bs×T）<br>
+  &nbsp;&nbsp;&nbsp;• <code>pg_loss1 = -advantages * ratio</code>；<code>pg_loss2 = -advantages * clip(ratio, 1-ε_low, 1+ε_high)</code><br>
+  &nbsp;&nbsp;&nbsp;• Dual-clip：<code>pg_loss3 = -advantages * clip_ratio_c</code>，负优势时取 <code>min(pg_loss3, max(pg_loss1, pg_loss2))</code><br>
+  &nbsp;&nbsp;&nbsp;• <code>agg_loss(pg_losses, response_mask, loss_agg_mode)</code> 按 dp_size 归一化<br>
+  5. 若 <code>use_kl_loss=True</code>，叠加 KL 损失项</p>
+</div>
+
+<pre><code class="language-python"># verl/trainer/ppo/core_algos.py — GAE 核心循环
+for t in reversed(range(gen_len)):
+    delta = token_level_rewards[:, t] + gamma * nextvalues - values[:, t]
+    lastgaelam_ = delta + gamma * lam * lastgaelam
+    # EOS 后 token 不参与 TD 计算
+    nextvalues = values[:, t] * response_mask[:, t] + (1 - response_mask[:, t]) * nextvalues
+    lastgaelam  = lastgaelam_ * response_mask[:, t] + (1 - response_mask[:, t]) * lastgaelam
+    advantages_reversed.append(lastgaelam)
+advantages = torch.stack(advantages_reversed[::-1], dim=1)
+returns = advantages + values
+advantages = verl_F.masked_whiten(advantages, response_mask)</code></pre>
+
+<hr>
+
+<!-- ========== 3. GRPO ========== -->
+<h2 id="grpo">3. GRPO — Group Relative Policy Optimization</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models (2024)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2402.03300">arxiv.org/abs/2402.03300</a></td></tr>
+  <tr><th>核心创新</th><td>无 Critic，用组内奖励均值作基线，避免训练独立价值网络</td></tr>
+  <tr><th>verl 配置</th><td><code>adv_estimator: grpo</code>，<code>rollout.n &gt; 1</code>，<code>use_kl_loss: true</code></td></tr>
+</table></div>
+
+<h3>3.1 理论推导</h3>
+
+<p>对每个 prompt $q$，采样 $G$ 条响应 $\{o_1, o_2, \ldots, o_G\}$。各响应得到 outcome reward $r_i$。</p>
+
+<h4>GRPO 优势估计（原始版本，带 std 归一化）</h4>
+<p>$$\hat{A}_i = \frac{r_i - \mu_G}{\sigma_G + \epsilon}, \quad \mu_G = \frac{1}{G}\sum_{i=1}^G r_i,\quad \sigma_G = \sqrt{\frac{1}{G}\sum_{i=1}^G (r_i - \mu_G)^2}$$</p>
+
+<p>该优势值广播到响应 $o_i$ 的每个 token 上：</p>
+<p>$$\hat{A}_{i,t} = \hat{A}_i \cdot \mathbf{1}[t \leq |o_i|]$$</p>
+
+<h4>GRPO 目标函数（verl 实现）</h4>
+<p>$$L^{GRPO}(\theta) = -\hat{E}\left[\frac{\pi_\theta(o_i|q)}{\pi_{\theta_{old}}(o_i|q)} \cdot \hat{A}_i\right] + \beta \cdot D_{KL}(\pi_\theta \| \pi_{ref})$$</p>
+
+<p>其中 KL 散度直接加在损失中（非 reward penalty），$\beta$ 通过 <code>kl_loss_coef</code> 控制。</p>
+
+<h4>Dr.GRPO 变体（无 std 归一化，消除长度偏差）</h4>
+<p>$$\hat{A}_i = r_i - \mu_G$$</p>
+<p>配合 <code>loss_agg_mode: seq-mean-token-sum-norm</code>，用常数 $H$（最大响应长度）归一化 token 级损失，彻底消除 token 数量对梯度的影响。</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 2: GRPO 优势估计</div>
+  <p><span class="kw">Input:</span> <span class="var">scores</span> ∈ ℝ<sup>B</sup>（每条响应总 reward）, <span class="var">index</span>（prompt 分组 ID）</p>
+  <p><span class="kw">for each</span> 唯一 prompt <span class="var">idx</span> <span class="kw">do</span></p>
+  <p style="padding-left:1.5em"><span class="var">group_scores</span> = <span class="var">scores</span>[<span class="var">index</span> == <span class="var">idx</span>]</p>
+  <p style="padding-left:1.5em"><span class="var">μ</span> = <span class="fn">mean</span>(<span class="var">group_scores</span>)</p>
+  <p style="padding-left:1.5em"><span class="var">σ</span> = <span class="fn">std</span>(<span class="var">group_scores</span>)</p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> <span class="var">norm_adv_by_std</span>: &nbsp;<span class="var">A_i</span> = (<span class="var">r_i</span> - <span class="var">μ</span>) / (<span class="var">σ</span> + <span class="var">ε</span>)</p>
+  <p style="padding-left:1.5em"><span class="kw">else</span>: &nbsp;<span class="var">A_i</span> = <span class="var">r_i</span> - <span class="var">μ</span>  &nbsp;<span class="cm">// Dr.GRPO</span></p>
+  <p><span class="kw">return</span> <span class="var">A</span>.unsqueeze(-1) * <span class="var">response_mask</span></p>
+</div>
+
+<h3>3.2 verl 实现细节</h3>
+
+<h4>① uid 分组机制 — Trainer 如何构建"组"</h4>
+<div class="impl-box">
+  <div class="impl-title">🔧 ray_trainer.py — uid 分组 + batch 扩展</div>
+  <p><strong>Step 1 — 分配 uid：</strong>每个原始 prompt 被赋一个 UUID：
+  <code>batch.non_tensor_batch["uid"] = [str(uuid4()) for _ in range(B)]</code>（B 个 prompt）。</p>
+  <p><strong>Step 2 — Interleave 扩展：</strong><code>batch.repeat(n, interleave=True)</code> 将 batch 扩展至 B×n 条，uid 按 interleave 复制：<br>
+  原 uid = <code>[uid_a, uid_b, uid_c]</code>，n=3 后变为 <code>[uid_a, uid_a, uid_a, uid_b, uid_b, uid_b, ...]</code>。<br>
+  这保证同一 prompt 的 n 条响应在 uid 数组中相邻且 uid 相同，为后续分组提供索引依据。</p>
+  <p><strong>Step 3 — balance_batch：</strong>若 <code>trainer.balance_batch=True</code>，batch 内样本会被重新排序（按 token 数均衡分配到 DP ranks）。但 advantage 计算基于 uid 而非位置，因此排序不影响结果。</p>
+</div>
+
+<h4>② compute_grpo_outcome_advantage() 执行路径</h4>
+<div class="impl-box">
+  <div class="impl-title">🔧 core_algos.py — 逐步数据流</div>
+  <p><strong>输入：</strong><code>token_level_rewards</code> 形状 <code>(B×n, T)</code>，<code>response_mask</code> 形状 <code>(B×n, T)</code>，<code>index = uid</code> 形状 <code>(B×n,)</code>。</p>
+  <p><strong>Step 1：</strong><code>scores = token_level_rewards.sum(dim=-1)</code> → 形状 <code>(B×n,)</code>。每条响应的所有 token reward 相加，对于 outcome-only reward（只有 EOS 处有非零值），这等价于直接取 EOS 位置的 reward scalar。</p>
+  <p><strong>Step 2：</strong>Python dict 分组：<code>id2score[uid[i]].append(scores[i])</code>。遍历所有 B×n 条样本，将各 uid 对应的 scores 收集到 list 中。</p>
+  <p><strong>Step 3：</strong>组内统计。若组内只有 1 条（n=1 情况），令 <code>mean=0, std=1</code>（使 advantage = 0，避免单样本组梯度为 0 但数值稳定）。组内 &gt;1 条时正常计算 mean 和 std。</p>
+  <p><strong>Step 4：</strong>归一化写回：<code>scores[i] = (scores[i] - mean[uid[i]]) / (std[uid[i]] + ε)</code>（Dr.GRPO 跳过 std 除法）。</p>
+  <p><strong>Step 5：</strong>广播到 token 维度：<code>scores.unsqueeze(-1) * response_mask</code> → 形状 <code>(B×n, T)</code>。每条响应的所有有效 token 位置都拿到相同的序列级 advantage 值，padding 处为 0。</p>
+  <p><strong>输出：</strong><code>data.batch["advantages"] = advantages</code>（形状 B×n × T），<code>returns = advantages</code>（与 advantages 相同，GRPO 无单独 returns 概念）。</p>
+</div>
+
+<h4>③ 向量化版本（GRPO_VECTORIZED）</h4>
+<div class="impl-box">
+  <div class="impl-title">🔧 core_algos.py — compute_grpo_vectorized_outcome_advantage()</div>
+  <p>用 <code>as_torch_index(uid)</code> 把 string uid 映射为整数 group index <code>g</code>，再调用 CUDA kernel <code>group_mean_std(scores, g)</code>，一次 scatter_reduce 操作完成所有组的 mean 和 std，替代 Python 循环分组。配置方式：<code>algorithm.adv_estimator: grpo_vectorized</code>。大批量场景下性能显著更好。</p>
+</div>
+
+<h4>④ KL Loss 的加入时机</h4>
+<div class="impl-box">
+  <div class="impl-title">🔧 Actor 更新时添加 KL Loss</div>
+  <p>GRPO 原论文推荐 KL 加在损失而非 reward 中。verl 中当 <code>use_kl_loss=True</code> 时，在 <code>compute_actor_loss()</code> 里额外计算：<code>kl_loss = kl_penalty(log_prob, ref_log_prob, type=kl_loss_type) * kl_loss_coef</code>，加到 pg_loss 上。<code>token_level_rewards</code> 此时不含 KL 惩罚。</p>
+</div>
+
+<hr>
+
+<!-- ========== 4. RLOO ========== -->
+<h2 id="rloo">4. RLOO — REINFORCE Leave-One-Out</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>Back to Basics: Revisiting REINFORCE-Style Optimization for LLM (2024)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2402.14740">arxiv.org/abs/2402.14740</a></td></tr>
+  <tr><th>核心创新</th><td>Leave-One-Out 基线：用同组其他响应的平均 reward 作基线，方差更低</td></tr>
+  <tr><th>verl 配置</th><td><code>adv_estimator: rloo</code>，无需 critic，<code>rollout.n &gt; 1</code></td></tr>
+</table></div>
+
+<h3>4.1 理论推导</h3>
+
+<p>对组内 $k$ 条响应 $\{r_1, ..., r_k\}$，第 $i$ 条的 LOO 基线：</p>
+<p>$$b_i^{LOO} = \frac{1}{k-1}\sum_{j \neq i} r_j$$</p>
+
+<p>RLOO 优势（等价于无偏 REINFORCE 的 LOO 估计器）：</p>
+<p>$$\hat{A}_i^{RLOO} = r_i - b_i^{LOO} = r_i \cdot \frac{k}{k-1} - \frac{1}{k-1}\sum_j r_j$$</p>
+
+<p>注意：当 $k=1$ 时 LOO 无法计算，verl 中直接跳过（advantage=0）。</p>
+
+<h3>4.2 verl 实现细节</h3>
+<div class="impl-box">
+  <div class="impl-title">🔧 ray_trainer.py + core_algos.py — RLOO 数据流</div>
+  <p><strong>uid 分组与 GRPO 完全相同：</strong>每个 prompt 分配 UUID，<code>repeat(n, interleave=True)</code> 扩展后同 prompt 的 n 条响应共享同一 uid。</p>
+  <p><strong>标准版 compute_rloo_outcome_advantage()：</strong><br>
+  Step 1：<code>scores = token_level_rewards.sum(-1)</code> → 形状 (B×n,)<br>
+  Step 2：dict 分组，与 GRPO 相同收集每组 scores<br>
+  Step 3：组内均值 <code>mean_g</code>（注意：LOO 不是简单减均值，而是按下式）<br>
+  Step 4：<code>adv[i] = scores[i] * k/(k-1) - mean_g/(k-1)</code>，展开即 LOO 无偏估计<br>
+  Step 5：<code>adv.unsqueeze(-1) * response_mask</code></p>
+  <p><strong>向量化版 compute_rloo_vectorized_outcome_advantage()（推荐）：</strong><br>
+  <code>np.unique(index, return_inverse=True)</code> 把 string uid 映射为连续整数 <code>inv</code>；<br>
+  <code>c = torch.bincount(inv)[inv]</code>：每个样本的组大小（shape: B×n）；<br>
+  <code>group_sum = torch.bincount(inv, weights=scores)[inv]</code>：每个样本所在组的 score 总和；<br>
+  一步计算：<code>adv = (c * scores - group_sum) / (c - 1)</code>，当 c=1 时置 0。<br>
+  全程无 Python 循环，单次 scatter_reduce 操作完成。</p>
+</div>
+
+<pre><code class="language-python"># vectorized RLOO core (rloo_vectorized)
+inv = torch.from_numpy(np.unique(index, return_inverse=True)[1]).to(scores.device)
+c = torch.bincount(inv)[inv].to(scores.dtype)        # 组大小，广播到每个样本
+group_sum = torch.bincount(inv, weights=scores)[inv] # 组总分，广播到每个样本
+# LOO: (c * r_i - sum_group) / (c - 1), with c=1 ⇒ 0
+adv = ((c * scores - group_sum) / (c - 1).clamp_min(1)) * (c > 1)
+adv = adv.unsqueeze(-1) * response_mask              # 广播到 token 维度</code></pre>
+
+<hr>
+
+<!-- ========== 5. REINFORCE++ ========== -->
+<h2 id="rf-pp">5. REINFORCE++ — 全局归一化增强</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>REINFORCE++: A Simple and Efficient Approach for Aligning LLMs (2025)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2501.03262">arxiv.org/abs/2501.03262</a></td></tr>
+  <tr><th>核心创新</th><td>全局批次归一化（而非局部组归一化），配合折扣回报</td></tr>
+  <tr><th>verl 配置</th><td><code>adv_estimator: reinforce_plus_plus</code> 或 <code>reinforce_plus_plus_baseline</code></td></tr>
+</table></div>
+
+<h3>5.1 理论推导</h3>
+
+<h4>REINFORCE++ 基本版</h4>
+<p>从 EOS 位置反向累积折扣回报（类似 policy gradient 的 reward-to-go）：</p>
+<p>$$G_t = \sum_{t'=t}^{T} \gamma^{t'-t} r_{t'}, \quad G_t = r_t + \gamma G_{t+1}$$</p>
+
+<p>在全局批次上做 whitening（均值归一化 + 方差归一化）：</p>
+<p>$$\hat{A}_{i,t} = \frac{G_{i,t} - \mu_{batch}}{\sigma_{batch} + \epsilon}$$</p>
+
+<p>相比 GRPO 的局部组归一化，全局归一化使偏差随批次大小增大而趋近于零，理论更严谨。</p>
+
+<h4>REINFORCE++ with Baseline 变体</h4>
+<p>先做组内均值去均值，再做全局 whitening：</p>
+<p>$$\hat{A}_i = \text{whiten}\left(r_i - \mu_{group}\right)$$</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 3: REINFORCE++ 优势计算</div>
+  <p><span class="kw">Input:</span> <span class="var">token_level_rewards</span>, <span class="var">response_mask</span>, <span class="num">γ</span></p>
+  <p><span class="cm">// 反向累积折扣回报</span></p>
+  <p><span class="kw">for</span> <span class="var">t</span> = <span class="var">T-1</span> <span class="kw">downto</span> <span class="num">0</span></p>
+  <p style="padding-left:1.5em"><span class="var">running_return</span> = <span class="var">r_t</span> + <span class="num">γ</span> · <span class="var">running_return</span></p>
+  <p style="padding-left:1.5em"><span class="var">returns[:, t]</span> = <span class="var">running_return</span></p>
+  <p style="padding-left:1.5em"><span class="var">running_return</span> *= <span class="var">mask[:, t]</span>  <span class="cm">// EOS 后归零</span></p>
+  <p><span class="cm">// 全局 whitening</span></p>
+  <p><span class="var">advantages</span> = <span class="fn">masked_whiten</span>(<span class="var">returns</span>, <span class="var">response_mask</span>)</p>
+</div>
+
+<hr>
+
+<!-- ========== 6. ReMax ========== -->
+<h2 id="remax">6. ReMax — Greedy Decoding Baseline</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>ReMax: A Simple, Effective, and Efficient Reinforcement Learning Method for Aligning LLMs (2023)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2310.10505">arxiv.org/abs/2310.10505</a></td></tr>
+  <tr><th>核心创新</th><td>用贪婪解码响应的 reward 作基线，避免 Critic 训练</td></tr>
+  <tr><th>verl 配置</th><td><code>adv_estimator: remax</code></td></tr>
+</table></div>
+
+<h3>6.1 理论推导</h3>
+
+<p>对 prompt $q$，除了采样响应 $o \sim \pi_\theta$，还用贪婪解码（greedy/argmax decoding）得到 $o_{base}$，其 reward 为 $r_{base}$。</p>
+
+<p>优势估计：</p>
+<p>$$\hat{A}_t = G_t - r_{base}, \quad G_t = \sum_{t'=t}^{T} r_{t'}$$</p>
+
+<p>$r_{base}$ 作为 token 级基线常数，从每步的 reward-to-go $G_t$ 中减去。</p>
+
+<h3>6.2 verl 实现细节</h3>
+<div class="impl-box">
+  <div class="impl-title">🔧 ray_trainer.py — ReMax 特殊 Rollout 分支</div>
+  <p>ReMax 需要同时做采样解码和贪婪解码，verl 的做法是<strong>将两个请求合并进一个 vLLM 调用</strong>（避免异步引擎状态问题）：</p>
+  <p><strong>Step 1：</strong>构建两个 batch：<code>gen_batch_output</code>（采样，<code>__do_sample__=True</code>，n 条响应）和 <code>gen_baseline_batch</code>（贪婪，<code>__do_sample__=False</code>，1 条响应）；用 <code>DataProto.concat()</code> 拼接为 <code>combined_gen_batch</code>。</p>
+  <p><strong>Step 2：</strong>统一发给 <code>generate_sequences()</code>，返回 <code>combined_gen_output</code>；再用 <code>.slice(0, num_sampled)</code> 和 <code>.slice(num_sampled, None)</code> 切分回两个 batch。</p>
+  <p><strong>Step 3：</strong>对贪婪 batch 调 Reward Model：<code>reward_baseline_tensor = gen_baseline_output.batch["rm_scores"].sum(dim=-1)</code> → 形状 (B,) 的标量 reward。</p>
+  <p><strong>Step 4：</strong>存入 <code>batch.batch["reward_baselines"]</code>，传入 <code>compute_advantage()</code> → <code>compute_remax_outcome_advantage()</code>。</p>
+</div>
+
+<div class="impl-box">
+  <div class="impl-title">🔧 core_algos.py — compute_remax_outcome_advantage()</div>
+  <p><strong>输入：</strong><code>token_level_rewards</code> (B×n, T)，<code>reward_baselines</code> (B×n,)（注意：B×n 条响应中每条对应贪婪解码的 baseline，由 batch.repeat 复制）。</p>
+  <p><strong>Step 1：</strong><code>returns = (r * mask).flip(-1).cumsum(-1).flip(-1)</code>：反向累积 reward-to-go，即 $G_t = \sum_{t'=t}^T r_{t'}$，形状 (B×n, T)。</p>
+  <p><strong>Step 2：</strong><code>advantages = returns - reward_baselines.unsqueeze(-1) * mask</code>：在每个 token 位置减去标量 baseline（只在有效 token 处减，padding 处保留 0）。</p>
+  <p>关键：与 GRPO 不同，ReMax 的 advantage 是 token 级的（不同时刻 $G_t$ 不同），而非序列级广播。</p>
+</div>
+
+<hr>
+
+<!-- ========== 7. DAPO ========== -->
+<h2 id="dapo">7. DAPO — Decoupled Clip & Dynamic Sampling</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>DAPO: An Open-Source LLM RL System at Scale (BytedTsinghua-SIA, 2025)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2503.14476">arxiv.org/abs/2503.14476</a></td></tr>
+  <tr><th>核心创新</th><td>4 个独立技巧：解耦 Clip、动态采样、Token 级损失、过长奖励塑形</td></tr>
+  <tr><th>成果</th><td>Qwen2.5-32B → AIME 2024 50%（DeepSeek-R1-Zero-32B 同等分数，少 50% 训练步）</td></tr>
+</table></div>
+
+<h3>7.1 理论推导</h3>
+
+<h4>① 解耦 Clip（Clip-Higher）</h4>
+<p>原始 PPO 使用对称 clip 参数 $\epsilon$，导致高奖励响应的梯度被过度压制（熵崩溃）。DAPO 引入不对称 clip：</p>
+
+<p>$$L^{DAPO}(\theta) = \hat{E}\left[-\min\left(r_t \hat{A}_t,\; \text{clip}(r_t, 1-\varepsilon_{low}, 1+\varepsilon_{high}) \cdot \hat{A}_t\right)\right]$$</p>
+
+<p>典型配置：$\varepsilon_{low} = 0.2$，$\varepsilon_{high} = 0.28$。增大上界允许更积极地强化正确响应，防止熵崩溃。</p>
+
+<h4>② 动态采样（Dynamic Sampling）</h4>
+<p>过滤掉组内所有响应 reward 相同的 group（全对或全错），只用 <em>信息量非零</em> 的 group 训练：</p>
+<p>$$\mathcal{B}_{train} = \{g \in \mathcal{B}_{gen} : \text{std}(r_{g,1}, ..., r_{g,n}) \gt 0\}$$</p>
+<p>反复采样直到 $|\mathcal{B}_{train}| \geq B_{target}$。</p>
+
+<h4>③ Token 级损失</h4>
+<p>避免 <code>seq-mean-token-mean</code> 对长响应的隐式惩罚（长响应 per-token 损失更小导致梯度更小）：</p>
+<p>$$L = \frac{1}{\sum_{i,t} m_{i,t}} \sum_{i,t} m_{i,t} \cdot \ell_{i,t} \quad \text{（token-mean）}$$</p>
+
+<h4>④ 过长奖励塑形</h4>
+<p>响应长度超过软上限 $L_{max} - L_{buf}$ 时，线性惩罚：</p>
+<p>$$r_{overlong} = \min\left(0,\; -\frac{|o| - (L_{max} - L_{buf})}{L_{buf}} \cdot \alpha\right)$$</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 4: DAPO 训练循环</div>
+  <p><span class="kw">while</span> <span class="var">|B_train|</span> &lt; <span class="var">B_target</span>:</p>
+  <p style="padding-left:1.5em">从 <span class="var">B_gen</span> 个 prompt 采样 <span class="num">n</span> 条响应</p>
+  <p style="padding-left:1.5em"><span class="cm">// 过长奖励塑形</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">o</span> <span class="kw">in</span> 响应: <span class="var">r</span> += <span class="fn">overlong_penalty</span>(<span class="var">|o|</span>)</p>
+  <p style="padding-left:1.5em"><span class="cm">// 动态采样过滤</span></p>
+  <p style="padding-left:1.5em"><span class="var">B_train</span> ∪= {<span class="var">g</span> : <span class="fn">std</span>(<span class="var">r_g</span>) &gt; <span class="num">0</span>}</p>
+  <p><span class="cm">// GRPO 优势估计（组内 reward 归一化）</span></p>
+  <p><span class="var">Â</span> = <span class="fn">compute_grpo_advantage</span>(<span class="var">B_train</span>)</p>
+  <p><span class="cm">// 解耦 Clip 损失</span></p>
+  <p><span class="var">L</span> = <span class="op">-</span><span class="fn">min</span>(<span class="var">r·Â</span>, <span class="fn">clip</span>(<span class="var">r</span>, <span class="num">1-ε_low</span>, <span class="num">1+ε_high</span>)·<span class="var">Â</span>)</p>
+  <p>反向传播，Token-mean 聚合</p>
+</div>
+
+<hr>
+
+<!-- ========== 8. GSPO ========== -->
+<h2 id="gspo">8. GSPO — Group Sequence Policy Optimization</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>Group Sequence Policy Optimization (2025)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2507.18071">arxiv.org/abs/2507.18071</a></td></tr>
+  <tr><th>核心创新</th><td>将 token 级重要性比率替换为序列级比率，显著提升 MoE 训练稳定性</td></tr>
+  <tr><th>应用</th><td>Qwen3 模型系列训练</td></tr>
+  <tr><th>verl 配置</th><td><code>policy_loss.loss_mode: gspo</code>，<code>loss_agg_mode: seq-mean-token-mean</code></td></tr>
+</table></div>
+
+<h3>8.1 理论推导</h3>
+
+<h4>PPO/GRPO 的问题：Token 级比率不稳定</h4>
+<p>标准 PPO 的 token 级比率 $r_t = \pi_\theta(a_t|s_t) / \pi_{\theta_{old}}(a_t|s_t)$ 对低概率 token 极度不稳定（小概率变化 → 巨大比率波动）。</p>
+
+<h4>GSPO 序列级重要性比率</h4>
+<p>定义序列级比率（几何均值形式）：</p>
+<p>$$s_i(\theta) = \left(\frac{\pi_\theta(y_i|x)}{\pi_{\theta_{old}}(y_i|x)}\right)^{1/|y_i|} = \exp\left(\frac{1}{|y_i|}\sum_{t=1}^{|y_i|} \log\frac{\pi_\theta(y_{i,t}|x, y_{i,\lt t})}{\pi_{\theta_{old}}(y_{i,t}|x, y_{i,\lt t})}\right)$$</p>
+
+<p>Token 级梯度传播（Stop Gradient 技巧）：</p>
+<p>$$s_{i,t}(\theta) = \text{sg}[s_i(\theta)] \cdot \frac{\pi_\theta(y_{i,t}|x, y_{i,\lt t})}{\text{sg}[\pi_\theta(y_{i,t}|x, y_{i,\lt t})]}$$</p>
+
+<p>GSPO 目标函数（Clipped Sequence Ratio）：</p>
+<p>$$L^{GSPO}(\theta) = -\hat{E}_i\left[\min\left(s_{i,t}(\theta)\hat{A}_{i,t},\; \text{clip}(s_{i,t}, 1-\varepsilon_{low}, 1+\varepsilon_{high})\hat{A}_{i,t}\right)\right]$$</p>
+
+<div class="impl-box">
+  <div class="impl-title">🔧 workers/utils/losses.py — compute_policy_loss_gspo() 逐步执行</div>
+  <p><strong>输入：</strong><code>old_log_prob</code>, <code>log_prob</code>（均为 bs×T），<code>advantages</code>（bs×T），<code>response_mask</code>（bs×T）。</p>
+  <p><strong>Step 1 — 序列平均 KL：</strong><br>
+  <code>seq_lengths = response_mask.sum(-1).clamp(min=1)</code>（每条响应的有效 token 数）<br>
+  <code>kl_per_token = log_prob - old_log_prob</code>（形状 bs×T）<br>
+  <code>kl_seq = (kl_per_token * mask).sum(-1) / seq_lengths</code> → 形状 (bs,)，即 $\log s_i(\theta)$（序列级平均 log 比率）</p>
+  <p><strong>Step 2 — Stop Gradient 构造 token 级比率：</strong><br>
+  <code>log_ratio_token = log_prob - log_prob.detach() + kl_seq.detach().unsqueeze(-1)</code><br>
+  解读：<code>log_prob.detach()</code> 使得梯度不经"当前 π 相对 π_old 的偏移"项传播；<code>kl_seq.detach()</code> 固定序列级 ratio 作为常数权重；梯度<strong>只</strong>经第一项 <code>log_prob</code> 传播，等价于 stop gradient on ratio。<br>
+  数值稳定：<code>log_ratio_token = clamp(log_ratio_token, max=10.0)</code></p>
+  <p><strong>Step 3 — 应用 PPO Clip：</strong><br>
+  <code>s_token = exp(log_ratio_token)</code>（形状 bs×T）<br>
+  <code>pg1 = -A * s_token</code>；<code>pg2 = -A * clip(s_token, 1-ε_low, 1+ε_high)</code><br>
+  <code>pg_loss = max(pg1, pg2)</code>（clipped surrogate，形状 bs×T）</p>
+  <p><strong>Step 4 — 聚合：</strong>强制用 <code>seq-mean-token-mean</code>（忽略传入的 <code>loss_agg_mode</code>），与 GSPO 论文一致：每条序列先 token-mean，再 seq-mean。</p>
+</div>
+
+<hr>
+
+<!-- ========== 9. DPPO ========== -->
+<h2 id="dppo">9. DPPO — Divergence PPO</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>Rethinking the Trust Region in LLM Reinforcement Learning (2026)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2602.04879">arxiv.org/abs/2602.04879</a></td></tr>
+  <tr><th>核心创新</th><td>用 TV/KL 散度代替概率比率作为 trust region 约束，解决 PPO 对低概率 token 的失当惩罚</td></tr>
+  <tr><th>verl 配置</th><td><code>policy_loss.loss_mode: dppo_tv</code> 或 <code>dppo_kl</code></td></tr>
+</table></div>
+
+<h3>9.1 理论推导</h3>
+
+<h4>PPO 的根本问题</h4>
+<p>PPO 的 clip 基于概率<em>比率</em>，但对于低概率 token（$p_{old}$ 接近 0），即使概率的<em>绝对变化</em>极小，比率也可能爆炸：$r_t = p_{new}/p_{old}$。</p>
+
+<h4>DPPO-Binary-TV（全变差距离）</h4>
+<p>valid mask 基于 TV 散度直接约束：</p>
+<p>$$\text{mask}_{i,t} = \begin{cases} \mathbf{1}[p_\theta - p_{\theta_{old}} \leq \varepsilon_{high}] & \text{if } \hat{A}_{i,t} \gt 0 \\ \mathbf{1}[p_{\theta_{old}} - p_\theta \leq \varepsilon_{low}] & \text{if } \hat{A}_{i,t} \leq 0 \end{cases}$$</p>
+
+<p>损失（使用截断 IS 权重）：</p>
+<p>$$L^{DPPO-TV}(\theta) = -\text{clip}(r_t, 0, c) \cdot \log\pi_\theta \cdot \hat{A}_{i,t} \cdot \text{mask}_{i,t}$$</p>
+
+<h4>DPPO-Binary-KL（二元 KL 散度）</h4>
+<p>用二元 KL 约束，比 TV 更精确但计算稍复杂：</p>
+<p>$$D_{KL}^{bin}(p_{old} \| p) = p_{old}\log\frac{p_{old}}{p} + (1-p_{old})\log\frac{1-p_{old}}{1-p}$$</p>
+
+<h3>9.2 verl 实现细节</h3>
+<div class="impl-box">
+  <div class="impl-title">🔧 workers/utils/losses.py — compute_policy_loss_dppo_tv() 执行路径</div>
+  <p><strong>参数重用：</strong><code>clip_ratio</code> 被复用为 TV 散度阈值 $\varepsilon$（而非概率比率 clip 范围）；<code>clip_ratio_c=20.0</code>（远大于 PPO 默认 3.0），用于截断 IS 权重减少截断偏差。</p>
+  <p><strong>Step 1 — 计算截断 IS 权重：</strong><code>ratio = exp(log_prob - old_log_prob)</code>，<code>truncated_ratio = clip(ratio, max=clip_ratio_c).detach()</code>（stop gradient，截断后的 ratio 只作为固定权重）。</p>
+  <p><strong>Step 2 — 构建 Binary-TV valid mask：</strong><br>
+  <code>prob = exp(log_prob)</code>，<code>old_prob = exp(old_log_prob)</code>（token 级概率，形状 bs×T）<br>
+  正优势位置：<code>valid = (prob - old_prob) &lt;= ε_high</code>（概率增长不超阈值才更新）<br>
+  负优势位置：<code>valid = (old_prob - prob) &lt;= ε_low</code>（概率减少不超阈值才更新）<br>
+  合并：<code>valid_mask = where(A&gt;0, valid_pos, valid_neg).detach().float()</code></p>
+  <p><strong>Step 3 — 损失：</strong><code>loss = -A * truncated_ratio * log_prob * valid_mask</code>。梯度仅经 <code>log_prob</code> 传播（IS 权重和 mask 均 detach），等价于在 trust region 内做加权 log-likelihood 优化。</p>
+  <p><strong>Step 4 — 统计量：</strong><code>pg_clipfrac = mean(1 - valid_mask)</code>（被 TV 约束过滤掉的 token 比例）。</p>
+</div>
+
+<hr>
+
+<!-- ========== 10. GPG ========== -->
+<h2 id="gpg">10. GPG — Group Policy Gradient</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>GPG: A Simple and Strong Reinforcement Learning Baseline for Model Reasoning (ICLR 2026)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2504.02546">arxiv.org/abs/2504.02546</a></td></tr>
+  <tr><th>核心创新</th><td>极简设计：去掉 clip/KL/critic/reference model，直接优化原始 RL 目标</td></tr>
+  <tr><th>verl 配置</th><td><code>adv_estimator: gpg</code> + <code>policy_loss.loss_mode: gpg</code></td></tr>
+</table></div>
+
+<h3>10.1 理论推导</h3>
+
+<h4>修正的优势估计</h4>
+<p>GPG 引入密度修正系数 $\alpha$：令 $m = \text{nnz}(r)$（批内非零 reward 数量），则：</p>
+<p>$$\alpha = \frac{B}{m}, \quad \hat{A}_i^{GPG} = \alpha \cdot \frac{r_i - \mu_{group}}{f_{norm}}$$</p>
+
+<p>$\alpha$ 自适应地缩放稀疏奖励场景下的梯度（当正确率低时，$m$ 小，$\alpha$ 大，梯度信号更强）。</p>
+
+<h4>Direct Policy Gradient 损失</h4>
+<p>$$L^{GPG}(\theta) = -\hat{E}\left[\log\pi_\theta(o_i|q) \cdot \hat{A}_i^{GPG}\right]$$</p>
+
+<p>无重要性采样比率，无 clipping，梯度直接经过 $\log\pi_\theta$ 传播。</p>
+
+<div class="impl-box">
+  <div class="impl-title">🔧 core_algos.py — GPG 优势估计 + 损失函数双路径</div>
+  <p><strong>优势估计（compute_gpg_outcome_advantage）：</strong><br>
+  Step 1：<code>scores = token_level_rewards.sum(-1)</code><br>
+  Step 2：<code>m = torch.count_nonzero(scores)</code> —— 批内有非零 reward 的响应数<br>
+  Step 3：<code>alpha = bsz / m.clamp(min=1)</code> —— 稀疏奖励修正系数（m 越小，alpha 越大）<br>
+  Step 4：与 GRPO 相同的组内去均值，但不除 std：<code>scores[i] = alpha * (scores[i] - mean_group) / f_norm</code><br>
+  Step 5：广播到 token 维度 <code>scores.unsqueeze(-1) * response_mask</code></p>
+  <p><strong>策略损失（compute_policy_loss_gpg）：</strong><br>
+  <code>pg_losses = -log_prob * advantages</code>（无 ratio、无 clip）<br>
+  与 vanilla（PPO）对比：vanilla 计算 <code>ratio = exp(log_prob - old_log_prob)</code> 后乘 A；GPG 直接用 log_prob 乘 A，梯度不经过 old_log_prob。<br>
+  <strong>含义：</strong>GPG 是纯 on-policy policy gradient，每次更新后 old_log_prob 立即过期；若不强制单 epoch、无 mini-batch 复用，会引入 off-policy 偏差——因此 GPG 通常配合 <code>ppo_epochs=1</code>。</p>
+</div>
+
+<hr>
+
+<!-- ========== 11. OPO ========== -->
+<h2 id="opo">11. OPO — On-Policy RL with Optimal Reward Baseline</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>On-Policy RL with Optimal Reward Baseline (2025)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2505.23585">arxiv.org/abs/2505.23585</a></td></tr>
+  <tr><th>核心创新</th><td>长度加权最优基线 + 严格 On-Policy（mini-batch = 全局 batch size）</td></tr>
+  <tr><th>verl 配置</th><td><code>adv_estimator: opo</code>，<code>ppo_mini_batch_size = train_batch_size</code></td></tr>
+</table></div>
+
+<h3>11.1 理论推导</h3>
+
+<p>OPO 的核心是使用最小化方差的<em>最优基线</em>：</p>
+<p>$$b^{OPO} = \frac{\sum_{i=1}^G |o_i| \cdot r_i}{\sum_{i=1}^G |o_i|}$$</p>
+
+<p>长度加权基线有理论依据：梯度估计方差与响应长度相关，长度加权使方差最小。</p>
+
+<p>优势估计：</p>
+<p>$$\hat{A}_i = r_i - b^{OPO}$$</p>
+
+<p>没有 std 归一化，没有 KL 惩罚，没有熵正则化。严格 on-policy 避免了 old policy 和 current policy 之间的分布偏移。</p>
+
+<div class="impl-box">
+  <div class="impl-title">🔧 core_algos.py — compute_opo_outcome_advantage() 关键步骤</div>
+  <p><strong>输入：</strong>与 GRPO 相同的 <code>token_level_rewards</code>，<code>response_mask</code>，<code>index（uid）</code>。</p>
+  <p><strong>Step 1：</strong><code>response_length = response_mask.sum(dim=-1)</code> → 每条响应实际长度（含 EOS），形状 (B×n,)。</p>
+  <p><strong>Step 2：</strong><code>scores = token_level_rewards.sum(-1)</code> → 形状 (B×n,)。</p>
+  <p><strong>Step 3：</strong>分组后计算长度加权基线：<br>
+  <code>score_tensor = stack(scores_in_group)</code>（形状 k）<br>
+  <code>len_tensor = stack(lens_in_group)</code>（形状 k）<br>
+  <code>baseline = (len_tensor * score_tensor).sum() / len_tensor.sum()</code><br>
+  即 $b = \sum |o_i| r_i / \sum |o_i|$，长响应权重更大。</p>
+  <p><strong>Step 4：</strong><code>scores[i] = scores[i] - baseline</code>，无 std 归一化。</p>
+  <p><strong>Step 5：</strong><code>scores.unsqueeze(-1) * response_mask</code> 广播到 token 维度。</p>
+  <p><strong>严格 On-Policy 的实现方式：</strong>通过配置 <code>ppo_mini_batch_size = train_batch_size</code>，actor 更新时整个 batch 只过一次（不切 mini-batch），等价于 <code>ppo_epochs=1 且无 mini-batch</code>。<code>entropy_coeff=0, use_kl_loss=False</code> 进一步消除额外正则项。</p>
+</div>
+
+<hr>
+
+<!-- ========== 12. OTB ========== -->
+<h2 id="otb">12. OTB — Optimal Token Baseline</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>Optimal Token Baseline for RL Training of LLMs (2026)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2602.07078">arxiv.org/abs/2602.07078</a></td></tr>
+  <tr><th>核心创新</th><td>Token 级最优基线，使用"实现能量"权重，无需额外反向传播</td></tr>
+  <tr><th>verl 配置</th><td><code>adv_estimator: optimal_token_baseline</code>，<code>calculate_sum_pi_squared: true</code></td></tr>
+</table></div>
+
+<h3>12.1 理论推导</h3>
+
+<h4>梯度方差分解</h4>
+<p>策略梯度估计器 $\hat{g}(\tau) = \nabla\log\pi_\theta(\tau) \cdot A(\tau)$ 的方差：</p>
+<p>$$\text{Var}(\hat{g}) = \mathbb{E}[\|\hat{g}\|^2] - \|\mathbb{E}[\hat{g}]\|^2$$</p>
+
+<h4>Logit-Gradient Proxy（实现能量 $W_t$）</h4>
+<p>使用前向传播的概率估计梯度范数，避免反向传播：</p>
+<p>$$w_t = 1 - 2\pi_t + \sum_v \pi_v^2, \quad W_t = \sum_{j=1}^{t} w_j \cdot m_j$$</p>
+
+<p>其中 $\sum_v \pi_v^2 = \exp(\text{logsumexp}(2\cdot\text{logits}) - 2\cdot\text{logsumexp}(\text{logits}))$，通过前向 pass 计算。</p>
+
+<h4>最优 Token 级基线</h4>
+<p>$$B_t^{*} = \frac{\sum_{i=1}^N G_t^{(i)} \cdot W_t^{(i)}}{\sum_{i=1}^N W_t^{(i)} + \epsilon}$$</p>
+
+<p>最终优势：$\hat{A}_{i,t} = (G_t^{(i)} - B_t^{*}) \cdot m_{i,t}$</p>
+
+<blockquote>
+  <strong>关键优势</strong>：OTB 以 N=4 样本达到 N=32 的方差减少效果，token 消耗降低 65% 以上。
+</blockquote>
+
+<h3>12.2 verl 实现细节</h3>
+<div class="impl-box">
+  <div class="impl-title">🔧 OTB 三阶段数据流</div>
+  <p><strong>阶段一 — Actor 前向产出 sum_pi_squared（workers/actor/...）：</strong><br>
+  配置 <code>calculate_sum_pi_squared=True</code> 且 <code>use_fused_kernels=False</code>（fused kernel 不暴露完整 logits）。<br>
+  Actor 前向后，verl 计算：<code>sum_pi_sq[i,t] = exp(logsumexp(2*logits[i,t]) - 2*logsumexp(logits[i,t]))</code>（即 $\sum_v \pi_v^2$ 的 log-sum-exp trick，数值稳定）。<br>
+  返回 <code>batch.batch["sum_pi_squared"]</code>，形状 (B×n, T)。</p>
+  <p><strong>阶段二 — compute_advantage() 路由：</strong>检测到 <code>adv_estimator == OPTIMAL_TOKEN_BASELINE</code> 后，断言 <code>"sum_pi_squared" in data.batch</code>，将 <code>old_log_probs</code>、<code>sum_pi_squared</code> 和可选的 <code>rollout_is_weights</code> 一并传入 <code>compute_optimal_token_baseline_advantage()</code>。</p>
+  <p><strong>阶段三 — compute_optimal_token_baseline_advantage() 内部：</strong><br>
+  Step 1：<code>returns[i,t] = sum(r[i,t:T])</code>（reward-to-go，flip-cumsum-flip）<br>
+  Step 2：<code>pi_t = exp(old_log_probs)</code>，<code>w[i,t] = 1 - 2*pi_t + sum_pi_sq</code><br>
+  Step 3（可选）：若有 rollout IS weights，<code>w[i,t] *= (rollout_is_weights[i,t])^2</code><br>
+  Step 4：<code>W_cumulative[i,t] = cumsum(w[i,:t+1] * mask[i,:t+1])</code><br>
+  Step 5：按 uid 分组，对每组每个时刻 t 计算：<br>
+  &nbsp;&nbsp;<code>numerator[t] = sum_i(returns[i,t] * W_cumulative[i,t] * mask[i,t])</code><br>
+  &nbsp;&nbsp;<code>denominator[t] = sum_i(W_cumulative[i,t] * mask[i,t]) + ε</code><br>
+  &nbsp;&nbsp;<code>baseline[t] = numerator[t] / denominator[t]</code><br>
+  Step 6（handle_zero_tail）：对每组最长轨迹中超过第二长轨迹的尾部，将 baseline 置 0（因为该区域只有 1 条轨迹可参考，估计不可靠）。<br>
+  Step 7：<code>advantages[i,t] = (returns[i,t] - baseline[t]) * mask[i,t]</code></p>
+</div>
+
+<hr>
+
+<!-- ========== 13. GDPO ========== -->
+<h2 id="gdpo">13. GDPO — Group reward-Decoupled Normalization Policy Optimization</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>GDPO (2025)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2601.05242">arxiv.org/abs/2601.05242</a></td></tr>
+  <tr><th>核心创新</th><td>多维度 reward 解耦归一化，防止强 reward 信号淹没弱信号</td></tr>
+  <tr><th>verl 配置</th><td><code>adv_estimator: gdpo</code>，<code>gdpo_reward_keys: [...]</code></td></tr>
+</table></div>
+
+<h3>13.1 理论推导</h3>
+
+<p>当训练使用多个 reward 维度（如格式正确性 + 内容准确性）时，直接合并后归一化会导致信号损失。GDPO 的三步流程：</p>
+
+<p><strong>步骤 1：各维度独立 GRPO 归一化</strong></p>
+<p>$$A_k^{(i)} = \frac{r_k^{(i)} - \mu_{group}(r_k)}{\sigma_{group}(r_k) + \epsilon}, \quad \forall k \in \{1,...,K\}$$</p>
+
+<p><strong>步骤 2：加权聚合</strong></p>
+<p>$$A_{sum}^{(i)} = \sum_{k=1}^K w_k \cdot A_k^{(i)}$$</p>
+
+<p><strong>步骤 3：批次级别 whitening</strong></p>
+<p>$$\hat{A}^{(i)} = \text{whiten}(A_{sum}^{(i)}, \text{response\_mask})$$</p>
+
+<h3>13.2 verl 实现细节</h3>
+<div class="impl-box">
+  <div class="impl-title">🔧 GDPO 四阶段数据流</div>
+  <p><strong>阶段一 — Reward Function 返回多维 dict：</strong><br>
+  用户自定义的 <code>compute_score()</code> 必须返回 <code>dict</code>，例如 <code>{"format_reward": 0.3, "accuracy_reward": 0.8}</code>。<br>
+  <code>extract_reward(batch)</code> 在 Trainer 中将各 key 的 scalar 列表存入 <code>reward_extra_infos_dict</code>。</p>
+  <p><strong>阶段二 — 存入 non_tensor_batch：</strong><br>
+  <code>batch.non_tensor_batch.update({k: np.array(v) for k, v in reward_extra_infos_dict.items()})</code>。<br>
+  此时 <code>batch.non_tensor_batch["format_reward"]</code> 是形状 (B×n,) 的 float 数组（每条响应一个标量）。</p>
+  <p><strong>阶段三 — compute_advantage() 路由：</strong>检测到 <code>adv_estimator == "gdpo"</code> 时，额外传入 <code>non_tensor_batch=data.non_tensor_batch</code> 和 <code>batch=data.batch</code>。</p>
+  <p><strong>阶段四 — compute_gdpo_outcome_advantage() 内部：</strong><br>
+  Step 1：读取 <code>gdpo_reward_keys = config.gdpo_reward_keys</code>（如 <code>["format_reward", "accuracy_reward"]</code>）<br>
+  Step 2：对每个 key，从 <code>non_tensor_batch[key]</code> 取出 (B×n,) 的标量，定位每条响应的有效长度（EOS 位置），构建 token-level score tensor（在 EOS 处放置标量值，其他位置为 0），形状 (B×n, T)。<br>
+  Step 3：对每个维度独立调用 <code>compute_grpo_outcome_advantage(score_list[k], response_mask, index)</code> → 得到该维度的归一化 advantage (B×n, T)。<br>
+  Step 4：加权求和：<code>new_advantage += weights[k] * normalized_score</code>（weights 来自 <code>gdpo_reward_weights</code>，默认均等）<br>
+  Step 5：全局 whitening：<code>masked_whiten(new_advantage, response_mask) * response_mask</code>。</p>
+</div>
+
+<hr>
+
+<!-- ========== 14. CISPO ========== -->
+<h2 id="cispo">14. CISPO — Clipped IS + Stop Gradient</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>CISPO (2025)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2506.13585">arxiv.org/abs/2506.13585</a></td></tr>
+  <tr><th>核心创新</th><td>截断 IS 权重后应用 Stop Gradient，梯度只经 log π 传播</td></tr>
+  <tr><th>verl 配置</th><td><code>policy_loss.loss_mode: cispo</code></td></tr>
+</table></div>
+
+<h3>14.1 理论推导</h3>
+
+<p>标准 PPO 梯度：$\nabla_\theta [-r_t(\theta) \cdot A_t]$，梯度同时经过比率 $r_t = \pi_\theta / \pi_{old}$ 和比率的 clip。</p>
+
+<p>CISPO 的关键修改：先 clip，然后 stop_gradient，最后乘 $\log\pi_\theta$：</p>
+
+<p>$$L^{CISPO}(\theta) = -\text{sg}\left[\text{clip}(r_t, 1-\varepsilon, 1+\varepsilon)\right] \cdot \hat{A}_{i,t} \cdot \log\pi_\theta(y_{i,t}|x, y_{i,\lt t})$$</p>
+
+<p>梯度只经 $\log\pi_\theta$ 传播，裁剪后的 IS 权重作为<em>常数权重</em>。这等价于在截断区域内做加权 supervised loss。</p>
+
+<pre><code class="language-python"># compute_policy_loss_cispo
+clipped_ratio = torch.clamp(ratio, 1 - clip_ratio_low, 1 + clip_ratio_high)
+clipped_ratio_sg = clipped_ratio.detach()          # stop gradient!
+pg_losses = -clipped_ratio_sg * advantages * log_prob  # 梯度仅经 log_prob</code></pre>
+
+<hr>
+
+<!-- ========== 15. SAPO ========== -->
+<h2 id="sapo">15. SAPO — Smooth Adaptive Policy Optimization</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>SAPO (2025)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2511.20347">arxiv.org/abs/2511.20347</a></td></tr>
+  <tr><th>核心创新</th><td>用 sigmoid 门控函数代替 hard clip，构建连续 trust region</td></tr>
+  <tr><th>verl 配置</th><td><code>policy_loss.loss_mode: sapo</code></td></tr>
+</table></div>
+
+<h3>15.1 理论推导</h3>
+
+<p>SAPO 的门控函数（$\tau$ 为温度参数）：</p>
+<p>$$f(r_{i,t}, \tau) = \sigma\left(\tau(r_{i,t} - 1)\right) \cdot \frac{4}{\tau}$$</p>
+
+<p>其中 $r_{i,t} = \pi_\theta / \pi_{\theta_{old}}$ 为 token 级比率。$4/\tau$ 为归一化因子使 $f(1, \tau) = 1$。</p>
+
+<p>根据优势正负，自适应选择温度：</p>
+<p>$$\tau_{i,t} = \begin{cases} \tau_{pos} & \text{if } \hat{A}_{i,t} \gt 0 \\ \tau_{neg} & \text{if } \hat{A}_{i,t} \leq 0 \end{cases}$$</p>
+
+<p>损失函数：</p>
+<p>$$L^{SAPO}(\theta) = -\hat{E}_{i,t}\left[f(r_{i,t}, \tau_{i,t}) \cdot \hat{A}_{i,t}\right]$$</p>
+
+<p>当 $r=1$（on-policy）时，$f=1$（无衰减）；远离 on-policy 时，门控平滑降低梯度贡献，避免崩溃。</p>
+
+<hr>
+
+<!-- ========== 16. GMPO ========== -->
+<h2 id="gmpo">16. GMPO — Geometric Mean Policy Optimization</h2>
+
+<div class="info-table"><table>
+  <tr><th>论文</th><td>Geometric-Mean Policy Optimization (2025)</td></tr>
+  <tr><th>论文链接</th><td><a href="https://arxiv.org/abs/2507.20673">arxiv.org/abs/2507.20673</a></td></tr>
+  <tr><th>核心创新</th><td>用序列几何均值比率替代 token 乘积，结合序列级优势</td></tr>
+  <tr><th>verl 配置</th><td><code>policy_loss.loss_mode: geo_mean</code></td></tr>
+</table></div>
+
+<h3>16.1 理论推导</h3>
+
+<p>GMPO 在 log-space 做 clip，然后取几何均值作为序列级比率：</p>
+
+<p>Token 级 clipped log 比率（符号敏感）：</p>
+<p>$$\Delta_t^{clip} = \text{sgn}(\hat{A}) \cdot \min(\text{sgn}(\hat{A}) \cdot \Delta_t,\; \text{sgn}(\hat{A}) \cdot \text{clip}(\Delta_t, -\varepsilon, \varepsilon))$$</p>
+
+<p>序列级几何均值比率：</p>
+<p>$$r_{geo}(y_i) = \exp\left(\frac{\sum_{t=1}^{|y_i|} \Delta_t^{clip} \cdot m_t}{|y_i|}\right)$$</p>
+
+<p>序列级优势（聚合 token 级优势）：</p>
+<p>$$\hat{A}_{seq} = \frac{\sum_t \hat{A}_{i,t} \cdot m_t}{|y_i|}$$</p>
+
+<p>损失（序列级）：$L^{GMPO} = -\hat{A}_{seq} \cdot r_{geo}$，最终 <code>torch.mean()</code> 聚合所有序列。</p>
+
+<hr>
+
+<!-- ========== 17. 对比分析 ========== -->
+<h2 id="comparison">17. 跨算法对比分析</h2>
+
+<h3>17.1 优势估计器全面对比</h3>
+
+<table>
+<thead>
+<tr>
+  <th>算法</th><th>基线类型</th><th>需 Critic</th><th>需 Ref Model</th><th>需 n&gt;1</th><th>token 级基线</th><th>信号来源</th>
+</tr>
+</thead>
+<tbody>
+<tr><td><strong>GAE (PPO)</strong></td><td>Critic 价值函数</td><td class="check">✅</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td><td>Critic V(s)</td></tr>
+<tr><td><strong>GRPO</strong></td><td>组内均值</td><td class="cross">❌</td><td><em>可选</em></td><td class="check">✅</td><td class="cross">❌</td><td>Outcome reward</td></tr>
+<tr><td><strong>REINFORCE++</strong></td><td>全局 batch 均值</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td>Discounted return</td></tr>
+<tr><td><strong>ReMax</strong></td><td>贪婪解码奖励</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td class="cross">❌</td><td>Outcome reward</td></tr>
+<tr><td><strong>RLOO</strong></td><td>LOO 组内均值</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td>Outcome reward</td></tr>
+<tr><td><strong>OPO</strong></td><td>长度加权均值</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td>Outcome reward</td></tr>
+<tr><td><strong>GPG</strong></td><td>组内均值（修正）</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td>Outcome reward</td></tr>
+<tr><td><strong>OTB</strong></td><td>实现能量加权</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td><td class="check">✅</td><td>Return-to-go</td></tr>
+<tr><td><strong>GDPO</strong></td><td>各维度 GRPO</td><td class="cross">❌</td><td class="cross">❌</td><td class="check">✅</td><td class="cross">❌</td><td>多维 Reward</td></tr>
+</tbody>
+</table>
+
+<h3>17.2 策略损失函数对比</h3>
+
+<table>
+<thead>
+<tr><th>Loss Mode</th><th>算法</th><th>Clip 机制</th><th>Trust Region 依据</th><th>梯度路径</th></tr>
+</thead>
+<tbody>
+<tr><td><code>vanilla</code></td><td>PPO/GRPO/DAPO</td><td>比率 clip（对称/非对称）</td><td>概率比率</td><td>经 ratio = π/π_old</td></tr>
+<tr><td><code>gspo</code></td><td>GSPO</td><td>序列比率 clip</td><td>序列几何均值比率</td><td>经 log_prob（stop grad on ratio）</td></tr>
+<tr><td><code>dppo_tv</code></td><td>DPPO</td><td>TV 散度 binary mask</td><td>$|p-p_{old}| \leq \varepsilon$</td><td>经 log_prob（截断 IS 权重）</td></tr>
+<tr><td><code>dppo_kl</code></td><td>DPPO</td><td>Binary KL mask</td><td>$D_{KL}^{bin}(p_{old}\|p) \leq \varepsilon$</td><td>经 log_prob（截断 IS 权重）</td></tr>
+<tr><td><code>sapo</code></td><td>SAPO</td><td>无 hard clip，软门控</td><td>sigmoid 门控</td><td>经 gates × advantages</td></tr>
+<tr><td><code>gpg</code></td><td>GPG</td><td>无 clip</td><td>无约束</td><td>经 log_prob 直接</td></tr>
+<tr><td><code>cispo</code></td><td>CISPO</td><td>IS 权重 clip + stop grad</td><td>概率比率</td><td>只经 log_prob</td></tr>
+<tr><td><code>geo_mean</code></td><td>GMPO</td><td>log-space clip + 几何均值</td><td>序列几何均值</td><td>经几何均值比率</td></tr>
+<tr><td><code>clip_cov</code></td><td>Clip-Cov</td><td>PPO clip + 协方差选择性 clip</td><td>概率比率 + 协方差</td><td>经 ratio（协方差调制）</td></tr>
+</tbody>
+</table>
+
+<h3>17.3 算法能力雷达图（ECharts）</h3>
+
+<div id="chart-radar" class="echarts-container" style="height:440px"></div>
+<script>
+(function() {
+  var chart = echarts.init(document.getElementById('chart-radar'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    legend: { data: ['PPO','GRPO','REINFORCE++','RLOO','DAPO','GSPO','GPG','OTB'], textStyle:{color:'#cdd6f4'}, bottom:0 },
+    radar: {
+      indicator: [
+        {name:'计算效率', max:5},
+        {name:'方差减少', max:5},
+        {name:'稳定性', max:5},
+        {name:'多奖励支持', max:5},
+        {name:'实现简洁', max:5},
+        {name:'MoE 适用', max:5}
+      ],
+      splitArea:{areaStyle:{color:['#1e1e2e','#252535']}},
+      axisName:{color:'#89b4fa'},
+      splitLine:{lineStyle:{color:'#45475a'}}
+    },
+    series: [{
+      type: 'radar',
+      data: [
+        {value:[2,5,4,2,2,3], name:'PPO', lineStyle:{color:'#89b4fa'}, areaStyle:{color:'rgba(137,180,250,0.1)'}},
+        {value:[4,3,3,3,3,3], name:'GRPO', lineStyle:{color:'#a6e3a1'}, areaStyle:{color:'rgba(166,227,161,0.1)'}},
+        {value:[4,4,4,2,4,3], name:'REINFORCE++', lineStyle:{color:'#cba6f7'}, areaStyle:{color:'rgba(203,166,247,0.1)'}},
+        {value:[4,4,3,2,4,3], name:'RLOO', lineStyle:{color:'#f38ba8'}, areaStyle:{color:'rgba(243,139,168,0.1)'}},
+        {value:[3,3,4,2,3,3], name:'DAPO', lineStyle:{color:'#fab387'}, areaStyle:{color:'rgba(250,179,135,0.1)'}},
+        {value:[4,3,5,2,3,5], name:'GSPO', lineStyle:{color:'#94e2d5'}, areaStyle:{color:'rgba(148,226,213,0.1)'}},
+        {value:[5,3,4,2,5,4], name:'GPG', lineStyle:{color:'#f9e2af'}, areaStyle:{color:'rgba(249,226,175,0.1)'}},
+        {value:[3,5,5,2,3,3], name:'OTB', lineStyle:{color:'#eba0ac'}, areaStyle:{color:'rgba(235,160,172,0.1)'}},
+      ]
+    }]
+  });
+})();
+</script>
+
+<h3>17.4 AIME 2024 性能对比</h3>
+
+<div id="chart-perf" class="echarts-container" style="height:350px"></div>
+<script>
+(function() {
+  var chart = echarts.init(document.getElementById('chart-perf'));
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+    xAxis:{ type:'category', data:['GRPO\n(base)', 'DAPO\n(w/o DS)', 'DAPO\n(full)', 'DPPO-KL', 'DPPO-TV', 'R1-Zero\n-32B'], axisLabel:{color:'#cdd6f4', fontSize:11} },
+    yAxis:{ type:'value', name:'AIME 2024 Acc.(%)', nameTextStyle:{color:'#89b4fa'}, axisLabel:{color:'#cdd6f4'} },
+    series:[{
+      type:'bar', barWidth:'50%',
+      data:[
+        {value:44, itemStyle:{color:'#45475a'}},
+        {value:50, itemStyle:{color:'#cba6f7'}},
+        {value:52, itemStyle:{color:'#a6e3a1'}},
+        {value:53, itemStyle:{color:'#89dceb'}},
+        {value:54, itemStyle:{color:'#89b4fa'}},
+        {value:50, itemStyle:{color:'#6c7086'}},
+      ],
+      label:{show:true, position:'top', color:'#cdd6f4', formatter:'{c}%'}
+    }]
+  });
+})();
+</script>
+<p style="color:#6c7086;font-size:0.85em">数据来源：DAPO 论文 & DPPO 论文实验结果（Qwen2.5/Qwen3-30B-A3B-Base）</p>
+
+<hr>
+
+<!-- ========== 18. verl 架构 ========== -->
+<h2 id="arch">18. verl 算法插件架构</h2>
+
+<p>verl 采用<strong>注册器模式</strong>，算法逻辑完全解耦，可通过配置组合任意优势估计器和策略损失函数。</p>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph Config["⚙️ 配置层 (Hydra YAML)"]
+        C1["adv_estimator: grpo"]
+        C2["loss_mode: gspo"]
+    end
+    subgraph Registry["📦 注册表"]
+        R1["ADV_ESTIMATOR_REGISTRY<br>dict[str, Callable]"]
+        R2["POLICY_LOSS_REGISTRY<br>dict[str, Callable]"]
+    end
+    subgraph Core["🔧 core_algos.py"]
+        F1["@register_adv_est('grpo')<br>compute_grpo_outcome_advantage"]
+        F2["@register_policy_loss('gspo')<br>compute_policy_loss_gspo"]
+    end
+    subgraph Trainer["🚀 ray_trainer.py"]
+        T1["get_adv_estimator_fn(name)"]
+        T2["get_policy_loss_fn(name)"]
+    end
+    C1 --> T1
+    C2 --> T2
+    T1 --> R1
+    T2 --> R2
+    R1 --> F1
+    R2 --> F2
+</pre>
+
+<h3>18.1 训练主循环架构</h3>
+
+<pre class="mermaid">
+flowchart TD
+    S([每个训练步开始]) --> R1
+
+    subgraph ROLL["① Rollout 阶段"]
+        R1["Trainer 发送 prompt batch<br>到 Rollout Worker"]
+        R2["生成 n 条响应<br>返回 responses + rollout_log_probs"]
+        R3["Actor Worker 重计算<br>old_log_probs 前向推断"]
+        R1 --> R2 --> R3
+    end
+
+    subgraph REW["② Reward 阶段"]
+        RW1["Reward Model 计算<br>token_level_scores"]
+        RW2{"use_kl_in_reward?"}
+        RW3["token_level_rewards<br>= rm_scores - β·KL"]
+        RW4["token_level_rewards<br>= rm_scores"]
+        RW1 --> RW2
+        RW2 -->|Yes| RW3
+        RW2 -->|No| RW4
+    end
+
+    subgraph ADV["③ 优势计算 Driver 端 CPU"]
+        A1{"adv_estimator<br>类型"}
+        A2["Critic 计算 V(s)<br>compute_gae_advantage<br>写入 batch.advantages"]
+        A3["compute_grpo/rloo/gpg<br>等优势估计函数<br>写入 batch.advantages"]
+        A1 -->|GAE| A2
+        A1 -->|其他| A3
+    end
+
+    subgraph UPD["④ Actor 更新 ppo_epochs 轮"]
+        U1["切分 mini-batch<br>ppo_mini_batch_size"]
+        U2["Actor 前向得 log_prob"]
+        U3["POLICY_LOSS_REGISTRY<br>查表得 policy_loss_fn"]
+        U4["计算 pg_loss<br>可选 KL loss + entropy"]
+        U5["反向传播 参数更新"]
+        U1 --> U2 --> U3 --> U4 --> U5
+        U5 -->|下一 epoch| U1
+    end
+
+    R3 --> RW1
+    RW3 --> A1
+    RW4 --> A1
+    A2 --> U1
+    A3 --> U1
+    U5 -->|下一训练步| S
+</pre>
+
+<h3>18.2 KL 散度控制</h3>
+
+<p>verl 提供两种 KL 控制机制，可独立启用：</p>
+
+<table>
+<thead><tr><th>机制</th><th>配置</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>KL reward penalty</td><td><code>algorithm.use_kl_in_reward: true</code></td><td>将 KL 散度 $\beta \cdot D_{KL}(\pi_\theta \| \pi_{ref})$ 从 reward 中减去</td></tr>
+<tr><td>KL loss</td><td><code>actor.use_kl_loss: true</code></td><td>在训练损失中直接加 KL 项，GRPO 原论文推荐方式</td></tr>
+</tbody>
+</table>
+
+<p>KL 系数控制器支持 Fixed（固定 $\beta$）和 Adaptive（根据当前 KL 动态调整 $\beta$，参考 InstructGPT）。</p>
+
+<h3>18.3 损失聚合模式</h3>
+
+<table>
+<thead><tr><th>loss_agg_mode</th><th>公式</th><th>推荐场景</th></tr></thead>
+<tbody>
+<tr><td><code>token-mean</code></td><td>$L = \frac{\sum_{i,t} m_{it} \ell_{it}}{\sum_{i,t} m_{it}}$</td><td>长思维链，DAPO，verl 默认</td></tr>
+<tr><td><code>seq-mean-token-sum</code></td><td>$L = \frac{1}{B}\sum_i \sum_t m_{it} \ell_{it}$</td><td>序列平均，抑制长序列主导</td></tr>
+<tr><td><code>seq-mean-token-mean</code></td><td>$L = \frac{1}{B}\sum_i \frac{\sum_t m_{it}\ell_{it}}{|y_i|}$</td><td>GRPO 原论文，GSPO，SAPO</td></tr>
+<tr><td><code>seq-mean-token-sum-norm</code></td><td>$L = \frac{\sum_i \sum_t m_{it}\ell_{it}}{B \cdot H}$</td><td>Dr.GRPO，消除长度偏差</td></tr>
+</tbody>
+</table>
+
+<h3>18.4 Rollout 推理延迟指标：TTFT 与 TPOT</h3>
+
+<p>verl 的 Rollout 阶段调用 vLLM / SGLang 做大规模自回归生成，其推理性能由两个核心指标刻画：</p>
+
+<table>
+<thead>
+<tr><th>指标</th><th>全称</th><th>定义</th><th>决定因素</th><th>RL 训练中的影响</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>TTFT</strong></td>
+  <td>Time To First Token</td>
+  <td>从请求发出到<strong>第一个 token 返回</strong>的时间<br><small>$\text{TTFT} = t_{\text{first\_token}} - t_{\text{request}}$</small></td>
+  <td>Prefill 计算量（与 prompt 长度成正比）；请求排队等待</td>
+  <td>决定每步 rollout 的<em>启动延迟</em>；prompt 越长 TTFT 越高，影响长文档/RAG 场景的训练效率</td>
+</tr>
+<tr>
+  <td><strong>TPOT</strong></td>
+  <td>Time Per Output Token</td>
+  <td>首 token 之后，<strong>平均每生成一个 token</strong> 的耗时<br><small>$\text{TPOT} = \dfrac{t_{\text{last}} - t_{\text{first}}}{N_{\text{out}} - 1}$</small></td>
+  <td>Decode 内存带宽（Memory-bound）；并发 batch 大小</td>
+  <td>决定整批 rollout 的<em>生成吞吐</em>；Long CoT 训练输出数千 token，TPOT 是主要瓶颈</td>
+</tr>
+</tbody>
+</table>
+
+<h4>两阶段的硬件特性差异</h4>
+
+<table>
+<thead><tr><th></th><th>Prefill（影响 TTFT）</th><th>Decode（影响 TPOT）</th></tr></thead>
+<tbody>
+<tr><td><strong>计算模式</strong></td><td>一次并行处理所有输入 token，大矩阵乘</td><td>每步只生成 1 个 token，自回归串行</td></tr>
+<tr><td><strong>硬件瓶颈</strong></td><td>Compute-bound（Tensor Core 满载）</td><td>Memory-bound（反复读 KV Cache + 权重）</td></tr>
+<tr><td><strong>典型 MFU</strong></td><td>&gt;80%</td><td>&lt;10%（大量时间等内存）</td></tr>
+<tr><td><strong>优化手段</strong></td><td>Chunked Prefill；增大 batch size；TP 并行</td><td>投机解码（Speculative Decoding）；连续批处理；量化；PD 分离</td></tr>
+</tbody>
+</table>
+
+<h4>端到端 Rollout 延迟公式</h4>
+<p>$$\text{Latency}_{\text{rollout}} = \text{TTFT} + \text{TPOT} \times (N_{\text{out}} - 1)$$</p>
+
+<p>Long CoT 训练（如 DAPO、GRPO on reasoning）输出长度可达数千 token，$N_{\text{out}} \gg 1$，此时 TPOT 主导总延迟。以 TPOT=50ms、$N_{\text{out}}=4096$ 为例，单条响应生成约需 <strong>200 秒</strong>，是影响训练吞吐的首要瓶颈。</p>
+
+<div class="impl-box">
+  <div class="impl-title">🔧 verl 中的体现</div>
+  <p><strong>TTFT 相关：</strong>verl 的 Rollout Worker 启动时，调用 <code>generate_sequences()</code> 向 vLLM/SGLang 提交整批 prompt；TTFT 决定了第一批 token 返回前的等待时间，对齐训练的流水线气泡（pipeline bubble）直接影响 GPU 利用率。</p>
+  <p><strong>TPOT 相关：</strong>verl 支持在 rollout 完成前让 Actor/Critic 的参数更新在 CPU 侧提前调度，尽量与 vLLM 生成并发执行；Long CoT 场景中 <code>max_response_length</code> 设置越大，TPOT 的累积效应越显著，需配合 <code>tensor_parallel_size</code> 和 <code>gpu_memory_utilization</code> 共同调优。</p>
+  <p><strong>PD 分离：</strong>DeepSeek-V3 生产环境采用 3 Prefill + 9 Decode 节点（1:3）；SGLang 96 H100 GPU PD 分离实测输入吞吐 52,300 token/s。verl 的 Rollout Worker 可通过配置 vLLM/SGLang 的 PD 分离模式（<code>kv_transfer_config</code>）显著降低 TPOT，提升长序列训练吞吐。</p>
+</div>
+
+<hr>
+
+<!-- ========== 19. 选算法指南 ========== -->
+<h2 id="guide">19. 算法选择指南</h2>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>🎯 追求最强效果（单 reward）</h4>
+    <p><strong>推荐：OTB + vanilla loss</strong></p>
+    <p>N=4 达到 N=32 方差减少，token 消耗减少 65%。</p>
+    <p class="tag">配置：adv_estimator=optimal_token_baseline, n=4</p>
+  </div>
+  <div class="card">
+    <h4>🚀 快速上手（入门首选）</h4>
+    <p><strong>推荐：GRPO</strong></p>
+    <p>无 Critic，配置简单，社区资源最丰富，适合大多数 LLM reasoning 任务。</p>
+    <p class="tag">配置：adv_estimator=grpo, use_kl_loss=true</p>
+  </div>
+  <div class="card">
+    <h4>⚡ 极简高效（无任何辅助模型）</h4>
+    <p><strong>推荐：GPG</strong></p>
+    <p>无 clip、KL、critic、reference model，ICLR 2026 收录，超越 GRPO。</p>
+    <p class="tag">配置：adv_estimator=gpg, loss_mode=gpg</p>
+  </div>
+  <div class="card">
+    <h4>🏆 AIME/竞赛级别数学推理</h4>
+    <p><strong>推荐：DAPO</strong></p>
+    <p>Qwen2.5-32B AIME 2024 达 50%，完整开源配方。</p>
+    <p class="tag">配置：clip_ratio_low=0.2, clip_ratio_high=0.28 + filter_groups</p>
+  </div>
+  <div class="card">
+    <h4>🔧 MoE 模型训练稳定性</h4>
+    <p><strong>推荐：GSPO 或 DPPO</strong></p>
+    <p>序列级约束避免 token 级比率爆炸，Qwen3 验证有效。DPPO 从散度角度彻底修复 trust region。</p>
+    <p class="tag">配置：loss_mode=gspo 或 dppo_kl</p>
+  </div>
+  <div class="card">
+    <h4>🎨 多维度 Reward（格式+准确性）</h4>
+    <p><strong>推荐：GDPO</strong></p>
+    <p>各维度独立归一化，防止强 reward 淹没弱 reward 信号。</p>
+    <p class="tag">配置：adv_estimator=gdpo, gdpo_reward_keys=[...]</p>
+  </div>
+  <div class="card">
+    <h4>📉 训练不稳定/熵崩溃</h4>
+    <p><strong>推荐：SAPO 或 DPPO-TV</strong></p>
+    <p>SAPO 软门控避免硬截断导致的突变；DPPO-TV 基于散度直接控制更新幅度。</p>
+    <p class="tag">配置：loss_mode=sapo (tau_pos/tau_neg) 或 dppo_tv</p>
+  </div>
+  <div class="card">
+    <h4>🔬 研究/消融（精确 On-Policy）</h4>
+    <p><strong>推荐：OPO</strong></p>
+    <p>理论最优基线 + 严格 on-policy，适合消融实验基准对比。</p>
+    <p class="tag">配置：adv_estimator=opo, ppo_mini_batch_size=train_batch_size</p>
+  </div>
+</div>
+
+<hr>
+
+<!-- ========== 20. 核心洞见 ========== -->
+<h2 id="insights">20. 核心洞见与深度评注</h2>
+
+<h3>20.1 无 Critic 的代价与补偿</h3>
+<p>PPO 的 Critic 提供了 token 级的价值估计 $V(s_t)$，本质上是在利用<em>未来信息</em>构建低方差基线。去掉 Critic 后（GRPO、RLOO、GPG 等），这个未来信息被"组内其他响应的统计量"所替代。</p>
+<p>这种替代存在根本性限制：组统计量是序列级的，无法区分同一响应内不同 token 的贡献差异。OTB 是目前在无 Critic 条件下最接近 token 级优化的方案，用前向概率统计代替 Critic 估计梯度范数。</p>
+
+<h3>20.2 Token 级 vs 序列级归一化的本质矛盾</h3>
+<p>GRPO 的组归一化在序列级做，导致长响应的每个 token 梯度被"稀释"（总 loss 被 token 数平均）。<code>token-mean</code> 模式解决了稀释问题，但带来了长响应主导梯度的问题。Dr.GRPO 用全局常数 $H$ 归一化是折中方案。DAPO 的 token-mean + 动态采样组合实际上在两个维度同时做了修正。</p>
+
+<h3>20.3 Trust Region 的本质是什么</h3>
+<p>PPO 的 clip 是历史遗留设计：用比率约束策略不走太远。但比率 $\pi_{new}/\pi_{old}$ 对低概率 token 极度不稳定（分母接近 0）。GSPO 和 GMPO 把比率提升到序列级，通过几何均值/对数平均来稳定；DPPO 直接换用散度（TV/KL）作约束。CISPO 则走了另一条路：不改约束形式，但切断梯度路径，让 clip 只作为权重而非梯度来源。</p>
+
+<h3>20.4 MoE 模型的特殊挑战</h3>
+<p>MoE 模型中，不同 expert 对同一 token 的概率贡献差异极大，导致 token 级比率方差放大。GSPO 和 DPPO 都从不同角度解决了这个问题。SAPO 的软门控则提供了一种更 elegant 的解法：不强行截断，而是平滑地降低离群 token 的梯度贡献。</p>
+
+<h3>20.5 多 Reward 训练的陷阱</h3>
+<p>GDPO 揭示了一个重要问题：当直接把多个 reward 相加再归一化时，强 reward 维度（如准确性，范围 0-1 且方差大）会完全压制弱 reward 维度（如格式，方差小）。解耦归一化使每个维度的梯度贡献量级可控，这对构建综合能力模型（reasoning + format + safety）至关重要。</p>
+
+<h3>20.6 verl 的设计哲学</h3>
+<p>verl 的注册器架构值得借鉴：优势估计和策略损失完全解耦，允许研究者在不修改训练框架的情况下插入新算法。<code>core_algos.py</code> 约 2500 行代码实现了超过 20 种算法变体，每个函数签名统一，返回格式一致。这种设计使得"算法即插件"成为可能，也是 verl 能快速迭代支持最新算法的根本原因。</p>
+
+<hr>
+
+<p style="color:#6c7086; font-size:0.85em; text-align:center; margin-top:3em">
+  📄 报告基于 verl main branch（2026-07-02）代码分析，结合各算法原论文生成<br>
+  🔗 verl: <a href="https://github.com/verl-project/verl">github.com/verl-project/verl</a> |
+  core_algos.py: <code>verl/trainer/ppo/core_algos.py</code>
+</p>
+
+</main>
+
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+
+  // 自动生成目录
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3, main h4').forEach((h, i) => {
+    if (!h.id) h.id = 'h-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent.replace(/^[0-9.]+\s/, '');
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    if (h.tagName === 'H4') a.classList.add('toc-h4');
+    toc.appendChild(a);
+  });
+
+  // 滚动高亮
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-5% 0px -75% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+</script>
+</body>
+</html>

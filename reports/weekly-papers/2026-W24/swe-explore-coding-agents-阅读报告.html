@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWE-Explore | 阅读报告</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1}
+    *{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border)}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #toc a:hover{background:var(--border)}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600}#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8}
+    main{margin-left:240px;max-width:none;padding:40px 64px}h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px}h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em}
+    p{margin:.6em 0}a{color:var(--link)}strong{color:var(--strong)}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em}th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border)}
+    td{padding:7px 12px;border:1px solid var(--border)}tr:hover td{background:#2a2a3e}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em}code{font-family:'JetBrains Mono','Fira Code',monospace}
+    p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center}.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+    ul,ol{padding-left:1.6em;margin:.6em 0}li{margin:.3em 0}
+    .tag{display:inline-block;font-size:.78em;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:4px;background:var(--heading);color:#1e1e2e}
+    .tag.orange{background:#fab387}.tag.green{background:#a6e3a1}.tag.purple{background:#cba6f7}
+    .info-table td:first-child{font-weight:600;color:var(--heading);width:130px;white-space:nowrap}
+    .algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9}
+    .algo-box .algo-title{color:var(--heading);font-weight:700;font-size:1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+    .algo-box .kw{color:#cba6f7;font-weight:700}.algo-box .cm{color:#6c7086;font-style:italic}.algo-box .var{color:#94e2d5}.algo-box .fn{color:#a6e3a1}.algo-box .num{color:#f9e2af}
+    .metric-card{display:inline-block;background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:12px 18px;margin:6px;vertical-align:top;min-width:160px}
+    .metric-card .mc-name{color:var(--heading);font-weight:700;font-size:.95em;margin-bottom:4px}
+    .metric-card .mc-val{font-size:1.4em;font-weight:700;color:var(--strong)}
+    .metric-card .mc-desc{font-size:.8em;color:#6c7086;margin-top:4px}
+    .highlight-box{background:#2a2a3e;border-left:3px solid var(--strong);padding:12px 16px;margin:1em 0;border-radius:0 6px 6px 0}
+    .finding-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin:1em 0}
+    .finding-card{background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:16px}
+    .finding-card h4{color:var(--heading);margin-bottom:8px;font-size:.95em}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}}</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<!-- ===== 标题区 ===== -->
+<h1>SWE-Explore: Benchmarking How Coding Agents Explore Repositories</h1>
+<p style="color:#6c7086;font-size:.9em">Shaoqiu Zhang, Yuhang Wang, Jialiang Liang 等 11 人 &nbsp;·&nbsp; 上海交通大学 &nbsp;·&nbsp; arXiv 2606.07297 &nbsp;·&nbsp; 2026-06</p>
+<p>
+  <span class="tag">仓库探索</span>
+  <span class="tag orange">编码 Agent</span>
+  <span class="tag green">基准评测</span>
+  <span class="tag purple">多语言</span>
+  <span class="tag" style="background:#cba6f7">行级标注</span>
+</p>
+
+<hr>
+
+<!-- ===== 论文信息表 ===== -->
+<table class="info-table">
+  <tr><th>标题</th><td>SWE-Explore: Benchmarking How Coding Agents Explore Repositories</td></tr>
+  <tr><th>核心问题</th><td>现有编码 Agent 基准（SWE-bench 等）将任务视为二元通过/失败，忽略了<strong>仓库探索</strong>这一细粒度能力；本文提出 SWE-Explore 基准，将仓库探索形式化为行级排序检索任务并系统评估</td></tr>
+  <tr><th>机构</th><td>上海交通大学（主导）、新疆大学、UIUC、香港中文大学、独立研究者</td></tr>
+  <tr><th>数据集规模</th><td>848 issues × 10 编程语言 × 203 开源仓库</td></tr>
+  <tr><th>开源地址</th><td><a href="https://github.com/Qiushao-E/SWE-Explore-Bench">github.com/Qiushao-E/SWE-Explore-Bench</a> &nbsp;|&nbsp; <a href="https://huggingface.co/datasets/SWE-Explore-Bench/SWE-Explore-Bench">HuggingFace Dataset</a></td></tr>
+  <tr><th>License</th><td>CC BY-NC-ND 4.0</td></tr>
+</table>
+
+<hr>
+
+<!-- ===== 1. 概述 ===== -->
+<h2>概述：为什么仓库探索是编码 Agent 的核心能力</h2>
+
+<p>
+在软件工程自动化的研究版图中，SWE-bench 等基准以「能否生成通过测试的补丁」为唯一度量，推动了 Claude Code、SWE-agent、AutoCodeRover 等系统的快速迭代。然而，这种<strong>端到端的二元评估</strong>掩盖了 Agent 在流程各阶段的真实能力差异。当一个 Agent 无法修复 issue 时，根本原因究竟是「探索了错误的代码区域」还是「找到了正确区域但生成了错误补丁」？现有基准无法区分这两种失败模式。
+</p>
+
+<p>
+仓库探索（Repository Exploration）是编码 Agent 流水线的第一步，也是最关键的一步。一个真实的代码仓库平均包含 759 个文件、18 万行代码，而修复一个 issue 往往只需要精确定位到 4.3 个文件、4.7 个区域、约 1578 行上下文。在如此高的信噪比挑战下，Agent 必须依靠对自然语言 issue 的理解、代码语义的把握以及多步交互式导航，才能找到真正相关的代码证据。
+</p>
+
+<p>
+<strong>为什么行级探索比文件级更重要？</strong>现有的 bug 定位研究（如 LocAgent、OrcaLoca）通常只评估到文件或函数粒度。但实验表明，即使 Agent 找到了正确的文件（HitFile 高达 0.64–0.68），其行级召回率（Recℓ）往往只有 0.14–0.19。这意味着 Agent 虽然进入了正确的「邻域」，却仍然遗漏了修复所需的关键代码行。行级覆盖不足直接导致下游补丁生成失败——实验中，当核心上下文覆盖率从 75% 降至 50% 时，修复率出现断崖式下降。
+</p>
+
+<p>
+SWE-Explore 的核心洞察在于：<strong>探索质量是可以独立测量的</strong>。通过将仓库探索形式化为「在固定行预算内返回相关代码区域排序列表」这一标准化任务，任何检索方法、搜索 Agent 或长上下文选择器都可以在同一评估框架下进行公平比较。这种解耦设计使研究者能够精确诊断 Agent 的探索瓶颈，为改进方向提供明确指引。
+</p>
+
+<blockquote>
+  <strong>核心论断</strong>：仓库探索不是端到端修复的附属品，而是一个独立的、可测量的、对下游修复行为具有高度预测力的核心能力维度。
+</blockquote>
+
+<!-- ===== 2. 研究背景 ===== -->
+<h2>研究背景：现有编码 Agent 基准的局限性</h2>
+
+<h3>现有基准对比</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>基准</th>
+      <th>评估目标</th>
+      <th>执行验证</th>
+      <th>多语言</th>
+      <th>行级真值</th>
+      <th>轨迹驱动真值</th>
+      <th>联合探索+修复</th>
+      <th>排序区域评估</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>HumanEval</td><td>函数级代码生成</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    <tr><td>MBPP</td><td>简单编程题</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    <tr><td>SWE-bench Verified</td><td>仓库级 issue 修复</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    <tr><td>SWE-bench Multilingual</td><td>多语言 issue 修复</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    <tr><td>SWE-bench-Pro</td><td>长视野专业任务</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    <tr><td>Loc-Bench</td><td>代码定位</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    <tr><td>ContextBench</td><td>上下文检索</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td>✓</td><td>✗</td></tr>
+    <tr><td>SWE-ContextBench</td><td>上下文学习</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+    <tr style="background:#2a2a3e"><td><strong>SWE-Explore（本文）</strong></td><td><strong>仓库探索</strong></td><td>✓</td><td>✓</td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td><td><strong>✓</strong></td></tr>
+  </tbody>
+</table>
+
+<h3>核心局限性分析</h3>
+
+<ul>
+  <li><strong>二元评估盲区</strong>：SWE-bench 的 pass/fail 指标无法区分「探索失败」与「合成失败」两种截然不同的根因。一个找到了正确代码但生成了语法错误补丁的 Agent，与一个连正确文件都没找到的 Agent，在排行榜上得到相同的分数。</li>
+  <li><strong>粒度不足</strong>：Loc-Bench、ContextBench 等中间评估基准停留在文件或函数粒度，无法揭示 Agent 是否真正读取了修复所需的关键代码行。</li>
+  <li><strong>缺乏统一对比框架</strong>：稀疏检索、密集检索、Reranker 和 Agentic 探索器从未在同一个任务定义下进行公平比较。</li>
+  <li><strong>真值来源不可靠</strong>：人工标注成本高昂且难以保持一致性，特别是在跨十种语言的大规模评估中。</li>
+  <li><strong>下游验证缺失</strong>：现有探索/定位基准没有直接验证其指标是否真正预测下游修复成功率。</li>
+</ul>
+
+<!-- ===== 3. 基准设计 ===== -->
+<h2>基准设计：SWE-Explore 构建方法</h2>
+
+<h3>任务形式化</h3>
+
+<p>SWE-Explore 将仓库探索定义为独立的功能性任务。给定一个 issue $q$ 和仓库快照 $R$，探索器返回相关代码区域的排序列表：</p>
+
+<p>$$f : (q, R) \mapsto P = (r_1, r_2, \ldots, r_K)$$</p>
+
+<p>其中每个区域 $r_i = (p_i, s_i, e_i)$ 由文件路径 $p_i$ 和行范围 $[s_i, e_i]$ 组成。探索器<strong>不需要生成补丁</strong>，<strong>不访问真值</strong>，也不强制要求与仓库交互。这种设计使得稀疏检索器、交互式 Agent 和长上下文选择器都能在同一输出契约下进行比较。</p>
+
+<h3>数据来源与规模统计</h3>
+
+<p>SWE-Explore 从三个公开数据集构建：SWE-bench Verified、SWE-bench-Pro 和 SWE-bench Multilingual。经过「至少两条成功轨迹」的过滤后，保留 <strong>848 个实例</strong>，覆盖 <strong>10 种编程语言</strong>和 <strong>203 个开源仓库</strong>。</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin:1em 0">
+  <div>
+    <h3>语言分布（ECharts 饼图）</h3>
+    <div id="chart-lang" class="echarts-container" style="height:300px"></div>
+  </div>
+  <div>
+    <h3>实例统计摘要</h3>
+    <table>
+      <tr><th>维度</th><th>均值</th><th>最大值</th></tr>
+      <tr><td>Issue 文本长度（词）</td><td>191.2</td><td>1,892</td></tr>
+      <tr><td>核心上下文文件数</td><td>4.3</td><td>15</td></tr>
+      <tr><td>核心上下文区域数</td><td>4.7</td><td>15</td></tr>
+      <tr><td>核心上下文行数</td><td>1,578</td><td>16,136</td></tr>
+      <tr><td>仓库文件数（非测试）</td><td>759</td><td>—</td></tr>
+      <tr><td>仓库行数（非测试）</td><td>179,600</td><td>—</td></tr>
+      <tr><td>成功轨迹数</td><td>4</td><td>66</td></tr>
+    </table>
+  </div>
+</div>
+
+<h3>真值构建：轨迹驱动行级标注</h3>
+
+<p>直接人工标注在如此规模下既昂贵又难以保持一致性。SWE-Explore 提出了一种<strong>轨迹驱动的自动标注方法</strong>，从成功修复 issue 的 Agent 轨迹中提取行级真值。</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: 轨迹驱动行级真值构建</div>
+  <p><span class="kw">Input:</span> <span class="var">T</span> = 成功轨迹集合（<span class="var">|T|</span> ≥ <span class="num">2</span>），来自 GPT-5.4, Gemini-3-Pro, Sonnet-4.6, GLM-5.1, Kimi-K2.6</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 1: 从每条轨迹提取可观测读取动作</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">τ</span> <span class="kw">in</span> <span class="var">T</span>:</p>
+  <p style="padding-left:3em"><span class="var">R(τ)</span> ← <span class="fn">extract_reads</span>(<span class="var">τ</span>)  <span class="cm">// editor views + cat/head/tail/sed-n + grep -n hits</span></p>
+  <p style="padding-left:3em"><span class="cm">// 归一化为 (path, start_line, end_line) 三元组，丢弃无法映射的动作</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 2: 跨轨迹取交集，得到保守核心候选</span></p>
+  <p style="padding-left:1.5em"><span class="var">R_core_raw</span> = ∩<sub>τ∈T</sub> <span class="var">R(τ)</span>  <span class="cm">// 文件级、行级交集</span></p>
+  <p style="padding-left:1.5em"><span class="var">R_opt_raw</span> = (∪<sub>τ∈T</sub> <span class="var">R(τ)</span>) \ <span class="var">R_core_raw</span>  <span class="cm">// 可选区域：交集外的成功读取</span></p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 3: LLM 辅助精化，提升关键可选区域</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">candidate</span> <span class="kw">in</span> <span class="var">R_opt_raw</span>:</p>
+  <p style="padding-left:3em"><span class="kw">if</span> <span class="fn">llm_is_load_bearing</span>(<span class="var">candidate</span>, issue, trajectories):</p>
+  <p style="padding-left:4.5em"><span class="var">R_core_raw</span> ← <span class="var">R_core_raw</span> ∪ {<span class="var">candidate</span>}</p>
+  <p style="padding-left:1.5em"><span class="cm">// Step 4: 人工审核，删除不支持的区域</span></p>
+  <p style="padding-left:1.5em"><span class="var">R_core</span> ← <span class="fn">human_audit</span>(<span class="var">R_core_raw</span>)  <span class="cm">// 最终行级核心真值</span></p>
+  <p><span class="kw">Output:</span> <span class="var">R_core</span>（主要评分目标），<span class="var">R_opt</span>（诊断用可选上下文）</p>
+</div>
+
+<p><strong>三种真值变体对比：</strong></p>
+<table>
+  <tr><th>变体</th><th>构建方式</th><th>特点</th><th>用途</th></tr>
+  <tr><td>纯交集（R_int）</td><td>所有轨迹的逐行交集</td><td>最保守，高精度低召回</td><td>消融分析</td></tr>
+  <tr><td>精化核心（R_core）</td><td>交集 + LLM 提升 + 人工审核</td><td>平衡精度与召回</td><td><strong>主要评分目标</strong></td></tr>
+  <tr><td>完全并集（R_union）</td><td>所有轨迹的并集</td><td>高召回，含探索性冗余</td><td>消融分析</td></tr>
+</table>
+
+<!-- ===== 4. 三维评估体系 ===== -->
+<h2>三维评估体系</h2>
+
+<p>设 $L(r)$ 为区域 $r$ 覆盖的 $(path, line)$ 集合，$L(P) = \bigcup_i L(r_i)$ 为预测列表覆盖的全部行，$Y = L(R_{core})$ 为行级核心真值，行预算为 $B$，$P_{\leq B}$ 为累计行数不超过 $B$ 的最长预测前缀。</p>
+
+<h3>维度一：覆盖率（Coverage）</h3>
+
+<p><strong>行级精度与召回：</strong></p>
+
+<p>$$\text{Prec} = \frac{|L(P) \cap Y|}{|L(P)|}$$</p>
+
+<p>$$\text{Rec}_\ell = \frac{|L(P) \cap Y|}{|Y|}$$</p>
+
+<p>$$\text{F1} = \frac{2 \cdot \text{Prec} \cdot \text{Rec}_\ell}{\text{Prec} + \text{Rec}_\ell}$$</p>
+
+<p><strong>粗粒度命中率（实践中重要的事件）：</strong></p>
+
+<p>文件级命中率：$\text{HitFile} = \frac{|\{p : \exists i, p_i = p\} \cap \text{Files}(Y)|}{|\text{Files}(Y)|}$</p>
+
+<p>区域级命中率：$\text{HitRegion} = \frac{|\{r \in R_{core} : \exists i, L(r_i) \cap L(r) \neq \emptyset\}|}{|R_{core}|}$</p>
+
+<h3>维度二：排序（Ranking）</h3>
+
+<p>将 nDCG 适配到行预算设置。每个预测区域 $r_i$ 的增益 $g_i$ 等于其覆盖的新核心行数，按预测顺序处理，在预算 $B$ 内累计折扣增益：</p>
+
+<p>$$\text{DCG}@B = \sum_{i \in P_{\leq B}} \frac{g_i}{\log_2(i+2)}$$</p>
+
+<p>$$\text{nDCG}@B = \frac{\text{DCG}@B}{\text{IDCG}@B}$$</p>
+
+<p>其中 IDCG 通过贪心算法在相同行预算下构建理想排序（每步选取剩余增益最大的真值区域）。主实验使用 $B \in \{100, 300, 500\}$。</p>
+
+<p><strong>首次有用命中（FUH）：</strong>设 $i^{*}$ 为预测列表中第一个与 $Y$ 有行级交集的排名，则：</p>
+
+<p>$$\text{FUH} = \begin{cases} 1 - i^{*}/|P|, & \text{若存在这样的 } i^{*} \\ 0, & \text{否则} \end{cases}$$</p>
+
+<p>FUH 越高，表示有用证据在排序列表中出现越早。</p>
+
+<h3>维度三：上下文效率（Context Efficiency）</h3>
+
+<p>$$\text{CtxEff} = \frac{|L(P) \cap (L(R_{core}) \cup L(R_{opt}))|}{|L(P)|}$$</p>
+
+<p>量化预测上下文中有多大比例是有效证据（核心或可选），而非无关代码。互补指标<strong>噪声率（NoiseReg）</strong>定义为既不与 $R_{core}$ 也不与 $R_{opt}$ 重叠的预测区域比例，作为区域级诊断。</p>
+
+<h3>指标与下游修复率的相关性</h3>
+
+<table>
+  <thead>
+    <tr><th>指标</th><th>Pearson r</th><th>Spearman ρ</th><th>解读</th></tr>
+  </thead>
+  <tbody>
+    <tr style="background:#2a2a3e"><td><strong>CtxEff</strong></td><td><strong>+0.950</strong></td><td>+0.739</td><td>最强 Pearson 信号：相关且紧凑</td></tr>
+    <tr><td>FUH</td><td>+0.928</td><td>+0.675</td><td>早期命中对修复至关重要</td></tr>
+    <tr style="background:#2a2a3e"><td><strong>Rec@100</strong></td><td>+0.926</td><td><strong>+0.845</strong></td><td>最强 Spearman 信号：紧预算下早期覆盖</td></tr>
+    <tr><td>HitFile</td><td>+0.925</td><td>+0.695</td><td>文件命中是强信号</td></tr>
+    <tr><td>nDCG@500</td><td>+0.921</td><td>+0.460</td><td>高 Pearson，Spearman 较弱（区分宏观层级）</td></tr>
+    <tr><td>HitRegion</td><td>+0.901</td><td>+0.695</td><td>区域命中强信号</td></tr>
+    <tr><td>NoiseReg ↓</td><td>-0.812</td><td>-0.562</td><td>噪声越低修复率越高</td></tr>
+    <tr><td>Rec@500</td><td>+0.710</td><td>+0.796</td><td>宽预算召回信号较弱</td></tr>
+    <tr><td>F1</td><td>+0.673</td><td>+0.810</td><td>综合指标，预测力中等</td></tr>
+    <tr><td>Recℓ（行级）</td><td>+0.617</td><td>+0.796</td><td>最弱的独立预测信号</td></tr>
+  </tbody>
+</table>
+
+<blockquote>
+<strong>关键洞察</strong>：上下文效率（CtxEff）具有最高的 Pearson 相关性（r=0.950），说明有用上下文必须同时满足「相关」和「紧凑」两个条件。Rec@100 是最强的 Spearman 信号（ρ=0.845），表明在严格行预算下的早期覆盖对修复成功率具有特别强的预测力。
+</blockquote>
+
+<!-- ===== 5. Agent 分类 ===== -->
+<h2>Agent 分类：Agentic Explorer vs 经典检索</h2>
+
+<h3>探索器分类体系</h3>
+
+<pre class="mermaid">
+flowchart TD
+    A["仓库探索器 (Repository Explorer)"] --> B["经典检索方法"]
+    A --> C["Agentic 探索器"]
+
+    B --> D["稀疏检索"]
+    B --> E["密集检索"]
+
+    D --> D1["BM25\n词频-逆文档频率加权\n基于词项匹配"]
+    D --> D2["TF-IDF\n经典信息检索基线\n无需训练"]
+
+    E --> E1["RAG / Potion\n句子变换器蒸馏\n静态词嵌入"]
+
+    C --> F["通用编码 Agent"]
+    C --> G["专门定位 Agent"]
+
+    F --> F1["Claude Code\n工具调用 + 仓库导航"]
+    F --> F2["Codex\nOpenAI 代码 Agent"]
+    F --> F3["OpenHands\n开源通用 Agent 平台"]
+    F --> F4["Mini-SWE-Agent\n轻量级 SWE-Agent 变体"]
+    F --> F5["AweAgent\n多轮交互修复框架"]
+
+    G --> G1["AutoCodeRover\nLLM + 代码搜索 + 程序分析\n高精度，保守策略"]
+    G --> G2["LocAgent\n图引导 LLM Agent\n文件/函数级定位"]
+    G --> G3["OrcaLoca\n软件 issue 定位框架\n极低噪声"]
+    G --> G4["CoSIL\n迭代代码图搜索\n最高行级召回"]
+</pre>
+
+<h3>各类型详解</h3>
+
+<table>
+  <thead>
+    <tr><th>类别</th><th>代表系统</th><th>工作原理</th><th>核心优势</th><th>主要局限</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>稀疏检索</strong></td>
+      <td>BM25, TF-IDF</td>
+      <td>以 issue 文本为查询，对仓库代码块进行词项相似度排序</td>
+      <td>速度快，无需训练，可解释</td>
+      <td>词汇鸿沟严重；issue 中无特定标识符时几乎失效；接近随机基线</td>
+    </tr>
+    <tr>
+      <td><strong>密集检索</strong></td>
+      <td>Potion (RAG)</td>
+      <td>句子变换器蒸馏的静态词嵌入，语义相似度排序</td>
+      <td>一定程度缓解词汇鸿沟</td>
+      <td>仍是单轮检索；无法利用仓库结构；性能仅略高于稀疏基线</td>
+    </tr>
+    <tr>
+      <td><strong>通用编码 Agent</strong></td>
+      <td>Claude Code, Codex, OpenHands, Mini-SWE-Agent, AweAgent</td>
+      <td>多步工具调用（文件浏览、代码搜索、grep、查看函数定义等）交互式导航仓库</td>
+      <td>文件命中率高（0.64–0.68）；早期排序好；上下文紧凑</td>
+      <td>行级召回率低（0.14–0.19）；各系统表现高度相似，说明探索机制趋同</td>
+    </tr>
+    <tr>
+      <td><strong>专门定位 Agent</strong></td>
+      <td>AutoCodeRover, LocAgent, OrcaLoca, CoSIL</td>
+      <td>专为代码定位设计的结构化搜索策略（代码图、程序分析、迭代搜索）</td>
+      <td>AutoCodeRover 精度最高；CoSIL 行级召回最高（0.788）</td>
+      <td>并非一致优于通用 Agent；部分系统（OrcaLoca）遗漏大量相关区域</td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- ===== 6. 实验结果 ===== -->
+<h2>实验结果</h2>
+
+<h3>各系统三维得分对比（K=5）</h3>
+
+<div id="chart-main" class="echarts-container" style="height:380px"></div>
+
+<h3>完整指标对比表（K=5，所有 Agentic 探索器使用 GPT-5.4）</h3>
+
+<table>
+  <thead>
+    <tr>
+      <th>探索器</th>
+      <th>HitReg ↑</th>
+      <th>Prec ↑</th>
+      <th>Recℓ ↑</th>
+      <th>F1 ↑</th>
+      <th>HitFile ↑</th>
+      <th>nDCG@500 ↑</th>
+      <th>FUH ↑</th>
+      <th>CtxEff ↑</th>
+      <th>NoiseReg ↓</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="background:#2a2a3e"><td><strong>Oracle</strong></td><td>0.915</td><td>1.000</td><td>0.953</td><td>0.964</td><td>0.923</td><td>0.858</td><td>1.000</td><td>1.000</td><td>0.000</td></tr>
+    <tr><td>Random</td><td>0.003</td><td>0.002</td><td>0.004</td><td>0.002</td><td>0.004</td><td>0.004</td><td>0.006</td><td>0.002</td><td>0.997</td></tr>
+    <tr><td>BM25</td><td>0.065</td><td>0.055</td><td>0.021</td><td>0.024</td><td>0.079</td><td>0.132</td><td>0.141</td><td>0.087</td><td>0.910</td></tr>
+    <tr><td>TF-IDF</td><td>0.121</td><td>0.117</td><td>0.049</td><td>0.054</td><td>0.140</td><td>0.223</td><td>0.240</td><td>0.190</td><td>0.821</td></tr>
+    <tr><td>Potion (RAG)</td><td>0.069</td><td>0.055</td><td>0.025</td><td>0.026</td><td>0.088</td><td>0.136</td><td>0.146</td><td>0.100</td><td>0.897</td></tr>
+    <tr style="background:#2a2a3e"><td><strong>CoSIL</strong></td><td>0.544</td><td>0.581</td><td><strong>0.788</strong></td><td><strong>0.602</strong></td><td>0.544</td><td>0.824</td><td>0.920</td><td>0.898</td><td>0.471</td></tr>
+    <tr><td>Mini-SWE-Agent</td><td>0.505</td><td>0.530</td><td>0.151</td><td>0.190</td><td>0.640</td><td>0.885</td><td>0.907</td><td>0.754</td><td>0.253</td></tr>
+    <tr><td>OpenHands</td><td>0.514</td><td>0.489</td><td>0.179</td><td>0.209</td><td>0.645</td><td>0.867</td><td>0.895</td><td>0.737</td><td>0.245</td></tr>
+    <tr><td>AweAgent</td><td>0.534</td><td>0.577</td><td>0.140</td><td>0.182</td><td>0.682</td><td>0.954</td><td>0.975</td><td>0.829</td><td>0.191</td></tr>
+    <tr><td>AutoCodeRover</td><td>0.272</td><td><strong>0.680</strong></td><td>0.233</td><td>0.291</td><td>0.280</td><td>0.720</td><td>0.730</td><td>0.738</td><td>0.034</td></tr>
+    <tr><td>LocAgent</td><td>0.472</td><td>0.642</td><td>0.191</td><td>0.241</td><td>0.540</td><td>0.950</td><td>0.977</td><td>0.799</td><td>0.195</td></tr>
+    <tr><td>OrcaLoca</td><td>0.126</td><td>0.295</td><td>0.033</td><td>0.049</td><td>0.129</td><td>0.311</td><td>0.313</td><td>0.317</td><td>0.003</td></tr>
+    <tr style="background:#2a2a3e"><td><strong>Claude Code</strong></td><td>0.531</td><td>0.598</td><td>0.154</td><td>0.202</td><td><strong>0.667</strong></td><td>0.938</td><td><strong>0.963</strong></td><td>0.829</td><td>0.186</td></tr>
+    <tr><td>Codex</td><td>0.516</td><td>0.523</td><td>0.194</td><td>0.223</td><td>0.649</td><td>0.901</td><td>0.936</td><td>0.762</td><td>0.249</td></tr>
+  </tbody>
+</table>
+
+<h3>下游修复率对比（受限上下文验证，K=5）</h3>
+
+<div id="chart-resolve" class="echarts-container" style="height:380px"></div>
+
+<table>
+  <thead>
+    <tr><th>探索器</th><th>修复率 (%)</th><th>类别</th></tr>
+  </thead>
+  <tbody>
+    <tr style="background:#2a2a3e"><td><strong>Oracle</strong></td><td><strong>59.7</strong></td><td>上界</td></tr>
+    <tr><td>CoSIL</td><td>59.3</td><td>专门定位 Agent</td></tr>
+    <tr><td>Mini-SWE-Agent</td><td>50.0</td><td>通用编码 Agent</td></tr>
+    <tr><td>Codex</td><td>50.3</td><td>通用编码 Agent</td></tr>
+    <tr><td>Claude Code</td><td>48.0</td><td>通用编码 Agent</td></tr>
+    <tr><td>OpenHands</td><td>47.7</td><td>通用编码 Agent</td></tr>
+    <tr><td>OrcaLoca</td><td>45.3</td><td>专门定位 Agent</td></tr>
+    <tr><td>AutoCodeRover</td><td>44.7</td><td>专门定位 Agent</td></tr>
+    <tr><td>LocAgent</td><td>44.7</td><td>专门定位 Agent</td></tr>
+    <tr><td>AweAgent</td><td>41.3</td><td>通用编码 Agent</td></tr>
+    <tr><td>TF-IDF</td><td>26.0</td><td>稀疏检索</td></tr>
+    <tr><td>RAG</td><td>23.3</td><td>密集检索</td></tr>
+    <tr><td>BM25</td><td>12.7</td><td>稀疏检索</td></tr>
+    <tr><td>Random</td><td>4.7</td><td>下界</td></tr>
+  </tbody>
+</table>
+
+<h3>不同 LLM 驱动同一 Mini-SWE-Agent 的探索质量（K=5）</h3>
+
+<div id="chart-llm" class="echarts-container" style="height:380px"></div>
+
+<h3>文件级 vs 行级：关键差距分析</h3>
+
+<div id="chart-gap" class="echarts-container" style="height:320px"></div>
+
+<!-- ===== 7. 关键发现 ===== -->
+<h2>关键发现</h2>
+
+<div class="finding-grid">
+  <div class="finding-card">
+    <h4>发现 1：Agentic 探索器显著优于经典检索</h4>
+    <p>稀疏检索（BM25、TF-IDF）和轻量密集检索（Potion）在大多数指标上接近随机基线，而每个 Agentic 探索器都显著高于它们。这证明仓库探索无法通过一次性词项或嵌入检索来有效完成——与仓库的多步交互已经是达到现代编码 Agent 指标范围的必要条件。</p>
+  </div>
+  <div class="finding-card">
+    <h4>发现 2：低 F1 主要是召回问题</h4>
+    <p>尽管文件命中率和排序分数较高，大多数非 Oracle 探索器的 F1 仍然很低，限制因素通常是行级召回率而非精度。通用编码 Agent 的 HitFile 和 nDCG@500 很高，但 Recℓ 仅在 0.14–0.19 之间。这表明<strong>足够广泛的仓库探索</strong>仍是当前代码 Agent 的核心瓶颈。</p>
+  </div>
+  <div class="finding-card">
+    <h4>发现 3：通用编码 Agent 表现出人意料地相似</h4>
+    <p>Claude Code、Codex、OpenHands、Mini-SWE-Agent 和 AweAgent 在覆盖率、排序和效率指标上高度匹配，尽管它们在实现和框架复杂度上差异显著。这一相似性表明：研究探索子问题不需要复杂的修复框架；更简单的探索器接口就能暴露相同的行为模式。</p>
+  </div>
+  <div class="finding-card">
+    <h4>发现 4：LLM 选择改变操作点，但不消除瓶颈</h4>
+    <p>用相同的 Mini-SWE-Agent 框架运行不同 LLM：GPT 系列最强，Kimi-K2.6 和 Sonnet-4.5 居中，GLM-4.7 和 Gemini-3-Pro 靠后。但更重要的规律是：无论哪种 LLM，文件命中率都远高于行级召回率。仅替换基础模型无法消除探索瓶颈。</p>
+  </div>
+  <div class="finding-card">
+    <h4>发现 5：专门定位器仅在拓宽搜索时有效</h4>
+    <p>学术 Agent 并不一致优于通用编码 Agent。AutoCodeRover 精度高但保守，OrcaLoca 噪声极低但遗漏大量区域，LocAgent 与通用 Agent 表现相近。CoSIL 是主要例外：其迭代代码图搜索实现了最高的非 Oracle Recℓ（0.788）和 F1（0.602），表明迭代式图搜索是高召回探索的重要组成部分。</p>
+  </div>
+  <div class="finding-card">
+    <h4>发现 6：缺失核心证据比冗余上下文更具破坏性</h4>
+    <p>在受控上下文降级实验中，当核心证据覆盖率从 75% 降至 50% 时，修复率出现阈值式断崖下降。这种阈值模式表明：修复器不是从每个额外区域平滑积累价值，而是需要多个核心证据同时存在才能完成正确修复。相比之下，冗余上下文（噪声注入）在阈值以上的危害相对较小。</p>
+  </div>
+</div>
+
+<h3>Agentic vs 检索的差距量化</h3>
+
+<div id="chart-tier" class="echarts-container" style="height:320px"></div>
+
+<!-- ===== 8. 局限性 ===== -->
+<h2>局限性</h2>
+
+<ul>
+  <li><strong>实例选择偏差</strong>：SWE-Explore 仅包含被至少一个 Agent 成功解决的实例（需要 ≥2 条成功轨迹），因此不代表所有未解决仓库级 issue 的完整分布。对于当前 Agent 无法解决的困难问题，本基准无法提供直接评估。</li>
+  <li><strong>轨迹驱动真值的近似性</strong>：从成功轨迹提取的行级真值是有用上下文的经验近似，而非证明。某些有效的解决路径可能依赖与观测轨迹不同的证据——其他代码区域同样可以支持有效的补丁生成。</li>
+  <li><strong>语言分布不均</strong>：Python 占 64.5%，主要因为 SWE-bench Verified 以 Python 为中心。非 Python 语言（如 C++ 仅 7 个实例）的评估结果统计显著性较低。</li>
+  <li><strong>受限上下文验证的局限性</strong>：下游修复协议使用固定的补丁框架（Mini-SWE-Agent + GPT-5.4），仅作为探索指标的外部效度检验，不是对补丁生成能力的绝对度量。更高的修复率可能反映更强的补丁框架而非更好的探索。</li>
+  <li><strong>K=5 的固定预算</strong>：主实验固定每个探索器返回 5 个区域，与平均 4.7 个核心区域对齐。这个选择对于核心区域数量差异大的实例可能不够灵活。</li>
+  <li><strong>时效性问题</strong>：真值来自 GPT-5.4、Gemini-3-Pro 等强模型的成功轨迹。随着模型能力提升，成功轨迹可能采用不同的探索策略，真值可能需要更新。</li>
+</ul>
+
+<!-- ===== 9. 总结与启发 ===== -->
+<h2>总结与启发</h2>
+
+<p>
+SWE-Explore 的出现标志着编码 Agent 评估范式的一次重要转变：从「能否修复问题」的二元判断，走向「如何探索仓库」的细粒度诊断。这一转变的意义不仅在于提供了一个新的基准，更在于它揭示了当前 Agent 能力的结构性瓶颈——<strong>行级召回率是区分优秀探索器的关键轴</strong>。
+</p>
+
+<p>
+<strong>对研究方向的深度启发：</strong>
+</p>
+
+<p>
+第一，<strong>探索与修复的解耦研究</strong>。当前大多数系统将探索和修复耦合在一个端到端流水线中，这使得改进探索能力的努力难以被独立衡量。SWE-Explore 提供的解耦框架使研究者可以专注于探索子问题，而不必同时优化补丁生成质量。这类似于信息检索领域将检索（retrieval）和重排序（reranking）分开研究的传统。
+</p>
+
+<p>
+第二，<strong>行级覆盖的重要性被长期低估</strong>。实验清晰地表明，文件命中率（HitFile ≈ 0.64–0.68）与行级召回率（Recℓ ≈ 0.14–0.19）之间存在巨大鸿沟。这意味着现有 Agent 虽然能找到正确的文件，却经常遗漏关键代码行。未来的改进方向应聚焦于如何在找到正确文件后，进一步精确定位到关键代码段。
+</p>
+
+<p>
+第三，<strong>CoSIL 的迭代图搜索提供了重要的方向性信号</strong>。CoSIL 以整文件粒度换取高召回率（Recℓ=0.788），虽然精度较低，但其修复率接近 Oracle（59.3% vs 59.7%）。这说明在当前技术水平下，<strong>高召回率的宽泛探索</strong>比高精度的保守探索更有利于下游修复。未来研究应探索如何在保持高召回率的同时提升精度——即「先广后精」的两阶段探索策略。
+</p>
+
+<p>
+第四，<strong>上下文效率是一个被忽视的维度</strong>。CtxEff 与修复率的 Pearson 相关系数高达 0.950，高于所有其他指标。这意味着「选择了多少有用内容」比「覆盖了多少真值」更能预测修复成功。对于有行预算限制的实际系统，提升上下文效率（减少噪声、增加信噪比）可能比单纯提升召回率更有价值。
+</p>
+
+<p>
+第五，<strong>多语言探索能力亟待关注</strong>。当前基准中 Python 占 64.5%，但 Go、JavaScript、Rust 等语言的仓库结构、命名约定和代码组织方式与 Python 存在显著差异。Agent 在非 Python 语言上的探索能力是否同样强健，是一个值得深入研究的问题。
+</p>
+
+<blockquote>
+<strong>最终洞察</strong>：SWE-Explore 不仅是一个基准，更是一种研究方法论的范式——它告诉我们，评估 Agent 能力不应只看最终结果，而应解构流水线中每个关键步骤的质量。随着 Agent 系统复杂度的增加，这种细粒度的能力评估框架将变得越来越重要。
+</blockquote>
+
+<!-- ===== 10. 参考文献 ===== -->
+<h2>参考文献</h2>
+
+<ol style="font-size:.9em;line-height:1.9">
+  <li>Anthropic. <em>Claude Code: AI-assisted coding in real-world codebases</em>, 2025.</li>
+  <li>Badertdinov et al. <em>SWE-rebench: An automated pipeline for task collection and decontaminated evaluation of software engineering agents</em>, arXiv:2505.20411, 2025.</li>
+  <li>Chen et al. <em>Beyond SWE: Can current code agent survive beyond single-repo bug fixing?</em>, arXiv:2603.03194, 2026.</li>
+  <li>Chen et al. <em>SWE-Exp: Experience-driven software issue resolution</em>, arXiv:2507.23361, 2025.</li>
+  <li>Chen et al. <em>LocAgent: Graph-guided LLM agents for code localization</em>, arXiv:2503.09089, 2025.</li>
+  <li>Chowdhury et al. <em>Introducing SWE-bench Verified</em>, OpenAI, 2024.</li>
+  <li>Deng et al. <em>SWE-bench Pro: Can AI agents solve long-horizon software engineering tasks?</em>, arXiv:2509.16941, 2025.</li>
+  <li>Husain et al. <em>CodeSearchNet challenge: Evaluating the state of semantic code search</em>, arXiv:1909.09436, 2019.</li>
+  <li>Järvelin &amp; Kekäläinen. <em>Cumulated gain-based evaluation of IR techniques</em>. ACM TOIS, 20(4):422–446, 2002.</li>
+  <li>Jiang et al. <em>Issue localization via LLM-driven iterative code graph searching</em> (CoSIL), arXiv:2503.22424, 2025.</li>
+  <li>Jimenez et al. <em>SWE-bench: Can language models resolve real-world GitHub issues?</em> ICLR 2024.</li>
+  <li>Li et al. <em>SWE-Debate: Competitive multi-agent debate for software issue resolution</em>, arXiv:2507.23348, 2025.</li>
+  <li>Li et al. <em>ContextBench: A benchmark for context retrieval in coding agents</em>, arXiv:2602.05892, 2026.</li>
+  <li>Liu et al. <em>RepoBench: Benchmarking repository-level code auto-completion systems</em>. ICLR 2024.</li>
+  <li>Pan et al. <em>Training software engineering agents and verifiers with SWE-Gym</em>, arXiv:2412.21139, 2025.</li>
+  <li>Peng et al. <em>SWE-QA: Can language models answer repository-level code questions?</em>, arXiv:2509.14635, 2025.</li>
+  <li>Robertson &amp; Zaragoza. <em>The probabilistic relevance framework: BM25 and beyond</em>. Found. Trends IR, 3(4):333–389, 2009.</li>
+  <li>Salton &amp; Buckley. <em>Term-weighting approaches in automatic text retrieval</em>. IPM, 24(5):513–523, 1988.</li>
+  <li>Shi et al. <em>From code to correctness: Closing the last mile with hierarchical debugging</em>, arXiv:2410.01215, 2024.</li>
+  <li>Shi et al. <em>LongCodeZip: Compress long context for code language models</em>. ASE 2025.</li>
+  <li>Shi et al. <em>Between lines of code: Unraveling the distinct patterns of machine and human programmers</em>. ICSE 2025.</li>
+  <li>Suri et al. <em>CodeScout: Contextual problem statement enhancement for software agents</em>, arXiv:2603.05744, 2026.</li>
+  <li>Wang et al. <em>SWE-Dev: Building software engineering agents with training and inference scaling</em>. ACL Findings 2025.</li>
+  <li>Wang et al. <em>OpenHands: An open platform for AI software developers as generalist agents</em>, arXiv:2407.16741, 2024.</li>
+  <li>Wang et al. <em>Context compression for LLM agents: A survey of methods, failure modes, and evaluation</em>, 2026.</li>
+  <li>Wang et al. <em>SWE-Pruner: Self-adaptive context pruning for coding agents</em>, arXiv:2601.16746, 2026.</li>
+  <li>Xia et al. <em>Agentless: Demystifying LLM-based software engineering agents</em>, arXiv:2407.01489, 2024.</li>
+  <li>Yang et al. <em>SWE-agent: Agent-computer interfaces enable automated software engineering</em>. NeurIPS 2024.</li>
+  <li>Yang et al. <em>SWE-bench Multimodal: Do AI systems generalize to visual software domains?</em> ICLR 2025.</li>
+  <li>Yang et al. <em>SWE-smith: Scaling data for software engineering agents</em>, arXiv:2504.21798, 2025.</li>
+  <li>Yu et al. <em>OrcaLoca: An LLM agent framework for software issue localization</em>. ICML 2025.</li>
+  <li>Zan et al. <em>Multi-SWE-bench: A multilingual benchmark for issue resolving</em>, arXiv:2504.02605, 2025.</li>
+  <li>Zhang et al. <em>SWE-bench goes live!</em>, arXiv:2505.23419, 2025.</li>
+  <li>Zhang et al. <em>AutoCodeRover: Autonomous program improvement</em>. ISSTA 2024.</li>
+  <li>Zhang et al. <em>MULocBench: A benchmark for localizing code and non-code issues</em>, arXiv:2509.25242, 2025.</li>
+  <li>Zhou et al. <em>Where should the bugs be fixed? IR-based bug localization</em>. ICSE 2012.</li>
+  <li>Zhu et al. <em>SWE ContextBench: A benchmark for context learning in coding</em>, arXiv:2602.08316, 2026.</li>
+</ol>
+
+</main>
+
+<!-- ===== Scripts ===== -->
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+
+  // 语言分布饼图
+  echarts.init(document.getElementById('chart-lang')).setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{trigger:'item',formatter:'{b}: {c} ({d}%)'},
+    legend:{orient:'vertical',right:'5%',top:'center',textStyle:{color:'#cdd6f4',fontSize:12}},
+    series:[{
+      name:'语言分布',type:'pie',radius:['35%','65%'],center:['38%','50%'],
+      label:{show:true,formatter:'{b}\n{c}',color:'#cdd6f4',fontSize:11},
+      data:[
+        {value:547,name:'Python',itemStyle:{color:'#89b4fa'}},
+        {value:84,name:'Go',itemStyle:{color:'#a6e3a1'}},
+        {value:51,name:'JavaScript',itemStyle:{color:'#fab387'}},
+        {value:31,name:'Rust',itemStyle:{color:'#f38ba8'}},
+        {value:30,name:'Java',itemStyle:{color:'#cba6f7'}},
+        {value:28,name:'PHP',itemStyle:{color:'#94e2d5'}},
+        {value:27,name:'TypeScript',itemStyle:{color:'#f9e2af'}},
+        {value:22,name:'Ruby',itemStyle:{color:'#eba0ac'}},
+        {value:21,name:'C',itemStyle:{color:'#89dceb'}},
+        {value:7,name:'C++',itemStyle:{color:'#b4befe'}}
+      ]
+    }]
+  });
+
+  // 主对比图（柱状图）
+  var chartMain = echarts.init(document.getElementById('chart-main'));
+  chartMain.setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['HitFile','nDCG@500','CtxEff','Recℓ (×5倍缩放显示)'],textStyle:{color:'#cdd6f4',fontSize:11},top:8},
+    grid:{left:'3%',right:'4%',bottom:'15%',containLabel:true},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4',rotate:35,fontSize:11},
+      data:['Oracle','CoSIL','AweAgent','LocAgent','Claude Code','Mini-SWE','OpenHands','Codex','AutoCodeRover','OrcaLoca','TF-IDF','BM25','Potion','Random']
+    },
+    yAxis:{type:'value',max:1.05,axisLabel:{color:'#cdd6f4',formatter:v=>v.toFixed(1)},splitLine:{lineStyle:{color:'#45475a'}}},
+    series:[
+      {name:'HitFile',type:'bar',barGap:'0%',
+       data:[0.923,0.544,0.682,0.540,0.667,0.640,0.645,0.649,0.280,0.129,0.140,0.079,0.088,0.004],
+       itemStyle:{color:'#89b4fa'}},
+      {name:'nDCG@500',type:'bar',
+       data:[0.858,0.824,0.954,0.950,0.938,0.885,0.867,0.901,0.720,0.311,0.223,0.132,0.136,0.004],
+       itemStyle:{color:'#a6e3a1'}},
+      {name:'CtxEff',type:'bar',
+       data:[1.000,0.898,0.829,0.799,0.829,0.754,0.737,0.762,0.738,0.317,0.190,0.087,0.100,0.002],
+       itemStyle:{color:'#fab387'}},
+      {name:'Recℓ (×5倍缩放显示)',type:'bar',
+       data:[4.765,3.940,0.700,0.955,0.770,0.755,0.895,0.970,1.165,0.165,0.245,0.105,0.125,0.020].map(v=>v/5),
+       itemStyle:{color:'#f38ba8'}}
+    ]
+  });
+
+  // 下游修复率柱状图
+  var chartResolve = echarts.init(document.getElementById('chart-resolve'));
+  chartResolve.setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:p=>`${p[0].name}: ${p[0].value}%`},
+    grid:{left:'3%',right:'4%',bottom:'15%',containLabel:true},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4',rotate:35,fontSize:11},
+      data:['Oracle','CoSIL','Codex','Mini-SWE','Claude Code','OpenHands','OrcaLoca','AutoCodeRover','LocAgent','AweAgent','TF-IDF','RAG','BM25','Random']
+    },
+    yAxis:{type:'value',max:70,axisLabel:{color:'#cdd6f4',formatter:v=>v+'%'},splitLine:{lineStyle:{color:'#45475a'}},name:'修复率 (%)',nameTextStyle:{color:'#cdd6f4'}},
+    series:[{
+      type:'bar',
+      data:[
+        {value:59.7,itemStyle:{color:'#f9e2af'}},
+        {value:59.3,itemStyle:{color:'#a6e3a1'}},
+        {value:50.3,itemStyle:{color:'#89b4fa'}},
+        {value:50.0,itemStyle:{color:'#89b4fa'}},
+        {value:48.0,itemStyle:{color:'#89b4fa'}},
+        {value:47.7,itemStyle:{color:'#89b4fa'}},
+        {value:45.3,itemStyle:{color:'#cba6f7'}},
+        {value:44.7,itemStyle:{color:'#cba6f7'}},
+        {value:44.7,itemStyle:{color:'#cba6f7'}},
+        {value:41.3,itemStyle:{color:'#89b4fa'}},
+        {value:26.0,itemStyle:{color:'#45475a'}},
+        {value:23.3,itemStyle:{color:'#45475a'}},
+        {value:12.7,itemStyle:{color:'#45475a'}},
+        {value:4.7,itemStyle:{color:'#313244'}}
+      ],
+      label:{show:true,position:'top',color:'#cdd6f4',fontSize:10,formatter:p=>p.value+'%'}
+    }]
+  });
+
+  // LLM 对比雷达图
+  var chartLLM = echarts.init(document.getElementById('chart-llm'));
+  chartLLM.setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{},
+    legend:{data:['GPT-5.4','GPT-5.4-mini','Kimi-K2.6','Sonnet-4.5','GLM-4.7','Gemini-3-Pro'],textStyle:{color:'#cdd6f4',fontSize:11},top:8},
+    radar:{
+      indicator:[
+        {name:'HitReg',max:0.6},{name:'Prec',max:0.6},{name:'HitFile',max:0.8},
+        {name:'nDCG@500',max:1.0},{name:'FUH',max:1.0},{name:'CtxEff',max:1.0}
+      ],
+      splitArea:{areaStyle:{color:['#1a1a2e','#2a2a3e']}},
+      axisLine:{lineStyle:{color:'#45475a'}},
+      splitLine:{lineStyle:{color:'#45475a'}},
+      name:{textStyle:{color:'#cdd6f4',fontSize:11}},
+      center:['50%','55%'],radius:'65%'
+    },
+    series:[{
+      type:'radar',
+      data:[
+        {value:[0.516,0.542,0.655,0.905,0.927,0.771],name:'GPT-5.4',lineStyle:{color:'#89b4fa'},areaStyle:{opacity:.15,color:'#89b4fa'}},
+        {value:[0.531,0.509,0.649,0.924,0.956,0.754],name:'GPT-5.4-mini',lineStyle:{color:'#a6e3a1'},areaStyle:{opacity:.1,color:'#a6e3a1'}},
+        {value:[0.413,0.475,0.509,0.739,0.759,0.676],name:'Kimi-K2.6',lineStyle:{color:'#fab387'},areaStyle:{opacity:.1,color:'#fab387'}},
+        {value:[0.428,0.519,0.535,0.779,0.802,0.715],name:'Sonnet-4.5',lineStyle:{color:'#cba6f7'},areaStyle:{opacity:.1,color:'#cba6f7'}},
+        {value:[0.289,0.414,0.343,0.557,0.572,0.536],name:'GLM-4.7',lineStyle:{color:'#f38ba8'},areaStyle:{opacity:.1,color:'#f38ba8'}},
+        {value:[0.268,0.420,0.369,0.605,0.620,0.540],name:'Gemini-3-Pro',lineStyle:{color:'#94e2d5'},areaStyle:{opacity:.1,color:'#94e2d5'}}
+      ]
+    }]
+  });
+
+  // 文件级 vs 行级差距图
+  var chartGap = echarts.init(document.getElementById('chart-gap'));
+  chartGap.setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['HitFile（文件命中率）','Recℓ（行级召回率）'],textStyle:{color:'#cdd6f4',fontSize:11},top:8},
+    grid:{left:'3%',right:'4%',bottom:'15%',containLabel:true},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4',rotate:30,fontSize:11},
+      data:['Claude Code','Mini-SWE','AweAgent','OpenHands','Codex','LocAgent','CoSIL','AutoCodeRover']
+    },
+    yAxis:{type:'value',max:1.0,axisLabel:{color:'#cdd6f4',formatter:v=>v.toFixed(1)},splitLine:{lineStyle:{color:'#45475a'}}},
+    series:[
+      {name:'HitFile（文件命中率）',type:'bar',barGap:'0%',
+       data:[0.667,0.640,0.682,0.645,0.649,0.540,0.544,0.280],
+       itemStyle:{color:'#89b4fa'}},
+      {name:'Recℓ（行级召回率）',type:'bar',
+       data:[0.154,0.151,0.140,0.179,0.194,0.191,0.788,0.233],
+       itemStyle:{color:'#f38ba8'}}
+    ]
+  });
+
+  // 层级差距图
+  var chartTier = echarts.init(document.getElementById('chart-tier'));
+  chartTier.setOption({
+    backgroundColor:'#2a2a3e',
+    tooltip:{trigger:'axis'},
+    legend:{data:['HitFile','CtxEff','nDCG@500'],textStyle:{color:'#cdd6f4',fontSize:11},top:8},
+    grid:{left:'3%',right:'4%',bottom:'10%',containLabel:true},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4',fontSize:12},
+      data:['随机基线','稀疏检索均值','密集检索','Agentic 均值','Oracle']
+    },
+    yAxis:{type:'value',max:1.05,axisLabel:{color:'#cdd6f4',formatter:v=>v.toFixed(1)},splitLine:{lineStyle:{color:'#45475a'}}},
+    series:[
+      {name:'HitFile',type:'bar',barGap:'5%',
+       data:[0.004,0.110,0.088,0.578,0.923],
+       itemStyle:{color:'#89b4fa'},
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:10,formatter:p=>p.value.toFixed(2)}},
+      {name:'CtxEff',type:'bar',
+       data:[0.002,0.139,0.100,0.773,1.000],
+       itemStyle:{color:'#fab387'},
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:10,formatter:p=>p.value.toFixed(2)}},
+      {name:'nDCG@500',type:'bar',
+       data:[0.004,0.178,0.136,0.876,0.858],
+       itemStyle:{color:'#a6e3a1'},
+       label:{show:true,position:'top',color:'#cdd6f4',fontSize:10,formatter:p=>p.value.toFixed(2)}}
+    ]
+  });
+
+  // 目录生成
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+    if(!h.id)h.id='s'+i;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent;
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const obs=new IntersectionObserver(es=>es.forEach(e=>{
+    const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  }),{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+</script>
+</body>
+</html>

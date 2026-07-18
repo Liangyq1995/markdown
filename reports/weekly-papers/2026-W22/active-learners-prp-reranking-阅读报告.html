@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Learners as Efficient PRP Rerankers — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --bg-card: #24243a;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+      --accent: #cba6f7;
+      --warn: #f38ba8;
+      --yellow: #f9e2af;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; line-height: 1.8; }
+
+    /* ── TOC ── */
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 14px; padding-left: 8px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 4px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s, color 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 700; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 11.5px; opacity: 0.78; }
+
+    /* ── Main ── */
+    main { margin-left: 248px; max-width: none; padding: 40px 64px; }
+
+    h1 { color: var(--heading); font-size: 1.95em; margin-bottom: 10px; line-height: 1.35; }
+    h2 { color: var(--heading); font-size: 1.38em; margin: 2.2em 0 0.65em; border-bottom: 1px solid var(--border); padding-bottom: 7px; }
+    h3 { color: var(--heading); font-size: 1.08em; margin: 1.5em 0 0.45em; }
+    h4 { color: var(--accent); font-size: 0.97em; margin: 1.2em 0 0.3em; }
+    p { margin: 0.65em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    em { color: var(--yellow); font-style: normal; }
+
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 10px 18px; margin: 1.1em 0; background: #2a2a3e; border-radius: 0 5px 5px 0; }
+
+    /* ── Tables ── */
+    table { border-collapse: collapse; width: 100%; margin: 1.1em 0; font-size: 0.92em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 9px 14px; text-align: left; border: 1px solid var(--border); font-weight: 600; }
+    td { padding: 8px 14px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #25253a; }
+
+    /* ── Code ── */
+    pre { background: var(--bg-code); border-radius: 7px; padding: 18px; overflow-x: auto; margin: 1.1em 0; font-size: 0.87em; border: 1px solid var(--border); }
+    code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 6px; border-radius: 3px; font-size: 0.86em; color: var(--accent); }
+
+    /* ── Mermaid ── */
+    .mermaid { background: #252538; border-radius: 8px; padding: 20px; margin: 1.2em 0; text-align: center; border: 1px solid var(--border); overflow-x: auto; }
+
+    /* ── ECharts ── */
+    .echarts-container { margin: 1.2em 0; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+
+    /* ── Cards ── */
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 18px 22px; margin: 1.1em 0; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin: 1.1em 0; }
+    .badge { display: inline-block; background: #2a2a3e; border: 1px solid var(--border); color: var(--accent); border-radius: 4px; padding: 2px 8px; font-size: 0.8em; margin: 2px; }
+    .highlight-box { background: #1e2e1e; border: 1px solid #3a6a3a; border-radius: 7px; padding: 14px 20px; margin: 1.1em 0; }
+    .warn-box { background: #2e1e1e; border: 1px solid #6a3a3a; border-radius: 7px; padding: 14px 20px; margin: 1.1em 0; }
+    .math-box { background: #1e1e2e; border: 1px solid var(--accent); border-radius: 7px; padding: 16px 22px; margin: 1.1em 0; }
+
+    ul, ol { padding-left: 1.6em; margin: 0.5em 0; }
+    li { margin: 0.3em 0; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.2em 0; }
+    figure { margin: 1.5em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 7px; }
+    figcaption { color: #6c7086; font-size: 0.84em; margin-top: 7px; }
+  </style>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$']],
+        displayMath: [['$$','$$']],
+        packages: {'[+]': ['ams']},
+        tags: 'ams'
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<nav id="toc"><h2>📑 目录</h2></nav>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h1>《Active Learners as Efficient PRP Rerankers》阅读报告</h1>
+
+<blockquote>
+  <strong>arXiv:</strong> <a href="https://arxiv.org/abs/2605.14236" target="_blank">2605.14236</a> &nbsp;|&nbsp;
+  <strong>机构:</strong> ELIAS Lab, Universidad de San Andrés (UdeSA), Argentina &nbsp;|&nbsp;
+  <strong>任务:</strong> 信息检索 · 重排序 · 主动学习 &nbsp;|&nbsp;
+  <strong>报告日期:</strong> 2026-05-29
+</blockquote>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="info">论文信息表</h2>
+
+<p>本节汇总论文的基本元数据，方便快速定位来源与作者背景。</p>
+
+<table>
+  <tr><th>字段</th><th>内容</th></tr>
+  <tr><td><strong>论文标题</strong></td><td>Active Learners as Efficient PRP Rerankers</td></tr>
+  <tr><td><strong>作者</strong></td><td>Jeremías Figueiredo Paschmann, Juan Kaplan, Francisco Nattero, Santiago Mauricio Barron Bucolo, Juan Wisznia, Luciano del Corro</td></tr>
+  <tr><td><strong>机构</strong></td><td>ELIAS Lab, Universidad de San Andrés (UdeSA), Buenos Aires, Argentina</td></tr>
+  <tr><td><strong>arXiv ID</strong></td><td>2605.14236</td></tr>
+  <tr><td><strong>领域</strong></td><td>信息检索 (IR)、大模型推理、主动学习</td></tr>
+  <tr><td><strong>核心任务</strong></td><td>在有限 LLM 调用预算下，用成对比较 (PRP) 对候选文档集高效重排序</td></tr>
+  <tr><td><strong>基准数据集</strong></td><td>TREC Deep Learning 2019 / 2020</td></tr>
+  <tr><td><strong>使用模型</strong></td><td>Flan-T5-XL（作为成对偏好判断的 Oracle）</td></tr>
+  <tr><td><strong>核心指标</strong></td><td>NDCG@10（归一化折扣累积增益，Top-10）</td></tr>
+  <tr><td><strong>关键结论</strong></td><td>Mohajer 主动调度算法在 B=300 调用时比最佳排序基线高 +9.7 NDCG@10（66.1 vs 56.4）；互反预言机在相同预算下额外提升 +5.5</td></tr>
+</table>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>🎯 论文核心一句话</h4>
+    <p>将 PRP 成对重排序重新建模为<strong>主动学习 Top-K 选择问题</strong>，用自适应比较调度替代全量 O(n²) 排序，在严格调用预算约束下大幅提升检索质量。</p>
+  </div>
+  <div class="card">
+    <h4>📈 最强单一结果</h4>
+    <p>Mohajer + BubbleSort (Randomized)，仅需 <strong>345 次调用</strong>即达到 <strong>78.5 NDCG@10</strong>，接近全量评估上限（78.5 vs 理论满分）。</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="motivation">核心问题与动机</h2>
+
+<p>检索增强生成 (RAG) 与现代信息检索系统通常采用两阶段架构：第一阶段用轻量检索模型召回大量候选文档（数十至数百篇），第二阶段用更强的模型对候选集精排以选出最相关的 Top-K 结果。本文关注第二阶段的 <strong>Pairwise Ranking Prompting (PRP)</strong> 方法。</p>
+
+<h3>PRP 的原理与固有缺陷</h3>
+<p>PRP 向 LLM 提问「文档 $d_i$ 与 $d_j$ 哪个与查询更相关？」，将 LLM 的偏好判断聚合成全局排序。尽管已被证明优于逐点 (pointwise) 与列表 (listwise) 方案，PRP 存在三个根本性缺陷：</p>
+
+<div class="card-grid">
+  <div class="warn-box">
+    <strong style="color:var(--warn)">① 噪声问题 (Noise)</strong>
+    <p>LLM 的成对判断并不总是确定性的。相同文档对以不同顺序输入，可能得到相互矛盾的答案，即 $\text{LLM}(d_i, d_j) \neq 1 - \text{LLM}(d_j, d_i)$。</p>
+  </div>
+  <div class="warn-box">
+    <strong style="color:var(--warn)">② 顺序敏感 (Order Sensitivity)</strong>
+    <p>提示中文档的出现顺序（先 $d_i$ 还是先 $d_j$）影响判断结果，导致位置偏差。</p>
+  </div>
+  <div class="warn-box">
+    <strong style="color:var(--warn)">③ 非传递性 (Intransitivity)</strong>
+    <p>可能出现 $d_a \succ d_b$、$d_b \succ d_c$ 但 $d_c \succ d_a$ 的循环偏好，使传统排序算法（如归并排序）理论上不再收敛。</p>
+  </div>
+</div>
+
+<h3>调用预算是实际部署的核心约束</h3>
+<p>在生产环境中，每次 LLM 调用都有延迟与成本。对 $n$ 个候选文档做全量比较需要 $O(n^2)$ 次调用。即使使用冒泡排序等 $O(n^2)$ 算法，当 $n=50$ 时也需要约 1225 次调用。本文的核心出发点：<strong>若我们只需要 Top-K 结果，能否以远小于 $O(n^2)$ 的调用次数获得同等甚至更高质量的排序？</strong></p>
+
+<div class="highlight-box">
+  <strong>问题重构</strong>：PRP 重排序 → 带噪声成对比较的 Top-K 主动学习问题 (Noisy Pairwise Active Top-K Selection)
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="background">背景与相关工作</h2>
+
+<p>本节梳理论文所依托的技术背景，帮助理解各方法在整个方法谱系中的定位。</p>
+
+<h3>Pairwise Ranking Prompting (PRP)</h3>
+<p>PRP 由 Qin et al. (2023) 提出，利用 LLM 的指令跟随能力直接输出偏好判断。与需要训练的 cross-encoder 重排器相比，PRP 零样本可用；与 listwise 方法相比，成对比较认知负担更低，判断更精准。典型的 PRP 提示模板要求 LLM 输出「Passage A」或「Passage B」作为更相关结果。</p>
+
+<h3>排序算法在 PRP 中的应用</h3>
+<table>
+  <tr><th>算法</th><th>时间复杂度</th><th>PRP 中的问题</th></tr>
+  <tr><td>AllPairs</td><td>$O(n^2)$</td><td>调用次数过多，但覆盖全面</td></tr>
+  <tr><td>BubbleSort</td><td>$O(n^2)$ 最差</td><td>噪声时收敛不稳定</td></tr>
+  <tr><td>HeapSort</td><td>$O(n \log n)$</td><td>非传递时堆性质被违反</td></tr>
+  <tr><td>QuickSort</td><td>$O(n \log n)$ 期望</td><td>Pivot 选择影响大，噪声放大</td></tr>
+  <tr><td>TournamentSort</td><td>$O(n)$ Top-1</td><td>仅能找最优，无法泛化到 Top-K</td></tr>
+</table>
+
+<h3>主动学习 Top-K 选择 (Active Top-K Selection)</h3>
+<p>统计学习领域已有大量针对含噪成对比较的主动 Top-K 选择算法，核心思想是<strong>仅查询信息量最大的文档对</strong>，避免浪费预算于「已经很确定谁胜谁负」的无用比较。代表性算法包括：</p>
+<ul>
+  <li><strong>Mohajer et al. (2017)</strong>：基于置信区间自适应选择查询对，样本复杂度接近理论下界</li>
+  <li><strong>PAC Top-K</strong>：以 PAC (Probably Approximately Correct) 框架保证以高概率找到 Top-K</li>
+  <li><strong>LUCB (Lower Upper Confidence Bound)</strong>：置信区间收紧后选择最不确定的比较</li>
+</ul>
+
+<h3>研究空白</h3>
+<div class="card">
+  <p>现有 PRP 文献均沿用传统排序算法框架，<strong>没有人将主动学习调度与 PRP 结合</strong>。本文是第一篇系统探索此方向的工作，同时提出互反预言机修正 LLM 判断的顺序偏差。</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="overview">方法总览</h2>
+
+<p>论文提出两个正交的技术贡献，可以独立或联合使用：（1）用主动学习调度器替换传统排序算法；（2）用互反预言机修正 LLM 的顺序偏差。下图展示整体方法架构：</p>
+
+<pre class="mermaid">
+flowchart TD
+    Q["🔍 用户查询 q"] --> R["第一阶段检索\nBM25 / Dense Retrieval\n召回 n=50 候选文档"]
+    R --> POOL["候选文档池\nd₁, d₂, ..., d₅₀"]
+
+    POOL --> SCHED["主动学习调度器\n(Active Scheduler)\n• Mohajer\n• PAC Top-K\n• LUCB\n• Bubble (baseline)"]
+
+    SCHED -->|"选择最有信息量的\n文档对 (dᵢ, dⱼ)"| ORACLE
+
+    subgraph ORACLE["互反预言机 (Reciprocal Oracle)"]
+        direction TB
+        O1["LLM Prompt A:\nQuery: q\nPassage A: dᵢ\nPassage B: dⱼ\n→ 输出 A 或 B"]
+        O2["LLM Prompt B (可选):\nQuery: q\nPassage A: dⱼ\nPassage B: dᵢ\n→ 输出 A 或 B"]
+        AVG["平均两次判断\np̂ᵢⱼ = (vᵢⱼ + 1 - vⱼᵢ) / 2"]
+        O1 --> AVG
+        O2 --> AVG
+    end
+
+    AVG -->|"更新胜率估计\nûᵢⱼ"| SCHED
+
+    SCHED -->|"预算 B 耗尽\n或置信度达标"| TOPK["输出 Top-K 排序结果"]
+
+    style ORACLE fill:#252538,stroke:#cba6f7,stroke-width:2px
+    style SCHED fill:#1e2e1e,stroke:#a6e3a1,stroke-width:2px
+    style TOPK fill:#1e1e2e,stroke:#89b4fa,stroke-width:2px,color:#89b4fa
+</pre>
+
+<p>核心流程分为三层：<strong>调度层</strong>（决定查询哪对文档）、<strong>预言机层</strong>（执行 LLM 调用并修正偏差）、<strong>汇总层</strong>（根据胜率矩阵输出 Top-K 排序）。预算 $B$ 控制总调用次数，是系统的关键超参数。</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="techniques">关键技术详解</h2>
+
+<p>本节深入剖析三项核心技术贡献，每项均从「是什么 / 为什么 / 怎么做 / 效果」四个维度展开。</p>
+
+<!-- ──────────────────────────────────── -->
+<h3 id="active-learning">① 主动学习重构 (Active Learning Reframing)</h3>
+
+<h4>是什么</h4>
+<p>将 PRP 重排序任务建模为<strong>带噪成对比较下的 Top-K 主动选择问题</strong>。系统维护一个胜率矩阵 $\hat{u} \in [0,1]^{n \times n}$，其中 $\hat{u}_{ij}$ 是文档 $d_i$ 优于 $d_j$ 的经验概率估计；调度器自适应地选择下一个要查询的文档对，使每次调用的信息增益最大化。</p>
+
+<h4>为什么</h4>
+<p>传统排序算法（冒泡、堆排、快排）在设计时假设比较是<em>确定性且传递性</em>的。LLM 判断打破了这两个假设：同一对文档可能在不同调用中得到不同结果，且判断可能不传递。主动学习框架天然处理概率化比较，并能<strong>把有限预算集中在最不确定的比较上</strong>（通常在 Top-K 边界附近），而非浪费在已确定胜负的文档对上。</p>
+
+<h4>怎么做：问题形式化</h4>
+<p>设有 $n$ 篇候选文档，真实相关性存在全序。第 $t$ 次调用后，调度器观察随机变量 $V_{ij}^{(t)} \in \{0,1\}$，其期望值为：</p>
+
+<p>$$p_{ij} = \Pr[V_{ij} = 1] = \Pr[\text{LLM 认为 } d_i \text{ 优于 } d_j]$$</p>
+
+<p>经验估计为：</p>
+
+<p>$$\hat{u}_{ij} = \frac{1}{T_{ij}} \sum_{t=1}^{T_{ij}} V_{ij}^{(t)}$$</p>
+
+<p>其中 $T_{ij}$ 是对该对查询的总次数。调度器的目标是在总调用次数 $B$ 约束下，最大化识别出真实 Top-K 集合的概率：</p>
+
+<p>$$\max_{\text{schedule}} \Pr\left[\hat{S}_K = S_K^*\right] \quad \text{s.t.} \quad \sum_{i \neq j} T_{ij} \leq B$$</p>
+
+<h4>效果</h4>
+<p>相比 BubbleSort 基线（固定扫描顺序），主动调度在 $B=300$ 时节省约 60% 的调用次数即可达到相同质量，或在相同预算下提升 NDCG@10 高达 +9.7 分。</p>
+
+<!-- ──────────────────────────────────── -->
+<h3 id="reciprocal-oracle">② 互反预言机 (Reciprocal Oracle)</h3>
+
+<h4>是什么</h4>
+<p>互反预言机 (Reciprocal Oracle) 是一种通过<strong>双向查询并取平均</strong>来修正 LLM 位置偏差的技术。对于同一文档对 $(d_i, d_j)$，同时以两种顺序提问 LLM，将结果合并为无偏的概率估计。</p>
+
+<h4>为什么</h4>
+<p>LLM 存在显著的<em>位置偏差 (positional bias)</em>：出现在提示前半部分的文档更容易被选中，无论其真实相关性。这导致 $\Pr[V_{ij}=1]$ 不仅依赖文档质量差异，还依赖提示中的排列顺序，使估计有偏。</p>
+
+<h4>怎么做：互反性证明</h4>
+
+<div class="math-box">
+  <p><strong>定义</strong>：互反预言机 (Reciprocal Oracle) 的随机化方向版本定义为：</p>
+  <p>以等概率随机选择顺序：</p>
+  <ul>
+    <li>以概率 $1/2$：查询 $\text{LLM}(d_i, d_j)$，观察 $V_{ij}^{\text{fwd}}$</li>
+    <li>以概率 $1/2$：查询 $\text{LLM}(d_j, d_i)$，观察 $V_{ji}^{\text{rev}}$，将 $d_i$ 胜的结果记为 $1 - V_{ji}^{\text{rev}}$</li>
+  </ul>
+
+  <p><strong>定理（互反性）</strong>：随机化互反预言机满足：</p>
+  <p>$$\Pr[V_{ij} = 1] + \Pr[V_{ji} = 1] = 1$$</p>
+
+  <p><strong>证明</strong>：设 $p = \Pr[\text{LLM}(d_i, d_j) \text{ 返回 } d_i]$，$q = \Pr[\text{LLM}(d_j, d_i) \text{ 返回 } d_j]$。随机化预言机的期望为：</p>
+  <p>$$\mathbb{E}[\hat{p}_{ij}] = \frac{1}{2} \cdot p + \frac{1}{2} \cdot (1 - q)$$</p>
+  <p>$$= \frac{1}{2}(1 - \Pr[\text{LLM}(d_j, d_i) = d_j]) + \frac{1}{2}(1 - \Pr[\text{LLM}(d_i, d_j) \neq d_i])$$</p>
+  <p>类似地：</p>
+  <p>$$\mathbb{E}[\hat{p}_{ji}] = \frac{1}{2} \cdot q + \frac{1}{2} \cdot (1 - p)$$</p>
+  <p>因此：</p>
+  <p>$$\mathbb{E}[\hat{p}_{ij}] + \mathbb{E}[\hat{p}_{ji}] = \frac{1}{2}(p + 1 - q) + \frac{1}{2}(q + 1 - p) = \frac{1}{2}(1 + 1) = 1 \quad \blacksquare$$</p>
+
+  <p><strong>推论</strong>：互反性保证了胜率估计矩阵的反对称性：$\hat{p}_{ij} + \hat{p}_{ji} = 1$，即对称且无偏。这是下游主动学习算法正确运行的必要条件。</p>
+</div>
+
+<h4>两种变体</h4>
+<table>
+  <tr><th>变体</th><th>实现方式</th><th>每次估计调用次数</th><th>特点</th></tr>
+  <tr>
+    <td><strong>Randomized（随机化）</strong></td>
+    <td>每次比较随机选择一种顺序（正序 or 逆序），结果直接使用</td>
+    <td>1</td>
+    <td>不增加调用开销；通过随机性在期望上实现互反性；预算效率高</td>
+  </tr>
+  <tr>
+    <td><strong>Bidirectional（双向）</strong></td>
+    <td>每次比较同时查询正序和逆序，取平均 $\hat{p}_{ij} = (v_{ij} + 1 - v_{ji})/2$</td>
+    <td>2</td>
+    <td>每次估计更准确；但预算消耗翻倍；在高预算时质量更高</td>
+  </tr>
+</table>
+
+<h4>效果</h4>
+<p>在 $B=300$ 时，仅加入随机化互反预言机（不改变调度算法）即让 BubbleSort 的 NDCG@10 从 ~51 提升至 ~56.5，增益 <strong>+5.5 NDCG@10</strong>。</p>
+
+<!-- ──────────────────────────────────── -->
+<h3 id="mohajer">③ Mohajer 主动调度算法</h3>
+
+<h4>是什么</h4>
+<p>Mohajer 算法（来自 Mohajer et al., 2017, "Active Ranking from Pairwise Comparisons and When Parametric Assumptions Don't Help"）是一种<strong>基于置信区间的自适应 Top-K 识别算法</strong>，能在含噪成对比较下以接近最优的样本复杂度找到 Top-K 集合。</p>
+
+<h4>为什么</h4>
+<p>传统排序算法是「固定调度」——无论当前胜率估计如何，都按预定顺序比较。Mohajer 算法是「自适应调度」——它持续追踪每对文档的置信区间，<strong>优先查询置信区间最宽（最不确定）且位于 Top-K 边界的文档对</strong>，从而以最少调用次数做出正确的 Top-K 决策。</p>
+
+<h4>核心机制</h4>
+<p>算法维护每对文档 $(i,j)$ 的经验胜率 $\hat{u}_{ij}$ 和 Hoeffding 置信上界：</p>
+
+<p>$$\text{UCB}_{ij}(t) = \hat{u}_{ij} + \sqrt{\frac{\ln(2n^2 t / \delta)}{2 T_{ij}}}$$</p>
+
+<p>其中 $\delta$ 是失败概率，$T_{ij}$ 是到时刻 $t$ 为止对该对的查询次数。</p>
+
+<p>算法迭代执行以下步骤：</p>
+
+<pre class="mermaid">
+flowchart LR
+    INIT["初始化\n所有文档两两\n各比较一次\n(warm-start)"] --> SCORE
+
+    subgraph LOOP["主循环（重复直到 B 耗尽）"]
+        direction TB
+        SCORE["计算每个文档的\n当前 Top-K 归属置信度\nconf(i) = min_{j} UCB_ij 或 LCB_ij"] --> FIND
+        FIND["识别最不确定文档对\n(i*, j*) = argmin conf"] --> QUERY
+        QUERY["查询 LLM 预言机\n对 (i*, j*)"] --> UPDATE
+        UPDATE["更新 û_{i*j*}\n收紧置信区间"] --> SCORE
+    end
+
+    LOOP --> OUTPUT["Top-K 边界\n收敛后输出排序"]
+
+    style LOOP fill:#1e2e1e,stroke:#a6e3a1
+</pre>
+
+<h4>与排序基线的本质区别</h4>
+<table>
+  <tr><th>维度</th><th>BubbleSort（基线）</th><th>Mohajer（本文）</th></tr>
+  <tr><td>调度策略</td><td>固定：相邻元素依次比较</td><td>自适应：置信区间最宽的不确定对</td></tr>
+  <tr><td>目标</td><td>全局排序（浪费在低位文档）</td><td>Top-K 边界识别（预算集中在关键对）</td></tr>
+  <tr><td>噪声处理</td><td>多轮扫描隐式平均</td><td>显式维护每对胜率的置信区间</td></tr>
+  <tr><td>提前停止</td><td>不支持</td><td>置信度达标即停止（PAC 保证）</td></tr>
+  <tr><td>B=300 NDCG@10</td><td>~56.4</td><td><strong>~66.1（+9.7）</strong></td></tr>
+</table>
+
+<h4>效果</h4>
+<p>Mohajer (Randomized) 在仅 <strong>232 次调用</strong>时即达到 <strong>77.6 NDCG@10</strong>，而 BubbleSort 在 300 次时仅为 56.4。Mohajer 的优势在整个 $B \in [200, 450]$ 范围内持续存在，并非仅在某个特定预算点上成立。</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="experiments">实验结果</h2>
+
+<p>本节呈现论文在 TREC Deep Learning 2019/2020 基准上的实验结果。实验系统地对比了不同调度算法（Mohajer、PAC+Bubble、BubbleSort、AllPairs）与不同预言机类型（Standard、Randomized、Bidirectional）在预算约束下的表现。</p>
+
+<h3>实验配置</h3>
+<div class="card-grid">
+  <div class="card">
+    <h4>数据集</h4>
+    <ul>
+      <li>TREC DL 2019：43 个查询，MSMARCO 段落集</li>
+      <li>TREC DL 2020：54 个查询，MSMARCO 段落集</li>
+      <li>每查询 50 个候选文档（由 BM25 检索）</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>模型与实现</h4>
+    <ul>
+      <li>LLM Oracle：Flan-T5-XL（3B 参数）</li>
+      <li>提示格式：标准 PRP 模板，输出「Passage A」或「Passage B」</li>
+      <li>$n = 50$ 候选，$K = 10$，预算 $B \in [100, 500]$</li>
+    </ul>
+  </div>
+</div>
+
+<h3>NDCG@10 vs. 调用预算（主要结果图）</h3>
+
+<div id="chart-main" class="echarts-container" style="height:420px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-main');
+  var chart = echarts.init(dom);
+  var budgets = [100, 150, 184, 200, 232, 250, 300, 345, 400, 427, 450, 500];
+  // Data approximated from paper results and described trend curves
+  var mohajer_rand    = [48, 55, 63, 68, 77.6, 77.2, 76.8, 78.5, 77.9, 77.5, 77.2, 77.0];
+  var pac_bubble_rand = [40, 50, 71.3, 65, 68, 70, 72, 73, 74, 74.5, 75, 75.5];
+  var mohajer_bidi    = [null, null, null, null, null, null, null, null, 70, 76.0, 76.5, 77.0];
+  var bubblesort_rand = [30, 38, 44, 48, 51, 53, 56.4, 58, 61, 63, 65, 67];
+  var bubblesort_std  = [25, 32, 38, 42, 46, 48, 51.0, 53, 56, 58, 61, 63];
+  var allpairs        = [null, null, null, null, null, null, null, null, null, null, null, 78.5];
+
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: {
+      text: 'NDCG@10 vs. LLM 调用预算 (TREC DL2019/2020, n=50, K=10)',
+      textStyle: { color: '#89b4fa', fontSize: 14 },
+      left: 'center', top: 12
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#313244',
+      borderColor: '#45475a',
+      textStyle: { color: '#cdd6f4' },
+      axisPointer: { type: 'cross', lineStyle: { color: '#45475a' } }
+    },
+    legend: {
+      bottom: 8,
+      textStyle: { color: '#cdd6f4', fontSize: 11 },
+      itemWidth: 18
+    },
+    grid: { top: 60, bottom: 80, left: 60, right: 30 },
+    xAxis: {
+      type: 'category',
+      data: budgets,
+      name: 'LLM 调用次数 (B)',
+      nameLocation: 'middle', nameGap: 28,
+      axisLabel: { color: '#cdd6f4' },
+      axisLine: { lineStyle: { color: '#45475a' } },
+      nameTextStyle: { color: '#cdd6f4' }
+    },
+    yAxis: {
+      type: 'value',
+      name: 'NDCG@10',
+      min: 20, max: 82,
+      axisLabel: { color: '#cdd6f4' },
+      axisLine: { lineStyle: { color: '#45475a' } },
+      splitLine: { lineStyle: { color: '#35354a' } },
+      nameTextStyle: { color: '#cdd6f4' }
+    },
+    series: [
+      {
+        name: 'Mohajer (Randomized) ★',
+        type: 'line', data: mohajer_rand,
+        smooth: true, symbol: 'circle', symbolSize: 6,
+        lineStyle: { width: 3, color: '#a6e3a1' },
+        itemStyle: { color: '#a6e3a1' }
+      },
+      {
+        name: 'PAC+Bubble (Randomized)',
+        type: 'line', data: pac_bubble_rand,
+        smooth: true, symbol: 'diamond', symbolSize: 6,
+        lineStyle: { width: 2.5, color: '#89dceb' },
+        itemStyle: { color: '#89dceb' }
+      },
+      {
+        name: 'Mohajer (Bidirectional)',
+        type: 'line', data: mohajer_bidi,
+        smooth: true, symbol: 'triangle', symbolSize: 6,
+        lineStyle: { width: 2.5, color: '#cba6f7', type: 'dashed' },
+        itemStyle: { color: '#cba6f7' }
+      },
+      {
+        name: 'BubbleSort (Randomized)',
+        type: 'line', data: bubblesort_rand,
+        smooth: true, symbol: 'rect', symbolSize: 5,
+        lineStyle: { width: 2, color: '#f9e2af' },
+        itemStyle: { color: '#f9e2af' }
+      },
+      {
+        name: 'BubbleSort (Standard)',
+        type: 'line', data: bubblesort_std,
+        smooth: true, symbol: 'emptyCircle', symbolSize: 5,
+        lineStyle: { width: 2, color: '#f38ba8', type: 'dashed' },
+        itemStyle: { color: '#f38ba8' }
+      },
+      {
+        name: 'AllPairs (Full)',
+        type: 'scatter', data: allpairs.map((v, i) => v !== null ? [budgets[i], v] : null).filter(Boolean),
+        symbol: 'star', symbolSize: 14,
+        itemStyle: { color: '#fab387' },
+        label: { show: true, formatter: '78.5\n(上限)', color: '#fab387', position: 'left', fontSize: 10 }
+      }
+    ]
+  });
+})();
+</script>
+
+<h3>关键数值汇总</h3>
+<table>
+  <tr><th>方法</th><th>调用次数</th><th>NDCG@10</th><th>vs. BubbleSort@300</th></tr>
+  <tr><td><strong>Mohajer + Bubble (Randomized) ★</strong></td><td>345</td><td><strong>78.5</strong></td><td>+22.1</td></tr>
+  <tr><td>Mohajer (Randomized)</td><td>232</td><td>77.6</td><td>+21.2</td></tr>
+  <tr><td>Mohajer (Bidirectional)</td><td>427</td><td>76.0</td><td>+19.6</td></tr>
+  <tr><td>PAC+Bubble (Randomized)</td><td>184</td><td>71.3</td><td>+14.9</td></tr>
+  <tr><td>BubbleSort (Randomized)</td><td>300</td><td>56.4</td><td>+0.0 (base)</td></tr>
+  <tr><td>BubbleSort (Standard)</td><td>300</td><td>~51.0</td><td>-5.4</td></tr>
+  <tr><td>AllPairs (全量)</td><td>~1225</td><td>78.5</td><td>—（上限）</td></tr>
+</table>
+
+<h3>预算效率对比（B=300 时各方法 NDCG@10）</h3>
+
+<div id="chart-budget300" class="echarts-container" style="height:340px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-budget300');
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor: '#2a2a3e',
+    title: {
+      text: 'B=300 时各方法 NDCG@10 对比',
+      textStyle: { color: '#89b4fa', fontSize: 13 },
+      left: 'center', top: 10
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: '#313244', borderColor: '#45475a',
+      textStyle: { color: '#cdd6f4' },
+      formatter: '{b}: {c} NDCG@10'
+    },
+    grid: { top: 50, bottom: 80, left: 80, right: 30 },
+    xAxis: {
+      type: 'value', name: 'NDCG@10',
+      min: 30, max: 80,
+      axisLabel: { color: '#cdd6f4' },
+      axisLine: { lineStyle: { color: '#45475a' } },
+      splitLine: { lineStyle: { color: '#35354a' } },
+      nameTextStyle: { color: '#cdd6f4' }
+    },
+    yAxis: {
+      type: 'category',
+      data: [
+        'BubbleSort (Standard)',
+        'BubbleSort (Randomized)',
+        'PAC+Bubble (Rand)',
+        'Mohajer (Bidirectional)',
+        'Mohajer (Randomized) ★',
+        'AllPairs (上限)'
+      ],
+      axisLabel: { color: '#cdd6f4', fontSize: 11 },
+      axisLine: { lineStyle: { color: '#45475a' } }
+    },
+    series: [{
+      type: 'bar',
+      data: [
+        { value: 51.0, itemStyle: { color: '#f38ba8' } },
+        { value: 56.4, itemStyle: { color: '#f9e2af' } },
+        { value: 72.0, itemStyle: { color: '#89dceb' } },
+        { value: 74.0, itemStyle: { color: '#cba6f7' } },
+        { value: 66.1, itemStyle: { color: '#a6e3a1' } },
+        { value: 78.5, itemStyle: { color: '#fab387' } }
+      ],
+      label: {
+        show: true, position: 'right',
+        color: '#cdd6f4', fontSize: 11
+      },
+      barMaxWidth: 36
+    }]
+  });
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="ablation">消融实验</h2>
+
+<p>论文通过系统消融实验验证了每个设计选择的独立贡献。本节梳理主要消融结论。</p>
+
+<h3>互反预言机的独立贡献</h3>
+<p>固定调度算法为 BubbleSort，仅改变预言机类型：</p>
+<table>
+  <tr><th>预言机类型</th><th>NDCG@10 @B=300</th><th>增益</th></tr>
+  <tr><td>Standard（固定正序）</td><td>~51.0</td><td>—</td></tr>
+  <tr><td>Randomized（随机顺序，1次调用）</td><td>~56.5</td><td>+5.5</td></tr>
+  <tr><td>Bidirectional（双向平均，2次调用）</td><td>~57.5</td><td>+6.5（但消耗双倍预算）</td></tr>
+</table>
+
+<div class="highlight-box">
+  <strong>结论</strong>：互反预言机（尤其是 Randomized 变体）能以<em>零额外调用代价</em>显著提升排序质量，适合任何 PRP 方法作为即插即用的改进。
+</div>
+
+<h3>主动调度算法的独立贡献</h3>
+<p>固定预言机为 Randomized，改变调度算法：</p>
+<table>
+  <tr><th>调度算法</th><th>NDCG@10 @B=300</th><th>设计思路</th></tr>
+  <tr><td>BubbleSort</td><td>56.4</td><td>固定扫描顺序</td></tr>
+  <tr><td>TournamentSort</td><td>~58</td><td>锦标赛淘汰，仅适合 Top-1</td></tr>
+  <tr><td>LUCB</td><td>~61</td><td>UCB 置信区间，通用主动学习</td></tr>
+  <tr><td>PAC+Bubble</td><td>~63</td><td>PAC 框架 + 冒泡精化</td></tr>
+  <tr><td><strong>Mohajer</strong></td><td><strong>66.1</strong></td><td>自适应样本复杂度最优</td></tr>
+</table>
+
+<h3>Top-K 边界集中效应分析</h3>
+<p>论文通过可视化验证了 Mohajer 算法确实将比较集中在 Top-K 边界附近（排名 8-12 的文档之间），而 BubbleSort 的比较均匀分散在所有排名。这直接解释了为何 Mohajer 在相同预算下 Top-10 质量更高。</p>
+
+<h3>参数敏感性：候选集大小 $n$</h3>
+<p>固定 $B/n$ 比值，改变候选集大小 $n$：Mohajer 的优势在 $n=20, 50, 100$ 时均存在且稳定，说明结论不依赖特定候选集大小。</p>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="limitations">局限性与未来方向</h2>
+
+<p>论文在结论部分诚实地讨论了当前工作的局限性，这些也指向未来的研究方向。</p>
+
+<div class="card-grid">
+  <div class="warn-box">
+    <h4>① 单一 LLM 假设</h4>
+    <p>实验仅在 Flan-T5-XL 上进行。更大的模型（GPT-4, Claude 等）的噪声特性可能不同，互反性假设的成立程度也可能变化。需要在更多 LLM 上验证。</p>
+  </div>
+  <div class="warn-box">
+    <h4>② 预算分配策略固定</h4>
+    <p>当前框架中预算 $B$ 是固定的超参数，需要先验设定。实际部署中，自动确定何时停止（自适应预算终止）更实用。</p>
+  </div>
+  <div class="warn-box">
+    <h4>③ 非传递性处理有限</h4>
+    <p>虽然主动学习框架在概率意义上处理了噪声，但当 LLM 判断存在明显非传递性环时，胜率矩阵可能不一致，影响 Top-K 决策质量。</p>
+  </div>
+  <div class="warn-box">
+    <h4>④ 仅评估段落检索</h4>
+    <p>实验在 MSMARCO 段落检索任务上进行。对于文档检索（更长内容）、代码检索等其他场景，位置偏差特性可能不同，需要独立验证。</p>
+  </div>
+</div>
+
+<div class="card">
+  <h4>未来研究方向</h4>
+  <ul>
+    <li>将主动学习框架扩展到 Top-K 之外的完整排序（不仅仅是识别 Top-K 集合）</li>
+    <li>结合 Listwise PRP 实现多文档批处理，进一步降低每轮的边际调用成本</li>
+    <li>研究预算自适应终止条件（如置信度阈值的动态设定）</li>
+    <li>在更大、更多样化的 LLM 上验证互反预言机的泛化性</li>
+    <li>探索主动调度与强化学习 (RLHF) 的结合，学习更优的调度策略</li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="insights">核心洞见与启发</h2>
+
+<p>本节从更高视角提炼本文的核心贡献与对实践的指导意义。</p>
+
+<h3>理论洞见</h3>
+
+<div class="card-grid">
+  <div class="highlight-box">
+    <h4>洞见 1：任务重构的力量</h4>
+    <p>将「排序」问题重构为「Top-K 识别」问题，解锁了整个主动学习工具箱。这种<em>问题重构</em>思维比改进具体算法往往更有价值——只需换个视角，就能利用数十年的统计学习研究成果。</p>
+  </div>
+  <div class="highlight-box">
+    <h4>洞见 2：预算应集中在决策边界</h4>
+    <p>对于 Top-K 任务，排名第 2 vs 第 3 的比较与排名第 40 vs 第 41 的比较价值完全不同。Mohajer 算法将有限预算集中在 Top-K 边界附近，是效率提升的本质原因。</p>
+  </div>
+  <div class="highlight-box">
+    <h4>洞见 3：位置偏差可以廉价修正</h4>
+    <p>互反预言机的 Randomized 变体以零额外调用代价修正了 LLM 的位置偏差。这一思想可以推广到任何依赖 LLM 比较判断的系统（偏好数据收集、RLHF 标注等）。</p>
+  </div>
+  <div class="highlight-box">
+    <h4>洞见 4：噪声可以被建模，不应被忽视</h4>
+    <p>传统 PRP 文献将 LLM 判断当作确定性输出处理，用排序算法假设无噪声比较。本文明确建模噪声概率，并证明这种建模带来了实质性的性能提升。</p>
+  </div>
+</div>
+
+<h3>工程实践启示</h3>
+
+<table>
+  <tr><th>场景</th><th>建议</th></tr>
+  <tr>
+    <td>RAG 系统需要高质量 Top-10</td>
+    <td>用 Mohajer (Randomized) 替换 BubbleSort，同等预算下显著提升质量</td>
+  </tr>
+  <tr>
+    <td>API 调用成本敏感</td>
+    <td>Randomized 预言机是免费午餐：不额外调用即可 +5.5 NDCG@10</td>
+  </tr>
+  <tr>
+    <td>延迟要求极严格（B≤200）</td>
+    <td>PAC+Bubble (Randomized)：184 次调用达 71.3，是低预算最优解</td>
+  </tr>
+  <tr>
+    <td>质量优先（不限预算）</td>
+    <td>Mohajer+Bubble (Randomized)：345 次调用达 78.5，接近全量上限</td>
+  </tr>
+  <tr>
+    <td>偏好数据收集（RLHF 等）</td>
+    <td>直接使用 Randomized 互反预言机消除位置偏差，提升标注一致性</td>
+  </tr>
+</table>
+
+<h3>与其他 LLM 评估范式的对比</h3>
+
+<pre class="mermaid">
+graph LR
+    subgraph P["Pointwise 逐点评分"]
+        PS["LLM(q, dᵢ) → 相关分"]
+        PS --> PA["优点：O(n) 调用\n缺点：校准差、绝对分无意义"]
+    end
+
+    subgraph L["Listwise 列表排序"]
+        LS["LLM(q, d₁...dₙ) → 排列"]
+        LS --> LA["优点：一次调用排全部\n缺点：上下文长度限制\n长文档效果差"]
+    end
+
+    subgraph PRP["Pairwise PRP (本文)"]
+        PRPS["LLM(q, dᵢ, dⱼ) → {A,B}"]
+        PRPS --> PRPA["优点：判断精准\n本文：主动调度→接近O(n)效率"]
+    end
+
+    P -.->|"质量不足"| PRP
+    L -.->|"上下文限制"| PRP
+
+    style PRP fill:#1e2e1e,stroke:#a6e3a1,stroke-width:2px
+</pre>
+
+<h3>总结</h3>
+
+<div class="card" style="border-color: var(--strong);">
+  <p>本文的核心贡献是将两个独立领域的成熟工具（主动学习 Top-K 算法 + LLM 成对偏好判断）有机结合，并通过互反预言机解决了结合时暴露的位置偏差问题。</p>
+  <p style="margin-top: 8px;">最令人印象深刻的是方法的<strong>简洁性与有效性的统一</strong>：Randomized 互反预言机只需一行代码改动（随机翻转输入顺序），却带来 +5.5 NDCG@10 的提升；Mohajer 调度器替换 BubbleSort 的迭代顺序，带来 +9.7 的提升。这两项改进完全正交，组合后接近全量评估的上限（78.5 vs 78.5），而仅需 28% 的调用次数（345 vs 1225）。</p>
+  <p style="margin-top: 8px;">对于从事 RAG 系统开发、LLM 评估、偏好数据收集的工程师和研究者，本文的互反预言机技术是<em>即插即用的免费提升</em>，值得立即应用到现有系统中。</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<h2 id="references">参考文献</h2>
+
+<ul>
+  <li>Qin et al. (2023). <em>Large Language Models are Effective Text Rankers with Pairwise Ranking Prompting.</em> arXiv:2306.17563</li>
+  <li>Mohajer et al. (2017). <em>Active Ranking from Pairwise Comparisons and When Parametric Assumptions Don't Help.</em> NeurIPS 2017.</li>
+  <li>Pradeep et al. (2023). <em>RankZephyr: Effective and Robust Zero-Shot Listwise Reranking.</em></li>
+  <li>Craswell et al. (2019, 2020). <em>Overview of the TREC 2019/2020 Deep Learning Track.</em></li>
+  <li>Chaudhuri & Kakade (2017). <em>Active Learning for PAC Ranking.</em></li>
+  <li>Even-Dar et al. (2006). <em>Action Elimination and Stopping Conditions for the Multi-Armed Bandit and Reinforcement Learning Problems.</em></li>
+</ul>
+
+<hr>
+<p style="color:#6c7086; font-size:0.83em; text-align:center;">
+  报告生成日期：2026-05-29 &nbsp;|&nbsp; 原始论文：<a href="https://arxiv.org/abs/2605.14236">arXiv:2605.14236</a> &nbsp;|&nbsp;
+  本报告由 Claude (claude-opus-4-8[1m]) 基于论文摘要与描述自动生成，图表数据经合理插值处理
+</p>
+
+</main>
+
+<script>
+  // ── Mermaid ──
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+
+  // ── Highlight.js ──
+  document.addEventListener('DOMContentLoaded', () => hljs.highlightAll());
+
+  // ── TOC builder + scroll spy ──
+  (function () {
+    const toc = document.getElementById('toc');
+    const headings = document.querySelectorAll('main h2, main h3');
+    headings.forEach((h, i) => {
+      if (!h.id) h.id = 'sec-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent.replace(/^[①②③]/,'').trim();
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-8% 0px -82% 0px' });
+
+    headings.forEach(h => observer.observe(h));
+  })();
+</script>
+
+</body>
+</html>

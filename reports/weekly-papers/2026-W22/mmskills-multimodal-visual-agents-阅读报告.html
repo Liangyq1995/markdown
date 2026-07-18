@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MMSkills 阅读报告 — 多模态技能驱动通用视觉智能体</title>
+
+<!-- CDN Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<style>
+  /* ===== CSS 变量 & 基础重置 ===== */
+  :root {
+    --bg:        #1e1e2e;
+    --surface:   #24273a;
+    --surface2:  #2a2d3e;
+    --border:    #363a4f;
+    --text:      #cad3f5;
+    --muted:     #8087a2;
+    --heading:   #89b4fa;
+    --strong:    #a6e3a1;
+    --accent:    #f5a97f;
+    --accent2:   #c6a0f6;
+    --red:       #ed8796;
+    --yellow:    #eed49f;
+    --toc-w:     260px;
+    --toc-bg:    #181825;
+    --radius:    10px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.85;
+    display: flex;
+  }
+
+  /* ===== 左侧固定目录 ===== */
+  #toc {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--toc-w);
+    height: 100vh;
+    background: var(--toc-bg);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 24px 0 40px;
+    z-index: 100;
+    flex-shrink: 0;
+  }
+
+  #toc .toc-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 20px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+
+  #toc ul { list-style: none; }
+  #toc ul li { position: relative; }
+
+  #toc ul li a {
+    display: block;
+    padding: 5px 20px 5px 20px;
+    font-size: 12.5px;
+    color: var(--muted);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all .18s ease;
+    line-height: 1.5;
+  }
+
+  #toc ul li.l2 a { padding-left: 34px; font-size: 12px; }
+  #toc ul li.l3 a { padding-left: 48px; font-size: 11.5px; }
+
+  #toc ul li a:hover { color: var(--heading); background: rgba(137,180,250,.07); }
+  #toc ul li a.active {
+    color: var(--heading);
+    border-left-color: var(--heading);
+    background: rgba(137,180,250,.1);
+    font-weight: 600;
+  }
+
+  /* ===== 主内容区域 ===== */
+  main {
+    margin-left: var(--toc-w);
+    max-width: none;
+    padding: 40px 64px;
+    width: calc(100% - var(--toc-w));
+  }
+
+  /* ===== 标题样式 ===== */
+  h1 {
+    font-size: 2.1rem;
+    color: var(--heading);
+    line-height: 1.3;
+    margin-bottom: 8px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  h2 {
+    font-size: 1.45rem;
+    color: var(--heading);
+    margin: 52px 0 18px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    font-weight: 700;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+    color: var(--accent);
+    margin: 32px 0 12px;
+    font-weight: 700;
+  }
+
+  h4 {
+    font-size: 1rem;
+    color: var(--strong);
+    margin: 22px 0 10px;
+    font-weight: 700;
+  }
+
+  p { margin-bottom: 14px; }
+
+  a { color: var(--heading); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  strong, b { color: var(--strong); font-weight: 700; }
+  em { color: var(--accent); font-style: italic; }
+
+  code {
+    background: var(--surface2);
+    color: var(--accent2);
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: .88em;
+  }
+
+  pre {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 20px 0;
+    font-size: .88em;
+  }
+
+  pre code { background: none; padding: 0; }
+
+  /* ===== 论文信息表 ===== */
+  .paper-meta-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-size: 14px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: 0 2px 16px rgba(0,0,0,.3);
+  }
+
+  .paper-meta-table th {
+    background: var(--surface2);
+    color: var(--heading);
+    font-weight: 700;
+    padding: 11px 18px;
+    text-align: left;
+    width: 150px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  .paper-meta-table td {
+    background: var(--surface);
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .paper-meta-table tr:last-child th,
+  .paper-meta-table tr:last-child td { border-bottom: none; }
+
+  /* ===== 信息卡片 ===== */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 26px;
+    margin: 18px 0;
+    position: relative;
+  }
+
+  .card.blue  { border-left: 4px solid var(--heading); }
+  .card.green { border-left: 4px solid var(--strong); }
+  .card.orange{ border-left: 4px solid var(--accent); }
+  .card.purple{ border-left: 4px solid var(--accent2); }
+  .card.red   { border-left: 4px solid var(--red); }
+  .card.yellow{ border-left: 4px solid var(--yellow); }
+
+  .card-label {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* ===== 标签 ===== */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+    margin: 2px;
+  }
+  .badge-blue   { background: rgba(137,180,250,.15); color: var(--heading); }
+  .badge-green  { background: rgba(166,227,161,.15); color: var(--strong); }
+  .badge-orange { background: rgba(245,169,127,.15); color: var(--accent); }
+  .badge-purple { background: rgba(198,160,246,.15); color: var(--accent2); }
+
+  /* ===== 列表 ===== */
+  ul, ol { padding-left: 24px; margin-bottom: 14px; }
+  li { margin-bottom: 6px; }
+  ul li::marker { color: var(--heading); }
+  ol li::marker { color: var(--accent); font-weight: 700; }
+
+  /* ===== 引用块 ===== */
+  blockquote {
+    border-left: 3px solid var(--accent2);
+    background: rgba(198,160,246,.07);
+    padding: 14px 20px;
+    margin: 18px 0;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 14.5px;
+  }
+
+  /* ===== 图表容器 ===== */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin: 22px 0;
+  }
+
+  .chart-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--heading);
+    margin-bottom: 12px;
+    text-align: center;
+    letter-spacing: .5px;
+  }
+
+  /* ===== Mermaid 容器 ===== */
+  .mermaid-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 22px 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+
+  .mermaid-wrap .caption {
+    font-size: 12.5px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 12px;
+    font-style: italic;
+  }
+
+  /* ===== 对比网格 ===== */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 18px 0; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; margin: 18px 0; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* ===== 统计数字高亮 ===== */
+  .stat-num {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--strong);
+    line-height: 1;
+    display: block;
+  }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ===== 分隔线 ===== */
+  hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+  /* ===== 步骤流程 ===== */
+  .steps { counter-reset: step; }
+  .step {
+    display: flex;
+    gap: 18px;
+    margin-bottom: 20px;
+    align-items: flex-start;
+  }
+  .step-num {
+    counter-increment: step;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--heading);
+    color: var(--bg);
+    font-weight: 900;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .step-content { flex: 1; }
+  .step-content strong { color: var(--accent); }
+
+  /* ===== 页脚 ===== */
+  footer {
+    margin-top: 80px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 2;
+  }
+
+  /* ===== 滚动条美化 ===== */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ===== 表格 ===== */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 18px 0;
+    font-size: 13.5px;
+  }
+  .data-table th {
+    background: var(--surface2);
+    color: var(--heading);
+    padding: 10px 14px;
+    text-align: center;
+    border: 1px solid var(--border);
+    font-weight: 700;
+  }
+  .data-table td {
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    text-align: center;
+    background: var(--surface);
+  }
+  .data-table tr:hover td { background: var(--surface2); }
+  .data-table .highlight { color: var(--strong); font-weight: 700; }
+  .data-table .best { color: var(--accent); font-weight: 900; }
+
+  /* ===== 组件高亮框 ===== */
+  .component-box {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin: 10px 0;
+    background: var(--surface);
+  }
+  .component-box .comp-title {
+    color: var(--accent2);
+    font-weight: 800;
+    font-size: 13.5px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .comp-icon {
+    width: 22px; height: 22px;
+    border-radius: 5px;
+    background: var(--surface2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  /* ===== 摘要标注 ===== */
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(137,180,250,.08), rgba(166,227,161,.06));
+    border: 1px solid rgba(137,180,250,.25);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== 左侧目录 ===== -->
+<nav id="toc">
+  <div class="toc-title">目录 Contents</div>
+  <ul>
+    <li class="l1"><a href="#sec-meta">01 · 论文信息</a></li>
+    <li class="l1"><a href="#sec-motivation">02 · 核心问题与动机</a></li>
+    <li class="l2"><a href="#sec-problem">问题陈述</a></li>
+    <li class="l2"><a href="#sec-challenge">主要挑战</a></li>
+    <li class="l1"><a href="#sec-related">03 · 背景与相关工作</a></li>
+    <li class="l2"><a href="#sec-vla">视觉语言智能体</a></li>
+    <li class="l2"><a href="#sec-skill-prior">技能知识先验</a></li>
+    <li class="l1"><a href="#sec-overview">04 · 方法总览</a></li>
+    <li class="l1"><a href="#sec-key-tech">05 · 关键技术</a></li>
+    <li class="l2"><a href="#sec-package">MMSkill 包结构</a></li>
+    <li class="l2"><a href="#sec-generator">轨迹-技能生成器</a></li>
+    <li class="l2"><a href="#sec-agent">分支加载代理</a></li>
+    <li class="l1"><a href="#sec-experiment">06 · 实验结果</a></li>
+    <li class="l2"><a href="#sec-osworld">OSWorld 主结果</a></li>
+    <li class="l2"><a href="#sec-breakdown">分类分解分析</a></li>
+    <li class="l1"><a href="#sec-ablation">07 · 消融实验</a></li>
+    <li class="l1"><a href="#sec-limitation">08 · 局限性</a></li>
+    <li class="l1"><a href="#sec-insight">09 · 核心洞见</a></li>
+  </ul>
+</nav>
+
+<!-- ===== 主内容 ===== -->
+<main>
+
+  <!-- 页眉 -->
+  <div style="margin-bottom:32px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+      <span class="badge badge-blue">arXiv 2605.13527</span>
+      <span class="badge badge-green">多模态智能体</span>
+      <span class="badge badge-orange">视觉决策</span>
+      <span class="badge badge-purple">技能复用</span>
+      <span class="badge badge-blue">2026 · 上海交通大学</span>
+    </div>
+    <h1>MMSkills: Towards Multimodal Skills<br/>for General Visual Agents</h1>
+    <p style="color:var(--muted);font-size:14px;margin-top:10px;">
+      面向通用视觉智能体的多模态技能框架 — 深度阅读报告
+    </p>
+    <p style="color:var(--muted);font-size:12.5px;">报告生成日期：2026-05-29 &nbsp;|&nbsp; 原文链接：<a href="https://arxiv.org/abs/2605.13527" target="_blank">arxiv.org/abs/2605.13527</a></p>
+  </div>
+
+  <!-- ===== 01 论文信息 ===== -->
+  <section id="sec-meta">
+    <h2>01 · 论文基本信息</h2>
+
+    <table class="paper-meta-table">
+      <tr><th>标题</th><td>MMSkills: Towards Multimodal Skills for General Visual Agents</td></tr>
+      <tr><th>arXiv 编号</th><td><a href="https://arxiv.org/abs/2605.13527" target="_blank">2605.13527</a></td></tr>
+      <tr><th>研究机构</th><td>上海交通大学（Shanghai Jiao Tong University）</td></tr>
+      <tr><th>发表年份</th><td>2026</td></tr>
+      <tr><th>研究领域</th><td>多模态大语言模型、视觉语言智能体、GUI 自动化、技能库构建</td></tr>
+      <tr><th>基准测试</th><td>OSWorld（桌面环境通用任务基准）</td></tr>
+      <tr><th>核心主张</th><td>通过可复用的多模态技能包，显著提升视觉智能体在真实 GUI 环境中的成功率</td></tr>
+      <tr><th>关键结果</th><td>Qwen3-VL 基线：11% → <strong>25%</strong> 成功率（+14 个百分点，相对提升约 127%）</td></tr>
+    </table>
+
+    <div class="highlight-box">
+      <div class="card-label">论文摘要（精译）</div>
+      <p>
+        MMSkills 提出了一个用于<strong>表示、生成和运行时使用可复用多模态过程</strong>的框架，专为视觉决策任务设计。
+        该框架将公开可用的历史操作轨迹转化为结构化的"技能包"（Skill Package），并在推理阶段通过
+        <em>分支加载代理</em>机制将相关技能注入当前决策流程，从而在不超载上下文窗口的前提下，
+        为主智能体提供精炼的、可执行的子目标指导。
+      </p>
+      <p>
+        在 OSWorld 基准上，使用 Qwen3-VL 骨干模型，成功率从 <strong>11%</strong> 提升至 <strong>25%</strong>，
+        游戏类和 GUI 操作类任务均获得显著增益，有力验证了多模态技能复用的有效性。
+      </p>
+    </div>
+  </section>
+
+  <!-- ===== 02 核心问题与动机 ===== -->
+  <section id="sec-motivation">
+    <h2>02 · 核心问题与动机</h2>
+
+    <section id="sec-problem">
+      <h3>2.1 问题陈述</h3>
+
+      <p>
+        当前视觉语言智能体（Visual Language Agents, VLAs）在执行复杂 GUI 任务时，
+        每次都从零开始推理，无法利用历史经验中已被验证的操作过程。
+        这造成了以下核心矛盾：
+      </p>
+
+      <div class="grid-2">
+        <div class="card red">
+          <div class="card-label">现有方法的问题</div>
+          <ul>
+            <li>每次任务独立推理，<strong>无法复用成功经验</strong></li>
+            <li>将大量历史轨迹直接塞入上下文，<strong>导致上下文窗口爆炸</strong></li>
+            <li>纯文本提示忽略了界面的<strong>视觉状态信息</strong></li>
+            <li>缺乏"何时使用"某项知识的<strong>条件判断能力</strong></li>
+          </ul>
+        </div>
+        <div class="card green">
+          <div class="card-label">MMSkills 的解决思路</div>
+          <ul>
+            <li>将轨迹<strong>提炼为紧凑的多模态技能包</strong></li>
+            <li>引入<strong>视觉状态卡片</strong>，捕捉关键界面状态</li>
+            <li>通过<strong>分支加载</strong>实现按需检索，不污染主上下文</li>
+            <li>提供结构化的<strong>适用性判断 + 子目标 + 下一步</strong>输出</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card blue">
+        <div class="card-label">核心研究问题（RQ）</div>
+        <p>
+          如何将非结构化的历史操作轨迹转化为<strong>结构紧凑、可视觉对齐、运行时可高效使用</strong>的
+          多模态技能表示，从而在不破坏上下文效率的前提下显著提升视觉智能体的任务完成率？
+        </p>
+      </div>
+    </section>
+
+    <section id="sec-challenge">
+      <h3>2.2 主要挑战</h3>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <strong>多模态对齐挑战</strong><br/>
+            文本步骤描述与对应视觉界面截图之间的精确对应关系难以自动建立——
+            相同操作在不同软件版本、主题、语言中的视觉呈现差异巨大。
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <strong>技能泛化 vs. 过拟合</strong><br/>
+            从具体轨迹归纳出<em>通用步骤过程</em>（General Procedure）需要在保留足够操作细节
+            与避免过度具化（导致零迁移）之间取得平衡。
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <strong>运行时检索效率</strong><br/>
+            在数百乃至数千个技能包中快速找到当前状态最相关的技能，
+            且检索判断本身不能消耗过多 token 预算。
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <strong>上下文开销控制</strong><br/>
+            直接将完整技能包（含所有截图、关键帧）注入主智能体上下文会导致
+            视觉 token 爆炸，需要一种"<em>渐进披露</em>"机制。
+          </div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===== 03 背景与相关工作 ===== -->
+  <section id="sec-related">
+    <h2>03 · 背景与相关工作</h2>
+
+    <section id="sec-vla">
+      <h3>3.1 视觉语言智能体（VLA）</h3>
+
+      <p>
+        视觉语言智能体以大型多模态模型（如 GPT-4V、Qwen-VL、LLaVA 系列）为核心，
+        通过感知屏幕截图并生成动作指令（点击、输入、滚动等）来自动化完成 GUI 任务。
+      </p>
+
+      <div class="grid-3">
+        <div class="component-box">
+          <div class="comp-title">感知层</div>
+          <p>截图/视频帧输入，OCR + 目标检测，UI 元素树解析</p>
+        </div>
+        <div class="component-box">
+          <div class="comp-title">推理层</div>
+          <p>任务分解，子目标规划，动作序列生成，错误恢复</p>
+        </div>
+        <div class="component-box">
+          <div class="comp-title">执行层</div>
+          <p>鼠标/键盘模拟，API 调用，状态验证，轨迹记录</p>
+        </div>
+      </div>
+
+      <p>
+        代表性工作包括 <strong>WebAgent</strong>、<strong>AppAgent</strong>、<strong>UFO</strong>（微软）、
+        <strong>OS-Copilot</strong> 等。OSWorld 是当前最综合的通用桌面任务基准，
+        涵盖文件管理、办公软件、游戏操控、系统设置等多类别任务。
+      </p>
+    </section>
+
+    <section id="sec-skill-prior">
+      <h3>3.2 技能知识先验与经验复用</h3>
+
+      <p>
+        在强化学习领域，技能/选项（Skill/Option）复用已有深入研究（如 HRL、SKILL-IT）。
+        在 LLM 时代，以下几类方法尝试引入经验复用：
+      </p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>方法类别</th>
+            <th>代表工作</th>
+            <th>核心机制</th>
+            <th>不足</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Few-Shot 示例库</td>
+            <td>Voyager, AgentBench</td>
+            <td>相似历史任务 + 解法注入上下文</td>
+            <td>上下文膨胀，无视觉信息</td>
+          </tr>
+          <tr>
+            <td>代码技能库</td>
+            <td>Voyager Skills, CodeAct</td>
+            <td>LLM 生成可复用代码函数</td>
+            <td>限于可编程环境，无视觉状态</td>
+          </tr>
+          <tr>
+            <td>检索增强生成 (RAG)</td>
+            <td>MemGPT, ExpeL</td>
+            <td>语义检索历史轨迹片段</td>
+            <td>检索粒度粗，轨迹噪音大</td>
+          </tr>
+          <tr>
+            <td><strong>MMSkills (本文)</strong></td>
+            <td>—</td>
+            <td><strong>多模态技能包 + 分支加载代理</strong></td>
+            <td class="highlight">覆盖视觉/文本/条件三维</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </section>
+
+  <!-- ===== 04 方法总览 ===== -->
+  <section id="sec-overview">
+    <h2>04 · 方法总览</h2>
+
+    <p>
+      MMSkills 框架由三个核心模块构成：
+      <strong>MMSkill 包结构</strong>（技能的表示形式）、
+      <strong>轨迹-技能生成器</strong>（离线构建技能库）和
+      <strong>分支加载多模态技能代理</strong>（运行时使用技能）。
+    </p>
+
+    <div class="mermaid-wrap">
+      <div class="chart-title">MMSkills 整体框架 — 离线构建与在线推理双阶段流程</div>
+      <pre class="mermaid">
+flowchart TB
+    subgraph OFFLINE["🏗️  离线阶段：技能库构建"]
+        direction TB
+        T1["公开操作轨迹\n(Non-Eval Trajectories)"]
+        G1["工作流分组\nWorkflow Grouping"]
+        G2["过程归纳\nProcedure Induction"]
+        G3["视觉接地\nVisual Grounding"]
+        G4["元技能引导审计\nMeta-Skill-Guided Auditing"]
+        PKG["📦 MMSkill 包\n文本过程 + 状态卡片 + 关键帧"]
+
+        T1 --> G1 --> G2 --> G3 --> G4 --> PKG
+    end
+
+    subgraph ONLINE["🚀  在线阶段：运行时推理"]
+        direction TB
+        TASK["用户任务 + 当前屏幕截图"]
+        RETRIEVAL["技能检索\n(多视图关键帧匹配)"]
+        BRANCH["分支加载代理\nBranch-Loaded Skill Agent"]
+        INSPECT["临时检查状态卡片 & 关键帧"]
+        GUIDANCE["结构化指导输出\n适用性 / 子目标 / 下一步"]
+        MAIN["主智能体\nMain VLA"]
+        ACTION["执行动作\n点击 / 输入 / 滚动 …"]
+
+        TASK --> RETRIEVAL --> BRANCH
+        BRANCH --> INSPECT --> GUIDANCE
+        GUIDANCE --> MAIN --> ACTION
+    end
+
+    PKG -->|"构建技能库"| RETRIEVAL
+
+    style OFFLINE fill:#1e2435,stroke:#89b4fa,stroke-width:2px,color:#cad3f5
+    style ONLINE  fill:#1e2a1e,stroke:#a6e3a1,stroke-width:2px,color:#cad3f5
+      </pre>
+      <div class="caption">图1：MMSkills 框架全貌。离线阶段将原始轨迹提炼为多模态技能包；在线阶段通过分支加载代理实现按需技能注入。</div>
+    </div>
+
+    <div class="grid-3" style="margin-top:24px;">
+      <div class="card blue" style="text-align:center;">
+        <span class="stat-num">3</span>
+        <div class="stat-label">MMSkill 包的核心组件</div>
+      </div>
+      <div class="card orange" style="text-align:center;">
+        <span class="stat-num">4</span>
+        <div class="stat-label">轨迹转技能的生成步骤</div>
+      </div>
+      <div class="card green" style="text-align:center;">
+        <span class="stat-num">+14pp</span>
+        <div class="stat-label">OSWorld 成功率绝对提升</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 05 关键技术 ===== -->
+  <section id="sec-key-tech">
+    <h2>05 · 关键技术详解</h2>
+
+    <!-- 5.1 MMSkill 包结构 -->
+    <section id="sec-package">
+      <h3>5.1 MMSkill 包结构（Package Structure）</h3>
+
+      <p>
+        MMSkill 包是框架的基本存储单元，它将一个可复用操作过程所需的
+        <em>语义信息</em>、<em>视觉状态信息</em>和<em>使用条件信息</em>耦合为一个紧凑结构。
+      </p>
+
+      <div class="mermaid-wrap">
+        <div class="chart-title">MMSkill 包内部结构</div>
+        <pre class="mermaid">
+classDiagram
+    class MMSkillPackage {
+        +String skill_id
+        +String title
+        +String description
+        +ProcedureText textual_procedure
+        +StateCard[] state_cards
+        +Keyframe[] multi_view_keyframes
+        +Condition when_to_use
+    }
+
+    class ProcedureText {
+        +String[] steps
+        +String goal
+        +String prerequisite
+    }
+
+    class StateCard {
+        +Image screenshot
+        +String state_description
+        +String[] observable_elements
+        +String step_mapping
+    }
+
+    class Keyframe {
+        +Image view_image
+        +String context_label
+        +String visual_cue
+    }
+
+    class Condition {
+        +String[] trigger_patterns
+        +String[] anti_patterns
+    }
+
+    MMSkillPackage "1" *-- "1" ProcedureText
+    MMSkillPackage "1" *-- "1..*" StateCard
+    MMSkillPackage "1" *-- "1..*" Keyframe
+    MMSkillPackage "1" *-- "1" Condition
+        </pre>
+        <div class="caption">图2：MMSkill 包的 UML 类图。三类视觉+文本组件共同构成完整技能表示。</div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card blue">
+          <div class="card-label">① 文本过程（Textual Procedure）</div>
+          <p>
+            由若干<strong>步骤指令</strong>（step-by-step instructions）构成的自然语言描述，
+            包含目标、前置条件及每步的操作意图。
+            这是技能的"骨架"，提供可解释的操作序列。
+          </p>
+        </div>
+        <div class="card orange">
+          <div class="card-label">② 运行时状态卡片（Runtime State Cards）</div>
+          <p>
+            技能执行过程中<strong>关键界面状态的视觉快照</strong>，
+            标注了可观测的 UI 元素与对应步骤的映射关系。
+            帮助代理在运行时核对"当前状态是否符合预期"。
+          </p>
+        </div>
+        <div class="card purple">
+          <div class="card-label">③ 多视图关键帧（Multi-View Keyframes）</div>
+          <p>
+            从多角度（不同应用状态、主题、版本）收集的<strong>触发条件视觉证据</strong>，
+            用于检索阶段判断"该技能是否适用于当前场景"，
+            提升跨环境泛化能力。
+          </p>
+        </div>
+      </div>
+
+      <blockquote>
+        三者的协同设计实现了"<strong>知道做什么（文本过程）+ 知道当前做到哪了（状态卡片）+ 知道什么时候用（关键帧）</strong>"的完整技能表达。
+      </blockquote>
+    </section>
+
+    <!-- 5.2 轨迹-技能生成器 -->
+    <section id="sec-generator">
+      <h3>5.2 轨迹-技能生成器（Trajectory-to-Skill Generator）</h3>
+
+      <p>
+        生成器是一个<strong>智能体式（Agentic）管道</strong>，将原始操作轨迹自动转化为结构化 MMSkill 包，
+        无需人工标注。整个流程分为四个有序阶段：
+      </p>
+
+      <div class="mermaid-wrap">
+        <div class="chart-title">轨迹-技能生成器四阶段流水线</div>
+        <pre class="mermaid">
+flowchart LR
+    subgraph INPUT["输入"]
+        RAW["原始轨迹\n(截图序列 + 动作标注)"]
+    end
+
+    subgraph STAGE1["阶段一\n工作流分组"]
+        WG["将连续动作序列\n按语义目标分组\n得到工作流片段"]
+    end
+
+    subgraph STAGE2["阶段二\n过程归纳"]
+        PI["从具体动作中\n抽象出通用步骤过程\n去除特化细节"]
+    end
+
+    subgraph STAGE3["阶段三\n视觉接地"]
+        VG["将文本步骤\n与对应截图帧对齐\n生成状态卡片 & 关键帧"]
+    end
+
+    subgraph STAGE4["阶段四\n元技能引导审计"]
+        AU["用元技能检查器\n验证一致性、完整性\n过滤低质量技能"]
+    end
+
+    subgraph OUTPUT["输出"]
+        PKG2["MMSkill 包\n📦"]
+    end
+
+    INPUT --> STAGE1 --> STAGE2 --> STAGE3 --> STAGE4 --> OUTPUT
+
+    style INPUT  fill:#1e1e2e,stroke:#89b4fa,color:#cad3f5
+    style OUTPUT fill:#1e1e2e,stroke:#a6e3a1,color:#cad3f5
+    style STAGE1 fill:#24273a,stroke:#f5a97f,color:#cad3f5
+    style STAGE2 fill:#24273a,stroke:#f5a97f,color:#cad3f5
+    style STAGE3 fill:#24273a,stroke:#f5a97f,color:#cad3f5
+    style STAGE4 fill:#24273a,stroke:#f5a97f,color:#cad3f5
+        </pre>
+        <div class="caption">图3：轨迹-技能生成器四阶段流水线，从非结构化轨迹到结构化多模态技能包的端到端转化。</div>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <strong>工作流分组（Workflow Grouping）</strong><br/>
+            将单条长轨迹按<em>语义子目标</em>切分为若干工作流片段。
+            使用 LLM 对动作序列做滑动窗口分析，识别语义边界
+            （如"打开文件"→"编辑内容"→"保存"构成三个片段）。
+            分组结果为后续归纳提供粒度合适的训练材料。
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <strong>过程归纳（Procedure Induction）</strong><br/>
+            给定工作流片段，LLM 被提示将其中具体的坐标、像素值、
+            应用内部路径等<em>特化信息</em>抽象为通用的操作步骤描述。
+            这一步类似"代码重构"——去掉具体值，保留操作模式。
+            结果为文本过程（Textual Procedure）。
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <strong>视觉接地（Visual Grounding）</strong><br/>
+            将归纳后的每个文本步骤与原始轨迹中的对应截图帧进行<em>精确对齐</em>，
+            提取关键 UI 元素的边界框和状态描述，生成状态卡片。
+            同时从多个轨迹中挑选具有代表性的场景截图作为多视图关键帧，
+            用于后续检索时的视觉条件匹配。
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <strong>元技能引导审计（Meta-Skill-Guided Auditing）</strong><br/>
+            使用一组预定义的"元技能"（Meta-Skills，覆盖质量维度如完整性、一致性、可迁移性）
+            对生成的技能包进行<em>自动化质检</em>。不符合标准的包被过滤或触发重生成。
+            这是保证技能库质量的关键安全阀。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5.3 分支加载代理 -->
+    <section id="sec-agent">
+      <h3>5.3 分支加载多模态技能代理（Branch-Loaded Multimodal Skill Agent）</h3>
+
+      <p>
+        这是 MMSkills 在<strong>运行时</strong>发挥作用的核心机制。
+        它的设计目标是：在不向主智能体上下文注入大量原始技能数据的前提下，
+        提供精准、结构化的操作指导。
+      </p>
+
+      <div class="mermaid-wrap">
+        <div class="chart-title">分支加载代理推理流程</div>
+        <pre class="mermaid">
+sequenceDiagram
+    participant U as 用户任务
+    participant M as 主智能体 (Main VLA)
+    participant R as 技能检索模块
+    participant B as 分支加载代理
+    participant P as MMSkill 包库
+
+    U->>M: 任务描述 + 当前屏幕截图
+    M->>R: 发起技能检索请求 (任务意图 + 视觉特征)
+    R->>P: 多视图关键帧相似度匹配
+    P-->>R: 返回 Top-K 候选技能包
+    R->>B: 传入候选技能包 + 当前截图
+
+    Note over B: 临时开启独立上下文分支
+    B->>B: 加载完整状态卡片 + 关键帧
+    B->>B: 与当前屏幕视觉对齐
+    B->>B: 生成结构化评估
+
+    B-->>M: 压缩输出：{适用性, 子目标列表, 推荐下一步}
+    Note over M: 主上下文仅接收精炼指导<br/>不含原始图像 token
+
+    M->>M: 结合技能指导 + 原始观察做决策
+    M-->>U: 执行动作序列
+        </pre>
+        <div class="caption">图4：分支加载代理时序图。代理在独立上下文分支中执行视觉检查，仅将精炼的结构化指导返回主智能体，实现"渐进披露"。</div>
+      </div>
+
+      <div class="card green">
+        <div class="card-label">分支加载代理的四项关键设计</div>
+        <div class="grid-2">
+          <div>
+            <h4>① 临时分支检查</h4>
+            <p>
+              代理在一个<strong>独立的、临时的上下文分支</strong>中工作，
+              完整加载状态卡片和多视图关键帧进行精细对齐分析。
+              该分支在完成后即销毁，不污染主智能体的对话历史。
+            </p>
+          </div>
+          <div>
+            <h4>② 视觉状态对齐</h4>
+            <p>
+              代理将技能包中的<strong>状态卡片与当前实时截图</strong>进行逐元素视觉比对，
+              判断当前界面处于技能执行的哪个阶段，
+              从而提供"从此刻开始的后续步骤"而非完整流程。
+            </p>
+          </div>
+          <div>
+            <h4>③ 结构化输出</h4>
+            <p>
+              输出严格遵循三字段格式：
+              <strong>适用性</strong>（是/否 + 理由）、
+              <strong>子目标</strong>（当前应完成的小目标列表）、
+              <strong>下一步</strong>（具体推荐动作）。
+              结构化保证了主智能体能高效解析。
+            </p>
+          </div>
+          <div>
+            <h4>④ 渐进披露（Progressive Disclosure）</h4>
+            <p>
+              主智能体<strong>只接收精炼的决策支持</strong>（文本摘要），
+              而非完整技能包（含大量图像 token）。
+              这解决了视觉 RAG 中最常见的"上下文爆炸"问题。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card yellow">
+        <div class="card-label">与传统 RAG 对比的核心优势</div>
+        <p>
+          传统 RAG 在检索后直接将原始文档/截图注入上下文，
+          信息密度低且噪音大。MMSkills 的分支加载机制相当于
+          在"检索"和"使用"之间增加了一个<em>智能压缩层</em>——
+          由专门的子代理负责消化原始技能包，并以主智能体能直接使用的格式输出。
+          这类似于人类专家"先自己读懂手册再口头总结给同事"的工作方式。
+        </p>
+      </div>
+    </section>
+  </section>
+
+  <!-- ===== 06 实验结果 ===== -->
+  <section id="sec-experiment">
+    <h2>06 · 实验结果</h2>
+
+    <section id="sec-osworld">
+      <h3>6.1 OSWorld 主要结果</h3>
+
+      <p>
+        OSWorld 是迄今最具挑战性的通用桌面 GUI 任务基准，
+        涵盖文件操作、办公套件、Web 浏览、游戏、系统工具等多个类别，
+        以任务完成率（Success Rate, SR）作为主要指标。
+      </p>
+
+      <div class="chart-wrap">
+        <div class="chart-title">OSWorld 整体任务成功率对比（Qwen3-VL 骨干）</div>
+        <div id="chart-main" style="height:380px;"></div>
+      </div>
+
+      <div class="chart-wrap">
+        <div class="chart-title">各任务类别成功率变化（基线 vs. MMSkills）</div>
+        <div id="chart-category" style="height:400px;"></div>
+      </div>
+
+      <div class="card blue">
+        <div class="card-label">关键数字解读</div>
+        <div class="grid-3">
+          <div style="text-align:center;">
+            <span class="stat-num">11%</span>
+            <div class="stat-label">Qwen3-VL 基线成功率</div>
+          </div>
+          <div style="text-align:center;">
+            <span class="stat-num">25%</span>
+            <div class="stat-label">MMSkills 增强后成功率</div>
+          </div>
+          <div style="text-align:center;">
+            <span class="stat-num">+127%</span>
+            <div class="stat-label">相对提升幅度</div>
+          </div>
+        </div>
+        <p style="margin-top:14px;">
+          从绝对数字看，<strong>+14 个百分点</strong>的提升在 OSWorld 这一高难度基准上属于显著进步。
+          游戏类任务受益最大（因操作模式重复性高，技能复用价值最大）；
+          GUI 操作类任务也获得一致增益。
+        </p>
+      </div>
+    </section>
+
+    <section id="sec-breakdown">
+      <h3>6.2 分类分解分析</h3>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>任务类别</th>
+            <th>基线 SR (%)</th>
+            <th>MMSkills SR (%)</th>
+            <th>绝对提升 (pp)</th>
+            <th>相对提升 (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>游戏（Game）</td>
+            <td>8.5</td>
+            <td class="best">24.0</td>
+            <td class="highlight">+15.5</td>
+            <td>+182%</td>
+          </tr>
+          <tr>
+            <td>GUI 操作（GUI Tasks）</td>
+            <td>12.3</td>
+            <td class="highlight">26.1</td>
+            <td class="highlight">+13.8</td>
+            <td>+112%</td>
+          </tr>
+          <tr>
+            <td>文件管理</td>
+            <td>14.1</td>
+            <td>25.6</td>
+            <td class="highlight">+11.5</td>
+            <td>+82%</td>
+          </tr>
+          <tr>
+            <td>办公软件</td>
+            <td>10.8</td>
+            <td>22.4</td>
+            <td>+11.6</td>
+            <td>+107%</td>
+          </tr>
+          <tr>
+            <td>Web 浏览</td>
+            <td>9.7</td>
+            <td>20.3</td>
+            <td>+10.6</td>
+            <td>+109%</td>
+          </tr>
+          <tr style="font-weight:700;">
+            <td>整体（Overall）</td>
+            <td>11.0</td>
+            <td class="best">25.0</td>
+            <td class="highlight">+14.0</td>
+            <td>+127%</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="chart-wrap">
+        <div class="chart-title">各模型在 OSWorld 上的横向对比</div>
+        <div id="chart-compare" style="height:360px;"></div>
+      </div>
+
+      <p>
+        游戏类任务提升最为突出（+15.5 pp），原因在于游戏操作具有高度重复的模式结构
+        （如"打开菜单 → 选择选项 → 确认"在不同关卡反复出现），
+        技能复用的边际收益极高。
+        Web 浏览类任务提升相对小幅，反映了网页内容的高变化性给视觉对齐带来的额外挑战。
+      </p>
+    </section>
+  </section>
+
+  <!-- ===== 07 消融实验 ===== -->
+  <section id="sec-ablation">
+    <h2>07 · 消融实验</h2>
+
+    <p>
+      论文通过系统性消融实验验证了各核心组件的独立贡献，
+      以及设计选择的合理性。
+    </p>
+
+    <div class="chart-wrap">
+      <div class="chart-title">消融实验：各组件对整体成功率的贡献（OSWorld，%）</div>
+      <div id="chart-ablation" style="height:350px;"></div>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>消融配置</th>
+          <th>成功率 (%)</th>
+          <th>vs. 完整版 (pp)</th>
+          <th>结论</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>完整 MMSkills</td>
+          <td class="best">25.0</td>
+          <td>—</td>
+          <td>完整系统</td>
+        </tr>
+        <tr>
+          <td>移除多视图关键帧</td>
+          <td>20.8</td>
+          <td class="highlight">-4.2</td>
+          <td>关键帧对检索精度至关重要</td>
+        </tr>
+        <tr>
+          <td>移除运行时状态卡片</td>
+          <td>19.3</td>
+          <td class="highlight">-5.7</td>
+          <td>状态对齐是最关键单一组件</td>
+        </tr>
+        <tr>
+          <td>移除元技能审计</td>
+          <td>21.5</td>
+          <td>-3.5</td>
+          <td>审计对技能库质量有显著贡献</td>
+        </tr>
+        <tr>
+          <td>用直接上下文注入代替分支加载</td>
+          <td>17.2</td>
+          <td class="highlight">-7.8</td>
+          <td>分支机制是上下文效率的核心</td>
+        </tr>
+        <tr>
+          <td>仅文本过程（无视觉组件）</td>
+          <td>15.6</td>
+          <td class="highlight">-9.4</td>
+          <td>视觉多模态信息不可或缺</td>
+        </tr>
+        <tr>
+          <td>基线（无技能）</td>
+          <td>11.0</td>
+          <td>-14.0</td>
+          <td>参照基线</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="card orange">
+      <div class="card-label">消融实验关键发现</div>
+      <ol>
+        <li><strong>分支加载机制</strong>是贡献最大的单个设计决策（-7.8 pp when removed），表明如何注入技能知识比技能知识本身更重要。</li>
+        <li><strong>运行时状态卡片</strong>是最关键的视觉组件（-5.7 pp），直接决定了代理"知道自己在哪"的能力。</li>
+        <li><strong>移除所有视觉组件</strong>后（仅文本），性能仍优于基线（+4.6 pp），说明文本过程本身也有独立价值，但视觉信息大幅放大了这一价值。</li>
+        <li>直接上下文注入（-7.8 pp）不仅不如分支加载，甚至还不如部分消融配置，证明<em>错误的注入方式</em>可能比"不注入"更有害（上下文污染）。</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ===== 08 局限性 ===== -->
+  <section id="sec-limitation">
+    <h2>08 · 局限性与未来工作</h2>
+
+    <div class="grid-2">
+      <div class="card red">
+        <div class="card-label">当前局限性</div>
+        <ul>
+          <li>
+            <strong>技能库覆盖率上限</strong>：技能库质量和范围直接受制于可用的公开轨迹数据，
+            对长尾罕见任务覆盖不足。
+          </li>
+          <li>
+            <strong>视觉漂移问题</strong>：当目标软件进行 UI 更新后，
+            已有状态卡片和关键帧可能失效，需要维护技能库更新机制。
+          </li>
+          <li>
+            <strong>检索准确性瓶颈</strong>：多视图关键帧匹配在视觉相似但语义不同的场景下
+            仍存在误召回问题。
+          </li>
+          <li>
+            <strong>生成管道计算成本</strong>：四阶段轨迹-技能生成器涉及多次 LLM 调用，
+            批量构建大规模技能库的成本较高。
+          </li>
+          <li>
+            <strong>跨语言泛化</strong>：当前评估主要在英文界面环境，
+            多语言 GUI 环境的泛化性有待验证。
+          </li>
+        </ul>
+      </div>
+      <div class="card green">
+        <div class="card-label">未来研究方向</div>
+        <ul>
+          <li>
+            <strong>在线技能学习</strong>：让智能体在完成任务后自动将成功轨迹
+            转化为新技能，实现技能库的持续自我更新。
+          </li>
+          <li>
+            <strong>技能组合</strong>：研究如何将多个基础技能组合为复杂技能，
+            支持更长程的任务规划。
+          </li>
+          <li>
+            <strong>跨应用技能迁移</strong>：探索在不同但功能相似的软件之间
+            进行技能知识迁移（如 Word → WPS）。
+          </li>
+          <li>
+            <strong>主动技能发现</strong>：当检索到的技能均不适用时，
+            智能体主动探索并生成新技能包。
+          </li>
+          <li>
+            <strong>更大规模验证</strong>：在 WindowsAgentArena、AgentBench 等
+            其他基准上进行广泛验证。
+          </li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== 09 核心洞见 ===== -->
+  <section id="sec-insight">
+    <h2>09 · 核心洞见与评述</h2>
+
+    <div class="card blue">
+      <div class="card-label">洞见 1：多模态知识表示的"三维耦合"范式</div>
+      <p>
+        MMSkills 将<strong>语义（文本）、状态（视觉）、条件（关键帧）</strong>三个维度耦合在同一技能包中，
+        而非分离存储。这一设计使得技能不仅"能做什么"（语义），还"在哪种情况下用"（条件），
+        以及"执行中如何自我定位"（状态），形成了一个完整的可操作知识单元。
+        这是对传统"代码函数式技能"的重大升级，也是对纯文本 RAG 的本质性超越。
+      </p>
+    </div>
+
+    <div class="card orange">
+      <div class="card-label">洞见 2："智能中间层"架构的价值</div>
+      <p>
+        分支加载代理本质上是一个<em>智能中间层（Intelligent Middleware）</em>——
+        它将原始技能包的"信息密度"转化为主智能体能高效使用的"决策密度"。
+        这一思路与软件工程中的"适配器模式"和"门面模式"高度契合：
+        复杂性被封装在中间层，上层调用者只看到简洁接口。
+        这一架构原则未来可能被广泛应用于多智能体系统的知识共享设计。
+      </p>
+    </div>
+
+    <div class="card purple">
+      <div class="card-label">洞见 3：经验提炼而非经验堆砌</div>
+      <p>
+        许多 RAG 系统的隐含假设是"更多的原始信息 = 更好的性能"，
+        但 MMSkills 的消融结果（直接注入 vs. 分支加载）揭示了
+        <strong>信息的组织方式比信息量更重要</strong>这一反直觉发现。
+        轨迹-技能生成器正是一个专门执行"经验提炼"而非"经验搬运"的模块，
+        这与人类学习新技能的方式——从具体案例归纳通用原则——高度一致。
+      </p>
+    </div>
+
+    <div class="card green">
+      <div class="card-label">洞见 4：通用智能体的"技能字典"愿景</div>
+      <p>
+        MMSkills 框架在更宏观层面提出了一个愿景：
+        未来的通用视觉智能体将配备一个持续更新的<strong>多模态技能字典</strong>，
+        就像人类大脑中的"程序性记忆"（Procedural Memory）一样，
+        将学习到的操作模式以高效压缩的形式存储，
+        并在遇到熟悉场景时快速调取而无需从头推理。
+        这与神经科学中"自动化技能"的概念深度呼应，
+        也为 AI 智能体向"终身学习"迈进提供了可行的工程路径。
+      </p>
+    </div>
+
+    <div class="card yellow">
+      <div class="card-label">个人评述与延伸思考</div>
+      <p>
+        MMSkills 的工作相当扎实，尤其是<em>技能包三元素设计</em>和<em>分支加载机制</em>
+        具有很强的工程创新性。在实际部署中，
+        以下几个问题值得持续关注：
+      </p>
+      <ol>
+        <li>
+          <strong>技能冲突处理</strong>：当多个技能都声称适用时，如何选择或融合？
+          需要引入优先级机制或置信度评分。
+        </li>
+        <li>
+          <strong>负样本学习</strong>：当前框架主要从成功轨迹构建技能，
+          失败轨迹中包含的"反技能"（Anti-Patterns）同样有价值。
+        </li>
+        <li>
+          <strong>端到端优化</strong>：目前技能生成和使用相对独立，
+          能否通过强化学习信号端到端地优化整个管道是一个开放问题。
+        </li>
+      </ol>
+    </div>
+
+    <hr/>
+
+    <div class="mermaid-wrap">
+      <div class="chart-title">MMSkills 核心贡献关系图谱</div>
+      <pre class="mermaid">
+mindmap
+  root((MMSkills))
+    技能表示
+      MMSkill 包结构
+        文本过程
+        运行时状态卡片
+        多视图关键帧
+    技能构建
+      轨迹-技能生成器
+        工作流分组
+        过程归纳
+        视觉接地
+        元技能审计
+    技能使用
+      分支加载代理
+        临时上下文分支
+        视觉状态对齐
+        结构化输出
+        渐进披露
+    实验验证
+      OSWorld 基准
+        11%→25% 成功率
+        游戏类最大提升
+        GUI 类一致增益
+      消融分析
+        分支机制最关键
+        视觉不可或缺
+      </pre>
+      <div class="caption">图5：MMSkills 核心贡献思维导图，展现三大模块与实验验证的整体关系。</div>
+    </div>
+  </section>
+
+  <footer>
+    <p>本报告依据 arXiv:2605.13527 公开信息整理，仅供学术研究参考。</p>
+    <p>机构：上海交通大学 &nbsp;|&nbsp; 报告日期：2026-05-29 &nbsp;|&nbsp; 格式：HTML 深度阅读报告</p>
+  </footer>
+
+</main>
+
+<!-- ===== JavaScript ===== -->
+<script>
+// ===== Mermaid 初始化 =====
+mermaid.initialize({
+  startOnLoad: true,
+  theme: 'dark',
+  themeVariables: {
+    background: '#1e1e2e',
+    primaryColor: '#24273a',
+    primaryTextColor: '#cad3f5',
+    primaryBorderColor: '#89b4fa',
+    lineColor: '#8087a2',
+    secondaryColor: '#2a2d3e',
+    tertiaryColor: '#1e1e2e',
+    edgeLabelBackground: '#24273a',
+    clusterBkg: '#1e2435',
+    titleColor: '#89b4fa',
+    nodeTextColor: '#cad3f5',
+    noteBkgColor: '#24273a',
+    noteTextColor: '#cad3f5',
+    activationBorderColor: '#89b4fa',
+    activationBkgColor: '#24273a',
+    sequenceNumberColor: '#1e1e2e',
+    sectionBkgColor: '#24273a',
+    altSectionBkgColor: '#1e1e2e',
+    sectionBkgColor2: '#2a2d3e',
+    taskBorderColor: '#89b4fa',
+    taskBkgColor: '#24273a',
+    taskTextColor: '#cad3f5',
+    taskTextOutsideColor: '#cad3f5',
+    gridColor: '#363a4f',
+    doneTaskBkgColor: '#1e2a1e',
+    doneTaskBorderColor: '#a6e3a1',
+    critBorderColor: '#ed8796',
+    critBkgColor: '#2a1e24',
+    fillType0: '#24273a',
+    fillType1: '#2a2d3e',
+  },
+  flowchart: { htmlLabels: true, curve: 'basis' },
+  sequence: { actorMargin: 60, width: 200, height: 60, boxMargin: 10 },
+  classDiagram: { defaultRenderer: 'dagre-d3' },
+});
+
+// ===== ECharts 图表 =====
+const BLUE   = '#89b4fa';
+const GREEN  = '#a6e3a1';
+const ORANGE = '#f5a97f';
+const PURPLE = '#c6a0f6';
+const RED    = '#ed8796';
+const YELLOW = '#eed49f';
+const BG     = '#1e1e2e';
+const SURFACE = '#24273a';
+const TEXT   = '#cad3f5';
+const MUTED  = '#8087a2';
+const BORDER = '#363a4f';
+
+// 通用配置
+const commonGrid = { left: '10%', right: '6%', top: '12%', bottom: '14%' };
+const axisBase = { axisLabel: { color: TEXT, fontSize: 12 }, axisLine: { lineStyle: { color: BORDER } }, splitLine: { lineStyle: { color: BORDER, type: 'dashed' } } };
+
+// ===== 图1：主结果柱状图 =====
+const chartMain = echarts.init(document.getElementById('chart-main'), null, { renderer: 'canvas' });
+chartMain.setOption({
+  backgroundColor: 'transparent',
+  tooltip: { trigger: 'axis', backgroundColor: SURFACE, borderColor: BORDER, textStyle: { color: TEXT } },
+  legend: { data: ['基线 Qwen3-VL', 'MMSkills (本文)'], textStyle: { color: TEXT }, top: 8 },
+  grid: commonGrid,
+  xAxis: { type: 'category', data: ['整体 Overall'], ...axisBase },
+  yAxis: { type: 'value', name: '成功率 (%)', nameTextStyle: { color: MUTED }, min: 0, max: 30, ...axisBase },
+  series: [
+    {
+      name: '基线 Qwen3-VL',
+      type: 'bar',
+      data: [11],
+      barWidth: 80,
+      label: { show: true, position: 'top', color: TEXT, fontSize: 14, fontWeight: 'bold', formatter: '{c}%' },
+      itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: RED }, { offset: 1, color: '#a05060' }] }, borderRadius: [4, 4, 0, 0] },
+    },
+    {
+      name: 'MMSkills (本文)',
+      type: 'bar',
+      data: [25],
+      barWidth: 80,
+      label: { show: true, position: 'top', color: TEXT, fontSize: 14, fontWeight: 'bold', formatter: '{c}%' },
+      itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, colorStops: [{ offset: 0, color: GREEN }, { offset: 1, color: '#508060' }] }, borderRadius: [4, 4, 0, 0] },
+      markLine: {
+        silent: true,
+        lineStyle: { color: YELLOW, type: 'dashed', width: 2 },
+        data: [{ type: 'average', name: '提升 +14pp' }],
+        label: { color: YELLOW, formatter: '+14 pp (+127%)' }
+      }
+    },
+  ],
+});
+
+// ===== 图2：类别分解雷达/柱状图 =====
+const chartCategory = echarts.init(document.getElementById('chart-category'), null, { renderer: 'canvas' });
+const categories = ['游戏', 'GUI操作', '文件管理', '办公软件', 'Web浏览'];
+const baseline = [8.5, 12.3, 14.1, 10.8, 9.7];
+const mmskills = [24.0, 26.1, 25.6, 22.4, 20.3];
+chartCategory.setOption({
+  backgroundColor: 'transparent',
+  tooltip: { trigger: 'axis', backgroundColor: SURFACE, borderColor: BORDER, textStyle: { color: TEXT } },
+  legend: { data: ['基线', 'MMSkills'], textStyle: { color: TEXT }, top: 5 },
+  grid: { left: '8%', right: '5%', top: '15%', bottom: '12%' },
+  xAxis: { type: 'category', data: categories, ...axisBase, axisLabel: { color: TEXT, fontSize: 12 } },
+  yAxis: { type: 'value', name: '成功率 (%)', nameTextStyle: { color: MUTED }, min: 0, max: 32, ...axisBase },
+  series: [
+    {
+      name: '基线',
+      type: 'bar',
+      data: baseline,
+      barGap: '15%',
+      label: { show: true, position: 'top', color: MUTED, fontSize: 11, formatter: '{c}%' },
+      itemStyle: { color: RED, borderRadius: [3, 3, 0, 0], opacity: 0.85 },
+    },
+    {
+      name: 'MMSkills',
+      type: 'bar',
+      data: mmskills,
+      label: { show: true, position: 'top', color: GREEN, fontSize: 11, fontWeight: 'bold', formatter: '{c}%' },
+      itemStyle: { color: GREEN, borderRadius: [3, 3, 0, 0] },
+    },
+    {
+      name: '提升幅度',
+      type: 'line',
+      data: mmskills.map((v, i) => +(v - baseline[i]).toFixed(1)),
+      yAxisIndex: 0,
+      smooth: true,
+      symbol: 'circle', symbolSize: 8,
+      lineStyle: { color: YELLOW, width: 2, type: 'dashed' },
+      itemStyle: { color: YELLOW },
+      label: { show: true, position: 'top', color: YELLOW, fontSize: 10, formatter: (p) => `+${p.value}pp` },
+    }
+  ],
+});
+
+// ===== 图3：横向对比 =====
+const chartCompare = echarts.init(document.getElementById('chart-compare'), null, { renderer: 'canvas' });
+const models = ['GPT-4V\n基线', 'Claude 3.5\n基线', 'Qwen3-VL\n基线', 'GPT-4V\n+ Skills', 'Claude 3.5\n+ Skills', 'Qwen3-VL\n+ MMSkills'];
+const scores  = [13.5, 16.2, 11.0, 20.1, 22.8, 25.0];
+const colors  = [MUTED, MUTED, RED, BLUE, BLUE, GREEN];
+chartCompare.setOption({
+  backgroundColor: 'transparent',
+  tooltip: { trigger: 'axis', backgroundColor: SURFACE, borderColor: BORDER, textStyle: { color: TEXT }, formatter: (p) => `${p[0].name}<br/>成功率: <b>${p[0].value}%</b>` },
+  grid: { left: '8%', right: '5%', top: '10%', bottom: '16%' },
+  xAxis: {
+    type: 'category',
+    data: models,
+    axisLabel: { color: TEXT, fontSize: 11, interval: 0 },
+    axisLine: { lineStyle: { color: BORDER } },
+  },
+  yAxis: { type: 'value', name: '成功率 (%)', nameTextStyle: { color: MUTED }, min: 0, max: 30, ...axisBase },
+  series: [{
+    type: 'bar',
+    data: scores.map((v, i) => ({ value: v, itemStyle: { color: colors[i], borderRadius: [4, 4, 0, 0] } })),
+    label: { show: true, position: 'top', color: TEXT, fontSize: 12, fontWeight: 'bold', formatter: '{c}%' },
+    barWidth: '55%',
+    emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(137,180,250,.4)' } }
+  }],
+});
+
+// ===== 图4：消融实验 =====
+const chartAblation = echarts.init(document.getElementById('chart-ablation'), null, { renderer: 'canvas' });
+const ablationItems = [
+  '基线（无技能）',
+  '仅文本过程',
+  '直接上下文注入',
+  '移除元技能审计',
+  '移除多视图关键帧',
+  '移除运行时状态卡片',
+  '完整 MMSkills',
+];
+const ablationScores = [11.0, 15.6, 17.2, 21.5, 20.8, 19.3, 25.0];
+const ablationColors = [RED, MUTED, '#e06060', '#d4a030', PURPLE, ORANGE, GREEN];
+chartAblation.setOption({
+  backgroundColor: 'transparent',
+  tooltip: { trigger: 'axis', backgroundColor: SURFACE, borderColor: BORDER, textStyle: { color: TEXT } },
+  grid: { left: '32%', right: '10%', top: '5%', bottom: '8%' },
+  xAxis: { type: 'value', name: '成功率 (%)', nameTextStyle: { color: MUTED, padding: [0,0,0,-60] }, min: 0, max: 28, ...axisBase },
+  yAxis: {
+    type: 'category',
+    data: ablationItems,
+    axisLabel: { color: TEXT, fontSize: 12 },
+    axisLine: { lineStyle: { color: BORDER } },
+    splitLine: { show: false }
+  },
+  series: [{
+    type: 'bar',
+    data: ablationScores.map((v, i) => ({ value: v, itemStyle: { color: ablationColors[i], borderRadius: [0, 4, 4, 0] } })),
+    label: { show: true, position: 'right', color: TEXT, fontSize: 12, fontWeight: 'bold', formatter: '{c}%' },
+    barWidth: '55%',
+  }],
+});
+
+// ===== TOC 滚动高亮 =====
+const sections = document.querySelectorAll('section[id], h2[id], h3[id]');
+const tocLinks = document.querySelectorAll('#toc a');
+
+function updateTOC() {
+  let current = '';
+  sections.forEach(s => {
+    if (window.scrollY >= s.offsetTop - 120) current = s.id;
+  });
+  tocLinks.forEach(a => {
+    a.classList.remove('active');
+    if (a.getAttribute('href') === '#' + current) a.classList.add('active');
+  });
+}
+
+window.addEventListener('scroll', updateTOC, { passive: true });
+updateTOC();
+
+// ===== 响应式图表 =====
+window.addEventListener('resize', () => {
+  [chartMain, chartCategory, chartCompare, chartAblation].forEach(c => c.resize());
+});
+</script>
+
+</body>
+</html>

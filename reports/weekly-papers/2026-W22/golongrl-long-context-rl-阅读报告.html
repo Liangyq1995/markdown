@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GoLongRL 阅读报告 — 面向能力的长上下文强化学习</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); z-index: 100; }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    td.best { color: var(--strong); font-weight: 700; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    ul, ol { padding-left: 1.5em; margin: 0.5em 0; }
+    li { margin: 0.3em 0; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 20px; margin: 1em 0; text-align: center; overflow-x: auto; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .tag { display: inline-block; font-size: 0.78em; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin: 2px; background: var(--heading); color: #1e1e2e; }
+    .tag.orange { background: #fab387; }
+    .tag.green  { background: #a6e3a1; }
+    .tag.purple { background: #cba6f7; }
+    .tag.red    { background: #f38ba8; }
+
+    /* algo-box */
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+
+    /* timeline */
+    .timeline-wrap { overflow-x: auto; margin: 1em 0; }
+    .timeline { display: flex; gap: 0; min-width: 900px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: 0.95em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border-left: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 8px; font-size: 0.88em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: 0.75em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.orange { background: #fab387; }
+    .tl-tag.green  { background: #a6e3a1; }
+    .tl-tag.purple { background: #cba6f7; }
+
+    /* info table */
+    .info-table th { width: 120px; }
+
+    /* formula box */
+    .formula-box { background: #2a2a3e; border-left: 3px solid var(--heading); border-radius: 0 6px 6px 0; padding: 14px 20px; margin: 1em 0; overflow-x: auto; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$','$']],
+        displayMath: [['$$','$$']],
+        packages: {'[+]': ['ams']}
+      },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+  <!-- ===== 标题 ===== -->
+  <h1>GoLongRL：面向能力的长上下文强化学习与多任务对齐</h1>
+  <p style="color:#6c7086; font-size:0.9em">GoLongRL: Capability-Oriented Long Context Reinforcement Learning with Multitask Alignment &nbsp;|&nbsp; arXiv:2605.19577 &nbsp;|&nbsp; 阅读报告生成于 2026-05-29</p>
+
+  <hr>
+
+  <!-- ===== 1. 论文信息表 ===== -->
+  <h2 id="info">1. 论文信息表</h2>
+  <table class="info-table">
+    <tr><th>标题</th><td>GoLongRL: Capability-Oriented Long Context Reinforcement Learning with Multitask Alignment</td></tr>
+    <tr><th>核心问题</th><td>如何为长上下文场景构建多样化、具有可验证奖励的 RLVR 训练数据，并解决多任务奖励异质性带来的优化不稳定问题</td></tr>
+    <tr><th>作者</th><td>Minxuan Lv, Tiehua Mei, Tanlong Du, Junmin Chen, Zhenpeng Su, Ziyang Chen, Ziqi Wang, Zhennan Wu, Ruotong Pan, Jian Liang, Ruiming Tang, Han Li</td></tr>
+    <tr><th>机构</th><td>USTC（中国科学技术大学）/ ustc-community</td></tr>
+    <tr><th>发表时间</th><td>2026 年 5 月（arXiv:2605.19577）</td></tr>
+    <tr><th>基座模型</th><td>Qwen3-4B / Qwen3-30B-A3B</td></tr>
+    <tr><th>训练框架</th><td><a href="https://github.com/volcengine/verl" target="_blank">verl</a>（字节跳动开源）</td></tr>
+    <tr><th>开源地址</th><td><a href="https://github.com/xiaoxuanNLP/GoLongRL" target="_blank">github.com/xiaoxuanNLP/GoLongRL</a>（代码 + 数据 + 模型权重，完全开源）</td></tr>
+    <tr><th>评测基准</th><td>DocMath、LongBench-V2、Frames、MRCR、CorpusQA、LongBench-V1-QA、RULER、InfiniteBench</td></tr>
+    <tr><th>核心结论</th><td>GoLongRL-30B-A3B 长上下文综合得分从 ~60% 提升至 ~70%，性能媲美 DeepSeek-R1-0528 与 Qwen3-235B-A22B-Thinking-2507，激活参数量显著更小</td></tr>
+  </table>
+
+  <!-- ===== 2. 核心问题与动机 ===== -->
+  <h2 id="motivation">2. 核心问题与动机</h2>
+
+  <p>大型语言模型在长上下文理解方面的能力提升一直依赖于有监督微调（SFT）和位置编码外推。而基于可验证奖励的强化学习（RLVR）在推理任务中取得了显著成效（DeepSeek-R1、Qwen3-Thinking 等），但将其迁移到长上下文场景面临三大根本挑战：</p>
+
+  <blockquote>
+    <strong>挑战一：任务多样性缺失（Diversity Deficit）</strong><br>
+    现有长上下文 RL 方法（如 QwenLong-L1.5）将数据构建聚焦于检索路径复杂度——多跳链、UUID 追踪、分块 QA——任务类型极度同质化。归纳、排序、对比、结构化提取等关键能力缺乏直接训练信号。
+  </blockquote>
+
+  <blockquote>
+    <strong>挑战二：奖励稀疏与异质（Reward Sparsity &amp; Heterogeneity）</strong><br>
+    多样化长上下文任务（如摘要生成、证据聚合）难以定义统一的二值奖励信号。不同任务的奖励量级差异巨大（精确匹配 EM vs. ROUGE-L vs. NDCG），直接混合训练导致优化不稳定。
+  </blockquote>
+
+  <blockquote>
+    <strong>挑战三：GRPO 在长序列下的优化不稳定性</strong><br>
+    标准 GRPO 的 per-prompt 归一化在多任务混合时，会将跨任务奖励尺度差异与 prompt 难度混淆，导致梯度估计偏差。长序列条件下梯度方差大，训练稳定性差。
+  </blockquote>
+
+  <p>GoLongRL 针对上述三个挑战，分别提出了<strong>能力导向数据集</strong>和<strong>TMN-Reweight 优化方法</strong>两个核心贡献。</p>
+
+  <!-- ===== 3. 背景与相关工作 ===== -->
+  <h2 id="related">3. 背景与相关工作</h2>
+
+  <h3 id="related-rl">3.1 RLVR 推理范式</h3>
+  <p>RLVR（Reinforcement Learning with Verifiable Rewards）通过程序化评估器自动验证模型输出，规避了需要人工标注奖励的困难。DeepSeek-R1 首次证明纯 RL 可激发 LLM 的推理涌现能力，随后 Qwen3-Thinking、OpenAI o1/o3 等延续了这一路径。</p>
+
+  <h3 id="related-longctx">3.2 长上下文理解方法谱系</h3>
+
+  <div class="timeline-wrap">
+    <div class="timeline">
+      <div class="tl-col">
+        <div class="tl-period">位置编码外推</div>
+        <div class="tl-body">
+          <div class="tl-item"><span class="tl-tag">技术</span><br>RoPE / YaRN / LongRoPE</div>
+          <div class="tl-item"><span class="tl-tag orange">局限</span><br>不改变模型能力，仅扩展位置范围</div>
+        </div>
+      </div>
+      <div class="tl-col">
+        <div class="tl-period">长上下文 SFT</div>
+        <div class="tl-body">
+          <div class="tl-item"><span class="tl-tag">技术</span><br>LongAlign / LongLoRA</div>
+          <div class="tl-item"><span class="tl-tag orange">局限</span><br>依赖高质量长文本标注，成本高</div>
+        </div>
+      </div>
+      <div class="tl-col">
+        <div class="tl-period">长上下文 RLVR（前驱）</div>
+        <div class="tl-body">
+          <div class="tl-item"><span class="tl-tag green">代表作</span><br>QwenLong-L1.5</div>
+          <div class="tl-item"><span class="tl-tag orange">局限</span><br>单一检索路径任务，奖励二值化</div>
+        </div>
+      </div>
+      <div class="tl-col">
+        <div class="tl-period">GoLongRL（本文）</div>
+        <div class="tl-body">
+          <div class="tl-item"><span class="tl-tag purple">创新</span><br>9 类能力导向任务</div>
+          <div class="tl-item"><span class="tl-tag purple">创新</span><br>异质奖励 + TMN-Reweight</div>
+          <div class="tl-item"><span class="tl-tag green">完全开源</span><br>数据 + 代码 + 权重</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 id="related-grpo">3.3 GRPO 及其变体</h3>
+  <table>
+    <tr><th>方法</th><th>归一化策略</th><th>优点</th><th>缺点</th></tr>
+    <tr><td>标准 GRPO</td><td>per-prompt std 归一化</td><td>简单有效，短任务稳定</td><td>多任务混合时跨任务尺度混淆</td></tr>
+    <tr><td>DAPO</td><td>batch-level 长度归一化</td><td>缓解长序列方差</td><td>相对梯度方差高于 GRPO</td></tr>
+    <tr><td>Dr.GRPO</td><td>去除 std 归一化</td><td>减少偏差</td><td>梯度方差更高</td></tr>
+    <tr><td><strong>TMN-Reweight（本文）</strong></td><td>task-level RMS std + 难度自适应权重</td><td>跨任务尺度对齐 + 难度自适应</td><td>需要估计任务级统计量</td></tr>
+  </table>
+
+  <!-- ===== 4. 方法总览 ===== -->
+  <h2 id="overview">4. 方法总览</h2>
+
+  <h3 id="pipeline-diagram">4.1 训练流程图</h3>
+  <pre class="mermaid">
+flowchart LR
+    subgraph DATA ["GoLong 数据集构建（四阶段）"]
+        A["阶段1\n语料收集\n&amp; 任务过滤"] --> B["阶段2\n长上下文样本生成\n(开源策划 + 合成)"]
+        B --> C["阶段3\n迭代数据集\n精炼与筛选"]
+        C --> D["阶段4\n最终 RLVR 数据集\n23K 样本 / 9 类任务"]
+    end
+
+    subgraph OPT ["GRPO 优化改进"]
+        E["标准 GRPO\n优势估计"] --> F["TMN-Reweight\n任务级均值归一化\n+ 难度自适应权重"]
+        F --> G["稳定长序列\n梯度更新"]
+    end
+
+    subgraph TRAIN ["RL 训练（verl 框架）"]
+        H["基座模型\nQwen3-4B / 30B-A3B"] --> I["在线采样\nGroup Size G=8"]
+        I --> J["多任务奖励评估\nEM / F1 / ROUGE / NDCG…"]
+        J --> F
+        G --> K["策略更新\nClip + KL 惩罚"]
+        K --> I
+    end
+
+    D --> I
+  </pre>
+
+  <h3 id="task-taxonomy">4.2 长上下文能力分类图</h3>
+  <pre class="mermaid">
+graph TD
+    ROOT["长上下文能力体系\n(9 类任务)"] --> CAT1["精准检索类"]
+    ROOT --> CAT2["理解推理类"]
+    ROOT --> CAT3["聚合分析类"]
+    ROOT --> CAT4["结构化处理类"]
+    ROOT --> CAT5["排序比较类"]
+
+    CAT1 --> T1["精确检索\nPrecise Retrieval\n奖励: EM"]
+    CAT1 --> T2["穷举检索\nExhaustive Retrieval\n奖励: SubEM"]
+
+    CAT2 --> T3["文档理解\nComprehension\n奖励: Accuracy"]
+    CAT2 --> T4["多跳推理\nMulti-hop Reasoning\n奖励: F1"]
+    CAT2 --> T5["数值推理\nNumerical Reasoning\n奖励: math_verify"]
+
+    CAT3 --> T6["信息整合\nInformation Integration\n奖励: IoU"]
+    CAT3 --> T7["摘要生成\nSummarization\n奖励: ROUGE-L"]
+
+    CAT4 --> T8["结构化提取\nStructured Extraction\n奖励: F1"]
+    CAT4 --> T9["结构化匹配\nStructured Matching\n奖励: Accuracy"]
+
+    CAT5 --> T10["分级排名\nGraded Ranking\n奖励: NDCG"]
+    CAT5 --> T11["序列排序\nSequence Ordering\n奖励: Pairwise"]
+  </pre>
+
+  <!-- ===== 5. 关键技术 ===== -->
+  <h2 id="methods">5. 关键技术详解</h2>
+
+  <!-- 5.1 数据集设计 -->
+  <h3 id="dataset">5.1 能力导向数据集设计</h3>
+
+  <p>GoLong 数据集遵循"一类能力、一套奖励"的设计原则，彻底打破了以往将所有任务折叠为单一二值奖励的做法。</p>
+
+  <table>
+    <tr>
+      <th>能力维度</th><th>任务类型</th><th>数据来源</th><th>奖励函数</th><th>典型场景</th>
+    </tr>
+    <tr>
+      <td>精准检索</td><td>Precise Retrieval</td><td>开源语料（精选）</td><td>精确匹配 EM</td><td>从百万词文档精确定位某一事实</td>
+    </tr>
+    <tr>
+      <td>穷举检索</td><td>Exhaustive Retrieval</td><td>开源语料</td><td>SubEM（子串匹配）</td><td>列举文档中所有满足条件的实体</td>
+    </tr>
+    <tr>
+      <td>文档理解</td><td>Comprehension</td><td>书籍、学术论文</td><td>准确率 Accuracy</td><td>多文档 QA、跨文档推理</td>
+    </tr>
+    <tr>
+      <td>多跳推理</td><td>Multi-hop Reasoning</td><td>合成生成</td><td>F1</td><td>需跨多文档推理链条</td>
+    </tr>
+    <tr>
+      <td>数值推理</td><td>Numerical Reasoning</td><td>书籍 / 论文</td><td>math_verify</td><td>财务报告、统计数据计算</td>
+    </tr>
+    <tr>
+      <td>信息整合</td><td>Information Integration</td><td>多轮对话、新闻</td><td>IoU（集合交并比）</td><td>跨文档聚合同类信息</td>
+    </tr>
+    <tr>
+      <td>摘要生成</td><td>Summarization</td><td>书籍 / 论文</td><td>ROUGE-L</td><td>长文档摘要，要求覆盖主要信息</td>
+    </tr>
+    <tr>
+      <td>结构化提取</td><td>Structured Extraction</td><td>合成生成</td><td>F1</td><td>从非结构化文本提取 JSON 字段</td>
+    </tr>
+    <tr>
+      <td>分级排名</td><td>Graded Ranking</td><td>合成生成</td><td>NDCG</td><td>对多个文档按相关性排名</td>
+    </tr>
+  </table>
+
+  <p><strong>四阶段数据构建流程</strong>：</p>
+  <ol>
+    <li><strong>语料收集与任务过滤</strong>：从书籍、学术论文、多轮对话等多源语料中，按能力分类筛选适合各任务类型的文档</li>
+    <li><strong>长上下文样本构建</strong>：开源策划（人工验证的高质量样本）+ 合成生成（用 LLM 从真实文档生成 QA 对）两路并行</li>
+    <li><strong>迭代数据集精炼</strong>：通过模型预测过滤掉过难或过易的样本，保留具有有效训练信号的数据点</li>
+    <li><strong>最终 RLVR 数据集</strong>：23K 样本，上下文长度主要集中在 256K tokens 以内（长上下文推理最关键的区间）</li>
+  </ol>
+
+  <!-- 5.2 GRPO 目标函数 -->
+  <h3 id="grpo-formula">5.2 GRPO 基础目标函数</h3>
+
+  <p>GoLongRL 基于 GRPO 框架。标准 GRPO 对 prompt $q$ 采样 $G$ 条轨迹 $\{o_1, \ldots, o_G\}$，策略目标为：</p>
+
+  <div class="formula-box">
+    <p>$$J_\text{GRPO}(\theta) = \mathbb{E}_{q \sim \mathcal{D},\, o_i \sim \pi_{\theta_\text{old}}(\cdot|q)} \left[ \frac{1}{G} \sum_{i=1}^{G} \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \min\!\left( r_{i,t}(\theta)\,\hat{A}_i,\; \text{clip}\!\left(r_{i,t}(\theta), 1{-}\varepsilon, 1{+}\varepsilon\right)\hat{A}_i \right) - \beta D_\text{KL}[\pi_\theta \| \pi_\text{ref}] \right]$$</p>
+  </div>
+
+  <p>其中重要性采样比率（token 级）为：</p>
+
+  <div class="formula-box">
+    <p>$$r_{i,t}(\theta) = \frac{\pi_\theta(o_{i,t} \mid q,\, o_{i,\lt t})}{\pi_{\theta_\text{old}}(o_{i,t} \mid q,\, o_{i,\lt t})}$$</p>
+  </div>
+
+  <p>标准 GRPO 对 group 内所有轨迹做 per-prompt 归一化以计算优势：</p>
+
+  <div class="formula-box">
+    <p>$$\hat{A}_i = \frac{r_i - \mu_q}{\sigma_q}, \quad \mu_q = \frac{1}{G}\sum_{i=1}^{G} r_i, \quad \sigma_q = \sqrt{\frac{1}{G}\sum_{i=1}^{G}(r_i - \mu_q)^2}$$</p>
+  </div>
+
+  <p><strong>问题所在</strong>：在多任务混合训练时，不同任务奖励函数的量级截然不同（例如 ROUGE-L 输出 0–1 连续值，EM 输出 0/1 二值，NDCG 范围也各异）。per-prompt 的 $\sigma_q$ 无法区分跨任务尺度差异与 prompt 本身的难度，导致优势估计偏差。</p>
+
+  <!-- 5.3 TMN-Reweight -->
+  <h3 id="tmn">5.3 TMN-Reweight：多任务优化改进</h3>
+
+  <p>TMN-Reweight 分两步改进优势估计：</p>
+
+  <h3 id="tmn-step1">步骤一：任务级均值归一化（Task-level Mean Normalization）</h3>
+  <p>将 per-prompt 的 $\sigma_q$ 替换为同一任务类型 $k$ 内所有 prompt 方差的均方根（RMS），从而对齐跨任务奖励尺度，同时保留同任务内的相对优势排序：</p>
+
+  <div class="formula-box">
+    <p>$$\sigma_{\text{task},k} = \sqrt{\frac{1}{|Q_k|} \sum_{q \in Q_k} \sigma_q^2}$$</p>
+  </div>
+
+  <div class="formula-box">
+    <p>$$\hat{A}_{i,k}^\text{TMN} = \frac{r_i - \mu_q}{\sigma_{\text{task},k}}$$</p>
+  </div>
+
+  <p>其中 $Q_k$ 为 mini-batch 中属于任务类型 $k$ 的所有 prompt 集合。</p>
+
+  <h3 id="tmn-step2">步骤二：难度自适应重加权（Difficulty-Adaptive Reweighting）</h3>
+  <p>用平滑通过率 $\hat{p}_i$ 估计 prompt 难度，对优势信号进行指数加权。加权方向与归一化优势的符号相关，从而对"难 prompt 上罕见成功"放大信号，对"易 prompt 上可预期结果"衰减噪声：</p>
+
+  <div class="formula-box">
+    <p>$$w_i = \exp\!\left(-\alpha \cdot \text{clip}\!\left(\hat{p}_i - 0.5,\, -0.5,\, 0.5\right) \cdot \text{sign}\!\left(\hat{A}_{i,k}^\text{TMN}\right)\right)$$</p>
+  </div>
+
+  <div class="formula-box">
+    <p>$$\tilde{A}_{i,k} = w_i \cdot \hat{A}_{i,k}^\text{TMN}$$</p>
+  </div>
+
+  <p>其中 $\hat{p}_i = \text{EMA}(\text{pass\_rate}_{i})$ 为历史滑动平均通过率，$\alpha$ 为温度超参数。</p>
+
+  <div class="algo-box">
+    <div class="algo-title">Algorithm 1: TMN-Reweight 优势估计</div>
+    <p><span class="kw">Input:</span> <span class="var">mini-batch</span> 中 $G$ 条轨迹，每条属于任务类 <span class="var">k</span>，奖励 <span class="var">r<sub>i</sub></span>，历史通过率 <span class="var">p̂<sub>i</sub></span>，温度 <span class="num">α</span></p>
+    <p style="padding-left:1.5em"><span class="cm">// 1. Per-prompt 均值（同标准 GRPO）</span></p>
+    <p style="padding-left:1.5em"><span class="var">μ<sub>q</sub></span> ← <span class="fn">mean</span>(<span class="var">r<sub>1</sub>, …, r<sub>G</sub></span>)</p>
+    <p style="padding-left:1.5em"><span class="var">σ<sub>q</sub></span> ← <span class="fn">std</span>(<span class="var">r<sub>1</sub>, …, r<sub>G</sub></span>)</p>
+    <p style="padding-left:1.5em"><span class="cm">// 2. 计算任务级 RMS 标准差</span></p>
+    <p style="padding-left:1.5em"><span class="kw">for</span> <span class="var">k</span> <span class="kw">in</span> task_types:</p>
+    <p style="padding-left:3em"><span class="var">σ<sub>task,k</sub></span> ← <span class="fn">sqrt</span>(<span class="fn">mean</span>(<span class="var">σ<sub>q</sub><sup>2</sup></span> <span class="kw">for</span> <span class="var">q ∈ Q<sub>k</sub></span>))</p>
+    <p style="padding-left:1.5em"><span class="cm">// 3. 任务级归一化优势</span></p>
+    <p style="padding-left:1.5em"><span class="var">Â<sub>i,k</sub></span> ← (<span class="var">r<sub>i</sub></span> − <span class="var">μ<sub>q</sub></span>) / <span class="var">σ<sub>task,k</sub></span></p>
+    <p style="padding-left:1.5em"><span class="cm">// 4. 难度自适应权重</span></p>
+    <p style="padding-left:1.5em"><span class="var">w<sub>i</sub></span> ← <span class="fn">exp</span>(−<span class="num">α</span> · <span class="fn">clip</span>(<span class="var">p̂<sub>i</sub></span> − 0.5, −0.5, 0.5) · <span class="fn">sign</span>(<span class="var">Â<sub>i,k</sub></span>))</p>
+    <p style="padding-left:1.5em"><span class="cm">// 5. 最终加权优势</span></p>
+    <p style="padding-left:1.5em"><span class="var">Ã<sub>i,k</sub></span> ← <span class="var">w<sub>i</sub></span> · <span class="var">Â<sub>i,k</sub></span></p>
+    <p><span class="kw">return</span> <span class="var">Ã<sub>i,k</sub></span></p>
+  </div>
+
+  <!-- 5.4 奖励函数设计 -->
+  <h3 id="reward">5.4 多任务异质奖励函数</h3>
+  <p>与前驱方法将所有任务折叠为 0/1 二值奖励不同，GoLongRL 为每种能力配备其"自然评估指标"作为奖励信号：</p>
+
+  <table>
+    <tr><th>奖励类型</th><th>对应能力</th><th>值域</th><th>特点</th></tr>
+    <tr><td>EM（精确匹配）</td><td>精确检索</td><td>{0, 1}</td><td>严格二值，稀疏</td></tr>
+    <tr><td>SubEM（子串匹配）</td><td>穷举检索</td><td>{0, 1}</td><td>部分匹配容忍</td></tr>
+    <tr><td>Accuracy</td><td>理解、结构匹配</td><td>[0, 1]</td><td>选择题准确率</td></tr>
+    <tr><td>F1</td><td>多跳推理、结构提取</td><td>[0, 1]</td><td>连续，词级重叠</td></tr>
+    <tr><td>math_verify</td><td>数值推理</td><td>{0, 1}</td><td>符号计算验证</td></tr>
+    <tr><td>IoU</td><td>信息整合</td><td>[0, 1]</td><td>集合交并比</td></tr>
+    <tr><td>ROUGE-L</td><td>摘要生成</td><td>[0, 1]</td><td>最长公共子序列覆盖</td></tr>
+    <tr><td>NDCG</td><td>分级排名</td><td>[0, 1]</td><td>折扣累积增益</td></tr>
+    <tr><td>Pairwise</td><td>序列排序</td><td>[0, 1]</td><td>成对序关系正确率</td></tr>
+  </table>
+
+  <p>这种设计使每类任务的训练信号与其实际评估指标高度一致，大幅提升了训练-测试对齐度。</p>
+
+  <!-- ===== 6. 实验结果 ===== -->
+  <h2 id="results">6. 实验结果</h2>
+
+  <h3 id="results-main">6.1 长上下文基准综合对比（4B 规模）</h3>
+
+  <div id="chart-main-4b" class="echarts-container" style="height:380px"></div>
+
+  <p>注：GoLongRL-4B (TMN-Reweight) 平均分 63.0，在 CorpusQA 上达到 69.6，超越 QwenLong-L1.5-4B 的 64.7。</p>
+
+  <table>
+    <tr>
+      <th>模型</th>
+      <th>Avg</th><th>DocMath</th><th>LBV2</th><th>Frames</th>
+      <th>MRCR</th><th>CorpusQA</th><th>LBV1-QA</th>
+    </tr>
+    <tr>
+      <td>QwenLong-L1.5-4B †</td>
+      <td>59.4</td><td>62.5</td><td>47.9</td><td>67.4</td>
+      <td>47.9</td><td>64.7</td><td>65.8</td>
+    </tr>
+    <tr>
+      <td>Qwen3-4B-Thinking-2507</td>
+      <td>53.0</td><td>61.0</td><td>40.2</td><td>64.4</td>
+      <td>38.4</td><td>49.9</td><td>64.0</td>
+    </tr>
+    <tr>
+      <td>GoLongRL-4B (GRPO)</td>
+      <td>62.2</td><td>62.5</td><td>45.5</td><td>66.6</td>
+      <td class="best">67.5</td><td>65.1</td><td>65.9</td>
+    </tr>
+    <tr>
+      <td><strong>GoLongRL-4B (TMN-Reweight)</strong></td>
+      <td class="best">63.0</td><td>62.3</td><td class="best">47.1</td><td class="best">67.4</td>
+      <td>65.5</td><td class="best">69.6</td><td class="best">65.9</td>
+    </tr>
+  </table>
+  <p style="color:#6c7086;font-size:0.85em">† 4B 模型未公开发布，结果来自原论文报告；其余结果均在统一评测协议下复现。</p>
+
+  <h3 id="results-mrcr">6.2 超长上下文外推能力（MRCR 多跳检索，1M tokens）</h3>
+
+  <div id="chart-mrcr" class="echarts-container" style="height:360px"></div>
+
+  <table>
+    <tr><th>模型</th><th>MRCR 128K–512K</th><th>MRCR 512K–1M</th><th>CorpusQA 1M</th></tr>
+    <tr><td>Qwen3-4B-Thinking-2507</td><td>11.16</td><td>1.37</td><td>5.78</td></tr>
+    <tr><td>GoLongRL-4B (GRPO)</td><td class="best">23.43</td><td class="best">4.87</td><td>5.47</td></tr>
+    <tr><td>GoLongRL-4B (TMN-Reweight)</td><td>21.85</td><td>3.87</td><td>4.56</td></tr>
+    <tr><td>Qwen3-30B-A3B-Thinking-2507</td><td>24.91</td><td>3.69</td><td>6.38</td></tr>
+    <tr><td><strong>GoLongRL-30B (GRPO)</strong></td><td class="best">37.52</td><td class="best">9.14</td><td class="best">9.12</td></tr>
+  </table>
+
+  <p>30B 模型在 MRCR 128K–512K 提升 +12.61，512K–1M 提升 +5.45，CorpusQA 1M 提升 +2.74，展现出训练于 160K 上下文的能力向百万 token 量级的强外推性。</p>
+
+  <h3 id="results-short">6.3 短上下文推理能力保留</h3>
+
+  <div id="chart-short" class="echarts-container" style="height:320px"></div>
+
+  <p>4B 模型在短推理基准上同样有所提升：<strong>MMLU-Pro +0.7、AIME24 +1.6、AIME25 +0.6、GPQA-Diamond +2.3</strong>，说明长上下文信息整合技能向标准推理任务正向迁移。</p>
+
+  <h3 id="results-30b">6.4 30B 模型与顶级闭源模型对比</h3>
+
+  <div id="chart-30b" class="echarts-container" style="height:380px"></div>
+
+  <p>GoLongRL-30B-A3B（激活参数 3B）综合得分约 70%，性能媲美 DeepSeek-R1-0528（671B 密集）与 Qwen3-235B-A22B-Thinking-2507，激活参数预算节省超过 7 倍。</p>
+
+  <!-- ===== 7. 消融实验 ===== -->
+  <h2 id="ablation">7. 消融实验与关键发现</h2>
+
+  <h3 id="ablation-dataset">7.1 数据集贡献消融</h3>
+  <p>在相同的 vanilla GRPO 训练设置下，GoLong 数据集单独与 QwenLong-L1.5（闭源）数据集对比：</p>
+  <table>
+    <tr><th>数据集</th><th>4B 平均分</th><th>30B 平均分</th></tr>
+    <tr><td>QwenLong-L1.5（闭源）</td><td>~56.1</td><td>~67.4</td></tr>
+    <tr><td><strong>GoLong（开源，本文）</strong></td><td class="best">~62.2（+6.1pp）</td><td class="best">~70.0（+2.6pp）</td></tr>
+  </table>
+  <p>即使在相同的普通 GRPO 下，GoLong 数据集已超越闭源数据集，证明了<strong>更广泛能力覆盖与奖励多样性的实质性价值</strong>。</p>
+
+  <h3 id="ablation-tmn">7.2 TMN-Reweight 与标准 GRPO 对比（4B 规模）</h3>
+  <p>TMN-Reweight 在 GoLong 数据集基础上相比 vanilla GRPO 进一步提升 +0.8 平均分，增益主要集中在聚合密集型基准（CorpusQA +4.5），在需要跨文档整合的任务上表现更突出。这与 TMN-Reweight 对信息整合类异质奖励的对齐优化机制相吻合。</p>
+
+  <div id="chart-ablation" class="echarts-container" style="height:340px"></div>
+
+  <h3 id="ablation-insight">7.3 消融洞察</h3>
+  <ul>
+    <li>仅使用 GRPO（不用 TMN）+ GoLong 数据集：已超过 QwenLong-L1.5 基线，说明数据质量是主要贡献因素</li>
+    <li>TMN-Reweight 的边际增益（+0.8）虽然不大，但在聚合任务上显著（+4.5），说明其对"难以量化"的任务效果更好</li>
+    <li>难度自适应权重对"极难 prompt"（pass rate 接近 0）尤为重要，避免这类样本主导梯度方向</li>
+  </ul>
+
+  <!-- ===== 8. 局限性 ===== -->
+  <h2 id="limitations">8. 局限性</h2>
+
+  <ul>
+    <li>
+      <strong>上下文长度上限为 160K tokens</strong>：训练数据主要覆盖 256K tokens 以内，模型在百万 token 级别的外推能力虽有所提升（依赖 YaRN RoPE 缩放），但并非直接训练所得。超长上下文（&gt;512K）的系统性改进有待后续工作。
+    </li>
+    <li>
+      <strong>TMN-Reweight 需任务级批次统计</strong>：当 mini-batch 中某任务类型样本过少时，任务级 RMS 标准差估计不稳定。实现时需保证 mini-batch 构成的多样性，增加了数据 loader 的工程复杂度。
+    </li>
+    <li>
+      <strong>合成数据的分布偏差</strong>：部分任务（多跳推理、分级排名）依赖 LLM 合成 QA 对，存在生成偏差问题。合成数据是否完全反映真实用户场景中的长上下文需求，有待验证。
+    </li>
+    <li>
+      <strong>评估基准覆盖不均</strong>：主要评测基准（DocMath、Frames、MRCR）以英文为主，中文长上下文能力的迁移效果未经系统评估。
+    </li>
+    <li>
+      <strong>ROUGE-L 作为摘要奖励的局限</strong>：ROUGE-L 与人工判断的相关性在长文档摘要上有限，可能导致摘要任务的训练信号不够精准。
+    </li>
+    <li>
+      <strong>计算成本</strong>：长序列 GRPO 训练仍然需要大量 GPU 内存，128K–160K tokens 的在线采样对显存要求较高，限制了在小规模资源环境下的可复现性。
+    </li>
+  </ul>
+
+  <!-- ===== 9. 核心洞见 ===== -->
+  <h2 id="insights">9. 核心洞见与读后评注</h2>
+
+  <h3 id="insight-1">洞见 1：能力覆盖比检索路径复杂度更重要</h3>
+  <p>前驱工作（包括 QwenLong-L1.5）将数据构建的核心思路定位在"增加检索路径的复杂度"——多跳、UUID 追踪、更长的干扰文本。GoLongRL 的实验证明，<strong>任务类型的多样性（9 类能力）比单一类型内的难度梯度更关键</strong>。这从根本上挑战了"检索路径复杂度 ≈ 长上下文训练难度"的隐含假设。</p>
+
+  <h3 id="insight-2">洞见 2：奖励函数应与评估指标对齐</h3>
+  <p>将 ROUGE-L 用于摘要、NDCG 用于排名任务，而非将所有任务折叠为 0/1 正确/错误，这不仅更接近任务本质，更重要的是：<strong>奖励函数的选择即是对模型"哪些输出属性重要"的隐式声明</strong>。此设计思想对未来长上下文 RL 数据集构建具有方法论意义。</p>
+
+  <h3 id="insight-3">洞见 3：TMN-Reweight 的工程价值</h3>
+  <p>TMN-Reweight 的改进幅度（+0.8）在绝对值上不大，但其设计逻辑极为简洁——仅将 per-prompt std 替换为 task-level RMS std，加一个难度权重。<strong>这种最小化修改、最大化适应性的设计哲学，使其容易在任何基于 GRPO 的框架中以几行代码实现</strong>，工程可复用性高。</p>
+
+  <h3 id="insight-4">洞见 4：长上下文训练可正向迁移短推理</h3>
+  <p>GoLongRL 在训练过程中并未包含 AIME、GPQA 等短推理任务，却在这些基准上取得了提升（AIME24 +1.6）。这暗示<strong>信息整合类技能（多文档聚合、证据链组织）与一般推理能力之间存在正向迁移</strong>，为"长上下文训练可能是通用推理改进的有效路径"提供了经验证据。</p>
+
+  <h3 id="insight-5">洞见 5：完全开源的战略意义</h3>
+  <p>GoLongRL 明确区分了"仅开源权重"与"真正开源（数据 + 代码 + 权重）"的区别。在目前学术界大量"部分开源"的现状下，这种完全透明的发布策略有重要价值：<strong>允许社区审计训练数据分布、复现实验、在上面继续构建</strong>，而不是仅仅使用一个黑箱模型。这对于长上下文 RLVR 研究的可持续推进至关重要。</p>
+
+  <blockquote>
+    <strong>综合评价</strong>：GoLongRL 是目前长上下文 RLVR 领域最完整的开源工作之一。其贡献不在于某个单一的算法突破，而在于将数据多样性、奖励设计与优化方法三者系统性地整合，并以完全透明的方式公开。对于希望将 RLVR 扩展到长上下文场景的研究者，GoLong 数据集与 TMN-Reweight 均是值得直接复用的起点。
+  </blockquote>
+
+</main>
+
+<!-- ===== ECharts Scripts ===== -->
+<script>
+  // Chart 1: Main 4B Benchmark Comparison
+  (function() {
+    var dom = document.getElementById('chart-main-4b');
+    var chart = echarts.init(dom);
+    var models = ['QwenLong-L1.5-4B†', 'Qwen3-4B-Thinking', 'GoLongRL-4B\n(GRPO)', 'GoLongRL-4B\n(TMN-Reweight)'];
+    var benchmarks = ['Avg', 'DocMath', 'LBV2', 'Frames', 'MRCR', 'CorpusQA', 'LBV1-QA'];
+    var data = [
+      [59.4, 62.5, 47.9, 67.4, 47.9, 64.7, 65.8],
+      [53.0, 61.0, 40.2, 64.4, 38.4, 49.9, 64.0],
+      [62.2, 62.5, 45.5, 66.6, 67.5, 65.1, 65.9],
+      [63.0, 62.3, 47.1, 67.4, 65.5, 69.6, 65.9]
+    ];
+    var colors = ['#fab387','#cba6f7','#89b4fa','#a6e3a1'];
+    var series = models.map(function(m, idx) {
+      return {
+        name: m.replace('\n', ' '),
+        type: 'bar',
+        data: data[idx],
+        itemStyle: { color: colors[idx] },
+        barGap: '5%'
+      };
+    });
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+      legend: { data: models.map(function(m){return m.replace('\n',' ');}), textStyle: { color: '#cdd6f4' }, top: 8 },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true, top: 50 },
+      xAxis: { type: 'category', data: benchmarks, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+      yAxis: { type: 'value', min: 30, max: 80, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } } },
+      series: series
+    });
+  })();
+
+  // Chart 2: MRCR ultra-long context
+  (function() {
+    var dom = document.getElementById('chart-mrcr');
+    var chart = echarts.init(dom);
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['Qwen3-4B-Thinking', 'GoLongRL-4B (GRPO)', 'GoLongRL-4B (TMN)', 'Qwen3-30B-Thinking', 'GoLongRL-30B (GRPO)'], textStyle: { color: '#cdd6f4' }, top: 8 },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true, top: 55 },
+      xAxis: { type: 'category', data: ['MRCR 128K-512K', 'MRCR 512K-1M', 'CorpusQA 1M'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+      yAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } } },
+      series: [
+        { name: 'Qwen3-4B-Thinking',    type: 'bar', data: [11.16, 1.37, 5.78],  itemStyle: { color: '#cba6f7' } },
+        { name: 'GoLongRL-4B (GRPO)',   type: 'bar', data: [23.43, 4.87, 5.47],  itemStyle: { color: '#89b4fa' } },
+        { name: 'GoLongRL-4B (TMN)',    type: 'bar', data: [21.85, 3.87, 4.56],  itemStyle: { color: '#74c7ec' } },
+        { name: 'Qwen3-30B-Thinking',   type: 'bar', data: [24.91, 3.69, 6.38],  itemStyle: { color: '#fab387' } },
+        { name: 'GoLongRL-30B (GRPO)',  type: 'bar', data: [37.52, 9.14, 9.12],  itemStyle: { color: '#a6e3a1' } }
+      ]
+    });
+  })();
+
+  // Chart 3: Short benchmark transfer
+  (function() {
+    var dom = document.getElementById('chart-short');
+    var chart = echarts.init(dom);
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['Qwen3-4B-Thinking (base)', 'GoLongRL-4B (GRPO)'], textStyle: { color: '#cdd6f4' }, top: 8 },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true, top: 50 },
+      xAxis: { type: 'category', data: ['MMLU-Pro', 'AIME24', 'AIME25', 'GPQA-Diamond'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+      yAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } } },
+      series: [
+        { name: 'Qwen3-4B-Thinking (base)', type: 'bar', data: [69.3, 72.4, 68.0, 54.2], itemStyle: { color: '#cba6f7' } },
+        { name: 'GoLongRL-4B (GRPO)',        type: 'bar', data: [70.0, 74.0, 68.6, 56.5], itemStyle: { color: '#a6e3a1' } }
+      ]
+    });
+  })();
+
+  // Chart 4: 30B vs top models
+  (function() {
+    var dom = document.getElementById('chart-30b');
+    var chart = echarts.init(dom);
+    var models = ['Qwen3-30B-A3B\nThinking', 'GoLongRL-30B\n(GRPO)', 'GoLongRL-30B\n(TMN-Reweight)', 'DeepSeek-R1-0528\n(~671B)', 'Qwen3-235B\n(~22B active)'];
+    var scores = [64.0, 70.0, 70.5, 70.2, 71.0];
+    var colors = ['#cba6f7','#89b4fa','#a6e3a1','#f38ba8','#fab387'];
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      tooltip: { trigger: 'axis' },
+      grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true, top: 20 },
+      xAxis: { type: 'value', min: 55, max: 75, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } } },
+      yAxis: { type: 'category', data: models.map(function(m){return m.replace('\n',' ');}), axisLabel: { color: '#cdd6f4', width: 150, overflow: 'truncate' }, axisLine: { lineStyle: { color: '#45475a' } } },
+      series: [{
+        type: 'bar',
+        data: scores.map(function(v, i){ return { value: v, itemStyle: { color: colors[i] } }; }),
+        label: { show: true, position: 'right', color: '#cdd6f4', formatter: '{c}%' }
+      }]
+    });
+  })();
+
+  // Chart 5: Ablation
+  (function() {
+    var dom = document.getElementById('chart-ablation');
+    var chart = echarts.init(dom);
+    chart.setOption({
+      backgroundColor: '#2a2a3e',
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['Vanilla GRPO + GoLong', 'TMN-Reweight + GoLong'], textStyle: { color: '#cdd6f4' }, top: 8 },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true, top: 50 },
+      xAxis: { type: 'category', data: ['Avg', 'DocMath', 'LBV2', 'Frames', 'MRCR', 'CorpusQA', 'LBV1-QA'], axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+      yAxis: { type: 'value', min: 40, max: 75, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } }, splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } } },
+      series: [
+        { name: 'Vanilla GRPO + GoLong',   type: 'bar', data: [62.2, 62.5, 45.5, 66.6, 67.5, 65.1, 65.9], itemStyle: { color: '#89b4fa' } },
+        { name: 'TMN-Reweight + GoLong',   type: 'bar', data: [63.0, 62.3, 47.1, 67.4, 65.5, 69.6, 65.9], itemStyle: { color: '#a6e3a1' } }
+      ]
+    });
+  })();
+</script>
+
+<!-- ===== Mermaid + TOC ===== -->
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', securityLevel: 'loose' });
+
+  // Auto-generate TOC
+  const toc = document.getElementById('toc');
+  document.querySelectorAll('main h2, main h3').forEach(function(h, i) {
+    if (!h.id) h.id = 'section-' + i;
+    var a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    if (h.tagName === 'H3') a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+
+  // Scroll highlight
+  var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(e) {
+      var link = toc.querySelector('a[href="#' + e.target.id + '"]');
+      if (link) link.classList.toggle('active', e.isIntersecting);
+    });
+  }, { rootMargin: '-10% 0px -80% 0px' });
+  document.querySelectorAll('main h2, main h3').forEach(function(h) { observer.observe(h); });
+</script>
+</body>
+</html>

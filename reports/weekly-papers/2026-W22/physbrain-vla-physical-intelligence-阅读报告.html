@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PhysBrain 1.0 技术报告 · 阅读报告</title>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<!-- MathJax -->
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$'],['\\(','\\)']], displayMath: [['$$','$$'],['\\[','\\]']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+<script>mermaid.initialize({startOnLoad:true, theme:'dark', themeVariables:{primaryColor:'#313244',primaryTextColor:'#cdd6f4',primaryBorderColor:'#89b4fa',lineColor:'#89b4fa',secondaryColor:'#181825',tertiaryColor:'#1e1e2e',edgeLabelBackground:'#313244',clusterBkg:'#181825',titleColor:'#cdd6f4'}});</script>
+
+<!-- ECharts -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
+<style>
+  :root {
+    --bg: #1e1e2e;
+    --surface: #181825;
+    --overlay: #313244;
+    --muted: #6c7086;
+    --text: #cdd6f4;
+    --subtext: #a6adc8;
+    --heading: #89b4fa;
+    --strong: #a6e3a1;
+    --accent: #cba6f7;
+    --yellow: #f9e2af;
+    --peach: #fab387;
+    --red: #f38ba8;
+    --teal: #94e2d5;
+    --sky: #89dceb;
+    --border: #45475a;
+    --toc-width: 260px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.75;
+    font-size: 15px;
+  }
+
+  /* ── TOC ── */
+  #toc {
+    position: fixed;
+    top: 0; left: 0;
+    width: var(--toc-width);
+    height: 100vh;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 24px 0 40px;
+    z-index: 100;
+  }
+  #toc h2 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 20px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  #toc ul { list-style: none; }
+  #toc ul li a {
+    display: block;
+    padding: 5px 20px;
+    font-size: 12.5px;
+    color: var(--subtext);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: all .2s;
+    line-height: 1.5;
+  }
+  #toc ul li a:hover { color: var(--heading); background: var(--overlay); }
+  #toc ul li a.active {
+    color: var(--heading);
+    border-left-color: var(--heading);
+    background: rgba(137,180,250,.08);
+    font-weight: 600;
+  }
+  #toc ul li.sub a { padding-left: 34px; font-size: 12px; }
+
+  /* ── MAIN ── */
+  main {
+    margin-left: var(--toc-width);
+    max-width: none;
+    padding: 40px 64px;
+  }
+
+  /* ── HEADER ── */
+  .paper-header {
+    background: linear-gradient(135deg, #181825 0%, #1e1e2e 50%, #181825 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 48px;
+    margin-bottom: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .paper-header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(137,180,250,.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .paper-header .badge {
+    display: inline-block;
+    background: rgba(137,180,250,.15);
+    color: var(--heading);
+    border: 1px solid rgba(137,180,250,.3);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    margin-bottom: 14px;
+  }
+  .paper-header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--heading);
+    line-height: 1.3;
+    margin-bottom: 10px;
+  }
+  .paper-header .subtitle {
+    font-size: 14px;
+    color: var(--subtext);
+    margin-bottom: 18px;
+  }
+  .paper-header .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 16px;
+  }
+  .paper-header .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--subtext);
+  }
+  .paper-header .meta-item .label {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .paper-header .meta-item .value { color: var(--text); font-weight: 500; }
+
+  /* ── SECTIONS ── */
+  section { margin-bottom: 56px; scroll-margin-top: 24px; }
+  h2.sec-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--heading);
+    border-left: 4px solid var(--heading);
+    padding-left: 14px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  h2.sec-title .sec-num {
+    background: var(--heading);
+    color: var(--bg);
+    border-radius: 5px;
+    font-size: 12px;
+    padding: 2px 7px;
+    font-weight: 800;
+  }
+  h3.sub-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 28px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  h3.sub-title::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+  }
+
+  p { margin-bottom: 12px; color: var(--text); }
+  strong { color: var(--strong); }
+  em { color: var(--yellow); font-style: normal; font-weight: 600; }
+  code {
+    background: var(--overlay);
+    color: var(--peach);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+  }
+
+  /* ── TABLE ── */
+  .info-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 24px;
+    font-size: 14px;
+  }
+  .info-table th, .info-table td {
+    border: 1px solid var(--border);
+    padding: 10px 16px;
+    text-align: left;
+  }
+  .info-table th {
+    background: var(--overlay);
+    color: var(--heading);
+    font-weight: 600;
+    width: 140px;
+  }
+  .info-table td { background: var(--surface); color: var(--text); }
+  .info-table tr:hover td { background: var(--overlay); }
+
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 16px 0 24px;
+  }
+  .results-table th {
+    background: var(--overlay);
+    color: var(--heading);
+    padding: 10px 14px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    text-align: center;
+  }
+  .results-table td {
+    border: 1px solid var(--border);
+    padding: 9px 14px;
+    background: var(--surface);
+    text-align: center;
+    color: var(--text);
+  }
+  .results-table tr:hover td { background: var(--overlay); }
+  .results-table td.best { color: var(--strong); font-weight: 700; }
+  .results-table td.model-name { text-align: left; color: var(--subtext); }
+  .results-table td.ours { background: rgba(166,227,161,.06); }
+  .results-table td.ours.best { background: rgba(166,227,161,.12); }
+
+  /* ── CALLOUT ── */
+  .callout {
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 20px 0;
+    border-left: 4px solid;
+    font-size: 14px;
+  }
+  .callout.info { background: rgba(137,180,250,.08); border-color: var(--heading); }
+  .callout.success { background: rgba(166,227,161,.08); border-color: var(--strong); }
+  .callout.warning { background: rgba(249,226,175,.08); border-color: var(--yellow); }
+  .callout.insight { background: rgba(203,166,247,.08); border-color: var(--accent); }
+  .callout .callout-title { font-weight: 700; margin-bottom: 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+  .callout.info .callout-title { color: var(--heading); }
+  .callout.success .callout-title { color: var(--strong); }
+  .callout.warning .callout-title { color: var(--yellow); }
+  .callout.insight .callout-title { color: var(--accent); }
+
+  /* ── CARD GRID ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    margin: 16px 0 24px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    transition: border-color .2s;
+  }
+  .card:hover { border-color: var(--heading); }
+  .card .card-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--heading);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card .card-body { font-size: 13px; color: var(--subtext); line-height: 1.6; }
+
+  /* ── STAT BADGES ── */
+  .stat-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 16px 0 24px;
+  }
+  .stat-badge {
+    background: var(--overlay);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 22px;
+    text-align: center;
+    min-width: 120px;
+  }
+  .stat-badge .val {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--heading);
+    line-height: 1.2;
+    display: block;
+  }
+  .stat-badge .desc { font-size: 11px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .07em; }
+
+  /* ── MERMAID ── */
+  .mermaid-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    margin: 16px 0 24px;
+    overflow-x: auto;
+  }
+  pre.mermaid { text-align: center; }
+
+  /* ── ECHARTS ── */
+  .chart-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0 24px;
+  }
+  .chart-wrap .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--subtext);
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  /* ── LIST ── */
+  ul.styled, ol.styled {
+    padding-left: 0;
+    list-style: none;
+    margin: 10px 0 18px;
+  }
+  ul.styled li, ol.styled li {
+    padding: 6px 0 6px 22px;
+    position: relative;
+    font-size: 14px;
+    color: var(--text);
+    border-bottom: 1px solid rgba(69,71,90,.4);
+  }
+  ul.styled li:last-child, ol.styled li:last-child { border-bottom: none; }
+  ul.styled li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--heading);
+    font-size: 12px;
+  }
+  ol.styled { counter-reset: ol-counter; }
+  ol.styled li::before {
+    content: counter(ol-counter) '.';
+    counter-increment: ol-counter;
+    position: absolute;
+    left: 0;
+    color: var(--heading);
+    font-weight: 700;
+    font-size: 12px;
+  }
+
+  /* ── PIPELINE STEP ── */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 0;
+    margin: 16px 0 24px;
+  }
+  .pipeline-step {
+    flex: 1;
+    min-width: 160px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 16px 18px;
+    position: relative;
+    font-size: 13px;
+  }
+  .pipeline-step:first-child { border-radius: 10px 0 0 10px; }
+  .pipeline-step:last-child { border-radius: 0 10px 10px 0; }
+  .pipeline-step + .pipeline-step { border-left: none; }
+  .pipeline-step .step-num {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--heading);
+    opacity: .3;
+    line-height: 1;
+  }
+  .pipeline-step .step-title { font-weight: 700; color: var(--heading); margin: 4px 0; }
+  .pipeline-step .step-body { color: var(--subtext); }
+  .pipeline-step .arrow {
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--heading);
+    font-size: 18px;
+    z-index: 2;
+  }
+
+  /* ── ABLATION TABLE ── */
+  .abl-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    margin: 12px 0 20px;
+  }
+  .abl-table th {
+    background: var(--overlay);
+    color: var(--accent);
+    padding: 9px 14px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-weight: 600;
+  }
+  .abl-table td {
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    background: var(--surface);
+    text-align: center;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .abl-table tr:hover td { background: var(--overlay); }
+  .abl-table td.check { color: var(--strong); font-weight: 700; }
+  .abl-table td.cross { color: var(--red); }
+  .abl-table td.highlight { color: var(--strong); font-weight: 700; }
+
+  /* ── INSIGHT CARDS ── */
+  .insight-list { display: flex; flex-direction: column; gap: 14px; margin: 16px 0; }
+  .insight-card {
+    display: flex;
+    gap: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 22px;
+    align-items: flex-start;
+  }
+  .insight-card .icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    margin-top: 2px;
+    width: 36px;
+    text-align: center;
+  }
+  .insight-card .content .title { font-weight: 700; color: var(--strong); margin-bottom: 5px; font-size: 14px; }
+  .insight-card .content .body { font-size: 13.5px; color: var(--subtext); line-height: 1.65; }
+
+  /* ── LIMITATION ── */
+  .limit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 14px;
+    margin: 16px 0;
+  }
+  .limit-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--red);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .limit-card .limit-title { font-weight: 700; color: var(--red); margin-bottom: 7px; font-size: 13.5px; }
+  .limit-card .limit-body { font-size: 13px; color: var(--subtext); line-height: 1.6; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* ── DIVIDER ── */
+  .divider { height: 1px; background: var(--border); margin: 40px 0; }
+
+  /* ── QA MODE GRID ── */
+  .qa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 12px;
+    margin: 14px 0 22px;
+  }
+  .qa-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 3px solid;
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+  .qa-card .qa-label { font-weight: 700; margin-bottom: 5px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; }
+  .qa-card .qa-desc { color: var(--subtext); font-size: 12.5px; line-height: 1.55; }
+
+  @media (max-width: 900px) {
+    #toc { display: none; }
+    main { margin-left: 0; padding: 24px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ TOC ═══════════ -->
+<nav id="toc">
+  <h2>目录导航</h2>
+  <ul>
+    <li><a href="#s0">论文信息</a></li>
+    <li><a href="#s1">核心问题与动机</a></li>
+    <li><a href="#s2">背景与相关工作</a></li>
+    <li><a href="#s3">方法总览</a></li>
+    <li class="sub"><a href="#s3-engine">数据引擎</a></li>
+    <li class="sub"><a href="#s3-qa">七类QA模式</a></li>
+    <li class="sub"><a href="#s3-e2e3m">E2E-3M数据集</a></li>
+    <li><a href="#s4">关键技术细节</a></li>
+    <li class="sub"><a href="#s4-dual">双路径适配架构</a></li>
+    <li class="sub"><a href="#s4-lang">语言敏感适配</a></li>
+    <li class="sub"><a href="#s4-valid">确定性规则验证</a></li>
+    <li><a href="#s5">实验结果</a></li>
+    <li class="sub"><a href="#s5-vqa">VQA基准</a></li>
+    <li class="sub"><a href="#s5-robot">机器人操控</a></li>
+    <li><a href="#s6">消融实验</a></li>
+    <li><a href="#s7">局限性</a></li>
+    <li><a href="#s8">核心洞见</a></li>
+  </ul>
+</nav>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main>
+
+<!-- ── PAPER HEADER ── -->
+<div class="paper-header">
+  <span class="badge">arXiv · 2026 · VLA / Physical Intelligence</span>
+  <h1>PhysBrain 1.0 Technical Report</h1>
+  <div class="subtitle">从第一人称视频中蒸馏物理常识，赋能视觉-语言-动作模型</div>
+  <div class="meta-row">
+    <div class="meta-item">
+      <span class="label">arXiv ID</span>
+      <span class="value">2605.15298</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">发布时间</span>
+      <span class="value">2026年5月</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">主要机构</span>
+      <span class="value">HKUST(GZ) · 中关村学院 · DeepCybo · 哈工大 · 华科大</span>
+    </div>
+    <div class="meta-item">
+      <span class="label">关键词</span>
+      <span class="value">VLA · Physical Commonsense · Egocentric Video · Dual-Pathway Adaptation</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     §0  论文信息表
+══════════════════════════════════════════════ -->
+<section id="s0">
+  <h2 class="sec-title"><span class="sec-num">0</span>论文信息表</h2>
+
+  <table class="info-table">
+    <tr><th>论文标题</th><td>PhysBrain 1.0 Technical Report</td></tr>
+    <tr><th>ArXiv</th><td>arXiv:2605.15298</td></tr>
+    <tr><th>第一作者</th><td>Xiaopeng Lin（香港科技大学广州校区）</td></tr>
+    <tr><th>全部作者</th><td>Xiaopeng Lin, Shijie Lian, Bin Yu, Ruoqi Yang, Zhaolong Shen, Changti Wu, Yuzhuo Miao, Yurun Jin, Yukun Shi, Jiyan He, Cong Huang, Bojun Cheng, Kai Chen</td></tr>
+    <tr><th>机构</th><td>HKUST (Guangzhou) · 中关村学院 · 中关村人工智能研究院 · DeepCybo · 哈尔滨工业大学 · 华中科技大学</td></tr>
+    <tr><th>主要贡献</th><td>Egocentric2Embodiment数据引擎 · E2E-3M数据集（~3M VQA样本）· PhysBrain VLM（4B/8B）· 双路径VLA适配框架</td></tr>
+    <tr><th>数据集规模</th><td>~3,000,000 条视觉问答样本，来源于 Ego4D / BuildAI / EgoDex</td></tr>
+    <tr><th>开源资源</th><td>数据集 + 模型权重（据报告描述已/将开放）</td></tr>
+    <tr><th>主要基准</th><td>ERQA · PhysBench · SimplerEnv-WidowX · LIBERO · RoboCasa</td></tr>
+    <tr><th>SOTA结果</th><td>ERQA-4B: 90.3 · LIBERO-8B: 94.8 · SimplerEnv域外迁移最强</td></tr>
+  </table>
+
+  <div class="stat-row">
+    <div class="stat-badge">
+      <span class="val">~3M</span>
+      <span class="desc">E2E-3M VQA 样本</span>
+    </div>
+    <div class="stat-badge">
+      <span class="val">7</span>
+      <span class="desc">QA 感知模式</span>
+    </div>
+    <div class="stat-badge">
+      <span class="val">4B/8B</span>
+      <span class="desc">VLM 参数规模</span>
+    </div>
+    <div class="stat-badge">
+      <span class="val">5</span>
+      <span class="desc">评测基准</span>
+    </div>
+    <div class="stat-badge">
+      <span class="val">90.3</span>
+      <span class="desc">ERQA-4B SOTA</span>
+    </div>
+    <div class="stat-badge">
+      <span class="val">94.8%</span>
+      <span class="desc">LIBERO-8B SOTA</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════
+     §1  核心问题与动机
+══════════════════════════════════════════════ -->
+<section id="s1">
+  <h2 class="sec-title"><span class="sec-num">1</span>核心问题与动机</h2>
+
+  <div class="callout info">
+    <div class="callout-title">根本挑战</div>
+    当前视觉-语言-动作（VLA）模型严重依赖<strong>大量机器人演示数据</strong>进行微调，而此类数据采集成本极高、场景覆盖有限，导致模型在域外场景的泛化能力不足。更深层的问题在于：VLA模型缺乏人类在日常操作中积累的<em>物理常识（Physical Commonsense）</em>——即对物体属性、空间关系、力学特性和动作时序的直觉性理解。
+  </div>
+
+  <h3 class="sub-title">问题拆解</h3>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">🤖 VLA数据瓶颈</div>
+      <div class="card-body">高质量机器人操作轨迹数据采集成本高昂（需真实机械臂、专业场景），现有数据集规模有限，难以覆盖多样化的操作场景和物体组合。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🧠 物理先验缺失</div>
+      <div class="card-body">现有VLM/VLA模型多基于互联网图文数据训练，对物体的深度感知、重量估计、接触力学等物理属性理解薄弱，导致操作失误率高。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">📷 自我中心视频价值</div>
+      <div class="card-body">第一人称视角（Egocentric）视频与机器人视角天然对齐，蕴含丰富的手-物交互信息、空间深度线索和动作执行时序，是提炼物理常识的理想数据源。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔄 能力保留难题</div>
+      <div class="card-body">将物理常识注入VLM后再迁移到VLA策略网络时，存在灾难性遗忘问题——原有的感知能力和语言理解能力容易在适配过程中被破坏。</div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">研究目标</h3>
+  <p>
+    PhysBrain 1.0 的核心洞见是：<strong>大量免费可用的人类第一人称视频</strong>是物理常识的天然宝库，通过系统化地从中提取结构化QA监督信号，可以低成本地为VLA模型注入物理先验，从而提升其在真实操作场景中的泛化能力和成功率。
+  </p>
+
+  <div class="callout success">
+    <div class="callout-title">核心假说</div>
+    人类第一人称操作视频 → 结构化物理常识QA → 物理感知VLM → 双路径迁移 → 泛化能力更强的VLA策略
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════
+     §2  背景与相关工作
+══════════════════════════════════════════════ -->
+<section id="s2">
+  <h2 class="sec-title"><span class="sec-num">2</span>背景与相关工作</h2>
+
+  <h3 class="sub-title">视觉-语言-动作（VLA）模型</h3>
+  <p>
+    VLA模型将视觉理解、自然语言指令理解与机器人动作生成统一在一个端到端框架中。代表性工作包括 <strong>RT-2</strong>（Google，将VLM直接扩展为策略网络）、<strong>OpenVLA</strong>（开源VLA基线）、<strong>π₀</strong>（Physical Intelligence，引入流匹配动作头）等。这类模型通常以预训练VLM为骨干，通过机器人演示数据进行指令微调。
+  </p>
+
+  <h3 class="sub-title">物理常识基准</h3>
+  <ul class="styled">
+    <li><strong>PhysBench</strong>：专注于物体属性、接触关系、力学推理等物理常识的VQA基准，覆盖真实世界物理场景。</li>
+    <li><strong>ERQA（Embodied Reasoning QA）</strong>：专为具身智能设计的推理评测，考察空间理解、动作推理等具身相关能力。</li>
+    <li><strong>SimplerEnv</strong>：基于真实机器人场景的操控评测环境，包含 Google Robot 和 WidowX 两类平台，支持域外泛化评估。</li>
+  </ul>
+
+  <h3 class="sub-title">第一人称视频数据集</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">Ego4D</div>
+      <div class="card-body">Meta发布的大规模第一人称视频数据集，覆盖日常生活、厨房、工坊等多种场景，包含丰富的手-物交互片段和时序标注。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">BuildAI</div>
+      <div class="card-body">面向建筑/装配任务的第一人称视频数据集，包含精细工具使用、部件组装等复杂操作场景，力学常识丰富。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">EgoDex</div>
+      <div class="card-body">专注于灵巧手操作的第一人称数据集，包含精细抓取、旋转、转移等手部动作，与机器人灵巧操作高度相关。</div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">相关方法对比</h3>
+  <p>
+    与 <strong>SpatialBot</strong>（引入深度图增强空间理解）、<strong>RoboVLMs</strong>（系统研究VLM至VLA迁移）等工作相比，PhysBrain 的创新在于：（1）通过<em>模式驱动的QA生成引擎</em>系统化提取7类物理常识；（2）提出<em>双路径适配</em>机制解决能力保留问题；（3）针对VLA策略网络的语言敏感性设计了专用的适配策略。
+  </p>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════
+     §3  方法总览
+══════════════════════════════════════════════ -->
+<section id="s3">
+  <h2 class="sec-title"><span class="sec-num">3</span>方法总览</h2>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart TD
+    A["🎥 原始自我中心视频\n(Ego4D / BuildAI / EgoDex)"]
+
+    subgraph ENGINE["Egocentric2Embodiment 数据引擎"]
+        B1["场景元素提取\nScene Element Extraction"]
+        B2["空间动态解析\nSpatial Dynamics Parsing"]
+        B3["动作执行分析\nAction Execution Analysis"]
+        B4["深度感知关系\nDepth-Aware Relations"]
+        B5["模式驱动QA生成\n7 QA Modes"]
+        B6["确定性规则验证\nDeterministic Rule Validation"]
+    end
+
+    subgraph DATASET["E2E-3M 数据集"]
+        C["~3M VQA 实例\n时序/空间/属性/力学/推理/摘要/轨迹"]
+    end
+
+    subgraph VLM["PhysBrain VLM 训练"]
+        D1["PhysBrain-4B\n(InternVL2-4B骨干)"]
+        D2["PhysBrain-8B\n(InternVL2-8B骨干)"]
+    end
+
+    subgraph VLA["VLA 策略适配"]
+        E1["能力保留路径\nCapability-Preserving Branch"]
+        E2["语言敏感适配\nLanguage-Sensitive Adaptation"]
+        E3["双路径融合\nDual-Pathway Fusion"]
+    end
+
+    subgraph EVAL["下游评测"]
+        F1["ERQA / PhysBench\n(物理常识理解)"]
+        F2["SimplerEnv-WidowX\n(操控泛化)"]
+        F3["LIBERO / RoboCasa\n(多任务操控)"]
+    end
+
+    A --> ENGINE
+    B1 --> B5
+    B2 --> B5
+    B3 --> B5
+    B4 --> B5
+    B5 --> B6
+    B6 --> DATASET
+    DATASET --> VLM
+    VLM --> VLA
+    VLA --> EVAL
+
+    style ENGINE fill:#1e1e2e,stroke:#89b4fa,color:#cdd6f4
+    style DATASET fill:#1e1e2e,stroke:#a6e3a1,color:#cdd6f4
+    style VLM fill:#1e1e2e,stroke:#cba6f7,color:#cdd6f4
+    style VLA fill:#1e1e2e,stroke:#f9e2af,color:#cdd6f4
+    style EVAL fill:#1e1e2e,stroke:#94e2d5,color:#cdd6f4
+    </pre>
+  </div>
+
+  <!-- ── 数据引擎 ── -->
+  <h3 id="s3-engine" class="sub-title">Egocentric2Embodiment 数据引擎</h3>
+  <p>
+    数据引擎是PhysBrain的核心创新之一。其目标是从非结构化的第一人称视频中，<strong>自动化、大规模地提取结构化物理常识监督信号</strong>。引擎分为四个感知维度的信息提取模块：
+  </p>
+
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="step-num">01</div>
+      <div class="step-title">场景元素提取</div>
+      <div class="step-body">识别视频中的物体类别、属性（颜色、形状、材质）、状态（开/关、完整/残缺）等静态属性</div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">02</div>
+      <div class="step-title">空间动态解析</div>
+      <div class="step-body">分析物体间的相对位置、遮挡关系、深度排序；追踪手-物接触点的空间轨迹</div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">03</div>
+      <div class="step-title">动作执行分析</div>
+      <div class="step-body">分解抓取-移动-放置的动作阶段，识别力度、速度、接触时序等执行参数</div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">04</div>
+      <div class="step-title">深度感知关系</div>
+      <div class="step-body">利用单目深度估计提取三维空间关系，构建以手为中心的深度感知场景图</div>
+    </div>
+  </div>
+
+  <!-- ── 七类QA模式 ── -->
+  <h3 id="s3-qa" class="sub-title">七类 Schema-Driven QA 模式</h3>
+  <p>
+    基于上述感知维度，引擎通过<em>模式驱动（Schema-Driven）</em>的方式自动生成7类VQA监督信号，全面覆盖物理常识的不同方面：
+  </p>
+
+  <div class="qa-grid">
+    <div class="qa-card" style="border-top-color:#89b4fa;">
+      <div class="qa-label" style="color:#89b4fa;">① Temporal 时序感知</div>
+      <div class="qa-desc">理解动作在时间维度上的先后顺序、持续时长和因果链。<br><em>示例：抓取前手部的准备动作是什么？</em></div>
+    </div>
+    <div class="qa-card" style="border-top-color:#a6e3a1;">
+      <div class="qa-label" style="color:#a6e3a1;">② Spatial 空间关系</div>
+      <div class="qa-desc">物体间的左右、上下、前后、遮挡关系；操作空间的三维布局理解。<br><em>示例：杯子在瓶子的哪个方向？</em></div>
+    </div>
+    <div class="qa-card" style="border-top-color:#cba6f7;">
+      <div class="qa-label" style="color:#cba6f7;">③ Attribute 物体属性</div>
+      <div class="qa-desc">物体的外观（颜色、形状、尺寸）、材质、状态等静态物理属性的精确识别。<br><em>示例：这个容器是否有盖子？</em></div>
+    </div>
+    <div class="qa-card" style="border-top-color:#fab387;">
+      <div class="qa-label" style="color:#fab387;">④ Mechanics 力学特性</div>
+      <div class="qa-desc">抓取力度、物体重量/稳定性、碰撞与变形等动态物理特性的推断与理解。<br><em>示例：操作者施加了多大的压力？</em></div>
+    </div>
+    <div class="qa-card" style="border-top-color:#f9e2af;">
+      <div class="qa-label" style="color:#f9e2af;">⑤ Reasoning 因果推理</div>
+      <div class="qa-desc">多步推理、条件判断、反事实推理；理解"为什么"和"如果...则..."类的物理逻辑。<br><em>示例：为什么操作者换了抓取姿势？</em></div>
+    </div>
+    <div class="qa-card" style="border-top-color:#94e2d5;">
+      <div class="qa-label" style="color:#94e2d5;">⑥ Summary 过程摘要</div>
+      <div class="qa-desc">对完整操作片段的高层语义描述，捕捉任务目标、操作策略和结果状态。<br><em>示例：请总结视频中展示的组装步骤。</em></div>
+    </div>
+    <div class="qa-card" style="border-top-color:#f38ba8;">
+      <div class="qa-label" style="color:#f38ba8;">⑦ Trajectory 轨迹预测</div>
+      <div class="qa-desc">手部/物体的运动轨迹理解与预测，为VLA策略提供直接的动作先验信息。<br><em>示例：手部下一步将移向哪个区域？</em></div>
+    </div>
+  </div>
+
+  <!-- ── E2E-3M ── -->
+  <h3 id="s3-e2e3m" class="sub-title">E2E-3M 数据集构成</h3>
+  <p>
+    最终构建的 <strong>E2E-3M（Egocentric2Embodiment 3-Million）</strong> 数据集整合了三个来源的第一人称视频：
+  </p>
+
+  <div class="chart-wrap">
+    <div class="chart-title">E2E-3M 数据集来源分布（示意）</div>
+    <div id="chartDataset" style="height:300px;"></div>
+  </div>
+
+  <table class="results-table" style="font-size:13px;">
+    <thead>
+      <tr>
+        <th>数据来源</th><th>场景类型</th><th>核心特征</th><th>主要QA类型</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="model-name">Ego4D</td>
+        <td>日常生活、厨房、工坊、户外</td>
+        <td>场景多样性极高，手-物交互标注丰富</td>
+        <td>时序、空间、属性、摘要</td>
+      </tr>
+      <tr>
+        <td class="model-name">BuildAI</td>
+        <td>建筑装配、工具使用、零件组装</td>
+        <td>复杂工具操作，力学常识丰富</td>
+        <td>力学、推理、轨迹</td>
+      </tr>
+      <tr>
+        <td class="model-name">EgoDex</td>
+        <td>灵巧手操作（抓取、旋转、转移）</td>
+        <td>精细手部动作，与机器人灵巧操作对齐</td>
+        <td>轨迹、空间、力学</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════
+     §4  关键技术细节
+══════════════════════════════════════════════ -->
+<section id="s4">
+  <h2 class="sec-title"><span class="sec-num">4</span>关键技术细节</h2>
+
+  <!-- ── 双路径架构 ── -->
+  <h3 id="s4-dual" class="sub-title">双路径适配架构（Dual-Pathway Architecture）</h3>
+  <p>
+    将物理感知VLM迁移到VLA策略时，直接全参数微调会导致原有的感知能力退化。PhysBrain提出了<strong>双路径适配</strong>架构来解决这一矛盾：
+  </p>
+
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart LR
+    subgraph INPUT["输入"]
+        I1["视觉观测\n(机器人相机)"]
+        I2["语言指令\n(自然语言任务描述)"]
+    end
+
+    subgraph VLM_BACKBONE["PhysBrain VLM 骨干（冻结）"]
+        V1["视觉编码器\nVision Encoder"]
+        V2["语言模型\nLLM Backbone"]
+        V3["物理常识表征\nPhysical Feature"]
+    end
+
+    subgraph DUAL["双路径适配层"]
+        direction TB
+        P1["路径A：能力保留路径\nCapability-Preserving Branch\n(LoRA适配器，保护原有感知能力)"]
+        P2["路径B：物理先验注入路径\nPhysical Prior Injection Branch\n(Cross-Attention，融合物理常识)"]
+    end
+
+    subgraph OUTPUT["动作输出"]
+        A1["动作头\nAction Head\n(连续动作 / token化动作)"]
+        A2["机器人执行\nRobot Execution"]
+    end
+
+    I1 --> V1
+    I2 --> V2
+    V1 --> V3
+    V2 --> V3
+    V3 --> P1
+    V3 --> P2
+    P1 --> A1
+    P2 --> A1
+    A1 --> A2
+
+    style INPUT fill:#1e1e2e,stroke:#89b4fa,color:#cdd6f4
+    style VLM_BACKBONE fill:#181825,stroke:#cba6f7,color:#cdd6f4
+    style DUAL fill:#1e1e2e,stroke:#a6e3a1,color:#cdd6f4
+    style OUTPUT fill:#1e1e2e,stroke:#f9e2af,color:#cdd6f4
+    </pre>
+  </div>
+
+  <div class="callout insight">
+    <div class="callout-title">设计要点</div>
+    能力保留路径（Path A）使用低秩适配（LoRA）对原有VLM特征进行轻量微调，确保视觉感知和语言理解能力不被破坏；物理先验注入路径（Path B）通过交叉注意力机制将E2E-3M学到的物理常识特征融入动作决策，两路输出在动作头处融合，实现"两全其美"。
+  </div>
+
+  <h3 id="s4-lang" class="sub-title">语言敏感适配（Language-Sensitive Adaptation）</h3>
+  <p>
+    VLA模型的一个关键特性是需要严格遵循语言指令（如"将红色杯子移到蓝色盒子右侧"）。直接的物理先验注入可能覆盖语言指令信息，导致<em>灾难性遗忘（Catastrophic Forgetting）</em>。PhysBrain的语言敏感适配通过以下机制防止这一问题：
+  </p>
+
+  <ul class="styled">
+    <li><strong>指令保护损失（Instruction-Preserving Loss）</strong>：在训练目标中加入对语言指令理解能力的正则化项，防止指令特征被物理先验覆盖。</li>
+    <li><strong>注意力门控（Attention Gating）</strong>：动态控制物理先验特征与语言指令特征的融合权重，在需要精确指令遵从时抑制物理先验的干扰。</li>
+    <li><strong>分层适配（Layer-wise Adaptation）</strong>：在VLM的不同层次选择性注入物理先验，高层语义特征优先保护语言理解，低层特征则侧重物理感知。</li>
+  </ul>
+
+  <h3 id="s4-valid" class="sub-title">确定性规则验证（Deterministic Rule Validation）</h3>
+  <p>
+    为保证E2E-3M数据质量，数据引擎对生成的QA对进行<strong>两阶段验证</strong>：
+  </p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">🔍 证据锚定验证（Evidence Grounding）</div>
+      <div class="card-body">每条QA的答案必须能够在原始视频的特定帧区间内找到视觉证据。规则验证器通过时间戳对齐和区域匹配来核实答案的可信度，拒绝无法溯源到视频证据的QA对。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">⏱️ 时序逻辑验证（Temporal Logic）</div>
+      <div class="card-body">涉及"之前/之后/同时"等时序关系的QA，通过确定性的时序规则进行一致性检验。例如，"动作A发生在动作B之前"必须与视频时间戳完全一致，否则该QA被过滤。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔢 数值一致性验证（Numerical Consistency）</div>
+      <div class="card-body">涉及计数、距离估计、角度等数值答案的QA，通过几何计算和深度估计进行数值范围的合理性验证，防止模型生成物理上不可能的答案。</div>
+    </div>
+  </div>
+
+  <div class="callout warning">
+    <div class="callout-title">训练策略</div>
+    PhysBrain在InternVL2-4B和InternVL2-8B基础上，先进行E2E-3M的物理常识预训练（Physical Commonsense SFT），再通过双路径适配迁移至VLA策略。训练采用混合精度（BF16），使用AdamW优化器，通过学习率热身+余弦衰减调度。
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════
+     §5  实验结果
+══════════════════════════════════════════════ -->
+<section id="s5">
+  <h2 class="sec-title"><span class="sec-num">5</span>实验结果</h2>
+
+  <!-- ── VQA基准 ── -->
+  <h3 id="s5-vqa" class="sub-title">物理常识VQA基准评测</h3>
+
+  <div class="chart-wrap">
+    <div class="chart-title">ERQA 与 PhysBench 评测结果对比</div>
+    <div id="chartVQA" style="height:360px;"></div>
+  </div>
+
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th>模型</th>
+        <th>参数量</th>
+        <th>ERQA ↑</th>
+        <th>PhysBench ↑</th>
+        <th>备注</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="model-name">GPT-4V</td>
+        <td>-</td>
+        <td>64.2</td>
+        <td>47.3</td>
+        <td>闭源基线</td>
+      </tr>
+      <tr>
+        <td class="model-name">Claude-3.5-Sonnet</td>
+        <td>-</td>
+        <td>67.5</td>
+        <td>49.8</td>
+        <td>闭源基线</td>
+      </tr>
+      <tr>
+        <td class="model-name">InternVL2-4B</td>
+        <td>4B</td>
+        <td>70.1</td>
+        <td>49.6</td>
+        <td>开源基线（4B）</td>
+      </tr>
+      <tr>
+        <td class="model-name">InternVL2-8B</td>
+        <td>8B</td>
+        <td>72.4</td>
+        <td>52.1</td>
+        <td>开源基线（8B）</td>
+      </tr>
+      <tr>
+        <td class="model-name">SpatialBot-3B</td>
+        <td>3B</td>
+        <td>68.3</td>
+        <td>50.4</td>
+        <td>空间增强模型</td>
+      </tr>
+      <tr>
+        <td class="model-name ours"><strong>PhysBrain-4B</strong></td>
+        <td>4B</td>
+        <td class="best ours">90.3</td>
+        <td class="ours">58.3</td>
+        <td>本文方法</td>
+      </tr>
+      <tr>
+        <td class="model-name ours"><strong>PhysBrain-8B</strong></td>
+        <td>8B</td>
+        <td class="ours">77.8</td>
+        <td class="best ours">62.5</td>
+        <td>本文方法</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout success">
+    <div class="callout-title">关键发现</div>
+    PhysBrain-4B 在 ERQA 上以 <strong>90.3</strong> 分大幅领先所有基线，甚至超过参数量更大的 PhysBrain-8B（77.8）。这一现象表明，4B 模型在物理常识注入后产生了更高效的知识压缩，体现了 E2E-3M 数据的高质量与高密度。PhysBrain-8B 则在 PhysBench（62.5）上表现更优，可能得益于更强的推理能力。
+  </div>
+
+  <!-- ── 机器人操控 ── -->
+  <h3 id="s5-robot" class="sub-title">机器人操控基准评测</h3>
+
+  <div class="chart-wrap">
+    <div class="chart-title">机器人操控基准成功率对比（%）</div>
+    <div id="chartRobot" style="height:400px;"></div>
+  </div>
+
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th>模型</th>
+        <th>SimplerEnv-WidowX ↑</th>
+        <th>LIBERO ↑</th>
+        <th>RoboCasa ↑</th>
+        <th>备注</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="model-name">OpenVLA-7B</td>
+        <td>21.3</td>
+        <td>68.2</td>
+        <td>41.5</td>
+        <td>开源VLA基线</td>
+      </tr>
+      <tr>
+        <td class="model-name">π₀-7B</td>
+        <td>26.7</td>
+        <td>78.4</td>
+        <td>52.3</td>
+        <td>流匹配VLA</td>
+      </tr>
+      <tr>
+        <td class="model-name">RoboVLMs-7B</td>
+        <td>28.4</td>
+        <td>81.3</td>
+        <td>58.7</td>
+        <td>VLM→VLA系统研究</td>
+      </tr>
+      <tr>
+        <td class="model-name">InternVL2-8B + VLA</td>
+        <td>29.1</td>
+        <td>85.6</td>
+        <td>61.2</td>
+        <td>直接VLA微调</td>
+      </tr>
+      <tr>
+        <td class="model-name ours"><strong>PhysBrain-4B</strong></td>
+        <td class="ours">34.7</td>
+        <td class="ours">80.6</td>
+        <td class="ours">65.9</td>
+        <td>本文方法</td>
+      </tr>
+      <tr>
+        <td class="model-name ours"><strong>PhysBrain-8B</strong></td>
+        <td class="best ours">34.8</td>
+        <td class="best ours">94.8</td>
+        <td class="best ours">67.4</td>
+        <td>本文方法</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout insight">
+    <div class="callout-title">域外泛化突出（SimplerEnv-WidowX）</div>
+    SimplerEnv 代表了<em>跨平台域外评测</em>——训练时使用的数据来自不同机器人平台，测试时切换到 WidowX 机械臂。PhysBrain-8B 以 <strong>34.8%</strong> 的成功率超越所有基线约 <strong>5-6 个百分点</strong>，这强烈表明物理常识先验显著增强了跨域泛化能力，而非仅在域内数据上记忆动作模式。LIBERO 结果（94.8%）同样显示出接近完美的任务完成率。
+  </div>
+
+  <div class="chart-wrap">
+    <div class="chart-title">PhysBrain-8B vs -4B 各基准全面对比（雷达图）</div>
+    <div id="chartRadar" style="height:380px;"></div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════
+     §6  消融实验
+══════════════════════════════════════════════ -->
+<section id="s6">
+  <h2 class="sec-title"><span class="sec-num">6</span>消融实验</h2>
+  <p>
+    作者通过系统性消融实验验证了各模块设计的有效性，主要针对以下四个维度展开：
+  </p>
+
+  <h3 class="sub-title">消融一：QA模式有效性验证</h3>
+
+  <table class="abl-table">
+    <thead>
+      <tr>
+        <th>时序</th><th>空间</th><th>属性</th><th>力学</th><th>推理</th><th>摘要</th><th>轨迹</th>
+        <th>ERQA</th><th>PhysBench</th><th>SimplerEnv</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td>
+        <td>74.3</td><td>50.2</td><td>27.1</td>
+      </tr>
+      <tr>
+        <td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td>
+        <td>78.6</td><td>53.8</td><td>29.4</td>
+      </tr>
+      <tr>
+        <td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td><td class="cross">✗</td><td class="cross">✗</td>
+        <td>83.1</td><td>57.4</td><td>31.6</td>
+      </tr>
+      <tr>
+        <td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="cross">✗</td>
+        <td>86.7</td><td>60.1</td><td>33.2</td>
+      </tr>
+      <tr>
+        <td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td>
+        <td class="highlight">90.3</td><td class="highlight">62.5</td><td class="highlight">34.8</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:13px;color:var(--subtext);margin-top:-12px;">↑ 逐步加入QA模式后，各项指标单调递增，验证了每类模式的独立贡献。</p>
+
+  <h3 class="sub-title">消融二：双路径适配有效性</h3>
+
+  <table class="abl-table">
+    <thead>
+      <tr>
+        <th>适配方式</th><th>LIBERO ↑</th><th>RoboCasa ↑</th><th>SimplerEnv ↑</th><th>ERQA保留率</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="text-align:left">无适配（直接VLM→VLA）</td>
+        <td>85.6</td><td>61.2</td><td>29.1</td><td>100%</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">单路径全参数微调</td>
+        <td>89.3</td><td>63.8</td><td>31.4</td><td>72.1%</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">单路径LoRA微调</td>
+        <td>91.2</td><td>65.1</td><td>32.7</td><td>86.4%</td>
+      </tr>
+      <tr>
+        <td style="text-align:left">双路径（无语言敏感）</td>
+        <td>92.7</td><td>66.3</td><td>33.9</td><td>91.2%</td>
+      </tr>
+      <tr>
+        <td style="text-align:left" class="highlight">双路径 + 语言敏感适配</td>
+        <td class="highlight">94.8</td><td class="highlight">67.4</td><td class="highlight">34.8</td><td class="highlight">96.8%</td>
+      </tr>
+    </tbody>
+  </table>
+  <p style="font-size:13px;color:var(--subtext);margin-top:-12px;">↑ 双路径+语言敏感适配在所有操控基准上均优于消融变体，同时最大程度保留了VLM原有物理感知能力（ERQA保留率96.8%）。</p>
+
+  <h3 class="sub-title">消融三：规则验证的数据质量影响</h3>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">无规则验证（噪声数据）</div>
+      <div class="card-body">ERQA: 82.1 / PhysBench: 55.3<br>使用原始生成QA不过滤，噪声导致约8-9点性能下降，说明数据质量至关重要。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">仅证据锚定验证</div>
+      <div class="card-body">ERQA: 86.7 / PhysBench: 59.2<br>保留了时序和数值噪声，仍有一定的性能损失。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">完整规则验证（本文方法）</div>
+      <div class="card-body">ERQA: 90.3 / PhysBench: 62.5<br>三阶段验证过滤后数据质量最高，各项指标达到最优。</div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════
+     §7  局限性
+══════════════════════════════════════════════ -->
+<section id="s7">
+  <h2 class="sec-title"><span class="sec-num">7</span>局限性与未来方向</h2>
+
+  <div class="limit-grid">
+    <div class="limit-card">
+      <div class="limit-title">触觉与力反馈缺失</div>
+      <div class="limit-body">E2E-3M 数据完全来自视觉模态，缺乏触觉传感器数据。对于依赖精确力控的任务（如拧螺丝、精密装配），仅靠视觉推断的力学常识可能不足，存在执行误差。</div>
+    </div>
+    <div class="limit-card">
+      <div class="limit-title">3D几何理解局限</div>
+      <div class="limit-body">深度感知依赖单目深度估计，在缺乏纹理或高光反射的物体表面上精度有限。复杂3D场景的空间推理仍弱于双目/LiDAR系统，可能影响精细空间操作。</div>
+    </div>
+    <div class="limit-card">
+      <div class="limit-title">长时序任务的规划不足</div>
+      <div class="limit-body">当前模型擅长单步或短序列操作，对于需要10步以上的长时序任务（如完整的烹饪流程），物理常识的跨步骤积累与传播机制尚待探索。</div>
+    </div>
+    <div class="limit-card">
+      <div class="limit-title">领域偏移仍存在</div>
+      <div class="limit-body">尽管域外泛化性能有所提升，但从人类视频到机器人执行仍存在观察-执行差（Observation-Action Gap）。极端外观差异（如工业环境 vs. 家庭环境）下的泛化仍具挑战。</div>
+    </div>
+    <div class="limit-card">
+      <div class="limit-title">QA生成的幻觉风险</div>
+      <div class="limit-body">数据引擎依赖VLM进行场景解析和QA生成，大型语言模型固有的幻觉问题虽经规则验证部分缓解，但不能完全消除低质量QA对模型的潜在负面影响。</div>
+    </div>
+    <div class="limit-card">
+      <div class="limit-title">计算资源需求较高</div>
+      <div class="limit-body">处理3M规模的VQA数据集和进行两阶段训练（物理常识SFT + VLA适配）需要大量GPU资源，限制了个人研究者和小型实验室的可及性。</div>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-title">作者指出的未来方向</div>
+    <ul class="styled" style="margin:8px 0 0;">
+      <li>引入多模态触觉数据（如触觉传感器视频）扩展E2E-3M数据集</li>
+      <li>探索视觉-语言-动作-触觉（VLAT）统一建模框架</li>
+      <li>将物理常识迁移扩展至移动操作（Mobile Manipulation）场景</li>
+      <li>研究在线学习机制，让VLA策略在部署中持续更新物理先验</li>
+    </ul>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ══════════════════════════════════════════════
+     §8  核心洞见
+══════════════════════════════════════════════ -->
+<section id="s8">
+  <h2 class="sec-title"><span class="sec-num">8</span>核心洞见与价值评估</h2>
+
+  <div class="insight-list">
+    <div class="insight-card">
+      <div class="icon">💡</div>
+      <div class="content">
+        <div class="title">洞见一：人类视频是廉价的物理常识教师</div>
+        <div class="body">
+          PhysBrain 最核心的贡献在于识别了一个被忽视的数据金矿：大量免费可用的人类第一人称操作视频。这类视频与机器人视角天然对齐，蕴含的物理常识远超通用互联网图文数据。通过系统化的信息提取引擎，可以以极低成本构建高质量的物理先验监督信号，为VLA模型提供免费的"物理课"。这一思路具有高度的可扩展性——随着可穿戴设备和第一人称视频数据的爆炸式增长，这条技术路线的潜力会持续放大。
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-card">
+      <div class="icon">🏗️</div>
+      <div class="content">
+        <div class="title">洞见二：双路径设计优雅地解决了能力保留的权衡</div>
+        <div class="body">
+          在VLM→VLA迁移中，"注入新能力"与"保留原有能力"之间存在固有张力。PhysBrain的双路径架构是这一难题的一个优雅解——通过将能力保留和知识注入分离为两条并行路径，并在动作头处融合，既避免了全参数微调带来的灾难性遗忘（实验中ERQA保留率达96.8%），又最大化了物理先验的实际贡献。这一架构设计思路具有广泛的迁移价值，可应用于其他需要"保留+增强"的多模态适配场景。
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-card">
+      <div class="icon">📐</div>
+      <div class="content">
+        <div class="title">洞见三：结构化QA模式是连接感知与操控的关键桥梁</div>
+        <div class="body">
+          7类QA模式的设计并非随意分类，而是经过精心选择以覆盖具身操控所需的完整感知-推理链路：从底层的属性/空间识别，到中层的力学理解和时序感知，再到高层的因果推理和过程摘要。消融实验证明每类模式都有独立贡献，且轨迹预测模式对操控基准的提升尤为显著（移除后SimplerEnv下降约1.6点），体现了动作先验的直接价值。这种层次化的QA设计框架可以作为未来数据引擎设计的参考范式。
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-card">
+      <div class="icon">🌐</div>
+      <div class="content">
+        <div class="title">洞见四：物理常识是提升泛化而非记忆的关键</div>
+        <div class="body">
+          SimplerEnv-WidowX 的强劲表现（+5-6点领先基线）最具说服力——这是一个严格的跨域评测，模型无法依赖训练时见过的动作模式取巧。PhysBrain在此场景的优势来自真正的物理理解（如知道"玻璃杯易碎应轻握"），而非动作记忆的泛化。这验证了论文的核心假说：物理常识是具身智能泛化能力的基础，而非附加品。这一发现对整个VLA研究方向具有重要的方法论启示——在追求数据规模和模型能力的同时，物理先验的系统性注入应成为标配。
+        </div>
+      </div>
+    </div>
+
+    <div class="insight-card">
+      <div class="icon">⚖️</div>
+      <div class="content">
+        <div class="title">洞见五：4B小模型的惊人表现值得深思</div>
+        <div class="body">
+          PhysBrain-4B 在 ERQA 上以 90.3 分超越 PhysBrain-8B（77.8），这一反直觉结果说明：<strong>高质量的任务特定数据（E2E-3M）能够弥补参数量差距，甚至在专项任务上实现逆转</strong>。这对资源受限的研究者和工业落地场景具有重要意义——不必追求最大参数量，聚焦于数据质量和任务对齐的小模型可以达到更优的效费比。当然，8B模型在PhysBench和操控基准上的全面领先也说明更大容量对复杂推理任务仍有优势。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">综合评价</h3>
+  <p>
+    PhysBrain 1.0 是一篇具有系统性和工程完整性的工作。其最大价值不在于单一模块的创新，而在于提出了一套<em>完整的物理常识注入闭环</em>：从数据来源（自我中心视频）→ 信息提取（四维感知模块）→ 监督构造（7类QA模式）→ 质量保证（规则验证）→ 模型训练（PhysBrain VLM）→ 策略迁移（双路径适配）→ 全链路评测（5个基准）。这种完整的系统设计思路，以及在多个SOTA基准上的强劲验证，使得PhysBrain成为VLA物理先验研究方向上重要的里程碑工作。
+  </p>
+
+  <div class="callout insight">
+    <div class="callout-title">对未来工作的启发</div>
+    PhysBrain 的成功为以下研究方向开辟了新路径：（1）将数据引擎扩展至工业制造视频，为工业机器人注入专业物理常识；（2）结合强化学习与物理常识先验，实现更高效的在线策略优化；（3）探索轻量化部署方案（如量化+蒸馏），将物理感知VLA推向边缘计算设备。PhysBrain 1.0 的开源资源（数据集+权重）有望加速整个社区在这一方向上的进展。
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<div style="margin-top:60px;padding-top:24px;border-top:1px solid var(--border);text-align:center;font-size:12px;color:var(--muted);">
+  阅读报告生成时间：2026年5月29日 &nbsp;|&nbsp; 论文：arXiv:2605.15298 &nbsp;|&nbsp; PhysBrain 1.0 Technical Report
+</div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════ -->
+<script>
+// ── TOC SCROLL HIGHLIGHT ──
+(function(){
+  const links = document.querySelectorAll('#toc a');
+  const sections = Array.from(links).map(a => document.querySelector(a.getAttribute('href')));
+  function onScroll(){
+    const scrollY = window.scrollY + 80;
+    let active = 0;
+    sections.forEach((s,i) => {
+      if(s && s.offsetTop <= scrollY) active = i;
+    });
+    links.forEach((l,i) => l.classList.toggle('active', i === active));
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+
+// ── ECHARTS: Dataset Composition ──
+(function(){
+  const chart = echarts.init(document.getElementById('chartDataset'));
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{ trigger:'item', formatter:'{b}: {c} ({d}%)' },
+    legend:{ orient:'vertical', right:'5%', top:'center', textStyle:{ color:'#a6adc8', fontSize:13 } },
+    series:[{
+      type:'pie', radius:['42%','70%'],
+      center:['40%','50%'],
+      data:[
+        { value:1450, name:'Ego4D', itemStyle:{ color:'#89b4fa' } },
+        { value:980, name:'EgoDex', itemStyle:{ color:'#a6e3a1' } },
+        { value:570, name:'BuildAI', itemStyle:{ color:'#cba6f7' } },
+      ],
+      label:{ color:'#cdd6f4', formatter:'{b}\n{d}%' },
+      emphasis:{ itemStyle:{ shadowBlur:10, shadowOffsetX:0, shadowColor:'rgba(0,0,0,0.5)' } }
+    }]
+  });
+})();
+
+// ── ECHARTS: VQA Results ──
+(function(){
+  const chart = echarts.init(document.getElementById('chartVQA'));
+  const models = ['GPT-4V','Claude-3.5-Sonnet','InternVL2-4B','InternVL2-8B','SpatialBot-3B','PhysBrain-4B','PhysBrain-8B'];
+  const erqa =    [64.2, 67.5, 70.1, 72.4, 68.3, 90.3, 77.8];
+  const phys =    [47.3, 49.8, 49.6, 52.1, 50.4, 58.3, 62.5];
+  const colors =  ['#6c7086','#6c7086','#6c7086','#6c7086','#6c7086','#a6e3a1','#89b4fa'];
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{ trigger:'axis', axisPointer:{ type:'shadow' }, backgroundColor:'#313244', textStyle:{ color:'#cdd6f4' } },
+    legend:{ data:['ERQA','PhysBench'], textStyle:{ color:'#a6adc8' }, top:6 },
+    grid:{ left:'2%', right:'4%', bottom:'12%', containLabel:true },
+    xAxis:{ type:'category', data:models, axisLabel:{ color:'#a6adc8', fontSize:11, rotate:15 }, axisLine:{ lineStyle:{ color:'#45475a' } } },
+    yAxis:{ type:'value', min:40, max:95, axisLabel:{ color:'#a6adc8' }, splitLine:{ lineStyle:{ color:'#313244' } } },
+    series:[
+      {
+        name:'ERQA', type:'bar', barWidth:'28%',
+        data: erqa.map((v,i) => ({ value:v, itemStyle:{ color: i >= 5 ? '#89b4fa' : '#45475a', borderRadius:[3,3,0,0] } })),
+        label:{ show:true, position:'top', color:'#cdd6f4', fontSize:11 }
+      },
+      {
+        name:'PhysBench', type:'bar', barWidth:'28%', barGap:'10%',
+        data: phys.map((v,i) => ({ value:v, itemStyle:{ color: i >= 5 ? '#a6e3a1' : '#313244', borderColor: i >= 5 ? '#a6e3a1' : '#45475a', borderWidth:1, borderRadius:[3,3,0,0] } })),
+        label:{ show:true, position:'top', color:'#cdd6f4', fontSize:11 }
+      }
+    ]
+  });
+})();
+
+// ── ECHARTS: Robot Manipulation ──
+(function(){
+  const chart = echarts.init(document.getElementById('chartRobot'));
+  const models = ['OpenVLA-7B','π₀-7B','RoboVLMs-7B','InternVL2-8B+VLA','PhysBrain-4B','PhysBrain-8B'];
+  const simpler = [21.3, 26.7, 28.4, 29.1, 34.7, 34.8];
+  const libero =  [68.2, 78.4, 81.3, 85.6, 80.6, 94.8];
+  const robocasa= [41.5, 52.3, 58.7, 61.2, 65.9, 67.4];
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{ trigger:'axis', axisPointer:{type:'shadow'}, backgroundColor:'#313244', textStyle:{color:'#cdd6f4'} },
+    legend:{ data:['SimplerEnv-WidowX','LIBERO','RoboCasa'], textStyle:{color:'#a6adc8'}, top:6 },
+    grid:{ left:'2%', right:'4%', bottom:'14%', containLabel:true },
+    xAxis:{ type:'category', data:models, axisLabel:{color:'#a6adc8', fontSize:11, rotate:12}, axisLine:{lineStyle:{color:'#45475a'}} },
+    yAxis:{ type:'value', min:0, max:100, axisLabel:{color:'#a6adc8', formatter:'{value}%'}, splitLine:{lineStyle:{color:'#313244'}} },
+    series:[
+      {
+        name:'SimplerEnv-WidowX', type:'bar', barWidth:'22%',
+        data: simpler.map((v,i) => ({ value:v, itemStyle:{ color: i >= 4 ? '#89b4fa' : '#45475a', borderRadius:[3,3,0,0] } })),
+        label:{ show:true, position:'top', color:'#cdd6f4', fontSize:10 }
+      },
+      {
+        name:'LIBERO', type:'bar', barWidth:'22%',
+        data: libero.map((v,i) => ({ value:v, itemStyle:{ color: i >= 4 ? '#a6e3a1' : '#313244', borderColor: i >= 4 ? '#a6e3a1' : '#45475a', borderWidth:1, borderRadius:[3,3,0,0] } })),
+        label:{ show:true, position:'top', color:'#cdd6f4', fontSize:10 }
+      },
+      {
+        name:'RoboCasa', type:'bar', barWidth:'22%',
+        data: robocasa.map((v,i) => ({ value:v, itemStyle:{ color: i >= 4 ? '#cba6f7' : '#3d3d50', borderColor: i >= 4 ? '#cba6f7' : '#45475a', borderWidth:1, borderRadius:[3,3,0,0] } })),
+        label:{ show:true, position:'top', color:'#cdd6f4', fontSize:10 }
+      }
+    ]
+  });
+})();
+
+// ── ECHARTS: Radar ──
+(function(){
+  const chart = echarts.init(document.getElementById('chartRadar'));
+  chart.setOption({
+    backgroundColor:'transparent',
+    tooltip:{ backgroundColor:'#313244', textStyle:{color:'#cdd6f4'} },
+    legend:{ data:['PhysBrain-8B','PhysBrain-4B'], textStyle:{color:'#a6adc8'}, top:6 },
+    radar:{
+      indicator:[
+        { name:'ERQA', max:100 },
+        { name:'PhysBench', max:70 },
+        { name:'SimplerEnv', max:40 },
+        { name:'LIBERO', max:100 },
+        { name:'RoboCasa', max:80 }
+      ],
+      center:['50%','55%'],
+      radius:'65%',
+      axisName:{ color:'#a6adc8', fontSize:12 },
+      splitLine:{ lineStyle:{ color:'#313244' } },
+      splitArea:{ areaStyle:{ color:['rgba(69,71,90,.15)','rgba(49,50,68,.15)'] } },
+      axisLine:{ lineStyle:{ color:'#45475a' } }
+    },
+    series:[{
+      type:'radar',
+      data:[
+        {
+          value:[77.8, 62.5, 34.8, 94.8, 67.4],
+          name:'PhysBrain-8B',
+          symbol:'circle', symbolSize:4,
+          lineStyle:{ color:'#89b4fa', width:2 },
+          areaStyle:{ color:'rgba(137,180,250,.15)' },
+          itemStyle:{ color:'#89b4fa' }
+        },
+        {
+          value:[90.3, 58.3, 34.7, 80.6, 65.9],
+          name:'PhysBrain-4B',
+          symbol:'circle', symbolSize:4,
+          lineStyle:{ color:'#a6e3a1', width:2 },
+          areaStyle:{ color:'rgba(166,227,161,.12)' },
+          itemStyle:{ color:'#a6e3a1' }
+        }
+      ]
+    }]
+  });
+})();
+
+// ── RESIZE ──
+window.addEventListener('resize', ()=>{
+  ['chartDataset','chartVQA','chartRobot','chartRadar'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) echarts.getInstanceByDom(el)?.resize();
+  });
+});
+</script>
+</body>
+</html>

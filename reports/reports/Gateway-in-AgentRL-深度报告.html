@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Gateway 在 Agent RL 训练中的应用</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8}
+#toc{position:fixed;top:0;left:0;width:235px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border)}
+#toc h2{color:var(--heading);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#toc a:hover{background:var(--border)}#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600}
+#toc a.h3{padding-left:20px;font-size:12px;opacity:.8}
+main{margin-left:255px;max-width:none;padding:40px 64px}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em}
+p{margin:.6em 0}a{color:var(--link)}strong{color:var(--strong)}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border)}
+td{padding:7px 12px;border:1px solid var(--border);vertical-align:top}
+tr:hover td{background:#2a2a3e}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em}
+code{font-family:'JetBrains Mono','Fira Code',monospace}
+p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+ul,ol{padding-left:1.6em;margin:.5em 0}li{margin:.3em 0}
+.algo-box{background:#1a1a2e;border:1px solid var(--border);border-radius:6px;padding:18px 22px;margin:1em 0;font-size:.9em;line-height:1.9}
+.algo-box .algo-title{color:var(--heading);font-weight:700;font-size:1em;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.algo-box .kw{color:#cba6f7;font-weight:700}.algo-box .cm{color:#6c7086;font-style:italic}
+.algo-box .var{color:#94e2d5}.algo-box .fn{color:#a6e3a1}.algo-box .num{color:#f9e2af}
+.card{background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:.8em 0}
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin:1em 0}
+.hl{background:#2a2a3e;border-left:4px solid var(--heading);border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.warn{background:#3a2a1e;border-left:4px solid #fab387;border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.danger{background:#3a1e1e;border-left:4px solid #f38ba8;border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.tip{background:#1e3a2e;border-left:4px solid #a6e3a1;border-radius:0 6px 6px 0;padding:12px 18px;margin:1em 0}
+.bd{display:inline-block;font-size:.75em;font-weight:700;padding:2px 8px;border-radius:10px;margin-right:4px}
+.r{background:#f38ba8;color:#1e1e2e}.o{background:#fab387;color:#1e1e2e}
+.g{background:#a6e3a1;color:#1e1e2e}.b{background:#89b4fa;color:#1e1e2e}.p{background:#cba6f7;color:#1e1e2e}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}}</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>LLM Gateway 在 Agent RL 训练中的应用</h1>
+<p style="color:#6c7086;margin-bottom:1.5em">Rollout 管理 · 轨迹缓存 · Token 预算 · 工具代理 · 训练可观测性 | 专注 Gateway 与 Agent RL 训练系统的深度集成</p>
+
+<table>
+<tr><th>核心议题</th><td>LLM Gateway 如何成为 Agent RL 训练基础设施的关键组件</td></tr>
+<tr><th>涉及能力</th><td>并发 Rollout 管理、子轨迹语义缓存、训练 Token 预算控制、工具调用代理、轨迹级可观测性、多 Provider 路由</td></tr>
+</table>
+
+<!-- ===== 1 ===== -->
+<h2>1. 为什么 Agent RL 训练特别需要 Gateway</h2>
+
+<p>Agent RL 训练的 Rollout 阶段会产生远比推理场景更极端的压力：同时采样数十条长轨迹（每条 10K~100K token）、频繁并发工具调用、需要跨多个 Provider 路由以控制成本——这些在直连 LLM API 的架构下根本无法管理。</p>
+
+<div class="danger">
+<strong>直连 LLM API 的 Agent RL 训练会遭遇什么？</strong>
+<ul style="margin-top:8px">
+<li>并行 G=16 条轨迹 × 平均 20 步 = 每个 Batch 320 次 LLM 调用，直接命中 Provider RPM 限制</li>
+<li>单条 70K token 轨迹 × 16 并行 = 112M tokens/batch，成本失控，无预算保护</li>
+<li>Provider 临时限速或故障直接中断训练，无熔断/故障转移，需要从头重跑</li>
+<li>轨迹中出现的相似子序列被重复送给 LLM 推理，无任何缓存复用</li>
+<li>训练崩溃后无法定位是哪步工具调用或哪个 Provider 导致的，缺乏可观测性</li>
+</ul>
+</div>
+
+<p>Gateway 在 Agent RL 训练中承担的不只是"代理转发"，而是成为<strong>训练基础设施的关键控制平面</strong>：</p>
+
+<div class="cg">
+<div class="card"><strong style="color:#89b4fa">🔀 Rollout 并发管理</strong><br>控制 G 条并行轨迹的 LLM 调用队列，匀速发送，防止 Provider 限速中断</div>
+<div class="card"><strong style="color:#a6e3a1">💾 子轨迹语义缓存</strong><br>相同前缀轨迹的 LLM 续写可复用缓存，节省重复计算</div>
+<div class="card"><strong style="color:#fab387">💰 训练 Token 预算</strong><br>按 Batch/Epoch 设置 Token 上限，防止 RL 训练 Loop 中的成本爆炸</div>
+<div class="card"><strong style="color:#cba6f7">🔧 工具调用统一代理</strong><br>Gateway 作为工具执行层，统一处理超时/重试/结果截断</div>
+<div class="card"><strong style="color:#f38ba8">📊 轨迹级可观测性</strong><br>追踪每条轨迹的 token 消耗、步骤延迟、工具成功率，定位训练问题</div>
+<div class="card"><strong style="color:#89dceb">⚡ 多 Provider 故障转移</strong><br>训练中某 Provider 不可用时自动切换，保证 Rollout 不中断</div>
+</div>
+
+<!-- ===== 2 ===== -->
+<h2>2. Agent RL 训练系统的整体架构</h2>
+
+<pre class="mermaid">
+flowchart TB
+    subgraph TRAINER["RL 训练进程"]
+        direction LR
+        SAMP["轨迹采样器\nRollout Worker"]
+        OPT["参数优化器\nPPO/GRPO Update"]
+        VERIF["任务验证器\nReward Calculator"]
+    end
+
+    subgraph GW["LLM Gateway（控制平面）"]
+        direction TB
+        QUEUE["Rollout 队列\n并发控制 G=16"]
+        TCACHE["轨迹前缀缓存\nKV-Cache Proxy"]
+        BUDGET["Token 预算器\n按 Batch 限额"]
+        ROUTER["训练感知路由\n低成本 Provider 优先"]
+        CB["熔断器\n训练稳定保护"]
+        TOBS["轨迹观测器\nStep-level Metrics"]
+        TOOLPX["工具代理层\n统一执行 + 超时"]
+    end
+
+    subgraph PROVIDERS["LLM Provider 层"]
+        direction LR
+        P1["GPT-4o\n高质量 Rollout"]
+        P2["Claude 3.5\n备用 Provider"]
+        P3["Gemini 1.5\n低成本批量"]
+        P4["Self-hosted\nvLLM 本地推理"]
+    end
+
+    subgraph TOOLS["工具执行层"]
+        direction LR
+        T1["代码沙箱\nDocker"]
+        T2["浏览器\nPlaywright"]
+        T3["文件系统\nFS Sandbox"]
+        T4["外部 API\nHTTP Proxy"]
+    end
+
+    SAMP -->|"并发 G 条 LLM 请求"| QUEUE
+    QUEUE --> TCACHE --> BUDGET --> ROUTER --> CB
+    CB --> P1 & P2 & P3 & P4
+    P1 & P2 & P3 & P4 -->|"LLM 生成动作"| TOOLPX
+    TOOLPX --> T1 & T2 & T3 & T4
+    T1 & T2 & T3 & T4 -->|"工具观测结果"| TOBS
+    TOBS -->|"完整轨迹"| VERIF
+    VERIF -->|"奖励信号"| OPT
+    OPT -->|"新策略参数"| SAMP
+
+    style TRAINER fill:#1a1a2e,stroke:#89b4fa
+    style GW fill:#1a1a2e,stroke:#a6e3a1
+    style PROVIDERS fill:#1a1a2e,stroke:#fab387
+    style TOOLS fill:#1a1a2e,stroke:#cba6f7
+</pre>
+
+<!-- ===== 3 ===== -->
+<h2>3. Rollout 并发管理：Gateway 的调度核心</h2>
+
+<h3>3.1 并发 Rollout 的核心矛盾</h3>
+
+<p>Agent RL 的 Rollout 阶段需要对同一任务并行采样 $G$ 条轨迹（GRPO 中 $G=8\sim16$），每条轨迹本身又是串行多步的——在每步 LLM 推理结束前无法进行下一步。这产生了"轨迹间并发、轨迹内串行"的特殊访问模式：</p>
+
+<p>$$\text{并发 LLM 调用数} = G \times B \times \frac{1}{\bar{T}_{step}}$$</p>
+
+<p>其中 $G$ 为并行轨迹数，$B$ 为 batch 中的任务数，$\bar{T}_{step}$ 为每步平均耗时。对于 $G=16, B=32, \bar{T}_{step}=3s$，峰值并发约 171 QPS——远超大多数 Provider 的 RPM 限制。</p>
+
+<h3>3.2 Gateway 的 Rollout 队列设计</h3>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph WORKERS["Rollout Workers（G×B 个协程）"]
+        W1["轨迹 1\n任务 A"]
+        W2["轨迹 2\n任务 A"]
+        WN["轨迹 G×B\n任务 N"]
+    end
+
+    subgraph GW["Gateway 队列层"]
+        PQ["优先级队列\n按轨迹步数排序\n步数少的优先完成"]
+        RL["令牌桶限流\n对齐 Provider RPM"]
+        SLOT["并发槽位池\nmax_concurrent=64"]
+    end
+
+    W1 & W2 & WN -->|"POST /v1/chat/completions\nX-Trajectory-ID: traj-001\nX-Step: 7"| PQ
+    PQ --> RL --> SLOT
+    SLOT -->|"放行"| PROVIDER["Provider"]
+    SLOT -->|"等待槽位"| WAIT["排队（非阻塞）"]
+
+    style GW fill:#1a1a2e,stroke:#a6e3a1
+</pre>
+
+<p>队列调度策略——<strong>步数少的轨迹优先</strong>（Shortest-Job-First 变体）：</p>
+<p>$$\text{priority}(\tau) = \frac{1}{T_{current} + 1} + \alpha \cdot \frac{R_{partial}(\tau)}{T_{max}}$$</p>
+
+<p>步数少的轨迹优先完成，释放资源；第二项鼓励奖励信号更高的轨迹优先推进（减少等待高质量经验）。</p>
+
+<div class="algo-box">
+<div class="algo-title">Algorithm 1: Rollout 并发调度器</div>
+<p><span class="kw">class</span> <span class="var">RolloutScheduler</span>:</p>
+<p style="padding-left:1.5em"><span class="var">max_concurrent</span> = <span class="num">64</span>  <span class="cm">// 全局并发槽位上限</span></p>
+<p style="padding-left:1.5em"><span class="var">provider_rpm</span> = {gpt4o: <span class="num">500</span>, claude: <span class="num">200</span>, gemini: <span class="num">1000</span>}</p>
+<p style="padding-left:1.5em"><span class="var">active_slots</span> = <span class="fn">Semaphore</span>(<span class="var">max_concurrent</span>)</p>
+<p style="padding-left:1.5em"><span class="var">pq</span> = <span class="fn">PriorityQueue</span>()</p>
+<br>
+<p style="padding-left:1.5em"><span class="kw">async def</span> <span class="fn">submit</span>(traj_id, step, request):</p>
+<p style="padding-left:3em">priority = <span class="num">-</span>step  <span class="cm">// 步数少 → 负数更大 → 更高优先级</span></p>
+<p style="padding-left:3em"><span class="kw">await</span> <span class="var">pq</span>.<span class="fn">put</span>((priority, traj_id, request))</p>
+<br>
+<p style="padding-left:1.5em"><span class="kw">async def</span> <span class="fn">dispatch_loop</span>():</p>
+<p style="padding-left:3em"><span class="kw">while True</span>:</p>
+<p style="padding-left:4.5em">_, traj_id, req = <span class="kw">await</span> <span class="var">pq</span>.<span class="fn">get</span>()</p>
+<p style="padding-left:4.5em"><span class="kw">await</span> <span class="var">active_slots</span>.<span class="fn">acquire</span>()</p>
+<p style="padding-left:4.5em"><span class="cm">// 检查 Provider 限速：按 RPM 令牌桶</span></p>
+<p style="padding-left:4.5em">provider = <span class="fn">select_provider</span>(req)  <span class="cm">// 路由决策</span></p>
+<p style="padding-left:4.5em"><span class="kw">await</span> <span class="fn">rpm_bucket</span>(provider).<span class="fn">acquire</span>()</p>
+<p style="padding-left:4.5em"><span class="fn">asyncio.create_task</span>(<span class="fn">call_llm</span>(req, traj_id))</p>
+<p style="padding-left:4.5em"><span class="cm">// call_llm 结束时 release active_slots</span></p>
+</div>
+
+<h3>3.3 训练感知的 Provider 路由</h3>
+
+<p>Agent RL 训练中 Provider 路由的目标与推理场景不同：训练更在意<strong>成本控制</strong>和<strong>轨迹多样性</strong>，而非最低延迟。</p>
+
+<table>
+<tr><th>训练阶段</th><th>路由策略</th><th>原因</th></tr>
+<tr><td>探索期（初期 Rollout）</td><td>低成本 Provider 优先（Gemini/本地模型）</td><td>早期策略质量差，省钱探索即可</td></tr>
+<tr><td>精炼期（成功轨迹附近）</td><td>高质量 Provider（GPT-4o/Claude）</td><td>临近成功时需高质量推理找到正确路径</td></tr>
+<tr><td>验证期（固定 Benchmark 评测）</td><td>固定单一 Provider</td><td>控制变量，保证评测可比性</td></tr>
+<tr><td>大规模采样期</td><td>多 Provider 混合 + 负载均衡</td><td>并行度高，需要分散压力</td></tr>
+</table>
+
+<p>路由决策可以注入轨迹元信息进行决策：</p>
+<pre><code class="language-python">def select_provider_for_rollout(request: RolloutRequest) -> Provider:
+    step = request.headers.get("X-Trajectory-Step", 0)
+    partial_reward = request.headers.get("X-Partial-Reward", 0.0)
+    is_eval = request.headers.get("X-Is-Eval", False)
+
+    if is_eval:
+        return FIXED_EVAL_PROVIDER  # 评测固定 Provider
+
+    # 高奖励轨迹（接近成功）用更好的模型
+    if partial_reward > 0.6:
+        return Provider.GPT4O
+
+    # 探索期（低步数 + 低奖励）用便宜模型
+    if step < 5 and partial_reward < 0.2:
+        return Provider.GEMINI_FLASH
+
+    # 默认：UCB 选择（见 Gateway 路由报告）
+    return ucb_router.select()
+</code></pre>
+
+<!-- ===== 4 ===== -->
+<h2>4. 子轨迹语义缓存：Agent RL 的独特缓存策略</h2>
+
+<h3>4.1 Agent RL 中的缓存机会</h3>
+
+<p>标准 LLM 缓存（精确匹配或语义相似）在 Agent RL 中需要针对轨迹结构做特化设计，因为存在多种可复用的模式：</p>
+
+<div class="cg">
+<div class="card"><strong style="color:#89b4fa">① 相同前缀轨迹</strong><br>同一任务的 G 条并行轨迹，在初始步骤（系统提示 + 初始 obs）完全相同，第一步 LLM 调用可 100% 缓存复用，节省 G-1 次调用</div>
+<div class="card"><strong style="color:#a6e3a1">② 跨轨迹相似子状态</strong><br>不同任务的中间状态可能语义相近（如"搜索后发现信息不足，需要换关键词"），语义缓存可复用对应步骤的行动策略</div>
+<div class="card"><strong style="color:#fab387">③ 跨 Iteration 缓存</strong><br>相邻训练迭代中，策略更新幅度小（KL &lt; 0.05），相同子状态的最优动作基本不变，可复用上一 Iteration 的缓存</div>
+<div class="card"><strong style="color:#cba6f7">④ KV Cache 前缀共享</strong><br>Gateway 感知公共前缀（系统提示 + 工具文档），在 vLLM 等推理引擎中启用 prefix caching，减少 TTFT</div>
+</div>
+
+<h3>4.2 轨迹前缀缓存（Prefix Cache）架构</h3>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant W1 as 轨迹 1 Worker
+    participant W2 as 轨迹 2 Worker
+    participant GW as Gateway
+    participant VC as 前缀缓存
+    participant LLM as Provider
+
+    Note over W1,W2: 同一任务，G=2 条并行轨迹
+    W1->>GW: Step 0: [SYS+TOOLS+TASK]
+    GW->>VC: 查找前缀哈希
+    VC-->>GW: MISS
+    GW->>LLM: 完整请求
+    LLM-->>GW: 动作 a0_traj1
+    GW->>VC: 写入 prefix_hash → KV cache ptr
+    GW-->>W1: a0_traj1
+
+    W2->>GW: Step 0: [SYS+TOOLS+TASK] (完全相同)
+    GW->>VC: 查找前缀哈希
+    VC-->>GW: HIT (共享 KV cache)
+    GW->>LLM: 带 prefix_cache_id 的短请求
+    LLM-->>GW: 动作 a0_traj2 (仅生成，无需重算前缀)
+    GW-->>W2: a0_traj2
+
+    Note over GW,LLM: 轨迹 2 的 Step 0 节省了全部前缀的 prefill 计算
+</pre>
+
+<h3>4.3 跨 Iteration 策略缓存</h3>
+
+<p>当相邻 RL 迭代的策略更新幅度较小时，缓存上一迭代的 $(s, a)$ 对具有复用价值。判断是否启用跨迭代缓存的条件：</p>
+
+<p>$$\text{use\_cache} = D_{KL}(\pi_{\theta_{new}} \| \pi_{\theta_{old}}) \leq \delta_{cache}, \quad \delta_{cache} \approx 0.02$$</p>
+
+<p>对于 KL 满足条件的状态，缓存命中的响应以概率 $p_{accept}$ 直接使用：</p>
+<p>$$p_{accept}(s, a) = \min\!\left(1,\; \frac{\pi_{\theta_{new}}(a|s)}{\pi_{\theta_{old}}(a|s)}\right)$$</p>
+
+<p>这实际上是 Metropolis-Hastings 接受准则——缓存命中但新策略更倾向该动作时接受，否则以相应概率重新采样。这样既节省了 LLM 调用成本，又保证了采样分布的正确性。</p>
+
+<div class="algo-box">
+<div class="algo-title">Algorithm 2: 跨 Iteration 策略缓存查找</div>
+<p><span class="kw">Input:</span> 状态 <span class="var">s_t</span>, 新策略 <span class="var">π_new</span>, 旧策略 <span class="var">π_old</span>, KL阈值 <span class="var">δ=0.02</span></p>
+<br>
+<p><span class="cm">// Step 1: 检查全局 KL 是否允许缓存复用</span></p>
+<p><span class="kw">if</span> <span class="fn">global_kl</span>(<span class="var">π_new</span>, <span class="var">π_old</span>) > <span class="var">δ</span>:</p>
+<p style="padding-left:1.5em"><span class="kw">return</span> <span class="fn">fresh_llm_call</span>(<span class="var">s_t</span>)  <span class="cm">// 策略变化太大，不复用</span></p>
+<br>
+<p><span class="cm">// Step 2: 查找语义缓存（向量 DB）</span></p>
+<p><span class="var">cached</span> = <span class="fn">vector_db.search</span>(<span class="fn">embed</span>(<span class="var">s_t</span>), threshold=<span class="num">0.97</span>)</p>
+<p><span class="kw">if not</span> <span class="var">cached</span>:</p>
+<p style="padding-left:1.5em"><span class="kw">return</span> <span class="fn">fresh_llm_call</span>(<span class="var">s_t</span>)</p>
+<br>
+<p><span class="cm">// Step 3: Metropolis-Hastings 接受准则</span></p>
+<p><span class="var">a_cached</span> = cached.action</p>
+<p><span class="var">log_ratio</span> = <span class="var">π_new</span>.<span class="fn">log_prob</span>(<span class="var">a_cached</span> | <span class="var">s_t</span>) - <span class="var">π_old</span>.<span class="fn">log_prob</span>(<span class="var">a_cached</span> | <span class="var">s_t</span>)</p>
+<p><span class="var">p_accept</span> = <span class="fn">min</span>(<span class="num">1.0</span>, <span class="fn">exp</span>(<span class="var">log_ratio</span>))</p>
+<p><span class="kw">if</span> <span class="fn">random</span>() &lt; <span class="var">p_accept</span>:</p>
+<p style="padding-left:1.5em"><span class="kw">return</span> <span class="var">a_cached</span>  <span class="cm">// 缓存命中，节省 LLM 调用</span></p>
+<p><span class="kw">else</span>:</p>
+<p style="padding-left:1.5em"><span class="kw">return</span> <span class="fn">fresh_llm_call</span>(<span class="var">s_t</span>)  <span class="cm">// 拒绝缓存，重新采样</span></p>
+</div>
+
+<h3>4.4 缓存对 Token 成本的影响</h3>
+
+<p>综合各类缓存的节省效果（以 G=16，每任务 20 步的典型训练场景）：</p>
+
+<div id="chart-cache-saving" class="echarts-container" style="height:300px"></div>
+
+<!-- ===== 5 ===== -->
+<h2>5. Training Token 预算控制</h2>
+
+<h3>5.1 RL 训练的 Token 消耗模型</h3>
+
+<p>一个完整 RL 训练 Epoch 的 Token 消耗估算：</p>
+
+<p>$$N_{tokens}^{epoch} = B \times G \times \bar{T} \times (\bar{L}_{ctx} + \bar{L}_{out})$$</p>
+
+<p>其中 $B$ 为每 Epoch 的 Batch 数，$G$ 为并行轨迹数，$\bar{T}$ 为平均轨迹步数，$\bar{L}_{ctx}$ 为平均 Context 长度，$\bar{L}_{out}$ 为平均输出长度。</p>
+
+<p>以典型参数（$B=100, G=16, \bar{T}=15, \bar{L}_{ctx}=8000, \bar{L}_{out}=500$）估算：</p>
+<p>$$N_{tokens}^{epoch} = 100 \times 16 \times 15 \times 8500 \approx 204 \text{ 亿 tokens/epoch}$$</p>
+
+<p>使用 GPT-4o 价格（输入 $2.50/M，输出 $10.00/M$），单 Epoch 成本约 $\$5.1$万——<strong>没有 Token 预算控制就是灾难</strong>。</p>
+
+<h3>5.2 分层 Token 预算架构</h3>
+
+<pre class="mermaid">
+flowchart TD
+    TOTAL["总训练预算\n如 $10K/月\n≈ 3B tokens GPT-4o"]
+    TOTAL --> EP["按 Epoch 分配\n每 Epoch 上限 300M tokens\n超限暂停 Rollout，等下一 Epoch"]
+    EP --> BATCH["按 Batch 分配\n每 Batch 上限 3M tokens\n超限丢弃当前 Batch 残余轨迹"]
+    BATCH --> TRAJ["按单条轨迹限制\n单轨迹 Context 上限 50K tokens\n超限触发强制 FINISH 动作"]
+    TRAJ --> STEP["按 Step 输出限制\n单步生成 Token 上限 2K\n防止 CoT 无限延伸"]
+
+    style TOTAL fill:#3a1e1e,stroke:#f38ba8
+    style EP fill:#3a2a1e,stroke:#fab387
+    style BATCH fill:#1e2a3a,stroke:#89b4fa
+    style TRAJ fill:#1e3a2a,stroke:#a6e3a1
+    style STEP fill:#2a2a3e,stroke:#cba6f7
+</pre>
+
+<h3>5.3 Gateway 的预算强制执行</h3>
+
+<pre><code class="language-python">class TrainingTokenBudget:
+    """Gateway 中的训练 Token 预算控制器"""
+
+    def __init__(self, epoch_limit: int, batch_limit: int, traj_limit: int):
+        self.epoch_budget = TokenBucket(epoch_limit, refill_on="epoch_start")
+        self.batch_budget = TokenBucket(batch_limit, refill_on="batch_start")
+        self.traj_budgets: dict[str, int] = {}  # traj_id → consumed
+
+    async def check_and_consume(self, request: RolloutRequest) -> BudgetDecision:
+        traj_id = request.headers["X-Trajectory-ID"]
+        estimated_tokens = estimate_tokens(request)
+
+        # 层次检查（从粗到细）
+        if not self.epoch_budget.try_consume(estimated_tokens):
+            return BudgetDecision.PAUSE_ROLLOUT  # 暂停当前 Epoch 的 Rollout
+            # Gateway 返回 503 + Retry-After: {seconds_to_next_epoch}
+
+        if not self.batch_budget.try_consume(estimated_tokens):
+            return BudgetDecision.DROP_BATCH_REMAINDER  # 丢弃当前 Batch 残余
+
+        traj_consumed = self.traj_budgets.get(traj_id, 0)
+        if traj_consumed + estimated_tokens > TRAJ_LIMIT:
+            # 注入强制终止指令：在 system 消息末尾追加终止提示
+            request.inject_finish_instruction()
+            return BudgetDecision.FORCE_FINISH
+
+        self.traj_budgets[traj_id] = traj_consumed + estimated_tokens
+        return BudgetDecision.ALLOW
+</code></pre>
+
+<h3>5.4 Cost-Aware 训练策略</h3>
+
+<p>Gateway 的预算信息可以反馈给 RL 训练器，动态调整采样策略：</p>
+
+<table>
+<tr><th>预算状态</th><th>Gateway 响应</th><th>训练器调整</th></tr>
+<tr><td>充裕（&gt;60% 剩余）</td><td>全速放行</td><td>保持 G=16，高质量 Provider</td></tr>
+<tr><td>适中（30-60% 剩余）</td><td>降低并发上限</td><td>降至 G=8，混合 Provider</td></tr>
+<tr><td>紧张（&lt;30% 剩余）</td><td>优先保成功轨迹</td><td>G=4，低成本 Provider，跳过低奖励任务</td></tr>
+<tr><td>耗尽（&lt;5% 剩余）</td><td>503 暂停采样</td><td>用已有轨迹做 PPO 更新，等待预算重置</td></tr>
+</table>
+
+<!-- ===== 6 ===== -->
+<h2>6. 工具调用统一代理层</h2>
+
+<h3>6.1 为什么 Gateway 应该代理工具调用</h3>
+
+<p>在标准 Agent 架构中，工具调用由 Agent 代码直接执行。引入 Gateway 作为工具代理层后，带来以下收益：</p>
+
+<div class="cg">
+<div class="card"><strong>统一超时控制</strong><br>代码沙箱 30s 超时、网页加载 15s 超时，统一在 Gateway 层配置，Agent 代码无需关心</div>
+<div class="card"><strong>工具结果截断</strong><br>大型工具输出（如搜索返回 100K 字符）在 Gateway 层智能截断，防止 Context 爆炸</div>
+<div class="card"><strong>工具幻觉拦截</strong><br>Agent 调用不存在的工具时，Gateway 拦截并返回结构化错误，不产生真实副作用</div>
+<div class="card"><strong>工具调用审计</strong><br>所有工具调用记录在 Gateway，追踪工具使用频率、成功率、耗时分布</div>
+</div>
+
+<h3>6.2 工具调用代理的详细设计</h3>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant A as Agent
+    participant GW as Gateway 工具代理
+    participant SB as 代码沙箱
+    participant CACHE as 工具结果缓存
+
+    A->>GW: POST /tool/execute\n{func: "bash", args: {"cmd": "pytest tests/"}}
+    GW->>GW: 1. 参数 Schema 校验\n（防幻觉工具调用）
+    GW->>GW: 2. 安全审查\n（禁止 rm -rf / 网络外连）
+    GW->>CACHE: 3. 查询结果缓存\n（相同 cmd + 相同文件状态）
+    CACHE-->>GW: MISS
+    GW->>SB: 4. 执行（带 timeout=30s）
+    SB-->>GW: stdout/stderr（可能很大）
+    GW->>GW: 5. 智能截断\n保留最后 N 行 + 错误摘要
+    GW->>CACHE: 6. 写入缓存（TTL=60s）
+    GW-->>A: 截断后的结果（&lt;4096 tokens）
+    GW->>GW: 7. 记录工具调用 Span\n（step, func, latency, success）
+</pre>
+
+<h3>6.3 工具结果智能截断算法</h3>
+
+<p>大型工具输出（测试报告、搜索结果、文件内容）需要智能截断，保留对 Agent 决策最有价值的部分：</p>
+
+<pre><code class="language-python">def smart_truncate_tool_output(
+    output: str,
+    max_tokens: int = 3000,
+    func_name: str = "bash"
+) -> str:
+    """按工具类型选择最优截断策略"""
+
+    if count_tokens(output) <= max_tokens:
+        return output  # 不需要截断
+
+    if func_name in ("bash", "python"):
+        # 代码执行：保留最后 N 行（错误通常在末尾）+ 前几行（输出开头）
+        lines = output.split("\n")
+        head = "\n".join(lines[:20])        # 前 20 行
+        tail = "\n".join(lines[-50:])       # 最后 50 行（包含 traceback）
+        middle_note = f"\n...[已截断 {len(lines)-70} 行]...\n"
+        return head + middle_note + tail
+
+    elif func_name == "search":
+        # 搜索结果：保留每个结果的标题 + 摘要，去掉正文
+        results = parse_search_results(output)
+        truncated = [f"[{i+1}] {r.title}\n{r.snippet[:200]}"
+                     for i, r in enumerate(results[:10])]
+        return "\n\n".join(truncated)
+
+    elif func_name == "read_file":
+        # 文件读取：保留头部 + 尾部，注明中间被截断
+        chars_per_token = 4
+        max_chars = max_tokens * chars_per_token
+        half = max_chars // 2
+        return output[:half] + f"\n...[截断 {len(output)-max_chars} 字符]...\n" + output[-half:]
+
+    else:
+        # 默认：直接截断
+        return output[:max_tokens * 4] + "\n...[已截断]"
+</code></pre>
+
+<h3>6.4 工具调用结果缓存（确定性工具）</h3>
+
+<p>部分工具调用是<strong>确定性的</strong>（相同输入总是相同输出），可以在 Gateway 层缓存：</p>
+
+<table>
+<tr><th>工具类型</th><th>可缓存性</th><th>缓存 Key</th><th>TTL</th></tr>
+<tr><td>代码执行（纯函数）</td><td><span class="bd g">高</span>无副作用</td><td>hash(code + env_snapshot)</td><td>训练 Epoch 内有效</td></tr>
+<tr><td>文件读取</td><td><span class="bd g">高</span>只读</td><td>hash(path + file_mtime)</td><td>文件未变更时有效</td></tr>
+<tr><td>搜索引擎</td><td><span class="bd o">中</span>结果会变化</td><td>hash(query)</td><td>1 小时</td></tr>
+<tr><td>网页浏览</td><td><span class="bd o">中</span>页面动态</td><td>hash(url + timestamp_hour)</td><td>1 小时</td></tr>
+<tr><td>API 调用（有状态）</td><td><span class="bd r">低</span>有副作用</td><td>不缓存</td><td>N/A</td></tr>
+<tr><td>数据库写入</td><td><span class="bd r">禁止</span>写操作</td><td>不缓存</td><td>N/A</td></tr>
+</table>
+
+<!-- ===== 7 ===== -->
+<h2>7. 轨迹级可观测性</h2>
+
+<h3>7.1 训练诊断所需的关键 Metrics</h3>
+
+<p>标准 Gateway 的请求级 Metrics 不足以支持 RL 训练诊断，需要扩展到<strong>轨迹级</strong>和<strong>批次级</strong>：</p>
+
+<pre class="mermaid">
+flowchart LR
+    subgraph STEP["Step 级 Metrics"]
+        S1["step_latency_ms\n每步 LLM 推理耗时"]
+        S2["step_input_tokens\n当前 Context 长度"]
+        S3["step_output_tokens\n动作生成长度"]
+        S4["tool_call_success\n工具调用成功/失败"]
+        S5["tool_latency_ms\n工具执行耗时"]
+    end
+    subgraph TRAJ["轨迹级 Metrics"]
+        T1["traj_length\n总步数"]
+        T2["traj_total_tokens\n轨迹总 token 消耗"]
+        T3["traj_total_cost_usd\n轨迹总成本"]
+        T4["traj_tool_error_rate\n工具错误率"]
+        T5["traj_finish_reason\n终止原因"]
+    end
+    subgraph BATCH["批次级 Metrics"]
+        B1["batch_success_rate\n轨迹成功率"]
+        B2["batch_reward_mean/std\n奖励分布"]
+        B3["batch_advantage_std\n优势函数方差"]
+        B4["batch_token_cost_usd\n本批总成本"]
+        B5["batch_cache_hit_rate\n缓存命中率"]
+    end
+
+    STEP --> TRAJ --> BATCH
+
+    style STEP fill:#1a1a2e,stroke:#89b4fa
+    style TRAJ fill:#1a1a2e,stroke:#a6e3a1
+    style BATCH fill:#1a1a2e,stroke:#fab387
+</pre>
+
+<h3>7.2 OTel Span 树：从单步到完整训练迭代</h3>
+
+<pre><code class="language-yaml">Span: rl_training.iteration[42]        # 训练迭代
+  attributes:
+    rl.iteration: 42
+    rl.batch_size: 32
+    rl.group_size: 16
+    rl.batch_reward_mean: 0.43
+    rl.batch_success_rate: 0.31
+    rl.total_tokens: 51200000
+    rl.total_cost_usd: 128.0
+
+  children:
+    - Span: rl_training.rollout         # Rollout 阶段
+        attributes:
+          rollout.parallel_tasks: 32
+          rollout.parallel_trajs: 512   # 32 × 16
+          rollout.duration_s: 340
+
+        children:
+          - Span: trajectory[task=A, traj=3]   # 单条轨迹
+              attributes:
+                traj.task_id: "swebench-1234"
+                traj.length: 18             # 18 步
+                traj.total_tokens: 124000
+                traj.cost_usd: 0.31
+                traj.final_reward: 1.0      # 成功
+                traj.finish_reason: "task_complete"
+
+              children:
+                - Span: step[t=0]           # 每步
+                    llm.input_tokens: 3200
+                    llm.output_tokens: 450
+                    llm.provider: "gpt-4o"
+                    llm.latency_ms: 2100
+                    llm.cache_hit: false
+
+                - Span: tool_call[t=0]
+                    tool.name: "bash"
+                    tool.latency_ms: 5200
+                    tool.success: true
+                    tool.output_tokens: 320  # 截断后
+
+                - Span: step[t=1] ...
+
+    - Span: rl_training.update          # 梯度更新阶段
+        rl.approx_kl: 0.023
+        rl.clip_fraction: 0.14
+        rl.policy_loss: -0.031
+        rl.value_loss: 0.018
+</code></pre>
+
+<h3>7.3 训练异常自动检测</h3>
+
+<p>Gateway 基于实时 Metrics 流做异常检测，及时告警训练问题：</p>
+
+<pre><code class="language-python">class TrainingAnomalyDetector:
+    """基于 Gateway Metrics 流的训练异常检测"""
+
+    RULES = [
+        # 规则 1: 工具幻觉率飙升（Agent 乱调工具）
+        AnomalyRule(
+            metric="tool_schema_error_rate",
+            condition=lambda v, hist: v > 0.3 and v > 2 * mean(hist[-10:]),
+            alert="工具幻觉率超过 30%，可能需要加强格式奖励",
+            action=TrainingAction.INCREASE_FORMAT_REWARD
+        ),
+        # 规则 2: 平均轨迹长度超出上限（Agent 陷入循环）
+        AnomalyRule(
+            metric="mean_trajectory_length",
+            condition=lambda v, hist: v > MAX_STEPS * 0.9,
+            alert="平均轨迹长度接近上限，Agent 可能进入循环",
+            action=TrainingAction.INCREASE_STEP_PENALTY
+        ),
+        # 规则 3: 缓存命中率骤降（策略变化过快）
+        AnomalyRule(
+            metric="cache_hit_rate",
+            condition=lambda v, hist: v < 0.05 and mean(hist[-5:]) > 0.2,
+            alert="缓存命中率骤降，策略 KL 可能过大",
+            action=TrainingAction.REDUCE_LEARNING_RATE
+        ),
+        # 规则 4: 成本消耗速率超预算
+        AnomalyRule(
+            metric="hourly_cost_usd",
+            condition=lambda v, hist: v > HOURLY_BUDGET_USD * 0.8,
+            alert="成本消耗接近每小时预算上限",
+            action=TrainingAction.REDUCE_PARALLEL_G
+        ),
+        # 规则 5: Provider 错误率飙升（需要切换路由）
+        AnomalyRule(
+            metric="provider_error_rate.gpt4o",
+            condition=lambda v, _: v > 0.15,
+            alert="GPT-4o 错误率 > 15%，触发路由切换",
+            action=TrainingAction.FAILOVER_PROVIDER
+        ),
+    ]
+</code></pre>
+
+<!-- ===== 8 ===== -->
+<h2>8. 熔断器在训练稳定性中的作用</h2>
+
+<h3>8.1 训练特有的熔断场景</h3>
+
+<p>Agent RL 训练中的熔断需求与推理服务不同，除了 Provider 故障，还需要应对训练内生的不稳定性：</p>
+
+<table>
+<tr><th>触发场景</th><th>熔断层级</th><th>恢复策略</th></tr>
+<tr><td>Provider API 返回 5xx 连续 10 次</td><td>Provider 级熔断</td><td>切换备用 Provider，指数退避重试</td></tr>
+<tr><td>单批次 Token 消耗超预算 2 倍</td><td>Batch 级熔断</td><td>丢弃当前 Batch，降低并行度后重启</td></tr>
+<tr><td>工具沙箱连续 OOM / Timeout</td><td>工具级熔断</td><td>降低工具输出 Token 上限，重启沙箱</td></tr>
+<tr><td>KL 散度连续 3 个 Batch 超阈值</td><td>训练级告警</td><td>通知训练器降低学习率</td></tr>
+<tr><td>策略 loss 突然变 NaN</td><td>训练级熔断</td><td>暂停 Rollout，加载上一个 Checkpoint</td></tr>
+</table>
+
+<h3>8.2 Checkpoint 感知的熔断器</h3>
+
+<p>训练级熔断最重要的恢复动作是加载上一个稳定 Checkpoint，而 Gateway 是触发这一动作的最早感知点：</p>
+
+<pre><code class="language-python">class TrainingCircuitBreaker:
+    def __init__(self, trainer_callback):
+        self.trainer_callback = trainer_callback  # 通知训练器的回调
+        self.consecutive_bad_batches = 0
+        self.loss_history = deque(maxlen=10)
+
+    async def on_batch_complete(self, metrics: BatchMetrics):
+        self.loss_history.append(metrics.policy_loss)
+
+        # 检测 NaN/Inf
+        if math.isnan(metrics.policy_loss) or math.isinf(metrics.policy_loss):
+            await self.trainer_callback.pause_training()
+            await self.trainer_callback.load_checkpoint("last_stable")
+            self.consecutive_bad_batches = 0
+            return
+
+        # 检测 Loss Spike（超过历史 3σ）
+        if len(self.loss_history) >= 5:
+            mean_loss = statistics.mean(self.loss_history)
+            std_loss = statistics.stdev(self.loss_history)
+            if abs(metrics.policy_loss - mean_loss) > 3 * std_loss:
+                self.consecutive_bad_batches += 1
+                if self.consecutive_bad_batches >= 3:
+                    # 连续 3 个 Batch 异常，触发熔断
+                    await self.trainer_callback.reduce_lr(factor=0.5)
+                    await self.trainer_callback.pause_rollout(seconds=60)
+            else:
+                self.consecutive_bad_batches = 0
+</code></pre>
+
+<!-- ===== 9 ===== -->
+<h2>9. 多 Provider 协同的 Rollout 策略</h2>
+
+<h3>9.1 混合精度 Rollout：不同 Provider 承担不同角色</h3>
+
+<p>Agent RL 训练中并非所有步骤都需要最强的模型，Gateway 可以根据轨迹状态动态分配 Provider：</p>
+
+<pre class="mermaid">
+flowchart LR
+    T["轨迹状态\n每步判断"] --> INIT["初始步骤\nt=0~2\n探索阶段"]
+    T --> MID["中间步骤\nt=3~N-3\n执行阶段"]
+    T --> CRIT["关键步骤\n接近成功时\npartial_reward>0.6"]
+    T --> FINAL["最终步骤\n生成答案"]
+
+    INIT -->|"便宜模型"| GF["Gemini Flash\n低成本探索"]
+    MID -->|"中等模型"| GM["GPT-4o-mini\n均衡性价比"]
+    CRIT -->|"最强模型"| G4["GPT-4o / Claude\n关键决策"]
+    FINAL -->|"高质量模型"| G4
+
+    style INIT fill:#2a2a3e,stroke:#a6e3a1
+    style MID fill:#2a2a3e,stroke:#89b4fa
+    style CRIT fill:#3a1e2e,stroke:#cba6f7
+    style FINAL fill:#3a2a1e,stroke:#fab387
+</pre>
+
+<p>混合精度路由的成本节省估算（假设 30% 初始步 + 50% 中间步 + 20% 关键步）：</p>
+<p>$$\text{cost}_{mixed} = 0.3 \cdot c_{cheap} + 0.5 \cdot c_{medium} + 0.2 \cdot c_{strong}$$</p>
+<p>$$= 0.3 \times \$0.3 + 0.5 \times \$1.5 + 0.2 \times \$10 = \$2.84/\text{M tokens}$$</p>
+<p>与全程使用 GPT-4o（$\$10/\text{M tokens}$）相比，<strong>节省约 72% 成本</strong>，而训练效果损失有限（关键步骤仍用最强模型）。</p>
+
+<h3>9.2 同构/异构 Provider 的 Rollout 差异处理</h3>
+
+<p>当不同步骤使用不同 Provider 时，需要处理模型间的输出风格差异：</p>
+
+<ul>
+<li><strong>格式一致性</strong>：Gateway 对不同 Provider 的工具调用格式做统一归一化（Anthropic 的 tool_use → OpenAI 的 function_call）</li>
+<li><strong>Token 计数不一致</strong>：不同模型的 tokenizer 不同，Gateway 用各自 tokenizer 精确计数，统一转为字符数后再做截断</li>
+<li><strong>重要性比率修正</strong>：若轨迹内不同步骤由不同模型生成，PPO 的 importance ratio $\pi_{new}(a|s)/\pi_{old}(a|s)$ 中的 $\pi_{old}$ 需要记录生成时的实际模型概率，而非统一用当前模型估算</li>
+</ul>
+
+<!-- ===== 10 ===== -->
+<h2>10. 完整训练系统集成：时序与数据流</h2>
+
+<pre class="mermaid">
+sequenceDiagram
+    participant TR as 训练控制器
+    participant GW as Gateway
+    participant PR as Provider Pool
+    participant TL as 工具层
+    participant VF as 验证器
+
+    TR->>GW: 注册训练会话\n{session_id, budget, G, providers}
+
+    loop 每个训练 Epoch
+        TR->>GW: 开始新 Batch\n{batch_id, tasks[32]}
+        GW->>GW: 重置 Batch Token 预算
+
+        par G×B 条轨迹并发展开
+            loop 每步（直到 FINISH 或超步数）
+                TR->>GW: LLM 请求\n{traj_id, step, context}
+                GW->>GW: 预算检查 + 路由决策
+                GW->>PR: 转发（含 Provider 选择）
+                PR-->>GW: LLM 响应（动作）
+                GW->>TL: 工具调用代理（若有）
+                TL-->>GW: 工具观测结果
+                GW-->>TR: 动作 + 观测\n（记录 Step Span）
+            end
+        end
+
+        GW->>TR: Batch 完成通知\n{batch_metrics, cost, cache_stats}
+        TR->>VF: 批量验证轨迹
+        VF-->>TR: 每条轨迹奖励
+        TR->>TR: 计算 Advantage\n执行 PPO/GRPO 更新
+        TR->>GW: 上报训练指标\n{kl, loss, lr}\n（用于异常检测）
+        GW->>GW: 更新缓存策略\n（按新 KL 决定是否复用缓存）
+    end
+</pre>
+
+<!-- ===== 11 ===== -->
+<h2>11. 工程实现：核心配置示例</h2>
+
+<h3>11.1 Gateway 训练模式配置</h3>
+
+<pre><code class="language-yaml"># gateway_training_config.yaml
+training:
+  mode: agent_rl
+
+  # Rollout 并发控制
+  rollout:
+    max_concurrent_trajectories: 64
+    max_concurrent_per_provider:
+      gpt-4o: 20
+      claude-3-5-sonnet: 15
+      gemini-1.5-flash: 30
+    queue_strategy: shortest_job_first
+    trajectory_id_header: "X-Trajectory-ID"
+    step_header: "X-Trajectory-Step"
+
+  # Token 预算
+  budget:
+    epoch_token_limit: 300_000_000       # 3 亿 tokens/epoch
+    batch_token_limit: 3_000_000          # 300 万 tokens/batch
+    per_trajectory_token_limit: 100_000   # 10 万 tokens/轨迹
+    per_step_output_limit: 2000           # 每步最多 2K 输出 tokens
+    soft_limit_ratio: 0.8                 # 80% 时告警
+
+  # 子轨迹缓存
+  cache:
+    prefix_cache:
+      enabled: true
+      min_prefix_length: 2048  # 前缀至少 2K tokens 才缓存
+    cross_iteration:
+      enabled: true
+      kl_threshold: 0.02        # KL < 0.02 时复用上一迭代缓存
+      similarity_threshold: 0.97
+    tool_result_cache:
+      enabled: true
+      cacheable_tools: [bash_pure, read_file, search]
+
+  # 工具代理
+  tool_proxy:
+    default_timeout_s: 30
+    max_output_tokens: 3000
+    smart_truncation: true
+    result_cache_ttl_s: 3600
+
+  # 训练感知路由
+  routing:
+    strategy: training_aware
+    low_partial_reward_threshold: 0.2
+    high_partial_reward_threshold: 0.6
+    provider_assignment:
+      exploration: gemini-1.5-flash
+      normal: gpt-4o-mini
+      exploitation: gpt-4o
+
+  # 异常检测
+  anomaly_detection:
+    tool_error_rate_threshold: 0.3
+    trajectory_length_ratio_threshold: 0.9
+    consecutive_bad_batches: 3
+    on_anomaly: [alert, adjust_hyperparams, checkpoint_rollback]
+</code></pre>
+
+<h3>11.2 Rollout Worker 与 Gateway 的交互接口</h3>
+
+<pre><code class="language-python">class GatewayRolloutClient:
+    """Rollout Worker 使用的 Gateway 客户端"""
+
+    def __init__(self, gateway_url: str, session_id: str):
+        self.base = gateway_url
+        self.session_id = session_id
+
+    async def llm_step(
+        self,
+        traj_id: str,
+        step: int,
+        messages: list[dict],
+        partial_reward: float = 0.0,
+        tools: list[dict] = None,
+    ) -> LLMStepResult:
+        """发送单步 LLM 请求，Gateway 自动处理路由/缓存/预算"""
+        response = await self.client.post(
+            f"{self.base}/v1/chat/completions",
+            json={"model": "auto", "messages": messages, "tools": tools},
+            headers={
+                "X-Training-Session": self.session_id,
+                "X-Trajectory-ID": traj_id,
+                "X-Trajectory-Step": str(step),
+                "X-Partial-Reward": str(partial_reward),  # 用于路由决策
+            }
+        )
+        if response.status_code == 503:
+            # Gateway 预算耗尽，等待后重试
+            retry_after = int(response.headers.get("Retry-After", 60))
+            await asyncio.sleep(retry_after)
+            return await self.llm_step(traj_id, step, messages, partial_reward)
+        return LLMStepResult.from_response(response)
+
+    async def execute_tool(self, traj_id: str, step: int, tool_call: ToolCall) -> ToolResult:
+        """通过 Gateway 工具代理执行工具调用"""
+        response = await self.client.post(
+            f"{self.base}/v1/tool/execute",
+            json={"tool_call": tool_call.dict()},
+            headers={
+                "X-Trajectory-ID": traj_id,
+                "X-Trajectory-Step": str(step),
+            }
+        )
+        return ToolResult.from_response(response)
+</code></pre>
+
+<!-- ===== 12 ===== -->
+<h2>12. 性能收益量化</h2>
+
+<div id="chart-benefit" class="echarts-container" style="height:340px"></div>
+<div id="chart-cost" class="echarts-container" style="height:300px"></div>
+
+<h2>13. 核心洞见</h2>
+
+<div class="hl">
+<strong>🔑 洞见 1：Gateway 的并发调度是 Agent RL 规模化的关键瓶颈</strong><br>
+G=16、Batch=32 意味着同时维护 512 条活跃轨迹的 LLM 调用队列。没有 Gateway 的并发控制，直连 Provider 的 RPM 限制会将实际并发压缩到个位数，训练速度损失 10 倍以上。
+</div>
+
+<div class="hl">
+<strong>🔑 洞见 2：跨 Iteration 策略缓存可以节省 15~30% Token 成本</strong><br>
+Agent RL 相邻迭代的策略 KL 通常在 0.01~0.05，大量中间状态的最优动作基本不变。用 Metropolis-Hastings 接受准则复用缓存，在保证采样分布正确性的同时实现可观的成本节省。
+</div>
+
+<div class="hl">
+<strong>🔑 洞见 3：混合精度 Rollout（不同步骤用不同 Provider）可节省 60~75% 成本</strong><br>
+探索期和中间步骤不需要最强模型，只有关键决策步（接近成功）才需要 GPT-4o 级别。Gateway 根据 partial_reward 自动切换 Provider，成本与全用强模型相比大幅下降。
+</div>
+
+<div class="warn">
+<strong>⚠️ 陷阱 1：工具代理的超时设置必须比 LLM 超时更长</strong><br>
+代码执行（pytest）可能需要 60s+，如果 Gateway 工具代理超时过短（如 30s），会导致频繁的"工具超时"误报，Agent 被迫处理虚假错误，严重干扰训练信号质量。建议代码执行超时 ≥ 120s，并支持流式进度上报。
+</div>
+
+<div class="warn">
+<strong>⚠️ 陷阱 2：不要对工具结果做语义缓存（应做精确哈希缓存）</strong><br>
+工具执行结果（测试输出、文件内容）必须精确匹配才能复用，不能用语义相似度——99% 相似的两个测试报告可能结论完全相反（1个 FAIL vs 0个 FAIL）。工具结果缓存只能用 hash(input) 精确匹配。
+</div>
+
+<div class="tip">
+<strong>💡 实践建议：先用本地 vLLM 验证训练逻辑，再接入 Gateway 做规模化</strong><br>
+调试阶段（G=2，B=4）用本地 vLLM 推理，验证奖励函数、轨迹格式、工具调用链路正确性，成本近乎零。逻辑验证通过后，接入 Gateway 做并发控制和成本管理，再逐步放大到生产规模（G=16，B=32）。
+</div>
+
+</main>
+
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+  if(!h.id)h.id='s'+i;
+  const a=document.createElement('a');
+  a.href='#'+h.id;a.textContent=h.textContent;
+  if(h.tagName==='H3')a.classList.add('h3');
+  toc.appendChild(a);
+});
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    const l=toc.querySelector('a[href="#'+e.target.id+'"]');
+    if(l)l.classList.toggle('active',e.isIntersecting);
+  });
+},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2,main h3').forEach(h=>obs.observe(h));
+
+// Chart 1: 缓存节省效果
+(function(){
+  var c=echarts.init(document.getElementById('chart-cache-saving'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'各类缓存对 Token 成本的节省效果（典型 Agent RL 训练场景）',textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['节省 Token 比例 (%)'],textStyle:{color:'#cdd6f4'}},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4',rotate:10},
+      data:['无缓存\n基线','前缀缓存\n(同 Task G 条)','工具结果\n缓存','跨迭代\n策略缓存','混合精度\nProvider','全部\n组合']},
+    yAxis:{type:'value',name:'相对基线成本 (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},max:110},
+    series:[{
+      name:'相对成本 (%)',type:'bar',
+      data:[100,88,78,65,35,22],
+      itemStyle:{color:function(p){
+        var colors=['#f38ba8','#fab387','#f9e2af','#a6e3a1','#89b4fa','#cba6f7'];
+        return colors[p.dataIndex];
+      }},
+      label:{show:true,position:'top',color:'#cdd6f4',formatter:'{c}%'}
+    }]
+  });
+})();
+
+// Chart 2: 有无 Gateway 的训练成本对比（按组件分解）
+(function(){
+  var c=echarts.init(document.getElementById('chart-cost'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'有无 Gateway 的训练成本对比（$K/Epoch，组件分解）',textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['无 Gateway','有 Gateway'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4'},
+      data:['LLM API 费用','工具重复调用','重复子轨迹','因故障重跑','总计']},
+    yAxis:{type:'value',name:'$K / Epoch',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'无 Gateway',type:'bar',data:[48,12,8,15,83],itemStyle:{color:'#f38ba8'}},
+      {name:'有 Gateway',type:'bar',data:[18,2,1,2,23],itemStyle:{color:'#a6e3a1'}}
+    ]
+  });
+})();
+
+// Chart 3: 综合收益
+(function(){
+  var c=echarts.init(document.getElementById('chart-benefit'));
+  c.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'引入 Gateway 后 Agent RL 训练关键指标改善',textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['引入前','引入后'],textStyle:{color:'#cdd6f4'},top:30},
+    xAxis:{type:'category',axisLabel:{color:'#cdd6f4'},
+      data:['Epoch 成本($K)','Rollout 并发数','训练中断次数/天','Token 浪费率(%)','问题定位时间(h)']},
+    yAxis:{type:'value',axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'引入前',type:'bar',data:[83,8,4.2,35,6],itemStyle:{color:'#f38ba8'}},
+      {name:'引入后',type:'bar',data:[23,64,0.3,8,0.5],itemStyle:{color:'#a6e3a1'}}
+    ]
+  });
+})();
+</script>
+</body>
+</html>

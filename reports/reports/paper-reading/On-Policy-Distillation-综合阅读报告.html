@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On-Policy Distillation · 综合技术报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --bg-code: #313244; --bg-nav: #181825;
+      --text: #cdd6f4; --heading: #89b4fa; --link: #89dceb;
+      --border: #45475a; --quote-bar: #fab387; --strong: #a6e3a1;
+      --red: #f38ba8; --yellow: #f9e2af; --purple: #cba6f7; --teal: #94e2d5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.85; }
+    #toc { position: fixed; top: 0; left: 0; width: 232px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 12.5px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background .15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 18px; font-size: 11.5px; opacity: .8; }
+    main { margin-left: 252px; max-width: none; padding: 40px 64px 80px; }
+    h1 { color: var(--heading); font-size: 1.85em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.38em; margin: 2.2em 0 .6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.08em; margin: 1.5em 0 .4em; }
+    h4 { color: var(--yellow); font-size: .97em; margin: 1.1em 0 .3em; }
+    p { margin: .6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    em { color: var(--yellow); font-style: normal; }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: .9em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: .87em; line-height: 1.6; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: .86em; color: var(--teal); }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2.4em 0; }
+    ul, ol { margin: .5em 0 .5em 1.6em; }
+    li { margin: .3em 0; }
+    .card { background: #23233a; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 1.2em 0; }
+    .card.blue { border-left: 4px solid var(--heading); }
+    .card.green { border-left: 4px solid var(--strong); }
+    .card.yellow { border-left: 4px solid var(--yellow); }
+    .card.red { border-left: 4px solid var(--red); }
+    .card.purple { border-left: 4px solid var(--purple); }
+    .card-title { font-weight: 700; color: var(--heading); margin-bottom: 8px; }
+    .algo-box { background: #0d1117; border: 1px solid var(--border); border-left: 3px solid var(--heading); border-radius: 6px; padding: 18px 24px; margin: 1em 0; font-size: .88em; line-height: 2; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: .95em; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw { color: var(--purple); font-weight: 700; }
+    .algo-box .cm { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: var(--teal); }
+    .algo-box .fn { color: var(--strong); }
+    .algo-box .num { color: var(--yellow); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 1.2em 0; }
+    .diff-box { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: 1em 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .diff-col { padding: 14px 18px; }
+    .diff-col.off { background: #1e2535; border-right: 1px solid var(--border); }
+    .diff-col.on  { background: #1e2e1e; }
+    .diff-label { font-size: .78em; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
+    .diff-label.off { color: var(--red); }
+    .diff-label.on  { color: var(--strong); }
+    .steps { counter-reset: step; margin: 1em 0; }
+    .step-item { counter-increment: step; display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+    .step-num { min-width: 28px; height: 28px; background: var(--heading); color: #1e1e2e; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .8em; font-weight: 800; flex-shrink: 0; margin-top: 3px; }
+    .step-num::before { content: counter(step); }
+    .step-body { flex: 1; }
+    .step-title { font-weight: 700; color: var(--yellow); margin-bottom: 4px; }
+    .tl-wrap { overflow-x: auto; margin: 1em 0; }
+    .tl { display: flex; gap: 0; min-width: 900px; }
+    .tl-col { flex: 1; display: flex; flex-direction: column; }
+    .tl-period { background: #2a2a3e; border: 1px solid var(--border); text-align: center; font-weight: 700; color: var(--heading); padding: 10px 6px; font-size: .93em; border-radius: 6px 6px 0 0; }
+    .tl-body { flex: 1; padding: 10px 8px; border: 1px solid var(--border); border-top: none; border-radius: 0 0 6px 6px; }
+    .tl-item { background: #313244; border-radius: 5px; padding: 7px 10px; margin-bottom: 7px; font-size: .86em; line-height: 1.5; }
+    .tl-item:last-child { margin-bottom: 0; }
+    .tl-tag { display: inline-block; font-size: .75em; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-bottom: 4px; background: var(--heading); color: #1e1e2e; }
+    .tl-tag.green  { background: var(--strong); }
+    .tl-tag.purple { background: var(--purple); }
+    .tl-tag.orange { background: var(--yellow); color: #1e1e2e; }
+    .math-block { background: #2a2a3e; border-radius: 6px; padding: 12px 18px; margin: 1em 0; overflow-x: auto; }
+    .math-block mjx-container[display="true"] { display: block !important; text-align: left !important; margin: 0.4em 0 !important; line-height: 1.6 !important; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>On-Policy Distillation · 综合技术报告</h1>
+<blockquote>
+  <strong>来源</strong>：A Survey of On-Policy Distillation for LLMs（arXiv:2604.00626）· GKD（ICLR 2024）· MiniLLM（2023）· DistiLLM（2024）· DistiLLM-2（ICML 2025 Oral）· Thinking Machines Lab（2025）· OPSD（2026）<br>
+  <strong>覆盖内容</strong>：问题动机 · MDP 形式化 · 三维分类体系 · 六大方法完整实现（伪代码 + 梯度推导）· 训练稳定性 · 工业部署实践 · 时间线 · 开放问题<br>
+  <strong>资源</strong>：<a href="https://github.com/nick7nlp/Awesome-LLM-On-Policy-Distillation" target="_blank">Awesome-LLM-On-Policy-Distillation</a>
+</blockquote>
+
+<table>
+  <tr><th>核心问题</th><td>通过 On-Policy 采样消除知识蒸馏中的 Exposure Bias，让小模型更高效地学习大模型能力</td></tr>
+  <tr><th>研究跨度</th><td>2023–2026，从目标函数设计 → 信号架构 → 训练动态稳定性三阶段演进</td></tr>
+  <tr><th>工业应用</th><td>DeepSeek-V4、Qwen3 均采用多教师 + On-Policy 蒸馏方案（替代或辅助 RL）</td></tr>
+</table>
+
+<!-- ===== 1. 核心问题 ===== -->
+<h2 id="s1">1. 核心问题：Exposure Bias</h2>
+
+<p>传统知识蒸馏（Off-Policy KD）让学生在<strong>教师生成的静态数据集</strong>上训练，推理时却在<strong>自己生成的前缀</strong>上续写——分布错配导致推理误差逐步累积放大。</p>
+
+<div class="diff-box">
+  <div class="diff-col off">
+    <div class="diff-label off">Off-Policy（有缺陷）</div>
+    <p style="font-size:.9em">$p_\theta(y_t \mid x,\; y^T_{1:t-1})$</p>
+    <p style="font-size:.85em;color:var(--red);margin-top:8px">前缀 $y^T$ 来自教师，学生从未在自己的错误前缀上训练</p>
+  </div>
+  <div class="diff-col on">
+    <div class="diff-label on">On-Policy（正确）</div>
+    <p style="font-size:.9em">$p_\theta(y_t \mid x,\; \hat{y}_{1:t-1})$</p>
+    <p style="font-size:.85em;color:var(--strong);margin-top:8px">前缀来自学生自己，训练与推理完全对齐</p>
+  </div>
+</div>
+
+<table>
+  <tr><th>维度</th><th>Off-Policy 蒸馏</th><th>On-Policy 蒸馏（OPD）</th></tr>
+  <tr><td>训练数据来源</td><td>教师生成的静态数据集</td><td>学生自己采样的轨迹</td></tr>
+  <tr><td>Exposure Bias</td><td>存在，推理时误差累积</td><td>消除，训练与推理分布一致</td></tr>
+  <tr><td>计算成本</td><td>低（数据预生成）</td><td>高（每步需要学生采样 + 教师打分）</td></tr>
+  <tr><td>数据多样性</td><td>受教师分布限制</td><td>覆盖学生可能探索的所有区域</td></tr>
+  <tr><td>典型方法</td><td>SeqKD, Standard KD</td><td>GKD, MiniLLM, DistiLLM</td></tr>
+</table>
+
+<p><strong>On-Policy 蒸馏</strong>的核心思路：<em>让学生在自己生成的轨迹上接受教师反馈</em>，从根本上消除训练-推理分布错配。这与交互式模仿学习（DAgger）和策略梯度优化在哲学上同源。</p>
+
+<!-- ===== 2. 数学基础 ===== -->
+<h2 id="s2">2. 数学基础：自回归生成作为 MDP</h2>
+
+<p>将 LLM 自回归生成形式化为有限序贯决策过程（MDP），是 OPD 与强化学习统一的理论基础：</p>
+
+<div class="card blue">
+  <div class="card-title">形式化：文本生成 = 有限 MDP</div>
+  <ul>
+    <li><strong>状态</strong> $s_t = (x, y_{1:t})$：当前 prompt + 已生成前缀</li>
+    <li><strong>动作</strong> $a_t = y_{t+1}$：下一个 token，动作空间 = 词表 $|\mathcal{V}|$（通常 $\sim 10^5$）</li>
+    <li><strong>策略</strong> $\pi_\theta(a_t|s_t) = p_\theta(y_{t+1}|x, y_{1:t})$：学生模型</li>
+    <li><strong>教师策略</strong> $\pi_T$：提供 soft logit 监督信号（白盒）或结果评分（黑盒）</li>
+  </ul>
+</div>
+
+<p>OPD 的统一目标函数——在学生自采样序列上计算每步散度：</p>
+
+<div class="math-block">
+$$\mathcal{L}_\text{OPD}(\theta) = \mathbb{E}_{x}\;\mathbb{E}_{\hat{y}\sim p_\theta} \left[\frac{1}{|\hat{y}|}\sum_{t=1}^{|\hat{y}|} \mathcal{D}_f\!\left(p_T(\cdot|x,\hat{y}_{\lt t})\;\|\;p_\theta(\cdot|x,\hat{y}_{\lt t})\right)\right]$$
+</div>
+
+<!-- ===== 3. 散度选择 ===== -->
+<h2 id="s3">3. 散度选择：三种行为差异</h2>
+
+<table>
+  <tr><th>散度</th><th>公式</th><th>梯度行为</th><th>实践后果</th><th>代表方法</th></tr>
+  <tr>
+    <td><strong>Forward KL</strong></td>
+    <td>$\sum_v p_T\log\frac{p_T}{p_\theta}$</td>
+    <td>Zero-avoiding，强制 $p_\theta(v)\gt 0$ 处处</td>
+    <td>覆盖所有模式，质量分散</td>
+    <td>GKD（可选）</td>
+  </tr>
+  <tr>
+    <td><strong>Reverse KL</strong></td>
+    <td>$\sum_v p_\theta\log\frac{p_\theta}{p_T}$</td>
+    <td>Zero-forcing，聚焦教师高概率区</td>
+    <td>输出精准，多样性差；需 REINFORCE</td>
+    <td>MiniLLM, TML OPD</td>
+  </tr>
+  <tr>
+    <td><strong>Skew KLD</strong></td>
+    <td>$D_\text{KL}(p_T\|\alpha p_T{+}(1{-}\alpha)p_\theta)$</td>
+    <td>混合分布下界 $\gt 0$，永不除零</td>
+    <td>数值稳定，直接可微，无需 REINFORCE</td>
+    <td>DistiLLM（SKL/SRKL）</td>
+  </tr>
+</table>
+
+<!-- ===== 4. 三维分类体系 ===== -->
+<h2 id="s4">4. 三维分类体系</h2>
+
+<p>Survey（arXiv:2604.00626）将 OPD 方法沿三个正交维度组织，揭示完整设计空间：</p>
+
+<pre class="mermaid">
+graph TD
+  OPD["On-Policy Distillation"]
+  subgraph D1["维度1：反馈信号"]
+    F1["Logit-Based\n白盒 soft token 分布"]
+    F2["Outcome-Based\n黑盒标量奖励 / 偏好"]
+    F3["Self-Play\n模型自博弈"]
+  end
+  subgraph D2["维度2：教师访问"]
+    T1["White-Box\n可访问 logits"]
+    T2["Black-Box\n仅生成输出"]
+    T3["Self-Distillation\n无外部教师"]
+  end
+  subgraph D3["维度3：损失粒度"]
+    G1["Token-Level\n逐 token 匹配"]
+    G2["Sequence-Level\n序列整体奖励"]
+    G3["Hybrid/Adaptive\n自适应权重"]
+  end
+  OPD --> D1 & D2 & D3
+</pre>
+
+<div class="grid2">
+  <div class="card blue">
+    <div class="card-title">维度1：反馈信号</div>
+    <ul>
+      <li><strong>Logit-Based</strong>：教师提供每个 token 位置的完整概率分布（白盒），信息量最丰富。主流方法（GKD、MiniLLM、DistiLLM）均属此类</li>
+      <li><strong>Outcome-Based</strong>：教师仅对完整生成结果打分（RM），通过策略梯度优化。RLKD、KDRL 等属此类</li>
+      <li><strong>Self-Play</strong>：学生与自身不同版本交互学习</li>
+    </ul>
+  </div>
+  <div class="card green">
+    <div class="card-title">维度2：教师访问方式</div>
+    <ul>
+      <li><strong>White-Box</strong>：可访问教师 logits，信息密度最高，需教师模型在线推理</li>
+      <li><strong>Black-Box</strong>：只能获取教师的生成文本，适合 API 调用（如 GPT-4 蒸馏）</li>
+      <li><strong>Self-Distillation</strong>：消除外部教师依赖——2025 年以来的主流趋势</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== 5. GKD ===== -->
+<h2 id="s5">5. GKD：最简洁的 On-Policy 框架（ICLR 2024）</h2>
+
+<div class="card blue">
+  <div class="card-title">GKD — Generalized Knowledge Distillation（Agarwal et al., ICLR 2024）</div>
+  <p><strong>核心思想</strong>：最早系统性地将 On-Policy 采样引入 LLM 蒸馏。学生在自生成序列上接受教师反馈，支持多种散度选择。</p>
+  <p><strong>优势</strong>：散度无关（Forward KL / Reverse KL / JSD 均可）、无需 REINFORCE 梯度估计（方差低）、实现极简。</p>
+  <p><strong>局限</strong>：理论上对散度选择缺乏指导，实践中需要调试哪种散度最优。</p>
+</div>
+
+<p>核心改动只有一处：把训练数据从"教师生成的固定序列"换成"学生自采样的动态序列"。由于前缀 $\hat{y}_{1:t-1}$ 对 $\theta$ 是 stop-grad 常数，梯度仅流经 $p_\theta$ 的 logits，<strong>无需 REINFORCE</strong>，方差低，实现极简。</p>
+
+<div class="steps">
+  <div class="step-item"><div class="step-num"></div><div class="step-body">
+    <div class="step-title">混合采样（$\lambda$ 比例来自学生）</div>
+    <p>以概率 $\lambda$ 让学生采样 $\hat{y}\sim p_\theta(\cdot|x)$（On-Policy）；以概率 $1{-}\lambda$ 从教师数据集取 $y^T$（Off-Policy 备用）。</p>
+  </div></div>
+  <div class="step-item"><div class="step-num"></div><div class="step-body">
+    <div class="step-title">教师完整 Forward（no_grad）</div>
+    <p>将序列 $\hat{y}$ 送入教师得到每个位置概率：$p_T^t=\text{softmax}(\text{Teacher}(x,\hat{y}_{1:t-1}))$，不参与反传。</p>
+  </div></div>
+  <div class="step-item"><div class="step-num"></div><div class="step-body">
+    <div class="step-title">学生 Forward + Token 级散度（梯度从这里流）</div>
+    <p>$\mathcal{L}=\frac{1}{|\hat{y}|}\sum_t \mathcal{D}_f(p_T^t\|p_\theta^t)$，FKL/RKL/JSD 均可，直接 backward。</p>
+  </div></div>
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 1: GKD</div>
+  <p><span class="kw">Input:</span> <span class="var">$p_\theta$</span>，<span class="var">$p_T$</span>，Prompt 集 <span class="var">$\mathcal{X}$</span>，散度 $\mathcal{D}$，混合比 $\lambda$</p>
+  <p><span class="kw">for</span> each step: &nbsp;$x\leftarrow$<span class="fn">sample</span>$(\mathcal{X})$</p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> rand()$\lt\lambda$: &nbsp;<span class="var">$\hat{y}$</span>$\leftarrow$<span class="fn">student_sample</span>$(p_\theta,x)$ <span class="cm">// On-Policy</span></p>
+  <p style="padding-left:1.5em"><span class="kw">else</span>: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="var">$\hat{y}$</span>$\leftarrow$<span class="fn">dataset_fetch</span>$(\mathcal{D},x)$ <span class="cm">// Off-Policy 备用</span></p>
+  <p style="padding-left:1.5em"><span class="kw">with</span> <span class="fn">no_grad</span>(): &nbsp;$p_T^t\leftarrow$<span class="fn">teacher_fwd</span>$(x,\hat{y}_{1:t-1})$ <span class="kw">for all</span> $t$</p>
+  <p style="padding-left:1.5em">$\mathcal{L}\leftarrow\frac{1}{|\hat{y}|}\sum_t\mathcal{D}_f(p_T^t\|p_\theta^t)$; &nbsp;<span class="fn">optimizer</span>.step($\mathcal{L}$.backward())</p>
+</div>
+
+<!-- ===== 6. MiniLLM ===== -->
+<h2 id="s6">6. MiniLLM：Reverse KL + REINFORCE（2023）</h2>
+
+<div class="card purple">
+  <div class="card-title">MiniLLM（Gu et al., 2023）</div>
+  <p><strong>核心创新</strong>：证明 Reverse KL 比 Forward KL 更适合 LLM 蒸馏——Reverse KL 的众数寻求（mode-seeking）特性使学生专注于教师的高质量输出，而非均摊覆盖低质量尾部。</p>
+  <p><strong>实现挑战</strong>：$\mathbb{E}_{y\sim p_\theta}[\cdot]$ 依赖 $\theta$，直接求梯度需 REINFORCE（高方差）。需要奖励基线、长度惩罚、SFT 预热等工程 tricks。</p>
+</div>
+
+<h3>梯度推导</h3>
+<p>$\nabla_\theta D_\text{KL}(p_\theta\|p_T)$，log-derivative trick：</p>
+
+<div class="math-block">
+$$\nabla_\theta\mathcal{L}=-\mathbb{E}_{y\sim p_\theta}\!\left[\sum_t(R_t-1)\nabla_\theta\log p_\theta(y_t|y_{\lt t},x)\right]$$
+</div>
+
+<p>Per-token 回报（单步分量<strong>可精确计算</strong>，无需 MC）：</p>
+
+<div class="math-block">
+$$R_t=\underbrace{\log\frac{p_T(y_t|y_{\lt t})}{p_\theta(y_t|y_{\lt t})}}_{r_t,\,\text{精确}}+\gamma\sum_{k\gt t}r_k$$
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 2: MiniLLM</div>
+  <p><span class="fn">sft_train</span>$(p_\theta,\mathcal{D})$ <span class="cm">// Phase 1: SFT 预热，防 p_θ≈0 时 NaN</span></p>
+  <p><span class="kw">for</span> each step: &nbsp;$\hat{y}\leftarrow$<span class="fn">sample</span>$(p_\theta|x)$</p>
+  <p style="padding-left:1.5em"><span class="kw">with</span> <span class="fn">no_grad</span>(): &nbsp;$r_t\leftarrow\log p_T(\hat{y}_t|\cdot)-\log p_\theta(\hat{y}_t|\cdot)$ <span class="kw">for all</span> $t$; &nbsp;$R_t\leftarrow r_t+\gamma\sum_{k\gt t}r_k$</p>
+  <p style="padding-left:1.5em">$\mathcal{L}_\text{RKL}\leftarrow-\frac{1}{|\hat{y}|}\sum_t(R_t-1)\log p_\theta(\hat{y}_t|\cdot)$ <span class="cm">// REINFORCE with baseline=1</span></p>
+  <p style="padding-left:1.5em">$\mathcal{L}_\text{LM}\leftarrow-\frac{1}{|y^T|}\sum_t\log p_\theta(y^T_t|\cdot)$ <span class="cm">// 通用能力正则</span></p>
+  <p style="padding-left:1.5em"><span class="fn">optimizer</span>.step($(\alpha\mathcal{L}_\text{RKL}+\beta\mathcal{L}_\text{LM})$.backward())</p>
+</div>
+
+<div class="card red">
+  <div class="card-title">必须的工程 Tricks</div>
+  <ul>
+    <li><strong>SFT 预热</strong>：cold start 时 $p_\theta\approx 0$，$\log(p_T/p_\theta)\to\infty$，直接 NaN</li>
+    <li><strong>长度惩罚</strong>：mode-seeking 导致学生倾向极短输出</li>
+    <li><strong>梯度截断</strong>：clip_grad_norm（max_norm=1.0）</li>
+    <li><strong>基线=1</strong>：$(R_t-1)$ 减少方差</li>
+  </ul>
+</div>
+
+<!-- ===== 7. DistiLLM ===== -->
+<h2 id="s7">7. DistiLLM：Skew KLD + Replay Buffer（2024）</h2>
+
+<div class="card green">
+  <div class="card-title">DistiLLM（Ko et al., 2024）</div>
+  <p><strong>核心创新</strong>：设计 Skew KLD（SKL/SRKL）目标。混合分布 $\tilde{p}=\alpha p_T+(1-\alpha)p_\theta$ 使散度下界 $\gt 0$，梯度直接可微（无需 REINFORCE），从根本上避免 $p_\theta(v)\approx 0$ 时的数值不稳定。</p>
+  <p><strong>自适应 Off-Policy 策略</strong>：引入 Replay Buffer，基于验证损失自适应决定何时更新 On-Policy 数据，大幅提升计算效率。</p>
+  <p><strong>核心权衡</strong>：用超参复杂度（$\alpha$ + replay buffer + 自适应调度器）换取数值稳定性，工程实现复杂但性能领先。</p>
+</div>
+
+<h3>SKL 梯度（直接反传，永不除零）</h3>
+
+<div class="math-block">
+$$\nabla_\theta\text{SKL}=-\sum_v p_T(v)\cdot\frac{(1-\alpha)\nabla_\theta p_\theta(v)}{\alpha p_T(v)+(1-\alpha)p_\theta(v)}$$
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 3: DistiLLM</div>
+  <p>$\mathcal{B}\leftarrow$<span class="fn">student_sample</span>$(p_\theta,K)$; &nbsp;$L_\text{prev}\leftarrow$<span class="fn">eval</span>$(p_\theta)$ <span class="cm">// 初始化 Replay Buffer</span></p>
+  <p><span class="kw">for</span> each step:</p>
+  <p style="padding-left:1.5em"><span class="kw">if</span> step mod $N=0$ <span class="kw">and</span> $|L_\text{prev}-$<span class="fn">eval</span>$(p_\theta)|\gt\delta$: &nbsp;$\mathcal{B}\leftarrow$<span class="fn">student_sample</span>$(p_\theta,K)$ <span class="cm">// 自适应刷新</span></p>
+  <p style="padding-left:1.5em">$(\hat{y}^i,x^i)\leftarrow$<span class="fn">sample</span>$(\mathcal{B},B)$ <span class="cm">// 从 buffer 取 batch</span></p>
+  <p style="padding-left:1.5em"><span class="kw">with</span> <span class="fn">no_grad</span>(): &nbsp;$p_T^{i,t}\leftarrow p_T(\cdot|x^i,\hat{y}^i_{\lt t})$</p>
+  <p style="padding-left:1.5em">$\tilde{p}^{i,t}\leftarrow\alpha p_T^{i,t}+(1-\alpha)p_\theta(\cdot|x^i,\hat{y}^i_{\lt t})$</p>
+  <p style="padding-left:1.5em">$\mathcal{L}\leftarrow\frac{1}{B}\sum_i\frac{1}{|\hat{y}^i|}\sum_t D_\text{KL}(p_T^{i,t}\|\tilde{p}^{i,t})$; &nbsp;<span class="fn">optimizer</span>.step($\mathcal{L}$.backward())</p>
+</div>
+
+<!-- ===== 8. DistiLLM-2 ===== -->
+<h2 id="s8">8. DistiLLM-2：对比蒸馏（ICML 2025 Oral）</h2>
+
+<div class="card yellow">
+  <div class="card-title">DistiLLM-2（Ko et al., ICML 2025 Oral）</div>
+  <p><strong>核心洞察</strong>：现有方法对教师生成数据和学生生成数据使用相同的损失函数，忽视了两类数据的本质差异——教师数据是"好答案"，学生数据是"自己的错误"。</p>
+  <p><strong>对比目标</strong>：同时：在教师生成数据上<strong>增大</strong>学生的预测概率（学习正确答案）；在学生生成数据上<strong>降低</strong>学生的预测概率（远离自身错误）。</p>
+  <p><strong>实验结果</strong>：在指令跟随、代码生成、偏好对齐、视觉语言任务上全面超越 DistiLLM。</p>
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 4: DistiLLM-2</div>
+  <p><span class="kw">for</span> each epoch: &nbsp;$\hat{Y}\leftarrow$<span class="fn">vllm_batch_generate</span>$(p_\theta,\mathcal{X})$ <span class="cm">// Epoch 级批量，与 vLLM 兼容</span></p>
+  <p style="padding-left:1.5em"><span class="kw">for</span> each mini-batch $(x,y^T,\hat{y})$:</p>
+  <p style="padding-left:3em">$\mathcal{L}_+\leftarrow-\frac{1}{|y^T|}\sum_t\log p_\theta(y^T_t|\cdot)$ <span class="cm">// ①提高教师数据概率</span></p>
+  <p style="padding-left:3em"><span class="kw">with</span> <span class="fn">no_grad</span>(): &nbsp;$p_T^t\leftarrow p_T(\cdot|x,y^T_{\lt t})$</p>
+  <p style="padding-left:3em">$\mathcal{L}_\text{KD}\leftarrow\frac{1}{|y^T|}\sum_t D_\text{KL}(p_T^t\|p_\theta^t)$ <span class="cm">// ②软标签蒸馏</span></p>
+  <p style="padding-left:3em">$\mathcal{L}_-\leftarrow+\frac{1}{|\hat{y}|}\sum_t\log p_\theta(\hat{y}_t|\cdot)$ <span class="cm">// ③降低学生数据概率（正号=逆SFT）</span></p>
+  <p style="padding-left:3em"><span class="fn">optimizer</span>.step($(\mathcal{L}_++\lambda_1\mathcal{L}_-+\lambda_2\mathcal{L}_\text{KD})$.backward())</p>
+</div>
+
+<!-- ===== 9. TML ===== -->
+<h2 id="s9">9. TML On-Policy：一行代码改变（2025）</h2>
+
+<p>（Kevin Lu / Thinking Machines Lab）在已有 PPO/GRPO 框架中把 KL 正则的参考模型从"初始策略"换成"教师"，令外部奖励为 0，仅改一行。</p>
+
+<p>Per-token 优势：$A_t=\log p_T(\hat{y}_t|\cdot)-\log p_\theta(\hat{y}_t|\cdot)$（stop-grad）</p>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 5: TML On-Policy Distillation</div>
+  <p><span class="kw">for</span> each step: &nbsp;$\hat{y}\leftarrow$<span class="fn">student_sample</span>$(p_\theta,x)$</p>
+  <p style="padding-left:1.5em"><span class="kw">with</span> <span class="fn">no_grad</span>(): &nbsp;$A_t\leftarrow\log p_T(\hat{y}_t|\cdot)-\log p_\theta(\hat{y}_t|\cdot)$ <span class="cm">// ← 唯一改动：ref=teacher</span></p>
+  <p style="padding-left:1.5em">$\mathcal{L}\leftarrow-\frac{1}{|\hat{y}|}\sum_t A_t^\text{sg}\cdot\log p_\theta(\hat{y}_t|\cdot)$; &nbsp;<span class="fn">optimizer</span>.step($\mathcal{L}$.backward())</p>
+</div>
+
+<pre><code class="language-python"># RL 框架中的实际改动（以 GRPO 为例）
+# 原始：kl = log_student - log_initial_policy
+log_teacher = teacher.compute_logprobs(sequences, prompts)  # &lt;- 新增这一行
+advantages  = log_teacher - log_student   # rewards=0，直接用负KL作为advantage
+loss = -(advantages.detach() * log_student).mean()
+loss.backward(); optimizer.step()</code></pre>
+
+<!-- ===== 10. OPSD ===== -->
+<h2 id="s10">10. OPSD：同一模型教自己（2026）</h2>
+
+<div class="card blue">
+  <div class="card-title">OPSD — On-Policy Self-Distillation（Zhao et al., 2026）</div>
+  <p><strong>核心问题</strong>：能否消除外部教师依赖，让模型从自身学习？</p>
+  <p><strong>核心洞察</strong>：给定正确答案 $y^*$ 作为特权信息，足够强大的 LLM 可以"合理化"推理步骤，为弱化版自身（无特权信息的版本）提供密集的 token 级监督。</p>
+</div>
+
+<div class="grid2">
+  <div class="card green">
+    <div class="card-title">教师 Forward（有 $y^*$）</div>
+    <p>输入：$\text{concat}(x,\;y^*,\;\hat{y}_{1:n-1})$<br>
+    输出：$p_T(\hat{y}_n|x,y^*,\hat{y}_{\lt n})$</p>
+  </div>
+  <div class="card blue">
+    <div class="card-title">学生 Forward（无 $y^*$）</div>
+    <p>输入：$\text{concat}(x,\;\hat{y}_{1:n-1})$<br>
+    输出：$p_S(\hat{y}_n|x,\hat{y}_{\lt n})$</p>
+  </div>
+</div>
+
+<p>优化目标（策略梯度形式），优势 $A_n = \log p_T(\hat{y}_n | x, y^*, \hat{y}_{\lt n}) - \log p_S(\hat{y}_n | x, \hat{y}_{\lt n})$：</p>
+
+<div class="math-block">
+$$\mathcal{L}(\theta) = -\mathbb{E}_{\hat{y} \sim p_S} \left[ \frac{1}{|\hat{y}|} \sum_{n=1}^{|\hat{y}|} A_n(x, \hat{y}) \cdot \log p_S(\hat{y}_n | x, \hat{y}_{\lt n}) \right]$$
+</div>
+
+<div class="algo-box">
+  <div class="algo-title">Algorithm 6: OPSD</div>
+  <p><span class="kw">for</span> each step: &nbsp;$\hat{y}\leftarrow$<span class="fn">sample</span>$(p_S(\cdot|x))$</p>
+  <p style="padding-left:1.5em"><span class="kw">with</span> <span class="fn">no_grad</span>(): &nbsp;$\log p_T(\hat{y}_n|\cdot)\leftarrow$<span class="fn">model_fwd</span>$(\text{concat}(x,y^*,\hat{y}_{\lt n}))$ <span class="kw">for all</span> $n$</p>
+  <p style="padding-left:1.5em">$A_n\leftarrow\log p_T(\hat{y}_n|x,y^*,\hat{y}_{\lt n})-\log p_S(\hat{y}_n|x,\hat{y}_{\lt n})$</p>
+  <p style="padding-left:1.5em">$\mathcal{L}\leftarrow-\frac{1}{|\hat{y}|}\sum_n A_n^\text{sg}\cdot\log p_S(\hat{y}_n|\cdot)$; &nbsp;<span class="fn">optimizer</span>.step($\mathcal{L}$.backward())</p>
+</div>
+
+<!-- ===== 11. 推理蒸馏 ===== -->
+<h2 id="s11">11. 推理任务专项：稀疏奖励难题</h2>
+
+<p>推理任务（数学、代码、逻辑推导）是 OPD 近年最活跃的应用方向。关键挑战是稀疏奖励——一条 500+ token 的推理链仅在最终答案处得到 ±1 奖励，信用分配极难。</p>
+
+<div class="grid2">
+  <div class="card blue">
+    <div class="card-title">RLKD / KDRL：KD + RL 融合</div>
+    <p>学生生成完整推理链 → RM 打分 → 策略梯度更新，同时最小化与教师的 KL 散度作为正则。KD 提供密集梯度稳定早期训练，RL 使学生超越教师分布。代表了"奖励 + 蒸馏"的工业化路径。</p>
+  </div>
+  <div class="card green">
+    <div class="card-title">SDPO：文本反馈自蒸馏</div>
+    <p>学生生成代码/推理 → 接收结构化文本反馈（编译错误、测试输出）→ 教师（条件化于反馈的当前模型）为无条件学生提供 dense token 级信号。解决 RLVR 二进制奖励的信用分配瓶颈。</p>
+  </div>
+</div>
+
+<!-- ===== 12. 训练动态 ===== -->
+<h2 id="s12">12. 训练动态稳定性：2025–2026 新前沿</h2>
+
+<p>随着方法成熟，研究重心转向 On-Policy 采样引入的训练不稳定性——这是 OPD 区别于静态数据集蒸馏的内在代价。</p>
+
+<h3>f-OPD：Freshness-Aware 异步控制</h3>
+<div class="card purple">
+  <p>异步 On-Policy 训练中，生产者（采样）和消费者（训练）速度不一致导致"样本过期"问题：训练时用的样本已经不是当前策略生成的，引入隐性 off-policy 偏差。</p>
+  <p><strong>f-OPD 解决方案</strong>：样本级 Staleness 评分 + 自适应 Buffer 刷新 + Rollout-Anchored KL，动态控制训练数据的"新鲜度"，平衡计算效率与 On-Policy 严格性。当前仍缺乏理论收敛分析。</p>
+</div>
+
+<h3>Entropy-Aware OPD</h3>
+<div class="card yellow">
+  <p>Reverse KL 的众数寻求特性在教师分布高熵（模糊/多样性任务）时会导致生成多样性降低和不稳定的学习信号。</p>
+  <p><strong>解决方案</strong>：根据教师熵动态切换——熵低时用 Reverse KL（精确追踪），熵高时融入 Forward KL（覆盖多样性），自适应平衡精度与多样性。</p>
+</div>
+
+<!-- ===== 13. 工业实践 ===== -->
+<h2 id="s13">13. 工业部署实践</h2>
+
+<p>OPD 已从学术研究进入工业级 LLM 训练流水线，以 Qwen3 和 DeepSeek 为典型案例。</p>
+
+<div class="card green">
+  <div class="card-title">Qwen3 的 On-Policy 蒸馏实践（2025）</div>
+  <ul>
+    <li>关键发现：在推理任务上，On-Policy 蒸馏能以<strong>约 1/3 的 RL GPU 计算量</strong>达到等效性能</li>
+    <li>核心优势：复用相同 prompt 多次训练不会导致答案记忆（不同于 RL），因为目标是匹配教师的完整分布而非记忆单一答案</li>
+    <li>技术栈：结合多教师信号 + 课程学习（Curriculum）+ 自适应调度</li>
+  </ul>
+</div>
+
+<table>
+  <tr><th>系统</th><th>OPD 应用方式</th><th>关键效果</th></tr>
+  <tr><td><strong>Qwen3</strong></td><td>On-Policy 蒸馏替代 RL，多教师 + 课程学习</td><td>等效 RL 性能，大幅降低 GPU 成本（~1/3）</td></tr>
+  <tr><td><strong>DeepSeek-V4</strong></td><td>自适应目标 + 多教师 + 课程稳定化</td><td>三轴融合（目标 + 信号 + 动态）的工业实践</td></tr>
+  <tr><td><strong>veRL 框架</strong></td><td>Async On-Policy KD Trainer，top-k sparse KL</td><td>生产级异步蒸馏基础设施</td></tr>
+</table>
+
+<div class="card blue">
+  <div class="card-title">为什么 On-Policy 蒸馏比 RL 高效（Qwen3 实践）</div>
+  <p>RL（GRPO）每条序列只有一个二进制奖励信号。On-Policy 蒸馏在每个 token 位置都有 $|\mathcal{V}|$ 维教师 logits 监督，信号密度高出词表大小倍（$\sim 10^5$×）。同一 prompt 可复用多轮不记忆答案（目标是匹配分布）。Qwen3：约 1/3 的计算量，等效 RL 推理性能。</p>
+</div>
+
+<!-- ===== 14. 时间线 ===== -->
+<h2 id="s14">14. 方法演进时间线（2023–2026）</h2>
+
+<div class="tl-wrap"><div class="tl">
+  <div class="tl-col">
+    <div class="tl-period">2023</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">目标函数</span><br><strong>MiniLLM</strong>：首次将 Reverse KL 引入 LLM 蒸馏，REINFORCE 优化</div>
+      <div class="tl-item"><span class="tl-tag">目标函数</span><br><strong>GKD</strong>（arXiv→ICLR'24）：On-Policy 采样框架，散度无关，实现简洁</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2024</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag">目标函数</span><br><strong>DistiLLM</strong>：SKL/SRKL 数值稳定 + 自适应 Replay Buffer，SOTA</div>
+      <div class="tl-item"><span class="tl-tag orange">工程基础</span><br>veRL 框架开始支持 Async On-Policy KD</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2025</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag green">信号架构</span><br><strong>DistiLLM-2</strong>（ICML Oral）：对比蒸馏，正负样本差异化处理</div>
+      <div class="tl-item"><span class="tl-tag green">RL 融合</span><br><strong>TML OPD</strong>（Kevin Lu）：per-token RKL via RL，一行改动</div>
+      <div class="tl-item"><span class="tl-tag orange">工业应用</span><br><strong>Qwen3</strong>：On-Policy 蒸馏替代 RL，1/3 算力达等效推理性能</div>
+      <div class="tl-item"><span class="tl-tag green">多方向</span><br>Vision-OPD、AdaSwitch、RLKD、KDRL 等专项方向涌现</div>
+    </div>
+  </div>
+  <div class="tl-col">
+    <div class="tl-period">2026</div>
+    <div class="tl-body">
+      <div class="tl-item"><span class="tl-tag purple">训练动态</span><br><strong>f-OPD</strong>：Freshness-Aware 异步控制，防策略漂移</div>
+      <div class="tl-item"><span class="tl-tag purple">训练动态</span><br><strong>SDPO</strong>：文本反馈自蒸馏，解决信用分配瓶颈</div>
+      <div class="tl-item"><span class="tl-tag green">自蒸馏</span><br><strong>OPSD</strong>：同模型双角色，消除外部教师</div>
+      <div class="tl-item"><span class="tl-tag">综述</span><br><strong>Survey</strong>（arXiv:2604.00626）：三维分类体系，系统梳理 40+ 方法</div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ===== 15. 方法对比 ===== -->
+<h2 id="s15">15. 方法对比与选型</h2>
+
+<div id="chart-bar" class="echarts-container" style="height:340px;background:#2a2a3e;border-radius:8px;margin:1.2em 0"></div>
+<div id="chart-radar" class="echarts-container" style="height:360px;background:#2a2a3e;border-radius:8px;margin:1.2em 0"></div>
+
+<table>
+  <tr><th>方法</th><th>梯度方式</th><th>采样频率</th><th>教师需求</th><th>适合场景</th></tr>
+  <tr><td><strong>GKD</strong></td><td>直接反传（无 REINFORCE）</td><td>每 step（$\lambda$ 比例）</td><td>白盒 logits</td><td>快速实验，代码最简</td></tr>
+  <tr><td><strong>MiniLLM</strong></td><td>REINFORCE + per-token 分解</td><td>每 step，纯 On-Policy</td><td>白盒 logits</td><td>追求 mode-seeking 精度</td></tr>
+  <tr><td><strong>DistiLLM</strong></td><td>SKL 直接反传</td><td>条件性（验证损失触发）</td><td>白盒 logits</td><td>计算预算有限，追求 SOTA</td></tr>
+  <tr><td><strong>DistiLLM-2</strong></td><td>对比损失直接反传</td><td>Epoch 级批量</td><td>白盒 logits</td><td>有配对正/负样本数据</td></tr>
+  <tr><td><strong>TML OPD</strong></td><td>Policy gradient</td><td>每 step rollout</td><td>仅 log-prob（轻量）</td><td>已有 RL 框架，一行改动</td></tr>
+  <tr><td><strong>OPSD</strong></td><td>Policy gradient（自蒸馏）</td><td>每 step</td><td>无外部教师</td><td>有 ground truth，推理强化</td></tr>
+</table>
+
+<!-- ===== 16. 开放问题 ===== -->
+<h2 id="s16">16. 开放问题与未来方向</h2>
+
+<div class="card red">
+  <div class="card-title">核心未解挑战</div>
+  <ul>
+    <li><strong>极端架构差距</strong>：400B MoE → 1B dense 的蒸馏，线性投影或词表对齐效果不佳，非线性层级对齐是开放挑战</li>
+    <li><strong>黑盒教师的 On-Policy 蒸馏</strong>：当教师为封闭 API（仅提供文本输出）时，如何有效实现 On-Policy 软蒸馏</li>
+    <li><strong>长序列训练动态</strong>：长思维链（4000+ tokens）的 On-Policy 训练极不稳定，信用分配和梯度传播需要新方法</li>
+    <li><strong>多模态扩展</strong>：视觉-语言模型的 On-Policy 蒸馏，状态空间维度爆炸</li>
+    <li><strong>自蒸馏的理论边界</strong>：何种规模的模型能有效自我教导？如何防止 Mode Collapse？OPSD 在弱模型时 $A_n\approx 0$ 退化</li>
+    <li><strong>异步采样稳定性</strong>：f-OPD 的 freshness 控制还缺收敛理论分析</li>
+  </ul>
+</div>
+
+<!-- ===== 17. 核心洞见 ===== -->
+<h2 id="s17">17. 核心洞见与读后评注</h2>
+
+<div class="card blue">
+  <div class="card-title">OPD 是 SFT → RL 的中间道路</div>
+  <p>Qwen3 团队的工作揭示了一个重要规律：On-Policy 蒸馏在推理任务上以 RL 成本的一小部分达到等效性能。这重新定义了后训练方法的选择逻辑——当有强大教师模型时，OPD 是 RL 的高性价比替代品；当需要超越教师时，RL 才是必要选择。</p>
+</div>
+
+<div class="card green">
+  <div class="card-title">GKD → MiniLLM → DistiLLM 的权衡三角</div>
+  <ul>
+    <li><strong>GKD</strong>：简单低方差，散度选择无理论指导</li>
+    <li><strong>MiniLLM</strong>：理论清晰（Reverse KL 有 mode-seeking 保证），高方差需大量 tricks</li>
+    <li><strong>DistiLLM</strong>：数值稳定，但引入 $\alpha$ + buffer + 调度器三个超参</li>
+  </ul>
+  <p>DistiLLM-2（对比）和 OPSD（自蒸馏）跳出此三角，开辟新方向。</p>
+</div>
+
+<div class="card purple">
+  <div class="card-title">三阶段演进的内在逻辑</div>
+  <p>Survey 识别的三阶段演进（目标函数 → 信号架构 → 训练动态）有其内在合理性：首先解决"学什么"（散度选择），再解决"从哪里学"（是否需要外部教师），最后解决"怎么稳定学"（异步采样与分布漂移）。当前的 f-OPD、Entropy-Aware OPD 等工作标志着领域进入工程成熟阶段。</p>
+</div>
+
+<div class="card yellow">
+  <div class="card-title">自蒸馏趋势的深层含义</div>
+  <p>2025 年以来自蒸馏方法的崛起（OPSD、Vision-OPD、SDPO）不仅是工程便利性的产物，更反映了 LLM 能力的质变——当模型足够强大，其知识密度已足以自我引导提升。这与 Self-Play、Self-Reward、STaR 等方向共同描绘了一个不依赖外部标注的自进化 AI 学习范式。</p>
+</div>
+
+<hr>
+<p style="color:#6c7086;font-size:.82em;text-align:center">
+  综合整理自：arXiv:2604.00626 · GKD(ICLR2024) · MiniLLM(2023) · DistiLLM/2(2024/ICML2025) · TML Blog(2025) · OPSD(2026)。综合版报告：2026-05-27
+</p>
+
+</main>
+
+<script>
+mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+const toc = document.getElementById('toc');
+document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+  if (!h.id) h.id = 's' + i;
+  const a = document.createElement('a');
+  a.href = '#' + h.id;
+  a.textContent = h.textContent;
+  if (h.tagName === 'H3') a.classList.add('toc-h3');
+  toc.appendChild(a);
+});
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    const lk = toc.querySelector(`a[href="#${e.target.id}"]`);
+    if (lk) lk.classList.toggle('active', e.isIntersecting);
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+document.querySelectorAll('main h2, main h3').forEach(h => obs.observe(h));
+
+// ECharts Bar chart
+(function() {
+  const dom = document.getElementById('chart-bar');
+  if (!dom) return;
+  const c = echarts.init(dom);
+  c.setOption({
+    backgroundColor: 'transparent',
+    title: { text: '各方法特性对比（越高越好）', left: 'center', top: 8, textStyle: { color: '#cdd6f4', fontSize: 13 } },
+    tooltip: { trigger: 'axis', backgroundColor: '#24243e', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+    legend: { bottom: 4, textStyle: { color: '#a6adc8' } },
+    grid: { top: 48, bottom: 44, left: 50, right: 20 },
+    xAxis: { type: 'category', data: ['实现简单', '梯度稳定', '数值稳定', '无需外部教师', '计算效率', '推理任务'], axisLabel: { color: '#cdd6f4', fontSize: 11 } },
+    yAxis: { type: 'value', max: 10, axisLabel: { color: '#7f849c' }, splitLine: { lineStyle: { color: '#2a2a42' } } },
+    series: [
+      { name: 'GKD',        type: 'bar', data: [9, 9, 7, 1, 8, 6], itemStyle: { color: '#89b4fa' } },
+      { name: 'MiniLLM',   type: 'bar', data: [5, 4, 5, 1, 6, 7], itemStyle: { color: '#cba6f7' } },
+      { name: 'DistiLLM',  type: 'bar', data: [4, 8, 9, 1, 7, 8], itemStyle: { color: '#a6e3a1' } },
+      { name: 'DistiLLM-2',type: 'bar', data: [5, 8, 8, 1, 7, 8], itemStyle: { color: '#f9e2af' } },
+      { name: 'OPSD',      type: 'bar', data: [6, 7, 7, 10, 8, 9], itemStyle: { color: '#94e2d5' } }
+    ]
+  });
+  window.addEventListener('resize', () => c.resize());
+})();
+
+// ECharts Radar chart
+(function() {
+  const dom = document.getElementById('chart-radar');
+  if (!dom) return;
+  const chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor: 'transparent',
+    title: { text: '核心方法特性雷达对比', left: 'center', top: 8, textStyle: { color: '#cdd6f4', fontSize: 13 } },
+    tooltip: { backgroundColor: '#24243e', borderColor: '#45475a', textStyle: { color: '#cdd6f4' } },
+    legend: {
+      bottom: 4, textStyle: { color: '#a6adc8' },
+      data: ['GKD', 'MiniLLM', 'DistiLLM', 'DistiLLM-2', 'OPSD']
+    },
+    radar: {
+      center: ['50%', '52%'], radius: '62%',
+      axisName: { color: '#cdd6f4', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#313244' } },
+      splitArea: { areaStyle: { color: ['#1e1e2e', '#23233a'] } },
+      axisLine: { lineStyle: { color: '#45475a' } },
+      indicator: [
+        { name: '实现简单度', max: 10 },
+        { name: '数值稳定性', max: 10 },
+        { name: '理论清晰度', max: 10 },
+        { name: '任务性能',   max: 10 },
+        { name: '无外部教师', max: 10 },
+        { name: '推理任务支持', max: 10 }
+      ]
+    },
+    series: [{
+      type: 'radar',
+      data: [
+        { name: 'GKD',        value: [9, 7, 6, 7, 1, 6],  lineStyle: { color: '#89b4fa' }, areaStyle: { opacity: .1, color: '#89b4fa' } },
+        { name: 'MiniLLM',   value: [5, 5, 9, 7, 1, 7],  lineStyle: { color: '#cba6f7' }, areaStyle: { opacity: .1, color: '#cba6f7' } },
+        { name: 'DistiLLM',  value: [4, 9, 7, 9, 1, 8],  lineStyle: { color: '#a6e3a1' }, areaStyle: { opacity: .1, color: '#a6e3a1' } },
+        { name: 'DistiLLM-2',value: [5, 8, 7, 9, 1, 8],  lineStyle: { color: '#f9e2af' }, areaStyle: { opacity: .1, color: '#f9e2af' } },
+        { name: 'OPSD',      value: [6, 7, 7, 8, 10, 9], lineStyle: { color: '#94e2d5' }, areaStyle: { opacity: .1, color: '#94e2d5' } }
+      ]
+    }]
+  });
+  window.addEventListener('resize', () => chart.resize());
+})();
+</script>
+</body>
+</html>

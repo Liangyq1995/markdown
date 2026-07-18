@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Audio Interaction Model 阅读报告</title>
+  <style>
+    :root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+    #toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);}
+    #toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+    #toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    #toc a:hover{background:var(--border);}
+    #toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+    #toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+    main{margin-left:240px;max-width:none;padding:40px 64px;}
+    h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+    h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+    h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+    p{margin:.6em 0;}
+    a{color:var(--link);}
+    strong{color:var(--strong);}
+    blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+    table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+    th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+    td{padding:7px 12px;border:1px solid var(--border);}
+    tr:hover td{background:#2a2a3e;}
+    pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;}
+    code{font-family:'JetBrains Mono','Fira Code',monospace;}
+    p code,li code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+    figure{margin:1.4em 0;text-align:center;}
+    figure img{max-width:100%;border-radius:6px;}
+    figcaption{color:#6c7086;font-size:.85em;margin-top:6px;}
+    .mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+    .echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+    hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+    ul,ol{padding-left:1.6em;margin:.6em 0;}
+    li{margin:.3em 0;}
+    .tag{display:inline-block;background:#313244;color:#89b4fa;padding:2px 8px;border-radius:12px;font-size:.8em;margin:2px;}
+    .highlight-box{background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:16px 20px;margin:1em 0;}
+    .metric-good{color:#a6e3a1;}
+    .metric-note{color:#fab387;}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]}};</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<!-- ===== 标题 + 论文信息 ===== -->
+<h1>Audio Interaction Model：面向实时交互的统一流式音频大模型</h1>
+<blockquote>
+  <strong>arXiv:</strong> <a href="https://arxiv.org/abs/2606.05121" target="_blank">2606.05121</a> &nbsp;|&nbsp;
+  <strong>提交日期:</strong> 2026年6月3日 &nbsp;|&nbsp;
+  <strong>机构:</strong> NTU / NUS / CUHK &nbsp;|&nbsp;
+  <strong>Upvotes:</strong> 88
+</blockquote>
+
+<table>
+  <tr><th>字段</th><th>内容</th></tr>
+  <tr><td>论文标题</td><td>Audio Interaction Model</td></tr>
+  <tr><td>arXiv ID</td><td>2606.05121v1</td></tr>
+  <tr><td>作者（11位）</td><td>Zhifei Xie*, Zihang Liu*, Ze An, Xiaobin Hu, Yue Liao, Ziyang Ma, Dongchao Yang, Mingbao Lin†, Deheng Ye†, Shuicheng Yan†, Chunyan Miao†</td></tr>
+  <tr><td>机构</td><td>¹Nanyang Technological University &nbsp; ²National University of Singapore &nbsp; ³CUHK</td></tr>
+  <tr><td>核心贡献</td><td>Audio-Interaction 模型、SoundFlow 框架、StreamAudio-2M 数据集、Proactive-Sound-Bench 基准</td></tr>
+  <tr><td>项目主页</td><td><a href="https://xzf-thu.github.io/Audio-Interaction" target="_blank">xzf-thu.github.io/Audio-Interaction</a></td></tr>
+  <tr><td>数据集</td><td><a href="https://huggingface.co/datasets/zhifeixie/StreamAudio-2M" target="_blank">HuggingFace: zhifeixie/StreamAudio-2M</a></td></tr>
+  <tr><td>许可证</td><td>CC BY 4.0</td></tr>
+</table>
+
+<figure>
+  <img src="https://arxiv.org/html/2606.05121v1/x1.png" alt="Audio-Interaction 持续监听音频流，决策保持静默或生成响应">
+  <figcaption>图1：Audio-Interaction 系统示意——持续监听音频流，在每个时间步决策"保持静默"或"生成响应"（来源：原文 Fig.1）</figcaption>
+</figure>
+
+<!-- ===== 概述 ===== -->
+<h2>概述</h2>
+<p>
+  音频天然具有交互属性——人类在日常生活中时刻处于声音环境之中，随时感知、随时响应。然而，当前的大型音频语言模型（Large Audio Language Models，LALMs）普遍采用<strong>离线批处理</strong>范式：先收集完整音频，再统一推理，无法在音频流入时实时决策。这一局限使得实时语音助手、主动音频干预等场景无从实现。
+</p>
+<p>
+  本文提出 <strong>Audio-Interaction</strong>——一个统一的流式音频大模型，通过 <strong>SoundFlow</strong> 端到端框架（含流式数据构建、感知感知训练、异步低延迟推理三阶段），配合 <strong>StreamAudio-2M</strong>（260万条、302k小时的流式音频语料库）和新基准 <strong>Proactive-Sound-Bench</strong>，在保持主流离线任务竞争力的同时，首次实现了"always-on perceive-decide-respond"的在线音频交互循环。
+</p>
+<p>
+  在8个基准测试上的实验表明，Audio-Interaction（3B参数）在 MMAU 指令理解评测中以 <strong>58.15分</strong> 超越 Qwen2.5-Omni-7B（49.58分），同时在主动音频干预基准上以 <strong>62.8%</strong> 的多事件准确率领先所有对比模型，验证了流式统一架构的有效性。
+</p>
+
+<!-- ===== 研究背景 ===== -->
+<h2>研究背景</h2>
+<p>
+  理解本文的动机，需要从三个维度审视当前音频AI的局限性：离线模型的结构性缺陷、实时交互的现实需求，以及流式音频建模面临的技术挑战。
+</p>
+
+<h3>离线 LALMs 的局限</h3>
+<p>
+  现有 LALMs（如 Qwen2-Audio、SALMONN、Qwen2.5-Omni）采用的是经典的"输入-推理-输出"静态范式，可形式化为：
+</p>
+<p>$$y = f(x, \mathcal{A})$$</p>
+<p>
+  其中 $x$ 是完整音频输入，$\mathcal{A}$ 是任务指令，$y$ 是模型输出。这一范式存在三个根本性缺陷：
+</p>
+<ul>
+  <li><strong>无法处理连续流</strong>：音频必须先收集完毕才能处理，无法在音频持续流入时实时推理；</li>
+  <li><strong>被动响应</strong>：模型只能等待用户显式指令，无法主动感知环境音频事件（如烟雾报警、婴儿哭声）并主动介入；</li>
+  <li><strong>任务碎片化</strong>：ASR、音频理解、对话等任务分散在不同模型中，缺乏统一的在线处理框架。</li>
+</ul>
+
+<h3>实时交互的现实需求</h3>
+<p>
+  随着智能耳机、车载助手、智能家居等场景的普及，用户对音频AI的期望已从"问答工具"升级为"始终在线的智能伴侣"。这要求模型能够：
+</p>
+<ul>
+  <li>在用户说话的同时实时转录（实时ASR）；</li>
+  <li>在连续音频流中跟随多轮指令（流式指令跟随）；</li>
+  <li>在检测到特定环境音事件时主动提醒用户（主动音频干预）。</li>
+</ul>
+<p>
+  这三类能力在离线范式下均无法原生支持，需要从架构层面重新设计。
+</p>
+
+<h3>流式音频建模的技术挑战</h3>
+<p>
+  将音频处理从离线迁移到流式并非简单的工程适配，而是面临深层的技术挑战：
+</p>
+<ul>
+  <li><strong>跨块连续性</strong>：音频被切分为固定长度的块（chunk）后，块间语义连续性会被打断。实验发现，原始编码器输出的块间余弦相似度仅为 0.25，直接影响理解质量；</li>
+  <li><strong>决策时机</strong>：模型需要在每个时间步判断"保持静默"还是"生成响应"，这一二元决策的精度直接决定交互体验；</li>
+  <li><strong>推理延迟</strong>：流式场景对首块响应延迟（First Chunk Latency，FCL）极为敏感，传统自回归推理的串行特性会导致显著的卡顿；</li>
+  <li><strong>数据缺乏</strong>：现有音频数据集几乎全部为离线格式，缺少带时间戳标注的流式交互数据。</li>
+</ul>
+
+<figure>
+  <img src="https://arxiv.org/html/2606.05121v1/x2.png" alt="人类听觉系统与当前音频模型的对比">
+  <figcaption>图2：人类持续感知音频环境（左）与当前离线音频模型只能批处理（右）的对比（来源：原文 Fig.2）</figcaption>
+</figure>
+
+<!-- ===== 核心框架 ===== -->
+<h2>核心框架：Always-On Perceive-Decide-Respond Loop</h2>
+<p>
+  Audio-Interaction 的核心设计哲学是将音频交互形式化为一个<strong>持续运行的感知-决策-响应循环</strong>，使模型在每个音频块到达时均执行一次完整的决策过程，而非等待完整输入。
+</p>
+
+<h3>形式化定义</h3>
+<p>
+  与离线范式的静态映射不同，Audio-Interaction 在每个时间步 $t$ 同时输出决策令牌 $d_t$ 和响应 $r_t$：
+</p>
+<p>$$(d_t, r_t) = f(a_{\leq t},\ d_{&lt;t},\ r_{&lt;t})$$</p>
+<p>
+  其中 $a_{\leq t}$ 是截至当前时刻的音频流，$d_{&lt;t}$ 和 $r_{&lt;t}$ 是历史决策和响应上下文。决策令牌 $d_t$ 取值为：
+</p>
+<p>$$d_t \in \{\texttt{&lt;silent&gt;},\ \texttt{&lt;response&gt;}\}$$</p>
+<p>
+  响应生成规则为：
+</p>
+<p>$$r_t = \begin{cases} \varnothing, & d_t = \texttt{&lt;silent&gt;} \\ f_{\mathrm{resp}}(a_t, C_t), & d_t = \texttt{&lt;response&gt;} \end{cases}$$</p>
+<p>
+  其中 $C_t$ 是包含历史决策和响应的上下文。这一设计将"何时响应"和"响应什么"解耦为两个子问题，前者由轻量决策头处理，后者仅在触发时激活完整生成路径，从而在保证响应质量的同时控制计算开销。
+</p>
+
+<h3>Always-On 循环时序图</h3>
+<pre class="mermaid">
+sequenceDiagram
+    participant Mic as 麦克风/音频流
+    participant Chunker as 块切分器
+    participant Encoder as 音频编码器
+    participant Adapter as 流式适配器
+    participant Decider as 决策头
+    participant LM as 语言模型
+    participant Out as 输出层
+
+    loop 每400ms一个块
+        Mic->>Chunker: 原始PCM音频
+        Chunker->>Encoder: 400ms音频块
+        Encoder->>Adapter: 声学特征
+        Adapter->>Decider: 跨块连续表示
+        Decider->>Decider: 判断 silent 或 response
+        alt d_t = silent
+            Decider->>Mic: 继续监听，不输出
+        else d_t = response
+            Decider->>LM: 触发生成
+            LM->>Out: 流式文本/语音输出
+        end
+    end
+</pre>
+
+<h3>关键设计：决策令牌机制</h3>
+<p>
+  决策令牌 <code>&lt;silent&gt;</code> 和 <code>&lt;response&gt;</code> 是整个框架的核心创新。与传统的 VAD（语音活动检测）不同，这两个令牌是<strong>语义级别</strong>的决策，而非纯粹的能量/频谱检测：
+</p>
+<ul>
+  <li><code>&lt;silent&gt;</code>：不仅代表"无人说话"，还包括"有声音但无需响应"（如背景音乐、环境噪声）；</li>
+  <li><code>&lt;response&gt;</code>：不仅响应用户明确指令，还能主动识别需要干预的环境事件（如报警声、婴儿哭声）。</li>
+</ul>
+<p>
+  实验发现，模型中存在一个特定注意力头（<strong>L35H14</strong>，第35层第14号头）在流式控制令牌的生成决策中起主导作用，单独消融该头会导致语音翻译令牌匹配率下降 0.88，揭示了流式控制的神经机制具有高度局部化的特征。
+</p>
+
+<!-- ===== SoundFlow 系统 ===== -->
+<h2>SoundFlow 系统：端到端流式处理框架</h2>
+<p>
+  SoundFlow 是支撑 Audio-Interaction 的完整工程框架，覆盖从原始数据到实时推理的全链路。它由三个紧密耦合的阶段组成：流式原生数据构建、感知感知训练、异步低延迟推理。
+</p>
+
+<figure>
+  <img src="https://arxiv.org/html/2606.05121v1/x3.png" alt="SoundFlow 训练框架总览">
+  <figcaption>图3：SoundFlow 端到端框架——数据构建、训练、推理三阶段协同设计（来源：原文 Fig.3）</figcaption>
+</figure>
+
+<h3>SoundFlow 总体流程图</h3>
+<pre class="mermaid">
+flowchart TD
+    A["原始音频数据<br>离线数据集 + 网络爬取"] --> B["TFJP 预处理<br>静音切割 / 去噪 / 边界归一化"]
+    B --> C["分层事件筛选<br>Hierarchical Event Curation"]
+    C --> D["序列拼接<br>双轨噪声混合 + 时间戳标注"]
+    D --> E["StreamAudio-2M<br>260万条 / 302k小时"]
+
+    E --> F["Stage 1: 格式训练<br>新Token嵌入 + LM Head"]
+    F --> G["Stage 2: 适配器训练<br>声学特征对齐"]
+    G --> H["Stage 3: 大规模流式SFT<br>ASR / 翻译 / 对话 / 理解"]
+    H --> I["Stage 4: 指令跟随微调<br>多轮 / 主动 / 历史回顾"]
+
+    I --> J["异步低延迟推理<br>FIFO 调度"]
+    J --> K["实时输出<br>FCL ≈ 392ms / Stall 0%"]
+
+    style A fill:#313244,stroke:#45475a
+    style E fill:#2a2a3e,stroke:#89b4fa
+    style K fill:#2a2a3e,stroke:#a6e3a1
+</pre>
+
+<h3>阶段一：流式原生数据构建</h3>
+<p>
+  离线音频数据集不能直接用于流式训练——它们缺少连续性、时间戳标注和噪声背景。SoundFlow 的数据构建管线通过以下步骤将离线数据转化为流式格式：
+</p>
+<ol>
+  <li><strong>TFJP 预处理</strong>（Time-Frequency Joint Processing）：对每条音频执行静音切割（$\tau=300$ms）、噪声分析（最低能量5%帧）、谱减法去噪（$\gamma=1.0$）、边界归一化和谱平滑（$\omega=20$ms Hann窗），最多迭代 $K=3$ 次直至稳定，对齐步长 $\delta=200$ms；</li>
+  <li><strong>分层事件筛选</strong>：按音频类型（语音/音乐/环境音/噪声）分层采样，确保各类事件在训练集中的覆盖均衡；</li>
+  <li><strong>序列拼接与噪声混合</strong>：将多条短音频拼接为 3–15 轮的连续对话序列，同时叠加双轨噪声（前景0dB、背景-6dB、环境-12dB），噪声池 $\mathcal{N} = \textsc{MUSAN} \cup \textsc{WHAM!} \cup \textsc{DNS-Challenge}$，SNR 均匀采样 $\mathcal{U}(5, 20)$dB；</li>
+  <li><strong>Token级标注</strong>：为每个位置生成 $\langle\text{input ids}, \text{labels}\rangle$ 对，包含决策令牌和响应内容的对齐标注。</li>
+</ol>
+
+<h3>阶段二：感知感知训练（四阶段课程）</h3>
+<p>
+  训练采用由浅入深的四阶段课程策略，每阶段递进地解锁更多模块：
+</p>
+<table>
+  <tr><th>阶段</th><th>描述</th><th>可训练模块</th><th>核心目标</th></tr>
+  <tr><td>Stage 1</td><td>格式训练</td><td>LM Head + 新Token嵌入</td><td>学习 &lt;silent&gt;/&lt;response&gt; 令牌用法</td></tr>
+  <tr><td>Stage 2</td><td>适配器训练</td><td>Adapter only</td><td>将块级声学特征对齐到LM语义空间</td></tr>
+  <tr><td>Stage 3</td><td>大规模流式SFT</td><td>Adapter + LM</td><td>ASR/翻译/对话/音频理解多任务联合</td></tr>
+  <tr><td>Stage 4</td><td>指令跟随微调</td><td>全模型</td><td>多轮对话、主动干预、历史回顾能力</td></tr>
+</table>
+<p>
+  训练目标采用<strong>双损失函数</strong>，同时优化语言建模损失和流式控制损失：
+</p>
+<p>$$\mathcal{L} = \frac{1}{N}\sum_{j=1}^{N}\left(\underbrace{-\log P_\theta(t_j \mid \mathcal{H}_j)}_{\mathcal{L}_{\mathrm{LM}}} + \lambda \underbrace{-\log P_\theta(s_j \mid \mathcal{H}_j)}_{\mathcal{L}_{\mathrm{stream}}}\right)$$</p>
+<p>
+  其中 $t_j$ 是目标文本令牌，$s_j$ 是流式控制令牌（silent/response），$\mathcal{H}_j$ 是历史上下文，$\lambda$ 为平衡系数（最优值 $\lambda=1.0$）。双损失设计确保模型在提升语言理解质量的同时，精准学习流式决策时机。
+</p>
+<p>
+  此外，训练中还引入了两项关键技术：
+</p>
+<ul>
+  <li><strong>历史回顾（History Review）</strong>：在训练序列中随机插入对历史片段的回顾问答，防止模型在长序列中遗忘早期内容；</li>
+  <li><strong>静音训练（Silence Training）</strong>：专门构造含大量静音段的训练样本，强化模型在无声环境下的"保持静默"决策。</li>
+</ul>
+
+<!-- ===== StreamAudio-2M ===== -->
+<h2>StreamAudio-2M 数据集</h2>
+<p>
+  StreamAudio-2M 是本文构建的大规模流式音频语料库，也是目前已知规模最大、任务覆盖最广的流式音频交互数据集。它包含 <strong>260万条</strong> 训练样本、<strong>302k小时</strong> 音频、<strong>749万轮</strong> 对话交互，覆盖 <strong>7个核心能力</strong> 和 <strong>28个子任务</strong>。
+</p>
+
+<h3>任务分布（ECharts 饼图）</h3>
+<div id="chart-dataset-pie" class="echarts-container" style="height:360px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-dataset-pie');
+  if(!dom) return;
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'StreamAudio-2M 任务分布（共260万条）',left:'center',top:12,textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'item',formatter:'{b}: {c}万条 ({d}%)'},
+    legend:{orient:'vertical',right:20,top:'center',textStyle:{color:'#cdd6f4',fontSize:12}},
+    series:[{
+      type:'pie',
+      radius:['35%','65%'],
+      center:['40%','55%'],
+      data:[
+        {value:53.9, name:'语音聊天\nVoice Chatting', itemStyle:{color:'#89b4fa'}},
+        {value:48.7, name:'流式指令跟随\nStr. Instr. Follow.', itemStyle:{color:'#a6e3a1'}},
+        {value:38.2, name:'流式音频理解\nStr. Audio Und.', itemStyle:{color:'#fab387'}},
+        {value:35.7, name:'流式翻译\nStr. Translation', itemStyle:{color:'#f38ba8'}},
+        {value:27.0, name:'实时ASR\nReal-time ASR', itemStyle:{color:'#cba6f7'}},
+        {value:17.1, name:'主动响应\nProactive Res.', itemStyle:{color:'#89dceb'}},
+        {value:13.0, name:'环境音频智能体\nEnv. Audio Agent', itemStyle:{color:'#f9e2af'}}
+      ],
+      label:{formatter:'{b}\n{d}%',color:'#cdd6f4',fontSize:11},
+      emphasis:{itemStyle:{shadowBlur:10,shadowOffsetX:0,shadowColor:'rgba(0,0,0,0.5)'}}
+    }]
+  });
+})();
+</script>
+
+<h3>各任务详细数据</h3>
+<table>
+  <tr><th>任务类别</th><th>条数</th><th>占比</th><th>主要数据来源</th></tr>
+  <tr><td>语音聊天 (Voice Chatting)</td><td>539k</td><td>23.1%</td><td>MOSS, GammaCorpus-Fact-QA</td></tr>
+  <tr><td>流式指令跟随 (Str. Instr. Follow.)</td><td>487k</td><td>20.8%</td><td>UltraChat, Magpie-Pro, BellGroup, COIG-CQIA</td></tr>
+  <tr><td>流式音频理解 (Str. Audio Und.)</td><td>382k</td><td>16.4%</td><td>AudioSet, FMA</td></tr>
+  <tr><td>流式翻译 (Str. Translation)</td><td>357k</td><td>15.3%</td><td>CoVoST 2, AISHELL</td></tr>
+  <tr><td>实时ASR (Real-time ASR)</td><td>270k</td><td>11.6%</td><td>CommonVoice, GigaSpeech, LibriSpeech, VoxPopuli</td></tr>
+  <tr><td>主动响应 (Proactive Res.)</td><td>171k</td><td>7.3%</td><td>AudioSet events, AudioX, ElevenLabs</td></tr>
+  <tr><td>环境音频智能体 (Env. Audio Agent)</td><td>130k</td><td>5.5%</td><td>MOSS, AudioSet, WHAM!, DNS, MUSAN</td></tr>
+</table>
+
+<h3>数据构建管线</h3>
+<p>
+  从原始数据到最终语料库经历四步处理：
+</p>
+<ol>
+  <li><strong>数据收集</strong>：汇聚约164万条基础样本（约8900小时），来源覆盖多语言ASR、音频理解、对话等开源数据集；</li>
+  <li><strong>预处理</strong>：使用 CosyVoice TTS 合成语音，LLM 改写文本以增加多样性，ASR 质量过滤（WER阈值 $\tau_{\text{wer}}=0.10$，最多重试 $R=2$ 次）；</li>
+  <li><strong>序列拼接</strong>：TFJP 预处理 + 双轨噪声混合，生成3–15轮连续对话序列；</li>
+  <li><strong>Token级标注</strong>：为每个位置生成决策令牌和响应内容的精确对齐标注。</li>
+</ol>
+
+<figure>
+  <img src="https://arxiv.org/html/2606.05121v1/fig/dataset.png" alt="StreamAudio-2M 数据集总览">
+  <figcaption>图5：StreamAudio-2M 数据集构成总览（来源：原文 Fig.5）</figcaption>
+</figure>
+
+<!-- ===== 异步低延迟推理 ===== -->
+<h2>异步低延迟推理：FIFO 调度机制</h2>
+<p>
+  流式推理的核心挑战在于：音频块持续到来，而语言模型的自回归生成需要时间。若处理不当，会出现两类问题：首块响应延迟过高（FCL过大），或因处理速度跟不上输入速度而产生卡顿（Stall）。SoundFlow 通过 <strong>FIFO（First-In-First-Out）异步调度</strong> 机制解决这一问题。
+</p>
+
+<figure>
+  <img src="https://arxiv.org/html/2606.05121v1/x4.png" alt="FIFO 异步流式推理示意图">
+  <figcaption>图4：FIFO 调度的异步流式推理——音频输入与语言模型生成解耦并行（来源：原文 Fig.4）</figcaption>
+</figure>
+
+<h3>FIFO 调度原理</h3>
+<p>
+  传统同步推理中，音频块的处理与LM生成串行执行，导致每个块的等待时间累积。FIFO 调度将两者解耦为独立的异步流：
+</p>
+<ul>
+  <li><strong>输入队列</strong>：音频块以固定间隔（400ms）入队，编码器持续处理；</li>
+  <li><strong>决策队列</strong>：决策头以FIFO顺序消费编码结果，输出 silent/response 令牌；</li>
+  <li><strong>生成队列</strong>：仅当决策为 response 时，触发LM生成并将结果异步推送到输出流；</li>
+  <li><strong>背压控制</strong>：当生成队列积压超过阈值时，自动降低采样率或跳帧，防止内存溢出。</li>
+</ul>
+
+<h3>FIFO 效果验证</h3>
+<div id="chart-fifo" class="echarts-container" style="height:280px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-fifo');
+  if(!dom) return;
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'FIFO 调度效果对比',left:'center',top:10,textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['平均首块延迟 FCL (ms)','卡顿率 Stall (%)'],top:40,textStyle:{color:'#cdd6f4'}},
+    grid:{top:70,bottom:40,left:80,right:40},
+    xAxis:{type:'category',data:['有FIFO调度','无FIFO调度'],axisLabel:{color:'#cdd6f4'}},
+    yAxis:[
+      {type:'value',name:'FCL (ms)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},max:1000},
+      {type:'value',name:'Stall (%)',nameTextStyle:{color:'#cdd6f4'},axisLabel:{color:'#cdd6f4'},max:10}
+    ],
+    series:[
+      {name:'平均首块延迟 FCL (ms)',type:'bar',data:[392,831],itemStyle:{color:'#89b4fa'},barWidth:'30%'},
+      {name:'卡顿率 Stall (%)',type:'bar',yAxisIndex:1,data:[0,5.2],itemStyle:{color:'#f38ba8'},barWidth:'30%',barGap:'20%'}
+    ]
+  });
+})();
+</script>
+<p>
+  实验数据显示，FIFO 调度将首块延迟从 831ms 降至 <strong>392ms（降低 4.5×）</strong>，并将卡顿率从 5.2% 降至 <strong>0%</strong>，实现了稳定的实时交互体验。
+</p>
+
+<h3>块大小的权衡</h3>
+<p>
+  块大小是延迟与理解质量之间的核心权衡参数：
+</p>
+<table>
+  <tr><th>块大小</th><th>Alpaca 评分↑</th><th>MMAU 评分↑</th><th>首块延迟↓</th></tr>
+  <tr><td>0.2s</td><td>3.41</td><td>49.74</td><td>258ms</td></tr>
+  <tr><td><strong>0.4s（最优）</strong></td><td><strong>4.28</strong></td><td><strong>58.15</strong></td><td><strong>392ms</strong></td></tr>
+  <tr><td>0.6s</td><td>4.27</td><td>58.46</td><td>674ms</td></tr>
+  <tr><td>0.8s</td><td>4.30</td><td>59.13</td><td>786ms</td></tr>
+</table>
+<p>
+  0.4s 块大小在延迟与质量之间取得最优平衡：相比0.2s，MMAU 提升 +8.41分，延迟仅增加 134ms；相比0.8s，延迟减少 394ms，质量损失微乎其微（-0.98分）。
+</p>
+
+<h3>跨块连续性：神经机制分析</h3>
+<p>
+  一个重要的发现是，模型能够在内部自动重建跨块的语义连续性。实验测量了不同模块输出的块间余弦相似度：
+</p>
+<ul>
+  <li>原始编码器输出：余弦相似度 <strong>0.25</strong>（连续性极低）；</li>
+  <li>GPT Layer 0 输出：余弦相似度提升至 <strong>0.80</strong>（仅经过一层即大幅恢复）。</li>
+</ul>
+<p>
+  这说明语言模型的最底层就已具备跨块语义融合能力，连续性重建是一个<strong>涌现性质</strong>，无需专门的跨块注意力机制。
+</p>
+
+<figure>
+  <img src="https://arxiv.org/html/2606.05121v1/x7.png" alt="跨块连续性比率在各模型组件中的变化">
+  <figcaption>图7：跨块连续性比率在不同模型层中的分布——GPT Layer 0 即将相似度从0.25提升至0.80（来源：原文 Fig.7）</figcaption>
+</figure>
+
+<!-- ===== 实验结果 ===== -->
+<h2>实验结果</h2>
+<p>
+  Audio-Interaction 在 8 个基准测试上与主流离线和在线模型进行了全面对比。核心发现是：<strong>一个3B参数的流式模型可以在多个维度超越7B参数的离线模型</strong>，打破了"流式=性能妥协"的固有认知。
+</p>
+
+<h3>MMAU 音频指令理解基准</h3>
+<p>
+  MMAU（Massive Multitask Audio Understanding）是综合评测声音理解、音乐理解和语音理解的主流基准。Audio-Interaction（3B）以 <strong>58.15</strong> 分成为所有参测模型中的最高分，超越 Qwen2.5-Omni-7B（49.58）达 8.57 分。
+</p>
+
+<div id="chart-mmau" class="echarts-container" style="height:380px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-mmau');
+  if(!dom) return;
+  var chart = echarts.init(dom);
+  var models = ['Audio Flamingo 2\n(3B,离线)','Qwen2-Audio\n(7B,离线)','Audio-Reasoner\n(8.4B,离线)','Phi-4-multimodal\n(5.6B,离线)','Voxtral-Mini\n(3B,离线)','Baichuan-Omni-1.5\n(7B,离线)','Qwen2.5-Omni\n(3B,离线)','Qwen2.5-Omni\n(7B,离线)','Audio-Interaction\n(3B,流式)'];
+  var sound = [1.50,22.32,20.48,44.65,46.08,57.53,51.81,60.54,65.63];
+  var music = [1.49,19.16,26.65,27.84,34.13,36.53,44.01,50.90,57.93];
+  var speech = [0.35,16.31,13.48,21.99,30.50,24.82,29.79,35.11,46.68];
+  var avg = [1.16,19.41,20.57,31.75,37.24,40.40,42.51,49.58,58.15];
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'MMAU 基准评测结果对比',left:'center',top:10,textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['Sound','Music','Speech','Average'],top:38,textStyle:{color:'#cdd6f4',fontSize:11}},
+    grid:{top:70,bottom:100,left:50,right:20},
+    xAxis:{type:'category',data:models,axisLabel:{color:'#cdd6f4',fontSize:10,interval:0,rotate:0}},
+    yAxis:{type:'value',name:'Score',max:80,axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'Sound',type:'bar',data:sound,itemStyle:{color:'#89b4fa'},barMaxWidth:18},
+      {name:'Music',type:'bar',data:music,itemStyle:{color:'#a6e3a1'},barMaxWidth:18},
+      {name:'Speech',type:'bar',data:speech,itemStyle:{color:'#fab387'},barMaxWidth:18},
+      {name:'Average',type:'bar',data:avg,itemStyle:{color:'#cba6f7'},barMaxWidth:18}
+    ]
+  });
+})();
+</script>
+
+<h3>语音对话基准</h3>
+<p>
+  在 LLaMA Questions、WebQuestions、AlpacaEval、SD-QA 四个语音对话基准上，Audio-Interaction（3B）与7B级别的离线模型保持竞争力：
+</p>
+<table>
+  <tr><th>模型</th><th>参数量</th><th>流式</th><th>LLaMA Q.</th><th>Web Q.</th><th>Alpaca.</th><th>SD-QA</th></tr>
+  <tr><td>Moshi</td><td>7B</td><td>✓</td><td>62.20</td><td>26.30</td><td>2.01</td><td>15.01</td></tr>
+  <tr><td>Freeze-Omni</td><td>7B</td><td>✓</td><td>72.00</td><td>44.73</td><td>4.14</td><td>50.16</td></tr>
+  <tr><td>Qwen2.5-Omni-3B</td><td>3B</td><td>✗</td><td>66.00</td><td>27.95</td><td>4.32</td><td>49.37</td></tr>
+  <tr><td>Qwen2.5-Omni-7B</td><td>7B</td><td>✗</td><td>75.33</td><td>62.80</td><td>4.49</td><td>55.71</td></tr>
+  <tr><td class="metric-good"><strong>Audio-Interaction</strong></td><td class="metric-good"><strong>3B</strong></td><td class="metric-good"><strong>✓</strong></td><td class="metric-good"><strong>67.31</strong></td><td class="metric-good"><strong>54.34</strong></td><td class="metric-good"><strong>4.28</strong></td><td class="metric-good"><strong>52.14</strong></td></tr>
+</table>
+
+<h3>ASR 与语音翻译基准</h3>
+<p>
+  在 LibriSpeech（WER）和 CoVoST 2（BLEU）基准上，Audio-Interaction 在翻译任务上表现尤为突出：
+</p>
+<table>
+  <tr><th>模型</th><th>参数量</th><th>clean WER↓</th><th>other WER↓</th><th>en-zh BLEU↑</th><th>zh-en BLEU↑</th></tr>
+  <tr><td>Canary</td><td>1B</td><td><strong>1.48</strong></td><td><strong>2.93</strong></td><td>—</td><td>—</td></tr>
+  <tr><td>Qwen2-Audio</td><td>7B</td><td>1.60</td><td>3.60</td><td>45.20</td><td>24.40</td></tr>
+  <tr><td>Qwen2.5-Omni-7B</td><td>7B</td><td>1.80</td><td>3.40</td><td>41.40</td><td>29.40</td></tr>
+  <tr><td class="metric-good"><strong>Audio-Interaction</strong></td><td class="metric-good"><strong>3B</strong></td><td class="metric-note">3.17</td><td class="metric-note">6.04</td><td class="metric-good"><strong>55.22</strong></td><td class="metric-good"><strong>35.21</strong></td></tr>
+</table>
+<p>
+  值得注意的是，Audio-Interaction 在 WER 上略逊于专精 ASR 的 Canary 模型（这是合理的，因为 Canary 是专用 ASR 模型），但在翻译 BLEU 上以较大优势领先所有对比模型（en-zh: +10.02 vs Qwen2-Audio，zh-en: +5.81）。
+</p>
+
+<h3>消融实验：训练组件贡献</h3>
+<div id="chart-ablation" class="echarts-container" style="height:300px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-ablation');
+  if(!dom) return;
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'训练组件消融实验（MMAU vs Trigger Accuracy）',left:'center',top:10,textStyle:{color:'#cdd6f4',fontSize:13}},
+    tooltip:{trigger:'axis'},
+    legend:{data:['MMAU Score','Trigger Accuracy (%)'],top:38,textStyle:{color:'#cdd6f4'}},
+    grid:{top:70,bottom:40,left:60,right:60},
+    xAxis:{type:'category',data:['V1 基线','V2 +流式SFT','V3 -TFJP','V4 -事件筛选','V5 完整模型'],axisLabel:{color:'#cdd6f4',fontSize:11}},
+    yAxis:[
+      {type:'value',name:'MMAU',min:54,max:60,axisLabel:{color:'#cdd6f4'}},
+      {type:'value',name:'Trigger Acc%',min:80,max:100,axisLabel:{color:'#cdd6f4'}}
+    ],
+    series:[
+      {name:'MMAU Score',type:'bar',data:[57.81,58.56,57.74,55.11,58.15],itemStyle:{color:'#89b4fa'},barMaxWidth:30},
+      {name:'Trigger Accuracy (%)',type:'line',yAxisIndex:1,data:[null,92.42,85.35,88.51,96.77],itemStyle:{color:'#a6e3a1'},lineStyle:{width:2},symbol:'circle',symbolSize:6}
+    ]
+  });
+})();
+</script>
+<p>
+  消融实验揭示了各组件的贡献：
+</p>
+<ul>
+  <li><strong>流式SFT</strong>（V1→V2）：触发准确率从无到有（92.42%），MMAU 提升 +0.75；</li>
+  <li><strong>TFJP预处理</strong>（V2 vs V3）：触发准确率提升 +7.07pp（92.42%→85.35%的对比说明去除TFJP后下降）；</li>
+  <li><strong>事件筛选</strong>（V2 vs V4）：MMAU 提升 +3.45（55.11→58.56），是质量提升最显著的单一组件；</li>
+  <li><strong>完整模型</strong>（V5）：触发准确率达 <strong>96.77%</strong>，各项指标综合最优。</li>
+</ul>
+
+<!-- ===== Proactive-Sound-Bench ===== -->
+<h2>Proactive-Sound-Bench：主动音频干预基准</h2>
+<p>
+  Proactive-Sound-Bench 是本文提出的新基准，专门评估模型在无显式指令情况下主动识别并响应环境音频事件的能力——这是现有所有音频基准均未覆盖的能力维度。
+</p>
+
+<h3>基准设计</h3>
+<p>
+  Proactive-Sound-Bench 包含 <strong>644个</strong> 人工设计的声学事件场景，按难度分为两个层级：
+</p>
+<ul>
+  <li><strong>Single 层级</strong>：单一事件决策——在干净或低噪声背景下，判断是否需要对特定声学事件（如烟雾报警、婴儿哭声、门铃）进行响应；</li>
+  <li><strong>Multiple 层级</strong>：多事件干扰——在持续的干扰音（背景音乐、人群噪声）中，准确识别目标事件并维持干预决策。</li>
+</ul>
+<p>
+  事件类别覆盖 <strong>6个顶级类别</strong>、<strong>17个子类别</strong>，包括：
+</p>
+<ul>
+  <li>安全警报（烟雾报警、CO报警、火警）；</li>
+  <li>家庭事件（婴儿哭声、宠物叫声、门铃）；</li>
+  <li>交通场景（汽车喇叭、紧急车辆警报）；</li>
+  <li>自然灾害（雷声、地震警报）；</li>
+  <li>医疗场景（心脏监护仪、呼叫铃）；</li>
+  <li>工作场景（会议提醒、电话铃声）。</li>
+</ul>
+<p>
+  评测指标为各类别的平均准确率，Single 和 Multiple 分别统计。
+</p>
+
+<h3>评测结果</h3>
+<div id="chart-proactive" class="echarts-container" style="height:300px"></div>
+<script>
+(function(){
+  var dom = document.getElementById('chart-proactive');
+  if(!dom) return;
+  var chart = echarts.init(dom);
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:'Proactive-Sound-Bench 评测结果',left:'center',top:10,textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{data:['Single Avg (%)','Multiple Avg (%)'],top:38,textStyle:{color:'#cdd6f4'}},
+    grid:{top:70,bottom:40,left:60,right:20},
+    xAxis:{type:'category',data:['Qwen2.5-Omni-3B','Qwen2.5-Omni-7B','MiniCPM-o-4.5','Audio-Interaction\n(3B,流式)'],axisLabel:{color:'#cdd6f4',fontSize:11}},
+    yAxis:{type:'value',name:'Accuracy (%)',max:80,axisLabel:{color:'#cdd6f4'}},
+    series:[
+      {name:'Single Avg (%)',type:'bar',data:[41.0,58.2,58.9,61.2],itemStyle:{color:'#89b4fa'},barMaxWidth:30},
+      {name:'Multiple Avg (%)',type:'bar',data:[29.3,32.1,58.9,62.8],itemStyle:{color:'#a6e3a1'},barMaxWidth:30}
+    ]
+  });
+})();
+</script>
+<p>
+  Audio-Interaction 在 Single 层级（61.2%）和 Multiple 层级（62.8%）均取得最高分。尤其在更具挑战性的 Multiple 层级，相比 Qwen2.5-Omni-7B（32.1%）提升 <strong>+30.7pp</strong>，体现了流式训练在主动感知方面的显著优势。值得注意的是，MiniCPM-o-4.5 在 Multiple 层级也表现出色（58.9%），说明部分离线模型通过特殊设计也能具备一定的主动响应能力，但 Audio-Interaction 仍以 3.9pp 领先。
+</p>
+
+<h3>真实场景验证</h3>
+<p>
+  论文在附录中进行了四个真实场景的验证（旅行、工作、居家、通勤），总时长约2小时，使用16kHz消费级设备录制，<strong>未应用TFJP预处理</strong>：
+</p>
+<table>
+  <tr><th>指标</th><th>合成测试集</th><th>真实场景</th></tr>
+  <tr><td>触发准确率</td><td>62.0%</td><td>58.9%</td></tr>
+  <tr><td>静音相关性（Pearson）</td><td>—</td><td>0.91</td></tr>
+  <tr><td>连续性比率（GPT L0）</td><td>0.80</td><td>0.78</td></tr>
+  <tr><td>L35H14消融退化</td><td>0.88</td><td>0.86</td></tr>
+</table>
+<p>
+  合成与真实场景的关键指标高度一致（连续性比率 0.80 vs 0.78，L35H14消融退化 0.88 vs 0.86），说明模型具备良好的领域泛化能力，实验室发现的神经机制在真实环境中同样成立。
+</p>
+
+<!-- ===== 总结与启发 ===== -->
+<h2>总结与启发</h2>
+<p>
+  Audio Interaction Model 是音频AI领域从"工具型"向"交互型"演进的重要里程碑。它不仅提供了一套完整的技术方案，更揭示了若干值得深思的研究洞见。
+</p>
+
+<h3>核心贡献总结</h3>
+<div class="highlight-box">
+  <p><strong>1. 范式转换</strong>：将音频AI从"输入-推理-输出"的静态范式升级为"always-on perceive-decide-respond"的动态循环，从根本上扩展了LALMs的能力边界。</p>
+  <p><strong>2. 统一框架</strong>：SoundFlow 首次在单一模型中统一了实时ASR、流式指令跟随、主动音频干预三类在线能力，避免了多模型切换的工程复杂性。</p>
+  <p><strong>3. 数据驱动</strong>：StreamAudio-2M 的构建方法论（TFJP预处理 + 分层事件筛选 + 双轨噪声混合）为流式音频数据的规模化生产提供了可复现的范本。</p>
+  <p><strong>4. 效率突破</strong>：3B参数的流式模型在MMAU上超越7B参数的离线模型，证明流式训练不仅不损害理解能力，反而通过更丰富的上下文学习提升了整体性能。</p>
+</div>
+
+<h3>关键技术洞见</h3>
+<ul>
+  <li><strong>连续性涌现</strong>：跨块语义连续性在 GPT Layer 0 即自动重建（0.25→0.80），说明LM底层具备强大的上下文融合能力，无需专门的跨块注意力机制；</li>
+  <li><strong>注意力头专化</strong>：单个注意力头（L35H14）主导流式控制决策，揭示了流式能力在模型内部的高度局部化表征；</li>
+  <li><strong>双损失平衡</strong>：$\lambda=1.0$ 是语言质量与流式决策精度的最优平衡点，过大的 $\lambda$ 会损害语言理解能力；</li>
+  <li><strong>块大小甜点</strong>：400ms 块大小在延迟（392ms）与质量（MMAU 58.15）之间取得最优平衡，与人类语音感知的自然分组粒度高度吻合。</li>
+</ul>
+
+<h3>局限性与未来方向</h3>
+<ul>
+  <li><strong>ASR 精度</strong>：流式模式下 WER 略高于专用 ASR 模型（3.17% vs 1.48%），在高精度转录场景仍有提升空间；</li>
+  <li><strong>多语言扩展</strong>：当前主要支持中英双语，多语言流式交互能力有待验证；</li>
+  <li><strong>端到端语音输出</strong>：当前输出仍为文本，与 Moshi 等端到端语音系统相比缺少直接语音响应能力；</li>
+  <li><strong>个性化适应</strong>：always-on 系统需要根据用户偏好动态调整触发阈值，个性化流式交互是重要的未来方向；</li>
+  <li><strong>隐私与安全</strong>：持续监听模式带来的隐私保护问题需要在部署层面重点关注。</li>
+</ul>
+
+<h3>对行业的启发</h3>
+<blockquote>
+  <p>Audio-Interaction 的成功表明，<strong>流式与离线不是对立关系</strong>——通过精心设计的数据构建（TFJP）、训练策略（双损失+课程学习）和推理机制（FIFO调度），流式模型可以在保持离线任务竞争力的同时获得全新的在线能力。这一思路对视频、多模态等其他流式场景同样具有参考价值。</p>
+</blockquote>
+<p>
+  对于工程实践者而言，400ms 块大小、FIFO 调度、$\lambda=1.0$ 双损失权重等具体超参数选择提供了可直接参考的工程基线。对于研究者而言，L35H14 注意力头的发现为理解流式能力的神经机制开辟了新的探索方向。
+</p>
+
+<!-- ===== 参考文献 ===== -->
+<h2>参考文献</h2>
+<ol>
+  <li>Zhifei Xie et al. (2026). <strong>Audio Interaction Model</strong>. arXiv:2606.05121. <a href="https://arxiv.org/abs/2606.05121" target="_blank">arxiv.org/abs/2606.05121</a></li>
+  <li>Défossez et al. (2024). <strong>Moshi: a speech-text foundation model for real-time dialogue</strong>. arXiv:2410.00037.</li>
+  <li>Qwen Team (2025). <strong>Qwen2.5-Omni technical report</strong>. arXiv:2503.20215.</li>
+  <li>Chu et al. (2024). <strong>Qwen2-audio technical report</strong>. arXiv:2407.10759.</li>
+  <li>Wang et al. (2024). <strong>Freeze-Omni: a smart and low latency speech-to-speech dialogue model with frozen LLM</strong>. arXiv:2411.00774.</li>
+  <li>Xie &amp; Wu (2024). <strong>Mini-omni: language models can hear, talk while thinking in streaming</strong>. arXiv:2408.16725.</li>
+  <li>Fang et al. (2024). <strong>LLaMA-Omni: seamless speech interaction with large language models</strong>. arXiv:2409.06666.</li>
+  <li>Sakshi et al. (2024). <strong>MMAU: a massive multitask audio understanding and reasoning benchmark</strong>. arXiv:2410.19168.</li>
+  <li>Radford et al. (2023). <strong>Robust speech recognition via large-scale weak supervision</strong> (Whisper). ICML 2023.</li>
+  <li>Gemmeke et al. (2017). <strong>Audio Set: an ontology and human-labeled dataset for audio events</strong>. ICASSP 2017.</li>
+  <li>Wang et al. (2021). <strong>CoVoST 2 and massively multilingual speech translation</strong>. Interspeech 2021.</li>
+  <li>Snyder et al. (2015). <strong>MUSAN: a music, speech, and noise corpus</strong>. arXiv:1510.08484.</li>
+  <li>Wichern et al. (2019). <strong>WHAM!: extending speech separation to noisy environments</strong>. Interspeech 2019.</li>
+  <li>Sekoyan et al. (2025). <strong>Canary-1B-v2 &amp; Parakeet-TDT-0.6B-v3</strong>. Technical Report.</li>
+  <li>Zhifei Xie et al. (2025). <strong>Audio-Reasoner: improving reasoning capability in large audio language models</strong>. arXiv:2503.02318.</li>
+  <li>Tian et al. (2025). <strong>AudioX: diffusion transformer for anything-to-audio generation</strong>. arXiv:2503.10522.</li>
+</ol>
+
+<hr>
+<p style="color:#6c7086;font-size:.85em;text-align:center;">
+  本报告生成时间：2026年6月5日 &nbsp;|&nbsp; 论文来源：<a href="https://arxiv.org/abs/2606.05121" target="_blank">arXiv:2606.05121</a> &nbsp;|&nbsp; 许可证：CC BY 4.0
+</p>
+
+</main>
+<script>
+  mermaid.initialize({startOnLoad:true,theme:'dark'});
+  const toc=document.getElementById('toc');
+  document.querySelectorAll('main h2,main h3').forEach((h,i)=>{
+    if(!h.id)h.id='section-'+i;
+    const a=document.createElement('a');
+    a.href='#'+h.id;a.textContent=h.textContent;
+    if(h.tagName==='H3')a.classList.add('toc-h3');
+    toc.appendChild(a);
+  });
+  const observer=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      const link=toc.querySelector(`a[href="#${e.target.id}"]`);
+      if(link)link.classList.toggle('active',e.isIntersecting);
+    });
+  },{rootMargin:'-10% 0px -80% 0px'});
+  document.querySelectorAll('main h2,main h3').forEach(h=>observer.observe(h));
+</script>
+</body>
+</html>

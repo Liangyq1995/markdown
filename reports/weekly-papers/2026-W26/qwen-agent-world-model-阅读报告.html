@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Qwen-AgentWorld 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.25em 0; }
+    .tag { display: inline-block; background: #313244; color: #89b4fa; border: 1px solid #45475a; border-radius: 4px; padding: 1px 8px; font-size: 0.82em; margin: 2px; }
+    .highlight-box { background: #1a1a2e; border: 1px solid #89b4fa44; border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .metric-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 1em 0; }
+    .metric-card { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; flex: 1; min-width: 140px; text-align: center; }
+    .metric-card .val { font-size: 1.8em; font-weight: 700; color: #a6e3a1; }
+    .metric-card .lbl { font-size: 0.82em; color: #6c7086; margin-top: 4px; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <h1>Qwen-AgentWorld: Language World Models for General Agents</h1>
+    <p style="color:#6c7086; font-size:0.9em; margin-bottom:1.5em;">
+      arXiv: 2606.24597 &nbsp;·&nbsp; 2026-06-23 &nbsp;·&nbsp; Qwen Team, Alibaba &nbsp;·&nbsp;
+      <a href="https://arxiv.org/abs/2606.24597" target="_blank">论文</a> &nbsp;·&nbsp;
+      <a href="https://github.com/QwenLM/Qwen-AgentWorld" target="_blank">GitHub</a> &nbsp;·&nbsp;
+      👍 116 upvotes
+    </p>
+
+    <!-- ===== 基本信息 ===== -->
+    <h2>论文基本信息</h2>
+    <table>
+      <tr><th style="width:160px">项目</th><th>内容</th></tr>
+      <tr><td><strong>论文标题</strong></td><td>Qwen-AgentWorld: Language World Models for General Agents</td></tr>
+      <tr><td><strong>核心问题</strong></td><td>如何构建能够模拟真实 Agent 交互环境的语言世界模型，并以此增强通用 Agent 能力</td></tr>
+      <tr><td><strong>发布机构</strong></td><td>Alibaba Qwen Team（33 位作者）</td></tr>
+      <tr><td><strong>发布时间</strong></td><td>2026 年 6 月 23 日</td></tr>
+      <tr><td><strong>模型规模</strong></td><td>Qwen-AgentWorld-35B-A3B（MoE，3B 激活）和 Qwen-AgentWorld-397B-A17B（MoE，17B 激活）</td></tr>
+      <tr><td><strong>训练数据</strong></td><td>7 个领域超过 1000 万条真实环境交互轨迹</td></tr>
+      <tr><td><strong>开源地址</strong></td><td><a href="https://github.com/QwenLM/Qwen-AgentWorld" target="_blank">https://github.com/QwenLM/Qwen-AgentWorld</a>（Apache 2.0）</td></tr>
+      <tr><td><strong>HuggingFace</strong></td><td><a href="https://huggingface.co/Qwen/Qwen-AgentWorld-35B-A3B" target="_blank">Qwen/Qwen-AgentWorld-35B-A3B</a></td></tr>
+      <tr><td><strong>评测基准</strong></td><td>AgentWorldBench（7 个领域 × 5 维度评估，基于 9 个已有基准构建）</td></tr>
+    </table>
+
+    <!-- ===== 概述 ===== -->
+    <h2>概述</h2>
+    <blockquote>
+      世界模型（World Model）根据当前观察和动作预测环境动态，是推理与规划的核心认知机制。本工作探索如何基于语言模型构建世界模型，以进一步突破通用 Agent 的能力边界。
+    </blockquote>
+
+    <p>
+      本文提出 <strong>Qwen-AgentWorld</strong>，这是首个能够通过<strong>长链式思维推理（Long Chain-of-Thought）</strong>模拟 Agent 交互环境的原生语言世界模型（Language World Model，LWM）。与以往将世界建模作为事后适配的方法不同，Qwen-AgentWorld 从持续预训练（CPT）阶段起就将环境建模作为核心训练目标，真正实现了"原生"世界模型。
+    </p>
+
+    <div class="metric-row">
+      <div class="metric-card"><div class="val">7</div><div class="lbl">覆盖领域数</div></div>
+      <div class="metric-card"><div class="val">10M+</div><div class="lbl">训练轨迹条数</div></div>
+      <div class="metric-card"><div class="val">3</div><div class="lbl">训练阶段</div></div>
+      <div class="metric-card"><div class="val">5</div><div class="lbl">评估维度</div></div>
+      <div class="metric-card"><div class="val">9</div><div class="lbl">基准数据集</div></div>
+      <div class="metric-card"><div class="val">58.71</div><div class="lbl">397B 整体得分</div></div>
+    </div>
+
+    <p>论文的核心贡献分为两大部分：</p>
+    <ol>
+      <li><strong>构建 Agent 环境模拟基础模型</strong>：通过三阶段训练流程（CPT → SFT → RL），在 AgentWorldBench 上超越 GPT-5.4、Claude Opus 4.8 等前沿模型。</li>
+      <li><strong>探索两种 Agent 增强范式</strong>：（1）解耦环境模拟器，支持可扩展的强化学习训练；（2）统一 Agent 基础模型，世界模型训练作为高效预热，提升下游 7 个 Agent 基准的表现。</li>
+    </ol>
+
+    <!-- ===== 研究背景与动机 ===== -->
+    <h2>研究背景与动机</h2>
+
+    <h3>世界模型的价值</h3>
+    <p>
+      世界模型的概念源自认知科学与强化学习领域。在经典 RL 框架中，世界模型允许 Agent 在"脑内"模拟环境，无需与真实环境交互即可进行规划与推理。对于语言 Agent 而言，真实环境交互成本极高（API 调用费用、执行时间、安全风险），因此构建高质量的语言世界模型具有重要的工程与科研价值。
+    </p>
+
+    <h3>现有方法的局限</h3>
+    <p>现有研究在以下方面存在明显不足：</p>
+    <ul>
+      <li><strong>领域割裂</strong>：已有世界模型通常只针对单一或少数几个 Agent 领域，缺乏跨领域统一建模能力。</li>
+      <li><strong>事后适配</strong>：大多数方法将世界建模视为通用 LLM 的事后微调任务，而非从预训练阶段就以环境建模为目标。</li>
+      <li><strong>缺乏推理能力</strong>：现有模型通常不具备长链式思维推理能力，在复杂多步骤环境模拟中表现欠佳。</li>
+      <li><strong>评测基准缺失</strong>：语言世界模型领域缺乏系统性、多维度的评测基准。</li>
+    </ul>
+
+    <h3>七大 Agent 领域</h3>
+    <p>Qwen-AgentWorld 覆盖的 7 个领域可分为两大类：</p>
+
+    <div class="mermaid">
+mindmap
+  root((Qwen-AgentWorld))
+    文本领域 Text
+      MCP 工具调用
+      Search 搜索
+      Terminal 终端
+      SWE 软件工程
+    GUI 领域
+      Android 安卓
+      Web 网页浏览
+      OS 桌面操作系统
+    </div>
+
+    <p>
+      对于 GUI 领域，环境观察使用<strong>无障碍树（Accessibility Tree）</strong>和 <strong>UI 视图层级（UI View Hierarchy）</strong>表示，而非像素帧，这使得语言模型能够直接处理结构化界面信息。
+    </p>
+
+    <!-- ===== 核心方法 ===== -->
+    <h2>核心方法</h2>
+
+    <h3>总体架构</h3>
+    <p>
+      Qwen-AgentWorld 的核心设计原则是：<strong>"CPT 注入，SFT 激活，RL 打磨"</strong>（CPT injects, SFT activates, RL sharpens）。整个训练流程从持续预训练阶段起就以环境建模为唯一目标，逐步构建世界建模能力。
+    </p>
+
+    <div class="mermaid">
+flowchart LR
+    A["原始数据\n10M+ 交互轨迹\n7 个领域"] --> B
+
+    subgraph B["阶段一：CPT\n持续预训练"]
+        B1["状态转移动态学习\n非思维链轨迹"]
+        B2["增强专业语料\n领域知识注入"]
+        B1 --- B2
+    end
+
+    B --> C
+
+    subgraph C["阶段二：SFT\n监督微调"]
+        C1["下一状态预测\n激活思维链推理"]
+        C2["质量过滤\n保留率 69.2%"]
+        C1 --- C2
+    end
+
+    C --> D
+
+    subgraph D["阶段三：RL\n强化学习"]
+        D1["混合奖励框架\nRubric + Rule"]
+        D2["仿真保真度优化\nLLM-as-Judge"]
+        D1 --- D2
+    end
+
+    D --> E["Qwen-AgentWorld\n35B-A3B / 397B-A17B"]
+
+    style A fill:#313244,stroke:#45475a,color:#cdd6f4
+    style E fill:#1a1a2e,stroke:#89b4fa,color:#89b4fa
+    </div>
+
+    <h3>阶段一：持续预训练（CPT）</h3>
+    <p>
+      CPT 阶段的目标是向模型注入<strong>通用世界建模能力</strong>，使其理解环境的状态转移动态。训练数据来源于两部分：
+    </p>
+    <ul>
+      <li><strong>环境交互轨迹</strong>：从 7 个领域收集超过 1000 万条真实环境交互记录，涵盖 MCP 工具调用、网页搜索、终端操作、软件工程任务、Android 操作、网页浏览和桌面 OS 任务。</li>
+      <li><strong>增强专业语料</strong>：针对各领域的专业知识文档，帮助模型建立领域知识基础。</li>
+    </ul>
+    <p>
+      CPT 阶段使用<strong>非思维链（Non-Thinking）</strong>轨迹进行训练，重点在于让模型掌握状态转移的基本模式，而非复杂推理。
+    </p>
+
+    <h3>阶段二：监督微调（SFT）</h3>
+    <p>
+      SFT 阶段的目标是<strong>激活下一状态预测的显式思维链推理模式</strong>，让模型学会"边思考边预测"。
+    </p>
+
+    <p>SFT 数据的构建经过严格的质量过滤流程：</p>
+
+    <table>
+      <tr>
+        <th>领域</th>
+        <th>候选样本数</th>
+        <th>保留率</th>
+        <th>最终 SFT 数据（K）</th>
+        <th>平均轮次</th>
+      </tr>
+      <tr><td>MCP</td><td>261K</td><td>68.6%</td><td>179K</td><td>24.3</td></tr>
+      <tr><td>Search</td><td>1,466K</td><td>71.1%</td><td>1,042K</td><td>3.3</td></tr>
+      <tr><td>Terminal</td><td>1,826K</td><td>86.5%</td><td>1,580K</td><td>5.9</td></tr>
+      <tr><td>SWE</td><td>402K</td><td>61.9%</td><td>249K</td><td>26.9</td></tr>
+      <tr><td>Android</td><td>1,975K</td><td>67.7%</td><td>1,337K</td><td>15.9</td></tr>
+      <tr><td>Web</td><td>2,697K</td><td>59.5%</td><td>1,605K</td><td>3.0</td></tr>
+      <tr><td>OS</td><td>1,623K</td><td>67.9%</td><td>1,102K</td><td>5.4</td></tr>
+      <tr><td><strong>合计</strong></td><td><strong>10,250K</strong></td><td><strong>69.2%</strong></td><td><strong>7,094K</strong></td><td><strong>8.5</strong></td></tr>
+    </table>
+
+    <p>
+      值得注意的是 MCP（平均 24.3 轮）和 SWE（平均 26.9 轮）领域的轨迹轮次显著更多，反映了这两类任务的高复杂性。
+    </p>
+
+    <h3>阶段三：强化学习（RL）</h3>
+    <p>
+      RL 阶段通过<strong>混合 Rubric-and-Rule 奖励框架</strong>进一步打磨模型的仿真保真度（Simulation Fidelity）。
+    </p>
+
+    <div class="algo-box">
+      <div class="algo-title">混合奖励框架 (Hybrid Rubric-and-Rule Rewards)</div>
+      <span class="kw">奖励信号 =</span> <span class="var">Rubric 奖励</span> + <span class="var">Rule 奖励</span><br><br>
+      <span class="cm">-- Rubric 奖励（基于 LLM-as-Judge）--</span><br>
+      &nbsp;&nbsp;<span class="fn">LLM_Judge</span>(<span class="var">预测状态</span>, <span class="var">真实状态</span>) → 五维度评分<br>
+      &nbsp;&nbsp;<span class="cm">评估维度：格式 / 事实性 / 一致性 / 真实性 / 质量</span><br><br>
+      <span class="cm">-- Rule 奖励（基于规则的硬约束）--</span><br>
+      &nbsp;&nbsp;<span class="fn">Format_Check</span>(<span class="var">输出</span>) → <span class="num">0/1</span> <span class="cm">（结构合规性）</span><br>
+      &nbsp;&nbsp;<span class="fn">Consistency_Check</span>(<span class="var">输出</span>, <span class="var">历史</span>) → <span class="num">0/1</span> <span class="cm">（跨轮一致性）</span>
+    </div>
+
+    <p>
+      混合奖励设计兼顾了<strong>语义质量</strong>（LLM 评判）和<strong>结构正确性</strong>（规则约束），避免了纯 LLM 评判可能带来的奖励黑客问题。
+    </p>
+
+    <h3>范式一：解耦环境模拟器（Decoupled Environment Simulator）</h3>
+
+    <p>
+      第一种 Agent 增强范式将 Qwen-AgentWorld 作为<strong>独立的环境模拟器</strong>，支持对数千个真实世界环境进行可扩展、可控制的模拟，用于 Agent 的强化学习训练。
+    </p>
+
+    <div class="mermaid">
+sequenceDiagram
+    participant A as Agent Policy
+    participant W as Qwen-AgentWorld<br/>(环境模拟器)
+    participant R as 真实环境<br/>(验证)
+
+    Note over A,W: 模拟强化学习 (Sim RL)
+    loop 大规模并行训练
+        A->>W: 动作 (Action)
+        W->>W: 长链式思维推理
+        W-->>A: 模拟观察 (Simulated Obs)
+        A->>A: 策略更新
+    end
+
+    Note over A,R: 迁移验证
+    A->>R: 部署到真实环境
+    R-->>A: 真实反馈 (验证效果)
+    </div>
+
+    <p>关键设计特性：</p>
+    <ul>
+      <li><strong>可控模拟（Controllable Simulation）</strong>：通过控制指令引导模拟器生成更具针对性的环境响应，是 Sim RL 有效工作的前提条件。实验表明，无控制指令的 Sim RL 几乎无法带来收益（Tool Decathlon 甚至从 32.4 下降到 31.5），而加入可控模拟后提升显著（+3.7 和 +12.3）。</li>
+      <li><strong>虚构世界泛化</strong>：在完全虚构、自洽的世界中训练的 Agent 能够泛化到真实搜索任务，同时防止 Agent 将模拟事实与真实知识混淆。</li>
+      <li><strong>状态是瓶颈</strong>：Sim RL 的有效性取决于为世界模型提供足够详细的初始状态；缺乏初始状态会导致仿真保真度下降，下游收益减少。</li>
+    </ul>
+
+    <h3>范式二：统一 Agent 基础模型（Unified Agent Foundation Model）</h3>
+
+    <p>
+      第二种范式将世界模型训练视为<strong>高效的预热（Warm-up）</strong>，在此基础上进行下游 Agent 任务的微调，从而提升跨领域 Agent 性能。
+    </p>
+
+    <div class="mermaid">
+flowchart TD
+    A["基础模型\nQwen3.5-35B-A3B / 397B-A17B"] --> B["三阶段 LWM 训练\nCPT → SFT → RL"]
+    B --> C["Qwen-AgentWorld\n世界建模能力"]
+    C --> D["下游 Agent 微调\n领域特定数据"]
+    D --> E1["Terminal-Bench 2.0\n+6.3 提升"]
+    D --> E2["SWE-Bench Verified\n+3.4 提升"]
+    D --> E3["WideSearch F1\n+12.8 提升"]
+    D --> E4["Claw-Eval\n+11.3 提升"]
+    D --> E5["BFCL v4\n+9.0 提升"]
+
+    style A fill:#313244,stroke:#45475a,color:#cdd6f4
+    style C fill:#1a1a2e,stroke:#89b4fa,color:#89b4fa
+    </div>
+
+    <p>
+      值得注意的是，LWM 训练流程中<strong>不包含</strong> Claw 和函数调用数据，但在这些完全域外（Out-of-Domain）任务上仍然取得了显著提升（+11.3、+9.7、+9.0），说明世界模型训练具有强大的跨领域迁移能力。
+    </p>
+
+    <!-- ===== AgentWorldBench ===== -->
+    <h2>AgentWorldBench 评测基准</h2>
+
+    <h3>基准构建</h3>
+    <p>
+      AgentWorldBench 是专为语言世界模型设计的综合评测基准，具有以下特点：
+    </p>
+    <ul>
+      <li><strong>数据来源</strong>：5 个前沿模型（GPT-5.4、Claude Opus 4.8/4.6、Claude Sonnet 4.6、Gemini 3.1 Pro）在 9 个已建立基准上的真实交互记录，包括 Tool Decathlon、Terminal-Bench 1.0 & 2.0、OSWorld-Verified 等。</li>
+      <li><strong>真实性保障</strong>：每个样本都配有来自真实环境的 ground-truth 观察，避免了纯合成数据的分布偏差。</li>
+      <li><strong>数据格式</strong>：7 个领域各对应独立 JSONL 文件（<code>mcp_test.jsonl</code>、<code>search_test.jsonl</code> 等）。</li>
+    </ul>
+
+    <h3>五维度评估体系</h3>
+    <p>
+      AgentWorldBench 通过 LLM 评判器对预测观察进行五维度开放式评分，最终得分归一化到 $[0, 100]$ 区间：
+    </p>
+
+    <table>
+      <tr><th>维度</th><th>英文名</th><th>评估内容</th><th>示例（MCP 领域）</th></tr>
+      <tr>
+        <td><strong>格式</strong></td><td>Format</td>
+        <td>输出是否遵循领域的结构约定</td>
+        <td>MCP 的 JSON Schema 合规性；Terminal 的 Shell 提示格式</td>
+      </tr>
+      <tr>
+        <td><strong>事实性</strong></td><td>Factuality</td>
+        <td>陈述的事实是否正确</td>
+        <td>文件内容、搜索结果、工具返回值是否准确</td>
+      </tr>
+      <tr>
+        <td><strong>一致性</strong></td><td>Consistency</td>
+        <td>输出是否内部连贯且与前序轮次一致</td>
+        <td>多轮对话中状态变量是否保持一致</td>
+      </tr>
+      <tr>
+        <td><strong>真实性</strong></td><td>Realism</td>
+        <td>模拟输出是否符合真实环境的行为模式</td>
+        <td>错误信息格式、响应延迟模式是否真实</td>
+      </tr>
+      <tr>
+        <td><strong>质量</strong></td><td>Quality</td>
+        <td>整体模拟质量的综合评估</td>
+        <td>信息丰富度、可用性、实用性</td>
+      </tr>
+    </table>
+
+    <p>最终评分公式：</p>
+    <p>
+      $$\text{Score} = \frac{1}{5} \sum_{d \in \{\text{Format, Factuality, Consistency, Realism, Quality}\}} \text{Score}_d \times 100$$
+    </p>
+
+    <!-- ===== 实验结果 ===== -->
+    <h2>实验结果</h2>
+
+    <h3>AgentWorldBench 主要结果</h3>
+    <p>
+      以下是各模型在 AgentWorldBench 七个领域上的综合得分（五维度 Rubric 均值，归一化到 0-100）：
+    </p>
+
+    <div id="chart-main" class="echarts-container" style="height:480px;"></div>
+
+    <table>
+      <tr>
+        <th>类别</th><th>模型</th>
+        <th>MCP</th><th>Search</th><th>Terminal</th><th>SWE</th>
+        <th>Android</th><th>Web</th><th>OS</th><th><strong>平均</strong></th>
+      </tr>
+      <!-- Frontier -->
+      <tr><td rowspan="5">前沿闭源</td><td>GPT-5.4</td><td>70.10</td><td>37.26</td><td>53.69</td><td>66.29</td><td>60.00</td><td>51.80</td><td>68.58</td><td><strong>58.25</strong></td></tr>
+      <tr><td>Claude Opus 4.8</td><td>54.93</td><td>35.14</td><td>59.18</td><td>64.10</td><td>61.50</td><td>54.66</td><td>66.62</td><td><strong>56.59</strong></td></tr>
+      <tr><td>Claude Opus 4.6</td><td>69.90</td><td>29.30</td><td>57.51</td><td>64.55</td><td>61.74</td><td>51.42</td><td>70.20</td><td><strong>57.80</strong></td></tr>
+      <tr><td>Claude Sonnet 4.6</td><td>70.00</td><td>28.79</td><td>56.98</td><td>64.52</td><td>58.03</td><td>50.78</td><td>63.17</td><td><strong>56.04</strong></td></tr>
+      <tr><td>Gemini 3.1 Pro</td><td>59.07</td><td>30.21</td><td>52.47</td><td>59.07</td><td>61.40</td><td>52.83</td><td>66.92</td><td><strong>54.57</strong></td></tr>
+      <!-- Open-weight -->
+      <tr><td rowspan="4">开源模型</td><td>DeepSeek-V4-Pro</td><td>63.27</td><td>27.61</td><td>51.26</td><td>59.44</td><td>55.17</td><td>50.32</td><td>63.70</td><td><strong>52.97</strong></td></tr>
+      <tr><td>Kimi K2.6</td><td>65.23</td><td>27.48</td><td>52.54</td><td>58.77</td><td>58.93</td><td>50.20</td><td>60.80</td><td><strong>53.42</strong></td></tr>
+      <tr><td>GLM-5.1</td><td>67.60</td><td>22.46</td><td>47.32</td><td>52.07</td><td>59.10</td><td>51.50</td><td>59.13</td><td><strong>51.31</strong></td></tr>
+      <tr><td>MiniMax-M2.7</td><td>55.82</td><td>27.30</td><td>41.62</td><td>37.44</td><td>52.40</td><td>50.52</td><td>57.73</td><td><strong>46.12</strong></td></tr>
+      <!-- Ours -->
+      <tr style="background:#1a2a1a"><td rowspan="4">本文模型</td><td>Qwen3.5-35B-A3B（基座）</td><td>57.87</td><td>25.98</td><td>46.13</td><td>47.58</td><td>53.18</td><td>47.10</td><td>56.27</td><td><strong>47.73</strong></td></tr>
+      <tr style="background:#1a2a1a"><td><strong>Qwen-AgentWorld-35B-A3B</strong></td><td><strong>64.79</strong></td><td><strong>36.69</strong></td><td><strong>53.96</strong></td><td><strong>65.63</strong></td><td><strong>58.17</strong></td><td><strong>49.55</strong></td><td><strong>65.92</strong></td><td><strong>56.39</strong></td></tr>
+      <tr style="background:#1a2a1a"><td>Qwen3.5-397B-A17B（基座）</td><td>68.31</td><td>30.81</td><td>55.30</td><td>64.44</td><td>54.90</td><td>48.55</td><td>60.85</td><td><strong>54.74</strong></td></tr>
+      <tr style="background:#1a2a1a"><td><strong>Qwen-AgentWorld-397B-A17B</strong></td><td><strong>68.24</strong></td><td><strong>37.82</strong></td><td><strong>57.73</strong></td><td><strong>68.49</strong></td><td><strong>60.20</strong></td><td><strong>50.98</strong></td><td><strong>67.89</strong></td><td><strong>58.71</strong></td></tr>
+    </table>
+
+    <h3>统一 Agent 基础模型实验结果</h3>
+    <p>
+      以下展示了 LWM 训练作为预热对下游 Agent 任务的提升效果（基于 397B 模型）：
+    </p>
+
+    <div id="chart-agent" class="echarts-container" style="height:400px;"></div>
+
+    <table>
+      <tr>
+        <th>领域</th><th>基准</th><th>类型</th>
+        <th>Base 得分</th><th>+ LWM RL</th><th>提升 (Δ)</th>
+      </tr>
+      <tr><td>Terminal</td><td>Terminal-Bench 2.0</td><td>域内</td><td>33.3</td><td>39.6</td><td style="color:#a6e3a1"><strong>+6.3</strong></td></tr>
+      <tr><td>SWE</td><td>SWE-Bench Verified</td><td>域内</td><td>64.5</td><td>67.9</td><td style="color:#a6e3a1"><strong>+3.4</strong></td></tr>
+      <tr><td>SWE</td><td>SWE-Bench Pro</td><td>域内</td><td>42.2</td><td>47.4</td><td style="color:#a6e3a1"><strong>+5.2</strong></td></tr>
+      <tr><td>Search</td><td>WideSearch F1 Item</td><td>域内</td><td>33.4</td><td>46.2</td><td style="color:#a6e3a1"><strong>+12.8</strong></td></tr>
+      <tr><td>Claw</td><td>Claw-Eval</td><td><strong>域外</strong></td><td>53.6</td><td>64.9</td><td style="color:#a6e3a1"><strong>+11.3</strong></td></tr>
+      <tr><td>Claw</td><td>QwenClawBench</td><td><strong>域外</strong></td><td>39.8</td><td>49.4</td><td style="color:#a6e3a1"><strong>+9.7</strong></td></tr>
+      <tr><td>Function Call</td><td>BFCL v4</td><td><strong>域外</strong></td><td>62.3</td><td>71.3</td><td style="color:#a6e3a1"><strong>+9.0</strong></td></tr>
+    </table>
+
+    <h3>解耦模拟器实验结果（Sim RL）</h3>
+    <p>
+      对比 Qwen-AgentWorld-397B-A17B 与基线模拟器（Qwen3.6-Plus）在可扩展环境模拟任务上的效果：
+    </p>
+
+    <table>
+      <tr><th>配置</th><th>Claw-Eval</th><th>QwenClawBench</th></tr>
+      <tr><td>Base（无 Sim RL）</td><td>65.4</td><td>47.9</td></tr>
+      <tr><td>+ Sim RL（Qwen3.6-Plus 作为模拟器）</td><td>66.7</td><td>47.8</td></tr>
+      <tr><td><strong>+ Sim RL（Qwen-AgentWorld-397B-A17B）</strong></td><td><strong>69.7 (+4.3)</strong></td><td><strong>55.0 (+7.1)</strong></td></tr>
+    </table>
+
+    <p>
+      使用 Qwen3.6-Plus 作为模拟器仅带来边际提升，而专门训练的 Qwen-AgentWorld-397B-A17B 取得了显著更大的增益，证明了专用 LWM 训练流程的关键价值。
+    </p>
+
+    <!-- ===== 消融实验 ===== -->
+    <h2>消融实验分析</h2>
+
+    <h3>三阶段训练流程的贡献</h3>
+    <p>
+      通过对比 Qwen-AgentWorld 与其基座检查点，可以量化三阶段流程的贡献：
+    </p>
+
+    <div class="highlight-box">
+      <ul>
+        <li><strong>397B 规模</strong>：整体平均分从 54.74（Qwen3.5-397B-A17B 基座）提升至 58.71（+3.97 分）</li>
+        <li><strong>35B 规模</strong>：整体平均分从 47.73（Qwen3.5-35B-A3B 基座）提升至 56.39（<strong>+8.66 分</strong>），超越 Claude Sonnet 4.6（56.04）</li>
+        <li><strong>文本领域</strong>（397B）：平均分提升 3.35 分</li>
+        <li><strong>GUI 领域</strong>（397B）：平均分提升 4.92 分</li>
+      </ul>
+    </div>
+
+    <p>
+      对比 Qwen3.6-Plus（50.81）和 Qwen3.6-Max-Preview（52.42）——这两个模型与 Qwen-AgentWorld 共享相同的架构系列但未经 LWM 训练——可以排除基础模型通用能力的干扰，证明提升确实来自世界模型训练本身。
+    </p>
+
+    <h3>可控模拟的重要性</h3>
+    <p>
+      针对解耦模拟器范式，实验对比了有无控制指令的 Sim RL 效果：
+    </p>
+
+    <table>
+      <tr><th>配置</th><th>Tool Decathlon</th><th>MCPMark</th></tr>
+      <tr><td>无 Sim RL（基线）</td><td>32.4</td><td>基线</td></tr>
+      <tr><td>Sim RL（无控制指令）</td><td>31.5 (-0.9)</td><td>边际提升</td></tr>
+      <tr><td><strong>Sim RL（有控制指令）</strong></td><td><strong>36.1 (+3.7)</strong></td><td><strong>+12.3</strong></td></tr>
+    </table>
+
+    <p>
+      实验揭示了一个关键发现：<strong>可控性不仅影响提升幅度，更是 Sim RL 能够工作的前提条件</strong>。MCPMark 上更大的提升（+12.3 vs +3.7）表明，可控模拟对于需要大量顺序工具调用和复杂中间结果处理的任务尤为有效。
+    </p>
+
+    <h3>模拟器质量的影响</h3>
+
+    <div id="chart-ablation" class="echarts-container" style="height:320px;"></div>
+
+    <p>
+      两种模拟器的对比清晰展示了世界模型质量的重要性：通用 LLM（Qwen3.6-Plus）作为模拟器仅带来边际收益，而专门训练的 Qwen-AgentWorld-397B-A17B 在两个基准上均取得实质性提升，证明专用 LWM 训练流程对于构建高保真模拟器至关重要。
+    </p>
+
+    <!-- ===== 局限性 ===== -->
+    <h2>局限性与未来方向</h2>
+
+    <h3>当前局限性</h3>
+    <ul>
+      <li>
+        <strong>评测基准自建问题</strong>：AgentWorldBench 由 Qwen 团队自行构建，评判器也是 LLM-as-Judge，存在潜在的评测偏差风险。外部研究者指出，模型在自建基准上的优势需要通过独立第三方评测来进一步验证。
+      </li>
+      <li>
+        <strong>GUI 领域的表示限制</strong>：当前 GUI 领域使用无障碍树而非像素帧，限制了对视觉元素的精细建模，对于视觉高度依赖的任务可能存在信息损失。
+      </li>
+      <li>
+        <strong>状态初始化依赖</strong>：Sim RL 的有效性高度依赖于提供足够详细的初始状态描述。在实际应用中，完整的初始状态往往难以获取，这限制了方法的适用范围。
+      </li>
+      <li>
+        <strong>领域覆盖边界</strong>：尽管覆盖 7 个领域，但仍有许多重要的 Agent 交互场景（如数据库操作、代码执行、多模态交互）未被纳入。
+      </li>
+      <li>
+        <strong>计算资源需求</strong>：397B 参数的 MoE 模型对推理计算资源要求较高，在资源受限场景下的应用存在挑战。
+      </li>
+    </ul>
+
+    <h3>未来研究方向</h3>
+    <ul>
+      <li>扩展到更多 Agent 交互领域，构建更全面的统一世界模型</li>
+      <li>探索像素级 GUI 模拟，突破无障碍树表示的限制</li>
+      <li>研究更高效的世界模型训练方法，降低计算资源需求</li>
+      <li>将语言世界模型与多模态感知能力深度融合</li>
+      <li>构建更客观、更全面的第三方评测基准</li>
+    </ul>
+
+    <!-- ===== 关键洞见与点评 ===== -->
+    <h2>关键洞见与点评</h2>
+
+    <h3>技术洞见</h3>
+
+    <blockquote>
+      <strong>洞见 1：原生世界模型 vs. 事后适配</strong><br>
+      Qwen-AgentWorld 的核心设计哲学是从 CPT 阶段起就以环境建模为目标，而非在通用 LLM 上事后添加世界建模能力。这种"原生"设计使模型能够从底层学习环境动态的表示，而非简单地在通用语言能力上叠加。实验数据支持这一设计：Qwen3.6-Plus 和 Qwen3.6-Max-Preview 尽管通用能力强，但在 AgentWorldBench 上显著落后于经过专用训练的 Qwen-AgentWorld。
+    </blockquote>
+
+    <blockquote>
+      <strong>洞见 2：长链式思维推理对世界建模的价值</strong><br>
+      SFT 阶段激活的长链式思维推理（Long CoT）是模型模拟复杂环境动态的关键。对于 MCP（平均 24.3 轮）和 SWE（平均 26.9 轮）这类长轨迹任务，显式的思维链推理允许模型追踪复杂的状态变化，维护跨轮次的一致性。
+    </blockquote>
+
+    <blockquote>
+      <strong>洞见 3：域外迁移的惊喜</strong><br>
+      最令人印象深刻的发现是 LWM 训练在域外任务上的强大迁移能力：在 Claw-Eval（+11.3）、QwenClawBench（+9.7）和 BFCL v4（+9.0）上的显著提升，尽管训练数据中完全不包含这些领域。这表明世界模型训练学到的是一种通用的"环境理解"能力，而非领域特定的记忆。
+    </blockquote>
+
+    <blockquote>
+      <strong>洞见 4：可控性是 Sim RL 的关键</strong><br>
+      实验清晰地表明，没有可控模拟，Sim RL 几乎无法工作（Tool Decathlon 甚至出现负提升）。这揭示了一个重要的系统设计原则：高质量的模拟训练需要精确的环境控制能力，不能简单地将通用 LLM 替换为模拟器。
+    </blockquote>
+
+    <h3>综合评价</h3>
+
+    <p>
+      Qwen-AgentWorld 代表了语言 Agent 研究的一个重要方向：<strong>将世界模型从强化学习的配角提升为 Agent 能力构建的核心组件</strong>。其三阶段训练流程设计合理，两种 Agent 增强范式互补，AgentWorldBench 的构建也填补了领域空白。
+    </p>
+
+    <p>
+      然而，也需要注意一些值得关注的问题：AgentWorldBench 由 Qwen 团队自建，且使用 LLM-as-Judge 评判，存在一定的评测偏差风险。正如外部研究者指出的，模型在某些关键子任务（如 Terminal、MCP）上并未全面领先，部分优势可能来自评测设置的有利因素。独立第三方验证将是未来工作的重要环节。
+    </p>
+
+    <p>
+      从更宏观的视角来看，这项工作提出了一个有价值的研究假设：<strong>理解环境动态（世界建模）与执行 Agent 任务（策略学习）之间存在正向迁移</strong>。如果这一假设得到更广泛的验证，将为构建通用 Agent 提供一条新的技术路径——先教模型理解世界，再教模型行动于世界。
+    </p>
+
+    <div class="highlight-box">
+      <strong>一句话总结</strong>：Qwen-AgentWorld 是首个跨 7 个 Agent 领域的原生语言世界模型，通过 CPT→SFT→RL 三阶段训练实现高保真环境模拟，并以此为基础探索了解耦模拟器和统一基础模型两种 Agent 增强范式，在 AgentWorldBench 上超越 GPT-5.4 等前沿模型，同时在域外任务上展现出强大的迁移能力。
+    </div>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center;">
+      报告生成时间：2026-06-26 &nbsp;·&nbsp;
+      论文链接：<a href="https://arxiv.org/abs/2606.24597">arXiv:2606.24597</a> &nbsp;·&nbsp;
+      代码：<a href="https://github.com/QwenLM/Qwen-AgentWorld">GitHub</a>
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    // TOC auto-generation
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+    // ECharts: Main benchmark chart
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-main'), 'dark');
+      const models = [
+        'GPT-5.4', 'Claude Opus 4.6', 'Claude Opus 4.8', 'Claude Sonnet 4.6',
+        'Gemini 3.1 Pro', 'DeepSeek-V4-Pro', 'Kimi K2.6', 'GLM-5.1',
+        'Qwen3.5-397B\n(基座)', 'AgentWorld-397B\n(本文)',
+        'Qwen3.5-35B\n(基座)', 'AgentWorld-35B\n(本文)'
+      ];
+      const domains = ['MCP', 'Search', 'Terminal', 'SWE', 'Android', 'Web', 'OS'];
+      const data = {
+        'GPT-5.4':        [70.10, 37.26, 53.69, 66.29, 60.00, 51.80, 68.58],
+        'Claude Opus 4.6':[69.90, 29.30, 57.51, 64.55, 61.74, 51.42, 70.20],
+        'Claude Opus 4.8':[54.93, 35.14, 59.18, 64.10, 61.50, 54.66, 66.62],
+        'Claude Sonnet 4.6':[70.00, 28.79, 56.98, 64.52, 58.03, 50.78, 63.17],
+        'Gemini 3.1 Pro': [59.07, 30.21, 52.47, 59.07, 61.40, 52.83, 66.92],
+        'DeepSeek-V4-Pro':[63.27, 27.61, 51.26, 59.44, 55.17, 50.32, 63.70],
+        'Kimi K2.6':      [65.23, 27.48, 52.54, 58.77, 58.93, 50.20, 60.80],
+        'GLM-5.1':        [67.60, 22.46, 47.32, 52.07, 59.10, 51.50, 59.13],
+        'Qwen3.5-397B\n(基座)': [68.31, 30.81, 55.30, 64.44, 54.90, 48.55, 60.85],
+        'AgentWorld-397B\n(本文)': [68.24, 37.82, 57.73, 68.49, 60.20, 50.98, 67.89],
+        'Qwen3.5-35B\n(基座)': [57.87, 25.98, 46.13, 47.58, 53.18, 47.10, 56.27],
+        'AgentWorld-35B\n(本文)': [64.79, 36.69, 53.96, 65.63, 58.17, 49.55, 65.92],
+      };
+      const colors = [
+        '#f38ba8','#fab387','#a6e3a1','#89dceb',
+        '#cba6f7','#89b4fa','#74c7ec','#94e2d5',
+        '#6c7086','#a6e3a1','#6c7086','#89b4fa'
+      ];
+      const series = models.map((m, i) => ({
+        name: m,
+        type: 'bar',
+        data: data[m],
+        itemStyle: { color: colors[i], opacity: (m.includes('本文') ? 1.0 : 0.7) },
+        barMaxWidth: 18,
+      }));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: models, textStyle: { color: '#cdd6f4', fontSize: 10 }, bottom: 0, type: 'scroll' },
+        grid: { left: 60, right: 20, top: 20, bottom: 100 },
+        xAxis: { type: 'category', data: domains, axisLabel: { color: '#cdd6f4' }, axisLine: { lineStyle: { color: '#45475a' } } },
+        yAxis: { type: 'value', min: 20, max: 80, axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } } },
+        series,
+      });
+    })();
+
+    // ECharts: Agent improvement chart
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-agent'), 'dark');
+      const tasks = ['Terminal-Bench 2.0', 'SWE-Bench Verified', 'SWE-Bench Pro', 'WideSearch F1', 'Claw-Eval', 'QwenClawBench', 'BFCL v4'];
+      const base  = [33.3, 64.5, 42.2, 33.4, 53.6, 39.8, 62.3];
+      const lwm   = [39.6, 67.9, 47.4, 46.2, 64.9, 49.4, 71.3];
+      const delta = lwm.map((v, i) => +(v - base[i]).toFixed(1));
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['Base', '+ LWM RL', '提升 Δ'], textStyle: { color: '#cdd6f4' }, bottom: 0 },
+        grid: { left: 140, right: 60, top: 20, bottom: 60 },
+        xAxis: { type: 'value', axisLabel: { color: '#cdd6f4' }, splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } } },
+        yAxis: { type: 'category', data: tasks, axisLabel: { color: '#cdd6f4', fontSize: 11 } },
+        series: [
+          { name: 'Base', type: 'bar', data: base, itemStyle: { color: '#6c7086' }, barMaxWidth: 16 },
+          { name: '+ LWM RL', type: 'bar', data: lwm, itemStyle: { color: '#89b4fa' }, barMaxWidth: 16 },
+          {
+            name: '提升 Δ', type: 'scatter', data: delta.map((v, i) => [v + base[i] + 1, i]),
+            symbol: 'roundRect', symbolSize: [36, 18],
+            label: { show: true, formatter: p => '+' + delta[p.dataIndex], color: '#a6e3a1', fontWeight: 700, fontSize: 11 },
+            itemStyle: { color: 'transparent' },
+          }
+        ],
+      });
+    })();
+
+    // ECharts: Ablation - simulator quality
+    (function() {
+      const chart = echarts.init(document.getElementById('chart-ablation'), 'dark');
+      chart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        legend: { data: ['Claw-Eval', 'QwenClawBench'], textStyle: { color: '#cdd6f4' }, bottom: 0 },
+        grid: { left: 60, right: 40, top: 30, bottom: 60 },
+        xAxis: {
+          type: 'category',
+          data: ['Base\n(无 Sim RL)', '+ Sim RL\n(Qwen3.6-Plus)', '+ Sim RL\n(AgentWorld-397B)'],
+          axisLabel: { color: '#cdd6f4', fontSize: 11 },
+          axisLine: { lineStyle: { color: '#45475a' } }
+        },
+        yAxis: {
+          type: 'value', min: 40, max: 60,
+          axisLabel: { color: '#cdd6f4' },
+          splitLine: { lineStyle: { color: '#45475a', type: 'dashed' } }
+        },
+        series: [
+          {
+            name: 'Claw-Eval',
+            type: 'bar', barMaxWidth: 40,
+            data: [
+              { value: 65.4, itemStyle: { color: '#6c7086' } },
+              { value: 66.7, itemStyle: { color: '#74c7ec' } },
+              { value: 69.7, itemStyle: { color: '#a6e3a1' } },
+            ],
+            label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}' }
+          },
+          {
+            name: 'QwenClawBench',
+            type: 'bar', barMaxWidth: 40,
+            data: [
+              { value: 47.9, itemStyle: { color: '#45475a' } },
+              { value: 47.8, itemStyle: { color: '#89dceb' } },
+              { value: 55.0, itemStyle: { color: '#89b4fa' } },
+            ],
+            label: { show: true, position: 'top', color: '#cdd6f4', formatter: '{c}' }
+          }
+        ]
+      });
+    })();
+  </script>
+</body>
+</html>

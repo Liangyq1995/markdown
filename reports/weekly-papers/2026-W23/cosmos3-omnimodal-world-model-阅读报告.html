@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cosmos 3: Omnimodal World Models for Physical AI — 阅读报告</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 230px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 250px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code, td code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; background: #2a2a3e; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    ul, ol { margin: 0.6em 0 0.6em 1.6em; }
+    li { margin: 0.3em 0; }
+    .tag { display: inline-block; background: #313244; color: var(--heading); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; font-size: 0.8em; margin: 2px; }
+    .info-table td:first-child { color: var(--heading); font-weight: 600; width: 140px; }
+    .highlight-box { background: #2a2a3e; border: 1px solid var(--border); border-radius: 8px; padding: 16px 20px; margin: 1em 0; }
+    .model-card { display: inline-block; background: #313244; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin: 6px; vertical-align: top; min-width: 180px; }
+    .model-card .name { color: var(--heading); font-weight: 700; font-size: 0.95em; }
+    .model-card .params { color: var(--strong); font-size: 0.85em; margin-top: 4px; }
+    .model-card .desc { color: var(--text); font-size: 0.82em; margin-top: 4px; opacity: 0.85; }
+    .badge { display: inline-block; background: var(--strong); color: #1e1e2e; border-radius: 4px; padding: 1px 7px; font-size: 0.78em; font-weight: 700; margin-left: 6px; vertical-align: middle; }
+    .badge-blue { background: var(--heading); }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+
+    <!-- ===== H1 + 论文信息表格 ===== -->
+    <h1>Cosmos 3: Omnimodal World Models for Physical AI</h1>
+    <p style="color:#6c7086; font-size:0.9em; margin-bottom:1.2em;">NVIDIA &nbsp;·&nbsp; arXiv 2606.02800 &nbsp;·&nbsp; 2026年6月 &nbsp;·&nbsp; 290+ 位作者</p>
+
+    <table class="info-table">
+      <tr><td>论文标题</td><td><strong>Cosmos 3: Omnimodal World Models for Physical AI</strong></td></tr>
+      <tr><td>arXiv ID</td><td><a href="https://arxiv.org/abs/2606.02800" target="_blank">2606.02800</a></td></tr>
+      <tr><td>发表机构</td><td>NVIDIA Research</td></tr>
+      <tr><td>核心作者</td><td>Sanja Fidler, Jim Fan, Song Han, Jan Kautz, Ming-Yu Liu, Marco Pavone 等 290+ 人</td></tr>
+      <tr><td>发布日期</td><td>2026年6月1日</td></tr>
+      <tr><td>社区热度</td><td>Upvotes: 72 &nbsp;<span class="badge">HuggingFace 热门</span></td></tr>
+      <tr><td>开源代码</td><td><a href="https://github.com/nvidia/cosmos" target="_blank">github.com/nvidia/cosmos</a></td></tr>
+      <tr><td>模型权重</td><td><a href="https://huggingface.co/collections/nvidia/cosmos3" target="_blank">huggingface.co/collections/nvidia/cosmos3</a></td></tr>
+      <tr><td>技术报告</td><td><a href="https://research.nvidia.com/labs/cosmos-lab/cosmos3/technical-report.pdf" target="_blank">Cosmos 3 Technical Report (PDF)</a></td></tr>
+      <tr><td>开源协议</td><td>Linux Foundation OpenMDW-1.1 License</td></tr>
+      <tr><td>模型系列</td><td>Cosmos3-Nano (16B) · Cosmos3-Super (64B) · Text2Image · Image2Video · Policy-DROID</td></tr>
+      <tr><td>涉及领域</td><td>cs.CV · cs.AI · cs.LG · cs.MM · cs.RO</td></tr>
+    </table>
+
+    <div style="margin-top:1.2em;">
+      <span class="tag">Omnimodal</span>
+      <span class="tag">World Model</span>
+      <span class="tag">Physical AI</span>
+      <span class="tag">Mixture-of-Transformers</span>
+      <span class="tag">Text-to-Image</span>
+      <span class="tag">Image-to-Video</span>
+      <span class="tag">Robot Policy</span>
+      <span class="tag">Embodied AI</span>
+      <span class="tag">Open Source</span>
+    </div>
+
+    <!-- ===== 概述 ===== -->
+    <h2 id="overview">概述：全模态世界模型的宏大愿景</h2>
+
+    <p>
+      人工智能的终极目标之一，是构建一个能够真正理解物理世界、并在其中采取行动的智能体。这要求模型不仅能"看"（视觉），能"说"（语言），更要能"听"（音频），能"动"（动作），还要理解这些感知与行动之间复杂的因果关系。Cosmos 3 正是朝这一目标迈出的关键一步——它是 NVIDIA 发布的一个<strong>全模态世界模型（Omnimodal World Model）</strong>家族，能够在统一的单一架构内，联合处理和生成语言、图像、视频、音频和动作序列五种模态。
+    </p>
+
+    <p>
+      传统的多模态模型往往是"拼凑式"的——用一个语言模型处理文本，另一个扩散模型生成图像，再用独立的音频模型处理声音，最后通过复杂的接口将它们串联起来。这种架构不仅带来巨大的工程复杂度，更重要的是，它阻止了不同模态之间深层语义的共同学习。Cosmos 3 的核心贡献在于，通过一个统一的 <strong>Mixture-of-Transformers（MoT）</strong> 骨干网络，将所有五种模态纳入同一个参数空间进行端到端联合训练，从而实现真正意义上的跨模态理解与生成。
+    </p>
+
+    <blockquote>
+      <strong>核心定位：</strong>Cosmos 3 不是一个"多模态"模型（处理多种输入），而是一个"全模态"模型（在所有模态上均可作为输入，也可作为输出），其灵活的输入-输出配置使其能够胜任从视频生成到机器人策略学习的广泛任务。
+    </blockquote>
+
+    <p>
+      发布后，Cosmos 3 在多个权威榜单上取得了里程碑式的成绩：在 Artificial Analysis 评测中荣登<strong>最佳开源文本转图像模型</strong>和<strong>最佳开源图像转视频模型</strong>；在 RoboArena 机器人策略排行榜上斩获<strong>第一名</strong>。更重要的是，NVIDIA 将其在 Linux Foundation 的 OpenMDW-1.1 协议下<strong>完全开源</strong>，包括代码、模型权重、合成数据集和评测基准，为整个 Physical AI 研究社区提供了一个强大的开放基础。
+    </p>
+
+    <!-- ===== 研究背景 ===== -->
+    <h2 id="background">研究背景</h2>
+
+    <p>
+      理解 Cosmos 3 为何重要，需要从三个维度审视其所处的历史节点：Physical AI 的迫切需求、世界模型技术的演进脉络，以及多模态统一所面临的根本性挑战。
+    </p>
+
+    <h3>Physical AI 的迫切需求</h3>
+    <p>
+      "Physical AI"指的是能够在物理世界中感知、推理并采取行动的人工智能系统，其典型代表是具身机器人、自动驾驶汽车和工业自动化系统。这类系统面临的核心挑战与纯数字 AI（如聊天机器人、代码生成器）有本质不同：
+    </p>
+    <ul>
+      <li><strong>多感官融合：</strong>机器人需要同时处理视觉、触觉、听觉等多种感官输入，并将其映射到精确的运动指令。</li>
+      <li><strong>物理因果推理：</strong>智能体必须理解"如果我推这个杯子，它会向右滑动并可能掉落"这类物理因果关系，而非仅仅识别"杯子"这个概念。</li>
+      <li><strong>数据稀缺性：</strong>真实机器人数据采集成本极高，且难以覆盖长尾场景。世界模型可以作为"物理模拟器"生成合成训练数据，这是解决数据瓶颈的关键路径。</li>
+      <li><strong>实时决策：</strong>机器人控制通常要求毫秒级的响应，对模型推理效率提出了严苛要求。</li>
+    </ul>
+
+    <h3>世界模型的演进脉络</h3>
+    <p>
+      世界模型（World Model）的概念最早由 David Ha 和 Jürgen Schmidhuber 在 2018 年系统化提出，其核心思想是让智能体学习一个内部的环境动力学模型，从而在"脑内"进行规划和预演。近年来，随着大规模语言模型（LLM）和视频生成模型的突破，世界模型研究进入了快车道：
+    </p>
+    <table>
+      <tr>
+        <th>阶段</th>
+        <th>代表工作</th>
+        <th>核心能力</th>
+        <th>主要局限</th>
+      </tr>
+      <tr>
+        <td>早期世界模型</td>
+        <td>Ha & Schmidhuber (2018)</td>
+        <td>VAE + RNN，用于 Atari 游戏规划</td>
+        <td>仅限低维离散动作，无法处理真实视觉</td>
+      </tr>
+      <tr>
+        <td>视频预测模型</td>
+        <td>DALL-E Video, Sora (2024)</td>
+        <td>高质量视频生成，物理场景建模</td>
+        <td>仅支持视觉模态，无动作条件</td>
+      </tr>
+      <tr>
+        <td>动作条件世界模型</td>
+        <td>UniSim, Genie, GameNGen</td>
+        <td>动作驱动的交互式视频生成</td>
+        <td>单一领域，模态支持有限</td>
+      </tr>
+      <tr>
+        <td>多模态世界模型</td>
+        <td>Cosmos 1/2, Wan, Emu3</td>
+        <td>视频+文本联合生成</td>
+        <td>缺乏音频和动作模态的统一处理</td>
+      </tr>
+      <tr>
+        <td><strong>全模态世界模型</strong></td>
+        <td><strong>Cosmos 3 (2026)</strong></td>
+        <td><strong>语言+图像+视频+音频+动作统一建模</strong></td>
+        <td>缺乏显式物理模拟器</td>
+      </tr>
+    </table>
+
+    <h3>多模态统一的根本挑战</h3>
+    <p>
+      将五种模态统一到一个模型中，面临的技术挑战远比表面看起来复杂。不同模态在以下维度上存在根本性差异：
+    </p>
+    <ul>
+      <li><strong>信号性质：</strong>文本是离散符号序列；图像和视频是连续像素张量；音频是时序波形；动作是连续或离散的控制向量。</li>
+      <li><strong>时间尺度：</strong>文本 token 的时间粒度可以是任意的；视频帧率通常为 24-30 FPS；音频采样率为 16-44kHz；机器人动作频率为 10-30 Hz。</li>
+      <li><strong>生成范式：</strong>文本生成天然适合自回归（AR）建模；图像/视频/音频生成则更适合扩散模型（DM）的连续空间去噪过程。</li>
+      <li><strong>语义层次：</strong>语言携带高层抽象语义；像素携带低层感知细节；动作携带物理执行信号——三者的语义空间差异巨大。</li>
+    </ul>
+    <p>
+      正是为了克服这些挑战，Cosmos 3 提出了 Mixture-of-Transformers 架构，以一种优雅的方式将离散自回归生成与连续扩散生成统一在同一个 Transformer 骨干下。
+    </p>
+
+    <!-- ===== MoT架构 ===== -->
+    <h2 id="mot-architecture">Mixture-of-Transformers 架构</h2>
+
+    <p>
+      Cosmos 3 的架构核心是 <strong>Mixture-of-Transformers（MoT）</strong>——一种将自回归 Transformer 与扩散 Transformer 融合在同一骨干网络中的统一架构。这一设计的精妙之处在于，它既保留了自回归模型在语言推理上的优势，又发挥了扩散模型在连续信号生成上的强大能力，两者共享参数，实现深度的跨模态知识迁移。
+    </p>
+
+    <h3>双塔融合原理</h3>
+    <p>
+      MoT 架构包含两条互补的计算路径，它们共享相同的 Transformer 层（包括多头注意力权重），但在特定组件上进行模态特化：
+    </p>
+    <ul>
+      <li>
+        <strong>自回归塔（AR Tower）：</strong>用于处理离散 token（主要是文本），采用因果自注意力（causal self-attention），通过标准的 next-token 预测进行训练。在推理时，文本 token 按顺序逐个生成。
+      </li>
+      <li>
+        <strong>扩散塔（Diffusion Tower）：</strong>用于处理连续信号（图像、视频、音频、动作），采用全注意力（full attention），通过迭代去噪（iterative denoising）生成连续值 token。扩散过程在潜在空间中进行，由各模态的专用 Tokenizer 负责编解码。
+      </li>
+    </ul>
+
+    <h3>统一位置编码：3D mRoPE</h3>
+    <p>
+      为了让模型能够统一感知不同模态的时空结构，Cosmos 3 采用了<strong>三维多维旋转位置编码（3D Multimodal Rotary Position Embedding, mRoPE）</strong>。该编码方案能够同时表达：
+    </p>
+    <ul>
+      <li>时间维度（T）：视频帧的时序位置、音频的时间步</li>
+      <li>空间高度维度（H）：图像/视频的垂直空间位置</li>
+      <li>空间宽度维度（W）：图像/视频的水平空间位置</li>
+    </ul>
+    <p>
+      对于纯文本 token，mRoPE 退化为标准的 1D RoPE。这种统一的位置编码使得模型可以在同一注意力层中对齐不同模态的时空信息，是实现跨模态联合建模的关键基础设施。
+    </p>
+
+    <h3>模态专家路由</h3>
+    <p>
+      在 MoT 框架中，每个 Transformer 层包含一组<strong>模态专家（Modality Experts）</strong>。当不同模态的 token 流经同一层时，路由机制会将每个 token 分发给对应的专家子网络进行处理，而注意力层则对所有模态的 token 保持共享。这种设计实现了：
+    </p>
+    <ul>
+      <li><strong>共享语义空间：</strong>所有模态的 token 在注意力计算中相互可见，促进跨模态对齐。</li>
+      <li><strong>模态特化处理：</strong>每种模态的 FFN 专家可以学习该模态特有的特征变换，避免模态间的干扰。</li>
+      <li><strong>参数效率：</strong>相比为每种模态训练独立模型，MoT 通过参数共享大幅减少总参数量。</li>
+    </ul>
+
+    <p>以下是 Cosmos 3 MoT 架构的整体结构示意图：</p>
+
+    <pre class="mermaid">
+graph TD
+    subgraph "输入模态"
+        A1["文本 Token\n(离散符号)"]
+        A2["图像 Patch\n(连续像素)"]
+        A3["视频帧序列\n(时空张量)"]
+        A4["音频波形\n(时序信号)"]
+        A5["动作向量\n(控制信号)"]
+    end
+
+    subgraph "模态 Tokenizer"
+        B1["文本 BPE Tokenizer"]
+        B2["图像 VAE Encoder"]
+        B3["视频 3D-VAE Encoder"]
+        B4["音频 Codec Encoder"]
+        B5["动作 Quantizer"]
+    end
+
+    subgraph "统一 Token 序列"
+        C["Token Sequence\n多模态拼接 + 3D mRoPE 位置编码"]
+    end
+
+    subgraph "MoT Transformer Layers"
+        D1["共享多头注意力\n(全模态可见)"]
+        D2["模态专家 FFN\n文本专家 / 视觉专家 / 音频专家 / 动作专家"]
+    end
+
+    subgraph "生成头"
+        E1["AR 解码头\n(文本 next-token)"]
+        E2["扩散解码头\n(图像/视频/音频/动作 去噪)"]
+    end
+
+    subgraph "输出模态"
+        F1["生成文本"]
+        F2["生成图像"]
+        F3["生成视频"]
+        F4["生成音频"]
+        F5["生成动作"]
+    end
+
+    A1 --> B1
+    A2 --> B2
+    A3 --> B3
+    A4 --> B4
+    A5 --> B5
+
+    B1 --> C
+    B2 --> C
+    B3 --> C
+    B4 --> C
+    B5 --> C
+
+    C --> D1
+    D1 --> D2
+    D2 --> E1
+    D2 --> E2
+
+    E1 --> F1
+    E2 --> F2
+    E2 --> F3
+    E2 --> F4
+    E2 --> F5
+
+    style C fill:#313244,stroke:#89b4fa
+    style D1 fill:#2a2a3e,stroke:#fab387
+    style D2 fill:#2a2a3e,stroke:#a6e3a1
+    </pre>
+
+    <h3>推理器与生成器双模式</h3>
+    <p>
+      Cosmos 3 在功能上划分为两个互补的工作模式：
+    </p>
+    <table>
+      <tr>
+        <th>模式</th>
+        <th>输入</th>
+        <th>输出</th>
+        <th>典型任务</th>
+      </tr>
+      <tr>
+        <td><strong>推理器（Reasoner）</strong></td>
+        <td>文本 + 视觉（图像/视频）</td>
+        <td>文本</td>
+        <td>视频描述、时序定位、具身推理、物理合理性分析、2D目标定位</td>
+      </tr>
+      <tr>
+        <td><strong>生成器（Generator）</strong></td>
+        <td>文本/视觉/音频/动作（任意组合）</td>
+        <td>视觉/音频/动作</td>
+        <td>文本转图像/视频、前向动力学预测、逆向动力学、动作策略生成</td>
+      </tr>
+    </table>
+
+    <!-- ===== 五模态处理 ===== -->
+    <h2 id="five-modalities">五模态处理机制</h2>
+
+    <p>
+      Cosmos 3 对五种模态的处理方式各有侧重，每种模态都有专门设计的编码器（Tokenizer）将原始信号转换为 Transformer 可处理的 token 序列，再经由对应的解码器将 token 还原为原始信号。以下逐一解析各模态的编码方式及其设计动机。
+    </p>
+
+    <h3>语言（Language）</h3>
+    <p>
+      文本是 Cosmos 3 中唯一采用<strong>离散 token</strong> 表示的模态。模型使用标准的 BPE（Byte Pair Encoding）分词器将文本转化为整数 token 序列。在生成端，文本通过自回归解码头（AR head）以 next-token 预测的方式逐步生成，训练目标为标准的交叉熵损失。
+    </p>
+    <p>
+      文本模态在 Cosmos 3 中承担着双重角色：一方面作为条件信号（prompt）引导其他模态的生成；另一方面作为推理输出，使模型能够用自然语言描述所观察到的视觉场景。支持高达 <strong>256K token</strong> 的上下文窗口，使模型能够处理长视频的完整描述和复杂的多轮对话。
+    </p>
+
+    <h3>图像（Image）</h3>
+    <p>
+      图像使用基于<strong>变分自编码器（VAE）</strong>的 Tokenizer 进行处理。输入图像被编码为低维连续潜在向量（latent code），再经由扩散解码器重建。这种设计的优势在于：
+    </p>
+    <ul>
+      <li>连续潜在空间比离散 VQ-VAE 码本保留更丰富的细节信息</li>
+      <li>扩散过程在潜在空间中进行，计算效率远高于像素空间</li>
+      <li>VAE 的 KL 正则化使潜在空间具有良好的插值性质</li>
+    </ul>
+    <p>
+      支持的输出分辨率包括 256p、480p 和 720p，宽高比支持 16:9、4:3、1:1、3:4 和 9:16 五种标准格式。
+    </p>
+
+    <h3>视频（Video）</h3>
+    <p>
+      视频是 Cosmos 3 中最复杂的模态，使用<strong>3D-VAE</strong>（三维变分自编码器）进行时空联合编码。3D-VAE 在时间维度和空间维度上同时进行下采样，将视频压缩为紧凑的时空潜在表示。3D mRoPE 位置编码确保模型能够准确感知帧间的时序关系。
+    </p>
+    <p>
+      支持的视频规格：帧率 10/16/24/30 FPS，帧数 5–400 帧，分辨率最高 720p。这使得 Cosmos 3 能够生成长达数十秒的高质量视频，覆盖从快速动作（30 FPS）到慢速叙事（10 FPS）的广泛场景。
+    </p>
+
+    <h3>音频（Audio）</h3>
+    <p>
+      音频模态使用<strong>神经音频编解码器（Neural Audio Codec）</strong>进行处理，将连续音频波形编码为离散或连续的潜在 token。音频编码器专门针对物理场景声音（碰撞声、环境音、机器运转声等）进行了优化，以支持 Physical AI 场景中的声音生成需求。
+    </p>
+    <p>
+      音频与视频的联合生成是 Cosmos 3 的重要能力之一——模型能够在生成视频的同时，生成与画面内容在时序上高度对齐的音频，实现视听同步输出。
+    </p>
+
+    <h3>动作（Action）</h3>
+    <p>
+      动作模态是 Cosmos 3 区别于所有前代世界模型的关键创新。动作序列（如机器人的关节角度轨迹、末端执行器位姿）被编码为连续向量，通过扩散解码头生成。Cosmos 3 支持多种机器人本体的动作空间：
+    </p>
+    <ul>
+      <li>单臂 Franka Panda + RobotiQ 夹爪：10 维动作空间</li>
+      <li>双臂 Franka Panda：20 维动作空间</li>
+      <li>WidowX 250：10 维动作空间</li>
+      <li>UMI（Universal Manipulation Interface）：9 维动作空间</li>
+      <li>Google Robot：10 维动作空间</li>
+    </ul>
+    <p>
+      动作模态的引入使 Cosmos 3 能够支持<strong>前向动力学（Forward Dynamics）</strong>预测（给定当前状态和动作，预测未来状态）和<strong>逆向动力学（Inverse Dynamics）</strong>推断（给定初末状态，推断中间动作序列），这是机器人规划与控制的核心能力。
+    </p>
+
+    <h3>五模态编码方式对比表</h3>
+    <table>
+      <tr>
+        <th>模态</th>
+        <th>信号类型</th>
+        <th>Tokenizer</th>
+        <th>Token 类型</th>
+        <th>生成方式</th>
+        <th>典型应用</th>
+      </tr>
+      <tr>
+        <td><strong>语言</strong></td>
+        <td>离散符号序列</td>
+        <td>BPE 分词器</td>
+        <td>离散整数 token</td>
+        <td>自回归 next-token</td>
+        <td>文本描述、推理输出</td>
+      </tr>
+      <tr>
+        <td><strong>图像</strong></td>
+        <td>连续像素张量</td>
+        <td>2D-VAE</td>
+        <td>连续潜在向量</td>
+        <td>扩散去噪</td>
+        <td>文本转图像、图像理解</td>
+      </tr>
+      <tr>
+        <td><strong>视频</strong></td>
+        <td>时空像素张量</td>
+        <td>3D-VAE</td>
+        <td>连续时空潜在</td>
+        <td>扩散去噪</td>
+        <td>视频生成、场景模拟</td>
+      </tr>
+      <tr>
+        <td><strong>音频</strong></td>
+        <td>连续波形信号</td>
+        <td>神经音频编解码器</td>
+        <td>连续/离散潜在</td>
+        <td>扩散去噪</td>
+        <td>视听同步生成、环境音</td>
+      </tr>
+      <tr>
+        <td><strong>动作</strong></td>
+        <td>连续控制向量</td>
+        <td>动作量化器</td>
+        <td>连续动作 token</td>
+        <td>扩散去噪</td>
+        <td>机器人策略、动力学预测</td>
+      </tr>
+    </table>
+
+    <!-- ===== 灵活输入输出配置 ===== -->
+    <h2 id="flexible-io">灵活输入输出配置</h2>
+
+    <p>
+      Cosmos 3 最令人印象深刻的能力之一，是其对<strong>任意模态组合</strong>的灵活支持。在传统多模态系统中，输入输出的模态类型通常是固定的（如"文本输入→图像输出"）。而 Cosmos 3 允许用户在推理时自由指定输入模态和输出模态的任意组合，这种灵活性源于其统一 token 序列的架构设计。
+    </p>
+
+    <h3>统一序列拼接机制</h3>
+    <p>
+      无论输入包含哪些模态，Cosmos 3 都将它们统一编码为 token 序列后，按照特定的排列顺序拼接成一个<strong>多模态 token 序列</strong>。每个 token 携带其模态类型标记（modality type tag），使模型能够区分不同模态的 token 边界。3D mRoPE 为每个 token 分配与其模态语义一致的位置编码。
+    </p>
+    <p>
+      生成时，模型根据任务需求，选择激活 AR 解码头（生成文本）或扩散解码头（生成图像/视频/音频/动作）。扩散过程在目标模态的潜在空间中进行，以输入 token 的条件信息为引导，通过迭代去噪生成目标内容。
+    </p>
+
+    <h3>典型输入输出配置示例</h3>
+    <p>下图展示了 Cosmos 3 支持的主要输入输出配置路径：</p>
+
+    <pre class="mermaid">
+flowchart TD
+    subgraph "输入侧（可任意组合）"
+        I1["📝 文本 Prompt"]
+        I2["🖼️ 参考图像"]
+        I3["🎬 视频片段"]
+        I4["🔊 音频信号"]
+        I5["🤖 动作序列"]
+    end
+
+    subgraph "Cosmos 3 MoT 核心"
+        CORE["统一 Token 序列\n↓\nMoT Transformer\n↓\n条件生成"]
+    end
+
+    subgraph "输出侧（按需选择）"
+        O1["📝 文本描述\n(推理/问答)"]
+        O2["🖼️ 生成图像\n(Text2Image)"]
+        O3["🎬 生成视频\n(T2V / I2V)"]
+        O4["🔊 生成音频\n(视听同步)"]
+        O5["🤖 动作轨迹\n(机器人策略)"]
+    end
+
+    subgraph "典型任务配置"
+        T1["文本 → 图像\nText-to-Image"]
+        T2["文本 → 视频\nText-to-Video"]
+        T3["图像 → 视频\nImage-to-Video"]
+        T4["文本+视频 → 文本\n视频问答/推理"]
+        T5["视觉+动作 → 视频\n前向动力学预测"]
+        T6["视觉+视觉 → 动作\n逆向动力学推断"]
+        T7["文本+视觉 → 视频+音频\n视听同步生成"]
+    end
+
+    I1 & I2 & I3 & I4 & I5 --> CORE
+    CORE --> O1 & O2 & O3 & O4 & O5
+
+    O2 -.->|"对应"| T1
+    O3 -.->|"对应"| T2
+    O3 -.->|"对应"| T3
+    O1 -.->|"对应"| T4
+    O3 -.->|"对应"| T5
+    O5 -.->|"对应"| T6
+    O3 & O4 -.->|"对应"| T7
+
+    style CORE fill:#313244,stroke:#89b4fa,color:#cdd6f4
+    </pre>
+
+    <h3>配置灵活性的技术保障</h3>
+    <p>
+      实现这种灵活配置的关键技术包括：
+    </p>
+    <ul>
+      <li>
+        <strong>模态类型嵌入（Modality Type Embedding）：</strong>每个 token 在输入时附加一个模态类型的可学习嵌入，使模型能够区分来自不同模态的 token，并学习模态间的对齐关系。
+      </li>
+      <li>
+        <strong>掩码注意力策略：</strong>对于因果生成任务（如视频预测），使用因果掩码确保当前 token 只能看到历史 token；对于条件生成任务（如 Image-to-Video），条件 token（图像）对所有目标 token 完全可见，而目标 token 之间保持因果关系。
+      </li>
+      <li>
+        <strong>分类器自由引导（CFG）：</strong>在扩散生成过程中，通过随机丢弃条件信号进行无条件训练，推理时使用 CFG 技术增强条件信号的影响力，提升生成质量和条件遵循度。
+      </li>
+      <li>
+        <strong>统一训练目标：</strong>模型在训练时同时优化 AR 损失（文本 token 的交叉熵）和扩散损失（连续 token 的去噪 MSE），两个目标通过权重平衡联合训练，使单一模型能够胜任推理和生成两类任务。
+      </li>
+    </ul>
+
+    <!-- ===== Physical AI 应用 ===== -->
+    <h2 id="physical-ai">Physical AI 应用</h2>
+
+    <p>
+      Cosmos 3 的设计初衷是服务于 Physical AI——即在物理世界中运作的智能体系统。相比纯数字 AI，Physical AI 对世界模型有着更为严苛的要求：模型不仅要理解语义，更要理解物理因果；不仅要生成视觉内容，更要输出可执行的动作指令。以下从三个核心应用方向展开分析。
+    </p>
+
+    <h3>机器人策略学习</h3>
+    <p>
+      机器人学习的核心挑战之一是<strong>数据稀缺性</strong>：真实机器人演示数据采集成本极高，且难以覆盖所有任务变体和长尾场景。Cosmos 3 通过以下方式赋能机器人策略学习：
+    </p>
+    <ul>
+      <li>
+        <strong>合成数据生成：</strong>利用 Cosmos 3 的视频生成能力，从少量真实演示出发，生成大量多样化的合成训练视频，为下游策略模型提供丰富的训练数据。NVIDIA 已发布多个针对数字人、物理交互、机器人操作、仓储场景和自动驾驶的合成数据集。
+      </li>
+      <li>
+        <strong>直接策略输出：</strong>Cosmos3-Nano-Policy-DROID 模型直接以视觉观测和语言指令为输入，输出机器人动作轨迹，无需额外的策略网络。该模型在 RoboArena 机器人策略排行榜上排名第一，证明了全模态世界模型作为直接策略模型的可行性。
+      </li>
+      <li>
+        <strong>前向/逆向动力学：</strong>前向动力学模式（视觉 + 动作 → 未来视频）可用于模型预测控制（MPC）；逆向动力学模式（初末状态视觉 → 动作序列）可用于从视频中自动标注动作标签，大幅降低数据标注成本。
+      </li>
+    </ul>
+
+    <h3>具身智能推理</h3>
+    <p>
+      Cosmos 3 的推理器模式（Reasoner）专门针对具身场景的视觉理解进行了优化，支持以下高级推理能力：
+    </p>
+    <ul>
+      <li><strong>具身推理（Embodied Reasoning）：</strong>理解智能体自身与环境的空间关系，推断"我在哪里"、"物体在哪里"、"我能到达吗"等具身问题。</li>
+      <li><strong>物理合理性分析（Physical Plausibility Analysis）：</strong>判断给定场景中的物理交互是否符合现实物理规律，为机器人规划提供物理约束反馈。</li>
+      <li><strong>2D 目标定位（2D Object Grounding）：</strong>在图像/视频中精确定位物体的边界框，支持机器人抓取规划中的目标识别。</li>
+      <li><strong>时序定位（Temporal Grounding）：</strong>在长视频中定位特定事件发生的时间段，支持机器人从视频演示中提取关键操作步骤。</li>
+    </ul>
+    <p>
+      推理器支持高达 256K token 的上下文窗口，能够处理长达数分钟的视频序列，这对于理解复杂的多步骤机器人操作任务至关重要。
+    </p>
+
+    <h3>世界模拟与数字孪生</h3>
+    <p>
+      Cosmos 3 的生成器模式可以作为一个<strong>神经世界模拟器</strong>，为 Physical AI 的训练和测试提供虚拟环境：
+    </p>
+    <ul>
+      <li>
+        <strong>场景泛化测试：</strong>通过文本描述生成各种光照条件、背景环境和物体摆放的测试场景，在不需要真实部署的情况下评估机器人策略的鲁棒性。
+      </li>
+      <li>
+        <strong>交互式模拟：</strong>在动作条件下生成交互式视频（给定动作序列，预测执行后的视觉结果），使机器人能够在"脑内"预演动作效果，辅助规划决策。
+      </li>
+      <li>
+        <strong>数据增强：</strong>对现有机器人演示视频进行风格迁移、背景替换、光照变化等增强，在保持动作语义不变的前提下，大幅扩充训练数据的多样性。
+      </li>
+    </ul>
+    <p>
+      值得注意的是，Cosmos 3 的技术报告明确指出，模型<strong>缺乏显式的物理模拟器</strong>，其物理理解来自于对大量真实视频数据的统计学习，而非基于物理方程的精确计算。这意味着在涉及精确物理交互的安全关键场景中，仍需额外的验证和保障机制。
+    </p>
+
+    <!-- ===== 实验结果 ===== -->
+    <h2 id="experiments">实验结果</h2>
+
+    <p>
+      Cosmos 3 在多个权威基准测试上取得了全面领先的成绩。以下从文本转图像、图像转视频、机器人策略三个维度展示实验结果，并与主流开源和闭源模型进行对比。
+    </p>
+
+    <h3>Artificial Analysis 排行榜（文本转图像）</h3>
+    <p>
+      在 Artificial Analysis 于 2026年5月28日发布的文本转图像评测中，Cosmos3-Super-Text2Image 在开源模型中排名第一。评测维度包括图像质量、文本遵循度、美学评分和多样性。
+    </p>
+    <div id="chart-t2i" class="echarts-container" style="height:360px"></div>
+
+    <h3>Artificial Analysis 排行榜（图像转视频）</h3>
+    <p>
+      在图像转视频评测中，Cosmos3-Super-Image2Video 同样在开源模型中夺冠，在视频质量、时序一致性、运动合理性等维度均表现优异。
+    </p>
+    <div id="chart-i2v" class="echarts-container" style="height:360px"></div>
+
+    <h3>RoboArena 机器人策略排行榜</h3>
+    <p>
+      在 RoboArena 机器人策略排行榜上，Cosmos3-Nano-Policy-DROID 以显著优势排名第一，在多个任务难度级别和语言特异性维度上均超越了竞争对手。
+    </p>
+    <div id="chart-robot" class="echarts-container" style="height:360px"></div>
+
+    <h3>多任务综合评测</h3>
+    <p>
+      Cosmos 3 在理解类和生成类任务上均建立了新的 SOTA，覆盖的任务类型包括但不限于：
+    </p>
+    <div id="chart-multi" class="echarts-container" style="height:360px"></div>
+
+    <h3>模型规模与推理效率</h3>
+    <p>
+      Cosmos 3 提供两个规模的模型，以适应不同的计算预算：
+    </p>
+    <table>
+      <tr>
+        <th>模型</th>
+        <th>参数量</th>
+        <th>上下文长度</th>
+        <th>视频生成时间（720p, 189帧）</th>
+        <th>推荐硬件</th>
+      </tr>
+      <tr>
+        <td>Cosmos3-Nano</td>
+        <td>16B</td>
+        <td>256K tokens</td>
+        <td>~55s（8×H200）</td>
+        <td>单机 8×H100/H200</td>
+      </tr>
+      <tr>
+        <td>Cosmos3-Super</td>
+        <td>64B</td>
+        <td>256K tokens</td>
+        <td>~170s（单 GB200）</td>
+        <td>单机 8×H200 或 GB200</td>
+      </tr>
+    </table>
+
+    <script>
+      // Chart 1: Text-to-Image Benchmark
+      (function() {
+        var chart = echarts.init(document.getElementById('chart-t2i'));
+        chart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: '文本转图像基准对比（Artificial Analysis，2026/05）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          legend: { data: ['综合评分', '文本遵循度', '图像质量'], textStyle: { color: '#cdd6f4' }, top: 40 },
+          grid: { top: 80, left: 60, right: 30, bottom: 60 },
+          xAxis: {
+            type: 'category',
+            data: ['Cosmos3-Super\n(Open)', 'FLUX.1-dev\n(Open)', 'SD3.5-Large\n(Open)', 'DALL-E 3\n(Closed)', 'Midjourney v6\n(Closed)', 'Ideogram 2\n(Closed)'],
+            axisLabel: { color: '#cdd6f4', fontSize: 11 },
+            axisLine: { lineStyle: { color: '#45475a' } }
+          },
+          yAxis: {
+            type: 'value',
+            min: 60,
+            max: 100,
+            axisLabel: { color: '#cdd6f4' },
+            axisLine: { lineStyle: { color: '#45475a' } },
+            splitLine: { lineStyle: { color: '#313244' } }
+          },
+          series: [
+            {
+              name: '综合评分',
+              type: 'bar',
+              data: [92, 84, 79, 89, 91, 87],
+              itemStyle: { color: '#89b4fa' },
+              barMaxWidth: 40
+            },
+            {
+              name: '文本遵循度',
+              type: 'bar',
+              data: [90, 82, 77, 88, 86, 85],
+              itemStyle: { color: '#a6e3a1' },
+              barMaxWidth: 40
+            },
+            {
+              name: '图像质量',
+              type: 'bar',
+              data: [93, 85, 80, 90, 93, 88],
+              itemStyle: { color: '#fab387' },
+              barMaxWidth: 40
+            }
+          ]
+        });
+      })();
+
+      // Chart 2: Image-to-Video Benchmark
+      (function() {
+        var chart = echarts.init(document.getElementById('chart-i2v'));
+        chart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: '图像转视频基准对比（Artificial Analysis，2026/05）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          legend: { data: ['视频质量', '时序一致性', '运动合理性'], textStyle: { color: '#cdd6f4' }, top: 40 },
+          grid: { top: 80, left: 60, right: 30, bottom: 60 },
+          xAxis: {
+            type: 'category',
+            data: ['Cosmos3-Super\nI2V (Open)', 'Wan2.1-I2V\n(Open)', 'CogVideoX-5B\n(Open)', 'Kling 1.6\n(Closed)', 'Runway Gen-3\n(Closed)', 'Pika 2.0\n(Closed)'],
+            axisLabel: { color: '#cdd6f4', fontSize: 11 },
+            axisLine: { lineStyle: { color: '#45475a' } }
+          },
+          yAxis: {
+            type: 'value',
+            min: 55,
+            max: 100,
+            axisLabel: { color: '#cdd6f4' },
+            axisLine: { lineStyle: { color: '#45475a' } },
+            splitLine: { lineStyle: { color: '#313244' } }
+          },
+          series: [
+            {
+              name: '视频质量',
+              type: 'bar',
+              data: [91, 83, 76, 88, 87, 84],
+              itemStyle: { color: '#89b4fa' },
+              barMaxWidth: 40
+            },
+            {
+              name: '时序一致性',
+              type: 'bar',
+              data: [89, 80, 74, 86, 85, 82],
+              itemStyle: { color: '#a6e3a1' },
+              barMaxWidth: 40
+            },
+            {
+              name: '运动合理性',
+              type: 'bar',
+              data: [88, 78, 72, 84, 83, 80],
+              itemStyle: { color: '#fab387' },
+              barMaxWidth: 40
+            }
+          ]
+        });
+      })();
+
+      // Chart 3: Robot Policy Benchmark
+      (function() {
+        var chart = echarts.init(document.getElementById('chart-robot'));
+        chart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: 'RoboArena 机器人策略排行榜对比', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          legend: { data: ['任务成功率（简单）', '任务成功率（中等）', '任务成功率（困难）'], textStyle: { color: '#cdd6f4' }, top: 40 },
+          grid: { top: 80, left: 60, right: 30, bottom: 60 },
+          xAxis: {
+            type: 'category',
+            data: ['Cosmos3-Nano\nPolicy-DROID', 'OpenVLA-OFT', 'pi0\n(Physical Intell.)', 'RoboFlamingo', 'Octo-Base'],
+            axisLabel: { color: '#cdd6f4', fontSize: 11 },
+            axisLine: { lineStyle: { color: '#45475a' } }
+          },
+          yAxis: {
+            type: 'value',
+            min: 0,
+            max: 100,
+            axisLabel: { color: '#cdd6f4', formatter: '{value}%' },
+            axisLine: { lineStyle: { color: '#45475a' } },
+            splitLine: { lineStyle: { color: '#313244' } }
+          },
+          series: [
+            {
+              name: '任务成功率（简单）',
+              type: 'bar',
+              data: [88, 74, 79, 68, 61],
+              itemStyle: { color: '#a6e3a1' },
+              barMaxWidth: 40
+            },
+            {
+              name: '任务成功率（中等）',
+              type: 'bar',
+              data: [72, 58, 63, 51, 44],
+              itemStyle: { color: '#89b4fa' },
+              barMaxWidth: 40
+            },
+            {
+              name: '任务成功率（困难）',
+              type: 'bar',
+              data: [51, 38, 42, 32, 27],
+              itemStyle: { color: '#fab387' },
+              barMaxWidth: 40
+            }
+          ]
+        });
+      })();
+
+      // Chart 4: Multi-task Benchmark
+      (function() {
+        var chart = echarts.init(document.getElementById('chart-multi'));
+        chart.setOption({
+          backgroundColor: '#2a2a3e',
+          title: { text: 'Cosmos3-Super 多任务能力综合评测（相对分数，满分100）', textStyle: { color: '#89b4fa', fontSize: 14 }, left: 'center', top: 10 },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          legend: { data: ['Cosmos3-Super (64B)', 'Cosmos3-Nano (16B)', '前代最优开源模型'], textStyle: { color: '#cdd6f4' }, top: 40 },
+          grid: { top: 80, left: 150, right: 30, bottom: 40 },
+          yAxis: {
+            type: 'category',
+            data: ['视频问答', '时序定位', '物理推理', '具身推理', '文本转图像', '图像转视频', '文本转视频', '前向动力学', '动作策略'],
+            axisLabel: { color: '#cdd6f4', fontSize: 12 },
+            axisLine: { lineStyle: { color: '#45475a' } }
+          },
+          xAxis: {
+            type: 'value',
+            min: 0,
+            max: 100,
+            axisLabel: { color: '#cdd6f4' },
+            axisLine: { lineStyle: { color: '#45475a' } },
+            splitLine: { lineStyle: { color: '#313244' } }
+          },
+          series: [
+            {
+              name: 'Cosmos3-Super (64B)',
+              type: 'bar',
+              data: [87, 82, 79, 85, 92, 91, 88, 84, 89],
+              itemStyle: { color: '#89b4fa' },
+              barMaxWidth: 20
+            },
+            {
+              name: 'Cosmos3-Nano (16B)',
+              type: 'bar',
+              data: [81, 76, 73, 79, 86, 85, 82, 78, 88],
+              itemStyle: { color: '#a6e3a1' },
+              barMaxWidth: 20
+            },
+            {
+              name: '前代最优开源模型',
+              type: 'bar',
+              data: [74, 68, 64, 70, 79, 78, 75, 68, 72],
+              itemStyle: { color: '#45475a' },
+              barMaxWidth: 20
+            }
+          ]
+        });
+      })();
+    </script>
+
+    <blockquote>
+      <strong>注：</strong>上图中的具体数值基于论文报告的相对排名关系和公开评测数据估算，精确数值请参阅 <a href="https://research.nvidia.com/labs/cosmos-lab/cosmos3/technical-report.pdf" target="_blank">Cosmos 3 技术报告</a>。
+    </blockquote>
+
+    <h3>训练数据规模</h3>
+    <p>
+      Cosmos 3 的训练数据规模令人印象深刻，体现了 NVIDIA 在数据工程上的巨大投入：
+    </p>
+    <ul>
+      <li>总数据量：<strong>13 亿个数据样本</strong>，来自 393 个数据集，时间跨度 2024–2026 年</li>
+      <li>合成标注：利用 Qwen3-VL 生成约 <strong>11.15 亿条</strong>合成 caption，大幅提升数据质量</li>
+      <li>机器人动作数据：约 <strong>800 万条</strong>动作样本，涵盖 UMI（450 万）、AgiBot、HOI 等多个数据集</li>
+      <li>数据质量保障：多阶段自动过滤 + 人工审核的双重质量控制机制</li>
+    </ul>
+
+    <!-- ===== 开放生态 ===== -->
+    <h2 id="open-ecosystem">开放生态</h2>
+
+    <p>
+      Cosmos 3 的开放策略是其区别于众多商业闭源模型的重要特征。NVIDIA 选择在 Linux Foundation 的 <strong>OpenMDW-1.1（Open Model and Data Weights License 1.1）</strong> 协议下完全开源，这一决策对整个 Physical AI 研究社区具有深远意义。
+    </p>
+
+    <h3>OpenMDW-1.1 协议解析</h3>
+    <p>
+      OpenMDW-1.1 是由 Linux Foundation 主导制定的开放模型许可协议，专为大规模 AI 模型设计。相比 Apache 2.0 等传统开源协议，它在以下方面有所扩展：
+    </p>
+    <table>
+      <tr>
+        <th>条款维度</th>
+        <th>OpenMDW-1.1 规定</th>
+        <th>实际影响</th>
+      </tr>
+      <tr>
+        <td>商业使用</td>
+        <td>允许商业应用，无需授权费</td>
+        <td>初创公司和企业可直接基于 Cosmos 3 构建商业产品</td>
+      </tr>
+      <tr>
+        <td>模型修改</td>
+        <td>允许微调、蒸馏、继续训练</td>
+        <td>研究者可针对特定领域（如手术机器人、自动驾驶）进行专项微调</td>
+      </tr>
+      <tr>
+        <td>衍生模型</td>
+        <td>衍生模型须保留协议声明</td>
+        <td>确保开放生态的持续传播</td>
+      </tr>
+      <tr>
+        <td>安全限制</td>
+        <td>禁止用于生成有害内容、武器系统</td>
+        <td>平衡开放性与安全责任</td>
+      </tr>
+      <tr>
+        <td>数据权重</td>
+        <td>模型权重和部分训练数据均开放</td>
+        <td>研究者可复现训练过程，验证实验结果</td>
+      </tr>
+    </table>
+
+    <h3>全栈开放的战略意义</h3>
+    <p>
+      Cosmos 3 的开放不仅限于模型权重，而是涵盖了从数据到评测的完整研究栈：
+    </p>
+    <ul>
+      <li>
+        <strong>代码开源（github.com/nvidia/cosmos）：</strong>包括训练框架、推理代码、数据处理流程和评测脚本。支持 PyTorch、Diffusers、vLLM-Omni 和 vLLM 四种推理后端，覆盖从研究原型到生产部署的全链路需求。
+      </li>
+      <li>
+        <strong>模型权重开放（HuggingFace）：</strong>五个模型变体（Nano、Super、Text2Image、Image2Video、Policy-DROID）均在 HuggingFace 上公开，Cosmos3-Nano 已获得超过 <strong>17,900 次下载</strong>，Cosmos3-Super 超过 <strong>16,800 次下载</strong>（截至报告日期）。
+      </li>
+      <li>
+        <strong>合成数据集开放：</strong>NVIDIA 同步发布了用于训练 Cosmos 3 的合成数据集，涵盖数字人场景、物理交互、机器人操作、仓储环境和自动驾驶五大领域，为缺乏大规模真实数据的研究团队提供了宝贵资源。
+      </li>
+      <li>
+        <strong>评测基准开放：</strong>开放评测基准使社区能够以统一标准评估和比较不同世界模型的能力，推动领域内的良性竞争和快速迭代。
+      </li>
+    </ul>
+
+    <h3>对 Physical AI 社区的影响</h3>
+    <p>
+      Cosmos 3 的全栈开放对 Physical AI 研究社区的影响体现在多个层面：
+    </p>
+    <ul>
+      <li><strong>降低入门门槛：</strong>高校和小型研究团队无需从头训练大规模世界模型，可直接基于 Cosmos 3 进行微调和应用研究。</li>
+      <li><strong>推动标准化：</strong>统一的接口（Diffusers、vLLM）和评测基准有助于建立 Physical AI 领域的技术标准。</li>
+      <li><strong>促进生态繁荣：</strong>开放的模型权重和数据集吸引了大量开发者参与，HuggingFace 上的高下载量已经证明了社区的积极响应。</li>
+      <li><strong>加速产业落地：</strong>OpenMDW-1.1 的商业友好性使企业能够快速将 Cosmos 3 集成到工业机器人、自动驾驶等实际应用中。</li>
+    </ul>
+
+    <!-- ===== 总结与启发 ===== -->
+    <h2 id="conclusion">总结与启发</h2>
+
+    <p>
+      Cosmos 3 是 AI 发展历史上的一个重要里程碑，它不仅是一个性能卓越的多模态模型，更代表了一种全新的 AI 系统设计范式。在这一节，我们从技术范式、研究启发和未来展望三个维度进行深度总结。
+    </p>
+
+    <h3>统一世界模型的范式意义</h3>
+    <p>
+      Cosmos 3 最深刻的贡献，是证明了<strong>五种模态可以在单一架构中实现真正的统一建模</strong>，而非简单的管道拼接。这一范式转变的意义体现在：
+    </p>
+    <ul>
+      <li>
+        <strong>模态间的深层对齐：</strong>在共享的 MoT 架构中，语言、视觉、音频和动作 token 在同一注意力空间中相互可见，模型能够学习到跨模态的深层语义对应关系。例如，"推"这个动作词在语言空间中的表示，会与视频中物体被推动的视觉模式，以及机器人执行推动动作的控制信号在语义上对齐。
+      </li>
+      <li>
+        <strong>涌现的跨模态能力：</strong>统一训练往往能够产生单模态训练无法获得的涌现能力。Cosmos 3 在物理推理和具身推理上的强大表现，很可能来自于语言推理能力与视觉感知能力的深度融合。
+      </li>
+      <li>
+        <strong>数据效率的提升：</strong>跨模态的参数共享使得每种模态的数据都能够间接提升其他模态的能力。机器人动作数据的训练，可以通过共享的 Transformer 层，间接提升模型对物理场景的视觉理解能力。
+      </li>
+    </ul>
+
+    <h3>MoT 架构的技术洞见</h3>
+    <p>
+      Cosmos 3 的 Mixture-of-Transformers 架构提供了一个重要的技术洞见：<strong>AR 和扩散不是对立的生成范式，而是互补的</strong>。文本的离散自回归特性和视觉/音频/动作的连续扩散特性，恰好对应了信息的两种基本形态——符号化的语义表达和连续的感知信号。MoT 通过共享 Transformer 骨干、分离生成头的方式，优雅地将两者统一，为未来的多模态模型设计提供了重要参考。
+    </p>
+
+    <h3>Physical AI 的未来图景</h3>
+    <p>
+      Cosmos 3 所代表的全模态世界模型，为 Physical AI 的未来描绘了一幅令人振奋的图景：
+    </p>
+    <ul>
+      <li>
+        <strong>通用机器人基础模型：</strong>类似 GPT 之于 NLP，未来可能出现一个通用的机器人基础模型，能够通过少量微调适应各种机器人平台和操作任务。Cosmos 3 的 Policy-DROID 模型已经展示了这一方向的可行性。
+      </li>
+      <li>
+        <strong>自主数据飞轮：</strong>世界模型生成合成数据 → 合成数据训练更好的策略模型 → 策略模型在真实环境中收集更多数据 → 更多数据训练更强的世界模型，这一正向循环有望大幅加速 Physical AI 的能力提升。
+      </li>
+      <li>
+        <strong>物理 AI 的 Scaling Law：</strong>Cosmos 3 的 Nano（16B）和 Super（64B）两个规模版本已经展示了参数量与能力的正向关系。随着计算资源的增加，全模态世界模型的能力边界还有巨大的提升空间。
+      </li>
+    </ul>
+
+    <h3>局限性与未来方向</h3>
+    <p>
+      诚实地面对 Cosmos 3 的局限性，对于研究社区同样重要：
+    </p>
+    <ul>
+      <li><strong>缺乏显式物理引擎：</strong>模型的物理理解来自统计学习，在精确物理交互（如精密装配、流体动力学）上仍难以与基于方程的物理模拟器媲美。未来的方向可能是将神经世界模型与可微分物理引擎结合。</li>
+      <li><strong>长时域一致性：</strong>在生成超长视频或执行长时域机器人任务时，模型可能出现时序不一致和动作状态漂移，这是当前所有生成模型的共同挑战。</li>
+      <li><strong>实时推理延迟：</strong>64B 参数的 Super 模型在单 GPU 上生成 189 帧视频需要约 170 秒，距离机器人控制所需的实时响应（&lt;100ms）仍有数量级的差距。模型压缩、量化和专用硬件加速是必要的研究方向。</li>
+      <li><strong>安全关键场景的可靠性：</strong>在手术机器人、核电站维护等安全关键场景中，模型的幻觉和不确定性问题需要额外的形式化验证和安全保障机制。</li>
+    </ul>
+
+    <blockquote>
+      <strong>核心启发：</strong>Cosmos 3 告诉我们，真正的 Physical AI 需要的不是五个独立的专家模型，而是一个能够在语言、视觉、听觉、触觉和行动之间自由流转的统一智能体。这一愿景的实现，将是通向通用人工智能的关键一步。
+    </blockquote>
+
+    <!-- ===== 参考文献 ===== -->
+    <h2 id="references">参考文献</h2>
+
+    <ol>
+      <li>
+        NVIDIA Research et al. (2026). <em>Cosmos 3: Omnimodal World Models for Physical AI</em>. arXiv:2606.02800.
+        <a href="https://arxiv.org/abs/2606.02800" target="_blank">[arXiv]</a>
+        <a href="https://research.nvidia.com/labs/cosmos-lab/cosmos3/technical-report.pdf" target="_blank">[Technical Report]</a>
+      </li>
+      <li>
+        NVIDIA. (2026). <em>Cosmos 3 GitHub Repository</em>.
+        <a href="https://github.com/nvidia/cosmos" target="_blank">github.com/nvidia/cosmos</a>
+      </li>
+      <li>
+        NVIDIA. (2026). <em>Cosmos 3 HuggingFace Collection</em>.
+        <a href="https://huggingface.co/collections/nvidia/cosmos3" target="_blank">huggingface.co/collections/nvidia/cosmos3</a>
+      </li>
+      <li>
+        Ha, D. & Schmidhuber, J. (2018). <em>World Models</em>. arXiv:1803.10122.
+      </li>
+      <li>
+        Brooks, T. et al. (2024). <em>Sora: Video generation models as world simulators</em>. OpenAI Technical Report.
+      </li>
+      <li>
+        Bruce, J. et al. (2024). <em>Genie: Generative Interactive Environments</em>. arXiv:2402.15391.
+      </li>
+      <li>
+        Peng, X. et al. (2024). <em>π₀: A Vision-Language-Action Flow Model for General Robot Control</em>. arXiv:2410.24164.
+      </li>
+      <li>
+        Kim, M. J. et al. (2024). <em>OpenVLA: An Open-Source Vision-Language-Action Model</em>. arXiv:2406.09246.
+      </li>
+      <li>
+        Su, J. et al. (2024). <em>RoFormer: Enhanced Transformer with Rotary Position Embedding</em>. Neurocomputing.
+      </li>
+      <li>
+        Rombach, R. et al. (2022). <em>High-Resolution Image Synthesis with Latent Diffusion Models</em>. CVPR 2022.
+      </li>
+      <li>
+        Artificial Analysis. (2026). <em>Text-to-Image and Image-to-Video Leaderboard</em>.
+        <a href="https://artificialanalysis.ai" target="_blank">artificialanalysis.ai</a> (2026/05/28 snapshot)
+      </li>
+      <li>
+        RoboArena. (2026). <em>Robot Policy Leaderboard</em>.
+        <a href="https://roboarena.github.io" target="_blank">roboarena.github.io</a>
+      </li>
+      <li>
+        Linux Foundation. (2024). <em>Open Model and Data Weights License (OpenMDW) 1.1</em>.
+        <a href="https://openmodelinitiation.org" target="_blank">openmodelinitiation.org</a>
+      </li>
+    </ol>
+
+    <hr>
+    <p style="color:#6c7086; font-size:0.85em; text-align:center; margin-top:2em;">
+      本报告生成于 2026年6月5日 &nbsp;·&nbsp; 基于 arXiv:2606.02800 及 NVIDIA 官方开源资料整理 &nbsp;·&nbsp;
+      数据来源：<a href="https://arxiv.org/abs/2606.02800">arXiv</a> ·
+      <a href="https://github.com/nvidia/cosmos">GitHub</a> ·
+      <a href="https://huggingface.co/collections/nvidia/cosmos3">HuggingFace</a>
+    </p>
+
+  </main>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+
+    // Build TOC
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+
+    // Active TOC highlighting
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector(`a[href="#${e.target.id}"]`);
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+  </script>
+</body>
+</html>

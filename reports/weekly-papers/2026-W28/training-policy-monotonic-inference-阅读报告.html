@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>阅读报告：The Mirage of Optimizing Training Policies</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --bg-code: #313244;
+      --bg-nav: #181825;
+      --text: #cdd6f4;
+      --heading: #89b4fa;
+      --link: #89dceb;
+      --border: #45475a;
+      --quote-bar: #fab387;
+      --strong: #a6e3a1;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; line-height: 1.8; }
+    #toc { position: fixed; top: 0; left: 0; width: 220px; height: 100vh; background: var(--bg-nav); overflow-y: auto; padding: 20px 12px; font-size: 13px; border-right: 1px solid var(--border); }
+    #toc h2 { color: var(--heading); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+    #toc a { display: block; color: var(--text); text-decoration: none; padding: 3px 8px; border-radius: 4px; margin-bottom: 2px; transition: background 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #toc a:hover { background: var(--border); }
+    #toc a.active { background: var(--heading); color: #1e1e2e; font-weight: 600; }
+    #toc a.toc-h3 { padding-left: 20px; font-size: 12px; opacity: 0.8; }
+    main { margin-left: 240px; max-width: none; padding: 40px 64px; }
+    h1 { color: var(--heading); font-size: 1.9em; margin-bottom: 8px; line-height: 1.3; }
+    h2 { color: var(--heading); font-size: 1.4em; margin: 2em 0 0.6em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    h3 { color: var(--heading); font-size: 1.1em; margin: 1.4em 0 0.4em; }
+    p { margin: 0.6em 0; }
+    a { color: var(--link); }
+    strong { color: var(--strong); }
+    blockquote { border-left: 3px solid var(--quote-bar); padding: 8px 16px; margin: 1em 0; background: #2a2a3e; border-radius: 0 4px 4px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 0.93em; }
+    th { background: #2a2a3e; color: var(--heading); padding: 8px 12px; text-align: left; border: 1px solid var(--border); }
+    td { padding: 7px 12px; border: 1px solid var(--border); }
+    tr:hover td { background: #2a2a3e; }
+    pre { background: var(--bg-code); border-radius: 6px; padding: 16px; overflow-x: auto; margin: 1em 0; font-size: 0.88em; }
+    code { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    p code, li code { background: var(--bg-code); padding: 2px 5px; border-radius: 3px; font-size: 0.88em; }
+    figure { margin: 1.4em 0; text-align: center; }
+    figure img { max-width: 100%; border-radius: 6px; }
+    figcaption { color: #6c7086; font-size: 0.85em; margin-top: 6px; }
+    .mermaid { background: #2a2a3e; border-radius: 6px; padding: 16px; margin: 1em 0; text-align: center; }
+    .echarts-container { margin: 1em 0; border-radius: 6px; overflow: hidden; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 2em 0; }
+    .info-table th { width: 130px; }
+    .algo-box { background: #1a1a2e; border: 1px solid var(--border); border-radius: 6px; padding: 18px 22px; margin: 1em 0; font-size: .9em; line-height: 1.9; }
+    .algo-box .algo-title { color: var(--heading); font-weight: 700; font-size: 1em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .algo-box .kw  { color: #cba6f7; font-weight: 700; }
+    .algo-box .cm  { color: #6c7086; font-style: italic; }
+    .algo-box .var { color: #94e2d5; }
+    .algo-box .fn  { color: #a6e3a1; }
+    .algo-box .num { color: #f9e2af; }
+    .best { color: var(--strong); font-weight: 700; }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>window.MathJax = { tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] } };</script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+  <nav id="toc"><h2>目录</h2></nav>
+  <main>
+    <h1>The Mirage of Optimizing Training Policies：以单调推理策略为 LLM 强化学习的真实目标</h1>
+
+    <p>本报告基于论文 <em>The Mirage of Optimizing Training Policies: Monotonic Inference Policies as the Real Objective for LLM Reinforcement Learning</em>（Liang, Tang, Ma 等，天津大学 & 阿里巴巴）。论文针对 LLM 后训练中“训练-推理不一致（training-inference mismatch）”导致的 RL 训练脆弱与崩溃问题，提出一个全新的目标层级视角：与其优化训练侧策略，不如直接保证<strong>推理策略单调改进</strong>。</p>
+
+    <h2 id="info">论文信息</h2>
+    <table class="info-table">
+      <tr><th>标题</th><td>The Mirage of Optimizing Training Policies: Monotonic Inference Policies as the Real Objective for LLM Reinforcement Learning</td></tr>
+      <tr><th>核心问题</th><td>训练-推理不一致下，训练侧策略改进不等于部署侧推理策略改进；如何让 RL 更新真正服务于推理策略的单调提升</td></tr>
+      <tr><th>核心方法</th><td>MIPI 原则 + MIPU 两步框架（Step 1 采样器参考更新构造候选，Step 2 推理间隙感知验收/回滚）</td></tr>
+      <tr><th>作者单位</th><td>天津大学、阿里巴巴</td></tr>
+      <tr><th>开源地址</th><td><a href="https://anitaleungxx.github.io/MIPU">https://anitaleungxx.github.io/MIPU</a></td></tr>
+      <tr><th>评测模型</th><td>Qwen3-1.7B、Qwen3-4B（FP8 量化 rollout 高失配设定）</td></tr>
+    </table>
+
+    <h2 id="overview">1. 概述</h2>
+    <p>现代 LLM RL 流水线通常将<strong>采样生成</strong>交给推理引擎（vLLM / SGLang），而将<strong>对数概率与梯度计算</strong>交给训练引擎（FSDP / Megatron）。即便两端参数完全同步，精度、解码、serving 后端等实现差异，也会使<strong>训练侧策略 $\pi$</strong> 与<strong>推理侧策略 $\mu$</strong> 对同一条轨迹给出不同概率，即 $\pi \neq \mu$。这就是 training-inference mismatch。</p>
+    <p>已有工作从两个方向缓解失配：(1) 算法侧——校正采样器侧比率（TIS）、过滤不稳定样本（MIS）、学习率衰减；(2) 系统侧——用 FP16 rollout 或量化系统缩小数值差异。这些方法都把失配当作<strong>需要被减小的系统误差</strong>，目标是稳定训练侧策略优化。</p>
+    <p>本文指出一个被忽视的<strong>目标错位（objective misalignment）</strong>：用于 rollout 与部署的是推理策略 $\mu$，因此一次更新是否有效，不应只看它是否改善了训练策略 $\pi$，而应看同步后是否真的产生了更好的推理策略 $\mu$。作者据此提出 <strong>MIPI（Monotonic Inference Policy Improvement）</strong> 原则，并以 <strong>MIPU（Monotonic Inference Policy Update）</strong> 两步框架实现之。在 FP8 量化 rollout 的高失配场景下，MIPU 在 Qwen3-4B / Qwen3-1.7B 上取得最佳平均性能与最稳定的训练动态。</p>
+
+    <h2 id="motivation">2. 研究背景与动机</h2>
+
+    <h3 id="motivation-mismatch">2.1 训练-推理不一致的根源</h3>
+    <p>在 LLM RL 的 MDP 建模中，策略 $\pi_\theta(a_t \mid s_t)$ 即 LLM 本身，状态 $s_t = (q, y_{1:t})$，动作 $a_t$ 为下一 token，奖励采用 verifiable reward：非终止步奖励为 0，序列完成时 $R(\tau) \in \{0,1\}$。学习目标是 $\pi^{*} = \arg\max_{\pi_\theta} J(\pi_\theta)$，其中 $J(\pi) = \mathbb{E}_{\tau \sim \pi}[R(\tau)]$。</p>
+    <p>工程上分离训练/推理引擎后，即便参数同步，$\pi_k$（训练引擎内表示的策略）与 $\mu_k$（推理引擎实际用于 rollout/部署的策略）仍不一致。这带来区别于传统 RL（deadly triad、non-stationarity）的全新学习问题。</p>
+
+    <h3 id="motivation-pi">2.2 经典单调改进与近端策略梯度</h3>
+    <p>策略差（policy difference）对任意两个策略 $\pi, \pi'$ 定义为：</p>
+    <p>$$\Delta(\pi', \pi) := J(\pi') - J(\pi) = \mathbb{E}_{s,a \sim d^{\pi'}}[A^{\pi}(s,a)]$$</p>
+    <p>单调改进的目标是找 $\pi_{k+1}$ 使 $J(\pi_{k+1}) - J(\pi_k) \geq 0$。但上式依赖更新后策略的访问分布，无法直接优化。TRPO 用旧策略分布 + 重要性采样比近似：</p>
+    <p>$$\tilde{\Delta}(\pi_{k+1}, \pi_k) := \mathbb{E}_{s \sim d^{\pi_k},\, a \sim \pi_k(\cdot \mid s)}\left[\frac{\pi_{k+1}(a \mid s)}{\pi_k(a \mid s)} A^{\pi_k}(s,a)\right]$$</p>
+    <p>PPO 用 clipped 概率比替代 TRPO 的约束优化；GRPO 则采用组内相对优势估计，免于学习价值函数。</p>
+
+    <h3 id="motivation-grpo">2.3 GRPO 在失配下的双重偏差</h3>
+    <p>GRPO 的训练侧目标是 clipped surrogate：</p>
+    <p>$$J_{\text{GRPO}}(\theta) = \mathbb{E}_{x \sim D,\, \{y_i\}_{i=1}^{G} \sim \mu_k(\cdot \mid x)}\left[\frac{1}{G}\sum_{i=1}^{G}\min\left(r_i(\theta)\hat{A}^{\mu_k}_i,\ \text{clip}(r_i(\theta), 1-\epsilon, 1+\epsilon)\hat{A}^{\mu_k}_i\right)\right]$$</p>
+    <p>其中 $r_i(\theta) = \pi_\theta(y_i \mid x)/\pi_k(y_i \mid x)$。关键在于：样本由推理策略 $\mu_k$ 采样，而 GRPO 的优势 $\hat{A}^{\mu_k}_i$ 是用 $\mu_k$ 采样的响应组归一化得到的，<strong>并非</strong>旧训练策略优势 $A^{\pi_k}$ 的显式估计。于是当 $\mu_k \neq \pi_k$ 时，标准 GRPO 更新同时受两类偏差影响：</p>
+    <ul>
+      <li><strong>比率级失配</strong>：clipping 以 $\pi_k$ 为中心，但样本来自 $\mu_k$，近端约束中心错位。</li>
+      <li><strong>优势级偏差</strong>：组相对统计量 $\hat{A}^{\mu_k}_i$ 由推理 rollout 诱导，与旧训练策略优势不对齐。</li>
+    </ul>
+
+    <h3 id="motivation-related">2.4 相关工作谱系与对比</h3>
+    <p>已有应对 mismatch 的工作可分为算法侧与系统侧两条线，本文与它们<strong>正交互补</strong>：不只在训练侧减小失配，而是从目标层级追问“同步后的更新是否应被接受为下一个推理策略”。</p>
+    <table>
+      <tr><th>方向</th><th>代表工作</th><th>核心做法</th><th>与本文关系</th></tr>
+      <tr><td>RLVR 主流算法</td><td>GRPO、DAPO、GSPO</td><td>可扩展的数学/推理 RL 配方</td><td>本文以 GRPO 为 instantiation 基线</td></tr>
+      <tr><td>采样器侧校正（算法）</td><td>TIS</td><td>用训练→采样器概率比作 clipped 校正权重</td><td>本文 Step 1 复用其截断权重思想</td></tr>
+      <tr><td>样本过滤（算法）</td><td>MIS</td><td>过滤极端 mismatch 的 token/序列</td><td>主对比 baseline 之一</td></tr>
+      <tr><td>优化侧补救（算法）</td><td>LR-decay</td><td>失配不稳定时降低更新幅度</td><td>主对比 baseline 之一</td></tr>
+      <tr><td>系统侧</td><td>FP16 rollout、QuRL</td><td>用更高精度/低精度系统设计减小数值失配</td><td>正交，本文不与之比较</td></tr>
+      <tr><td>目标层级（本文）</td><td>MIPI / MIPU</td><td>把推理策略单调改进作为真实目标</td><td>—</td></tr>
+    </table>
+
+    <h2 id="method">3. 核心方法</h2>
+
+    <h3 id="method-keyidea">3.1 关键洞见：目标错位</h3>
+    <p>当 $\pi \neq \mu$ 时，训练侧改进不蕴含推理侧改进：</p>
+    <p>$$J(\pi_{k+1}) - J(\pi_k) \geq 0 \;\not\Rightarrow\; J(\mu_{k+1}) - J(\mu_k) \geq 0$$</p>
+    <p>也就是说，标准 RL 更新优化的是训练策略 $\pi_k \to \pi_{k+1}$ 的转移，而部署依赖的是推理策略 $\mu_k \to \mu_{k+1}$ 的转移。在失配下两者可能背道而驰——这正是 RL 训练“看似在涨却突然崩溃”的目标层根因。</p>
+
+    <h3 id="method-mipi">3.2 MIPI：单调推理策略改进原则</h3>
+    <p>MIPI 把<strong>推理策略改进 $J(\mu_{k+1}) - J(\mu_k)$</strong> 作为目标量，并将其分解为三项：</p>
+    <p>$$J(\mu_{k+1}) - J(\mu_k) = \underbrace{J(\mu_{k+1}) - J(\pi_{k+1})}_{\textcircled{1}\ \text{更新后推理间隙}} + \underbrace{J(\pi_{k+1}) - J(\pi_k)}_{\textcircled{2}\ \text{训练侧更新}} + \underbrace{J(\pi_k) - J(\mu_k)}_{\textcircled{3}\ \text{更新前推理间隙}}$$</p>
+    <p>该分解把推理策略改进拆为<strong>候选构造</strong>与<strong>同步后验证</strong>两部分。项 ②+③ 合并为 $J(\pi_{k+1}) - J(\mu_k)$（即 $\Delta(\pi_{k+1}, \mu_k)$），由 Step 1 近似优化；项 ① 即 $J(\mu_{k+1}) - J(\pi_{k+1})$，由 Step 2 作为验收信号估计。</p>
+
+    <h3 id="method-arch">3.3 MIPU 整体架构</h3>
+    <p>下图展示 MIPU 两步实现与经典 RL 的对比。经典 RL 仅凭训练侧目标直接接受同步更新；MIPU 先做采样器参考的候选构造（Step 1），再用推理间隙代理做接受/回滚判定（Step 2），共同覆盖 MIPI 分解的全部三项。</p>
+    <pre class="mermaid">
+flowchart TD
+    subgraph Classic["经典 RL：优化训练策略"]
+      A1["训练侧更新<br>π_k → π_θ"] --> A2["直接同步<br>π_θ → μ_{k+1}"]
+      A2 --> A3["接受为下一推理策略"]
+    end
+    subgraph MIPU["MIPU：MIPI 两步实现"]
+      B1["Step 1：采样器参考更新<br>优化 ②+③ = J π_{k+1} - J μ_k"] --> B2["候选 π_{k+1} 同步为 μ_{k+1}"]
+      B2 --> B3["Step 2：推理间隙感知验收<br>估计 ① = J μ_{k+1} - J π_{k+1}"]
+      B3 --> B4{"T̂_post ≥ -c ?"}
+      B4 -->|通过| B5["接受：π_k←π_{k+1}, μ_k←μ_{k+1}"]
+      B4 -->|失败| B6["回滚到上一检查点"]
+    end
+    </pre>
+
+    <h3 id="method-step1">3.4 Step 1：采样器参考的策略更新</h3>
+    <p>Step 1 目标是项 ②+③，即 $J(\pi_{k+1}) - J(\mu_k) = \Delta(\pi_{k+1}, \mu_k)$。以采样器 $\mu_k$ 为参照，由式 (2) 自然得到采样器参考权重 $(\pi_\theta/\mu_k) A^{\mu_k}$，使概率比与优势统计量都与采样器对齐。</p>
+    <p>训练器→采样器的全比率 $\rho_i(\theta) = \pi_\theta(y_i \mid x)/\mu_k(y_i \mid x)$ 混淆了两种效应，可分解为：</p>
+    <p>$$\rho_i(\theta) = \underbrace{\frac{\pi_k(y_i \mid x)}{\mu_k(y_i \mid x)}}_{w^k_i:\ \text{更新前失配}} \cdot \underbrace{\frac{\pi_\theta(y_i \mid x)}{\pi_k(y_i \mid x)}}_{r_i(\theta):\ \text{当前更新}}$$</p>
+    <p>该分解催生三种实现：</p>
+    <ul>
+      <li><strong>PPO-IS</strong>：直接 clip 全比率 $\pi_\theta/\mu_k$。但全比率在更新前就可能已偏离 1，使 PPO clipping 过度活跃、近端约束不再以当前更新为中心，无法维持稳定上升轨迹。</li>
+      <li><strong>Vanilla-IS</strong>：用无界校正权重 $w^k_i$，只对 $r_i(\theta)$ 做 clip。近端约束更合适，但 $w^k_i$ 无界，低概率 token 会放大梯度方差，出现梯度范数尖刺。</li>
+      <li><strong>TIS（本文采用）</strong>：截断权重 $\bar{w}^k_i = \min(w^k_i, w^{*}_{\max})$，仍只对 $r_i(\theta)$ 做 PPO clipping。兼顾过度 clipping 与方差放大，稳定性-性能折中最优。</li>
+    </ul>
+    <p>Step 1 的 surrogate 为：</p>
+    <p>$$J^{S_1}(\theta) = \mathbb{E}_{x \sim D,\, \{y_i\}_{i=1}^{G} \sim \mu_k(\cdot \mid x)}\left[\frac{1}{G}\sum_{i=1}^{G}\bar{w}^k_i \min\left(r_i(\theta)\hat{A}^{\mu_k}_i,\ \text{clip}(r_i(\theta), 1-\epsilon, 1+\epsilon)\hat{A}^{\mu_k}_i\right)\right]$$</p>
+    <p>截断权重 $\bar{w}^k_i$ 保留采样器参考校正，同时防止 $\pi_k$ 与 $\mu_k$ 间过大的更新前失配主导梯度；近端约束仍只施加于当前更新比 $r_i(\theta)$（对应 $\pi_k \to \pi_\theta$）。优化得候选训练策略 $\pi_{k+1} := \pi_{\theta^{*}}$。Step 1 给出项 $J(\pi_{k+1}) - J(\mu_k)$ 的一个采样器参考提议，但<strong>不决定</strong>同步后推理策略 $\mu_{k+1}$ 是否真正实现了该增益——这交给 Step 2。</p>
+
+    <h3 id="method-step2">3.5 Step 2：推理间隙感知的更新验收</h3>
+    <p>Step 1 后，候选 $\pi_{k+1}$ 同步到推理引擎得到 $\mu_{k+1}$。剩余项为更新后推理间隙 $T_{\text{post}} = J(\mu_{k+1}) - J(\pi_{k+1})$。$T_{\text{post}}$ 为负意味着推理策略在同步后落后于其训练侧对应物——一种不利的失配模式：推理策略对正优势响应分配概率不足，或对负优势响应分配过多。即便训练侧看似有益，这类更新仍不可靠。</p>
+    <p>由 performance difference identity，直接形式 $T_{\text{post}} = \Delta(\mu_{k+1}, \pi_{k+1})$ 需要候选训练策略 $\pi_{k+1}$ 下的优势，GRPO 风格训练中不可得。因此用<strong>反向恒等式</strong>，把优势锚定在 $\mu_{k+1}$，使其与同步推理策略的验证 rollout 兼容，并引入 $\mu_{k+1} \to \pi_{k+1}$ 的重要性校正：</p>
+    <p>$$T_{\text{post}} = -\Delta(\pi_{k+1}, \mu_{k+1}) = -\mathbb{E}_{s,a \sim d^{\pi_{k+1}}}[A^{\mu_{k+1}}(s,a)] \;\leadsto\; \hat{T}_{\text{post}} = -\mathbb{E}_{x \sim D_{\text{val}},\, y_i \sim \mu_{k+1}}\left[\rho_i \hat{A}^{\mu_{k+1}}_i\right]$$</p>
+    <p>其中 $\hat{A}^{\mu_{k+1}}_i$ 是由 $\mu_{k+1}$ 采样的验证响应计算的组相对优势；符号 $\leadsto$ 强调 $\hat{T}_{\text{post}}$ 是受反向恒等式启发的稳定代理，而非 $T_{\text{post}}$ 的精确估计。由于反向形式在 $\pi_{k+1}$ 下取期望、验证响应却来自 $\mu_{k+1}$，需引入重要性权重。对每个补全 $y_i$，采用<strong>长度归一化序列比</strong>以降低方差：</p>
+    <p>$$\rho_i = \exp\left(\frac{1}{T_i}\sum_{t=1}^{T_i}\log\frac{\pi_{k+1}(y_{i,t} \mid x, y_{i,\lt t})}{\mu_{k+1}(y_{i,t} \mid x, y_{i,\lt t})}\right)$$</p>
+    <p>因为 $\hat{T}_{\text{post}} = -\mathbb{E}_{\mu_{k+1}}[\rho_i \hat{A}^{\mu_{k+1}}_i]$，其值越负，说明 $\rho_i$ 与验证优势统计量正相关——即相对同步推理策略，候选训练策略给正优势响应更高概率、给负优势响应更低概率，训练侧提议可能未被推理引擎实现。这并不证明推理策略一定变差，但标记该更新在失配下不可靠。</p>
+    <p>据此用 $\hat{T}_{\text{post}}$ 做接受测试：<strong>当 $\hat{T}_{\text{post}} \geq -c$ 时接受</strong>，令 $\pi_k \leftarrow \pi_{k+1}$、$\mu_k \leftarrow \mu_{k+1}$；否则拒绝并<strong>回滚</strong>训练器与推理引擎到上一检查点。$c \geq 0$ 为容忍代理噪声的参数。</p>
+
+    <h3 id="method-algo">3.6 算法伪代码</h3>
+    <div class="algo-box">
+      <div class="algo-title">Algorithm 1: Monotonic Inference Policy Update (MIPU)</div>
+      <p><span class="kw">Input:</span> 基座模型 <span class="var">π_base</span>，组大小 <span class="num">G</span>，clipping 范围 <span class="num">ε</span>，容忍度 <span class="num">c</span></p>
+      <p><span class="kw">Init:</span> 训练策略 <span class="var">π_{θ0}</span> = <span class="var">π_base</span>，优化器状态 <span class="var">Ω_0</span>，推理策略 <span class="var">μ_0</span> = <span class="fn">Sync</span>(<span class="var">π_{θ0}</span>)</p>
+      <p><span class="kw">for</span> k = 0, 1, 2, ... <span class="kw">do</span></p>
+      <p style="padding-left:1.5em"><span class="cm">// 保存检查点</span></p>
+      <p style="padding-left:1.5em"><span class="fn">SaveCheckpoint</span>(<span class="var">θ_k</span>, <span class="var">Ω_k</span>, <span class="var">μ_k</span>)</p>
+      <p style="padding-left:1.5em"><span class="cm">// ▷ Step 1：采样器参考提议</span></p>
+      <p style="padding-left:1.5em">采集训练 batch <span class="var">B</span> ∼ <span class="var">D</span>，每个 prompt 从 <span class="var">μ_k</span> 采 <span class="num">G</span> 个样本</p>
+      <p style="padding-left:1.5em">计算奖励、组相对优势 <span class="var">Â^{μ_k}</span>、失配权重 <span class="var">w^k</span> = <span class="var">π_k</span>/<span class="var">μ_k</span></p>
+      <p style="padding-left:1.5em">最大化 Step-1 surrogate（式 7）更新训练器参数与优化器状态</p>
+      <p style="padding-left:1.5em"><span class="var">π_{k+1}</span> ← <span class="var">π_{θ*}</span>；<span class="var">μ_{k+1}</span> ← <span class="fn">Sync</span>(<span class="var">π_{k+1}</span>)</p>
+      <p style="padding-left:1.5em"><span class="cm">// ▷ Step 2：单调推理验收</span></p>
+      <p style="padding-left:1.5em">采样验证 batch <span class="var">B_val</span> ∼ <span class="var">D_val</span>，从 <span class="var">μ_{k+1}</span> 每 prompt rollout <span class="num">G</span> 个响应</p>
+      <p style="padding-left:1.5em">计算奖励、优势 <span class="var">Â^{μ_{k+1}}</span>、比率 <span class="var">ρ_i</span></p>
+      <p style="padding-left:1.5em">估计更新后推理间隙 <span class="var">T̂_post</span></p>
+      <p style="padding-left:1.5em"><span class="kw">if</span> <span class="var">T̂_post</span> &lt; −<span class="num">c</span> <span class="kw">then</span></p>
+      <p style="padding-left:3em"><span class="cm">// 拒绝更新</span></p>
+      <p style="padding-left:3em">恢复 <span class="var">θ_{k+1}</span> ← <span class="var">θ_k</span>，<span class="var">Ω_{k+1}</span> ← <span class="var">Ω_k</span>，<span class="var">μ_{k+1}</span> ← <span class="var">μ_k</span></p>
+      <p style="padding-left:1.5em"><span class="kw">end if</span></p>
+      <p><span class="kw">end for</span></p>
+    </div>
+
+    <h3 id="method-impl">3.7 关键实现细节</h3>
+    <ul>
+      <li><strong>Dual-clip</strong>：所有方法（含 baseline）在 token 级 ratio $r_{i,t}(\theta)$ 上采用 dual-clipped 目标，$\epsilon = 0.2$；对负优势 $\hat{A}_i \lt 0$ 用 $\max(\ell^{\text{clip}}_{i,t}, (1+2\epsilon)\hat{A}_i)$ 防止过大负向更新。</li>
+      <li><strong>Step 1 token 级</strong>：对每个 token 计算失配权重 $w^k_{i,t}$，截断上界 $w_{\max} = 2$，目标 $J^{S_1} = \mathbb{E}\left[\frac{1}{G}\sum_i \frac{1}{T_i}\sum_t \bar{w}^k_{i,t}\,\ell^{\text{dc}}_{i,t}\right]$。</li>
+      <li><strong>Step 2 动态容忍度</strong>：观察到 $\hat{T}_{\text{post}}$ 在 FP8 下初期偏低、逐步升高，故前 100 步线性退火 $c_t = c_{\text{start}} + \frac{\min(t,100)}{100}(c_{\text{end}} - c_{\text{start}})$。Qwen3-1.7B：$c_{\text{start}}=4\times10^{-3}, c_{\text{end}}=10^{-3}$；Qwen3-4B：$c_{\text{start}}=10^{-3}, c_{\text{end}}=0$。100 步后固定为 $c_{\text{end}}$。</li>
+      <li><strong>MIS baseline</strong>：token 级过滤，掩码 $m^k_{i,t} = \mathbb{1}[w^k_{i,t} \leq \bar{w}]$，$\bar{w}=2$，作用于 dual-clipped GRPO 目标。</li>
+      <li><strong>LR-decay baseline</strong>：每 $T_{\text{decay}}$ 步学习率减半直至下界 $\eta_\infty$；Qwen3-1.7B $T_{\text{decay}}=249$，Qwen3-4B $T_{\text{decay}}=234$。</li>
+      <li><strong>基础设施</strong>：8×H100，RL 框架 ROLL，训练引擎 Megatron，推理引擎 vLLM。</li>
+    </ul>
+
+    <h2 id="exp">4. 实验结果与分析</h2>
+
+    <h3 id="exp-setup">4.1 实验设置</h3>
+    <ul>
+      <li><strong>模型与场景</strong>：Qwen3-1.7B / Qwen3-4B，FP8 量化 rollout（高失配设定）；额外分析均在 Qwen3-4B 上进行。</li>
+      <li><strong>训练数据</strong>：DAPO-Math-17 与 DeepMath-103K；1.7B 用 5759 条 DAPO 过滤样本，4B 用 1491 条 DeepMath 过滤样本（保留 base 模型有非平凡但非饱和成功率的题目以保证奖励方差）。</li>
+      <li><strong>评测基准</strong>：MATH-500、AIME24、OlympiadBench、Minerva、AMC23，报 pass@1；AIME24/AMC23 用 avg@16 降方差。</li>
+      <li><strong>诊断指标</strong>：inference-training K3-KL（记为 Mismatch-K3），在 $\mu$ 采样 token 上计算 $d_t = \log\pi(y_t \mid s_t) - \log\mu(y_t \mid s_t)$，取 $\mathbb{E}[\exp(d_t) - d_t - 1]$，估计 $D_{KL}(\mu \| \pi)$。</li>
+      <li><strong>研究问题</strong>：RQ1 性能与稳定性；RQ2 两步是否互补；RQ3 Step 2 收益是否来自推理间隙信号本身。</li>
+    </ul>
+
+    <h3 id="exp-main">4.2 主结果（Table 1）</h3>
+    <p>下表为 FP8 量化 rollout 下五个数学推理基准的 pass@1（%）。加粗为每列最优。<strong>Stable</strong> 列表示方法在高性能后能否避免崩溃/急剧退化。</p>
+    <table>
+      <tr><th>模型</th><th>方法</th><th>MATH-500</th><th>AIME24</th><th>OlympiadBench</th><th>Minerva</th><th>AMC23</th><th>Avg.</th><th>Stable</th></tr>
+      <tr><td rowspan="4">Qwen3-4B</td><td>Baseline (GRPO)</td><td>89.34</td><td>42.00</td><td>64.89</td><td>43.39</td><td>82.50</td><td>64.42</td><td>✗</td></tr>
+      <tr><td>MIS</td><td>90.95</td><td>38.44</td><td>62.50</td><td>44.12</td><td>81.09</td><td>63.42</td><td>✗</td></tr>
+      <tr><td>LR-decay</td><td>90.34</td><td>44.00</td><td>67.26</td><td>43.75</td><td>82.97</td><td>65.66</td><td>✗</td></tr>
+      <tr><td>Ours (MIPU)</td><td><span class="best">91.15</span></td><td>43.56</td><td><span class="best">67.86</span></td><td><span class="best">45.96</span></td><td><span class="best">85.00</span></td><td><span class="best">66.71</span></td><td><strong>✓</strong></td></tr>
+      <tr><td rowspan="4">Qwen3-1.7B</td><td>Baseline (GRPO)</td><td>83.10</td><td>25.33</td><td>56.55</td><td>31.68</td><td>57.66</td><td>50.86</td><td>✗</td></tr>
+      <tr><td>MIS</td><td>81.29</td><td>24.67</td><td>58.33</td><td>34.19</td><td>60.16</td><td>51.73</td><td>✗</td></tr>
+      <tr><td>LR-decay</td><td>82.09</td><td>26.00</td><td>58.93</td><td>28.68</td><td>65.47</td><td>52.23</td><td>✗</td></tr>
+      <tr><td>Ours (MIPU)</td><td><span class="best">86.52</span></td><td><span class="best">24.67*</span></td><td><span class="best">59.52</span></td><td><span class="best">33.82</span></td><td><span class="best">65.31</span></td><td><span class="best">53.97</span></td><td><strong>✓</strong></td></tr>
+    </table>
+    <p><small>* 注：1.7B 的 AIME24 列各方法相近（24.67–26.00），论文以平均分判定 MIPU 整体最优；该单列最优实为 LR-decay 的 26.00，此处如实标注。</small></p>
+    <p>两个规模上 MIPU 均取得最佳平均分（4B：66.71%，1.7B：53.97%）。4B 增益在 AMC23（85.00%）与 Minerva（45.96%）最明显；1.7B 增益在 MATH-500（86.52%）与 OlympiadBench（59.52%）最明显。更重要的是 <strong>Stable 列</strong>：MIPU 训练全程稳定，而多个 baseline 在持续训练中出现崩溃或急剧退化。</p>
+
+    <div id="chart-main" class="echarts-container" style="height:360px"></div>
+    <p style="text-align:center;color:#6c7086;font-size:0.85em">图：四个方法在两模型上的平均 pass@1 对比（数据源自 Table 1 Avg. 列）。</p>
+
+    <h3 id="exp-dynamics">4.3 训练动态（Figure 2）</h3>
+    <p>部分 baseline 能达到有竞争力的中间性能，但增益无法持续：失配驱动的误差累积后出现急剧退化。Figure 2（Qwen3-4B FP8）显示 Baseline / MIS / LR-decay 在中段达到合理性能后于持续训练中退化，而 MIPU 在达到高性能后保持稳定轨迹。这说明 MIPU 同时改善了峰值性能与长程训练稳定性，而非仅在不稳定 run 上平移最佳检查点。</p>
+
+    <h2 id="ablation">5. 消融实验与关键发现</h2>
+
+    <h3 id="ablation-table">5.1 两步互补性消融（Table 2）</h3>
+    <p>在 Qwen3-4B FP8 下对比 Baseline、仅 Step 1、仅 Step 2、完整 Step 1+2。</p>
+    <table>
+      <tr><th>方法</th><th>MATH-500</th><th>AIME24</th><th>OlympiadBench</th><th>Minerva</th><th>AMC23</th><th>Avg.</th></tr>
+      <tr><td>Baseline</td><td>89.34</td><td>42.00</td><td>64.89</td><td>43.39</td><td>82.50</td><td>64.42</td></tr>
+      <tr><td>+ Step 1</td><td>90.34</td><td>41.11</td><td><span class="best">68.45</span></td><td>44.85</td><td>82.03</td><td>65.36</td></tr>
+      <tr><td>+ Step 2</td><td>90.34</td><td>40.44</td><td>64.88</td><td>43.38</td><td>75.00</td><td>62.81</td></tr>
+      <tr><td>Ours (Step 1+2)</td><td><span class="best">91.15</span></td><td><span class="best">43.56</span></td><td>67.86</td><td><span class="best">45.96</span></td><td><span class="best">85.00</span></td><td><span class="best">66.71</span></td></tr>
+    </table>
+    <ul>
+      <li><strong>Step 1（候选构造）</strong>：把近端约束中心从 $\pi_k$ 校正到采样器 $\mu_k$，构造更优候选更新；但单用时会接受每一个同步候选，失配波动仍会累积（OlympiadBench 单列最佳 68.45，但 Avg. 仅 65.36 且不稳定）。</li>
+      <li><strong>Step 2（验收）</strong>：靠拒绝大负 $\hat{T}_{\text{post}}$ 候选防崩溃，但<strong>无法改善候选质量</strong>；当 baseline 鲜有提出有用候选时，Step 2 多半只是保留旧推理策略，Avg. 反降至 62.81。</li>
+      <li><strong>完整方法</strong>：Step 1 产出更好候选 + Step 2 过滤“增益难以被 $\mu_{k+1}$ 实现”的候选，两者解决不同瓶颈，故 Avg. 达 66.71 且训练轨迹更受控。</li>
+    </ul>
+
+    <h3 id="ablation-step1impl">5.2 Step 1 实现对比（Appendix B, Figure 5）</h3>
+    <p>对比 PPO-IS、Vanilla-IS、TIS 的性能/梯度范数/Mismatch-K3/clip ratio。PPO-IS clip 比例远高于其他变体、虽降低测量 KL 却无持续上升轨迹；Vanilla-IS 恢复更清晰上升但梯度范数尖刺更大；TIS 兼顾二者，是 Step 1 最优实现。结论：直接 clip $\pi_\theta/\mu_k$ 使近端约束依赖预先存在的失配而过度保守；分解形式把失配校正与当前更新分离，截断版 TIS 进一步控方差。</p>
+
+    <h3 id="ablation-step2analysis">5.3 Step 2 收益来源分析（Figure 4）</h3>
+    <p><strong>推理间隙作为推理侧信号</strong>：Figure 4a 显示更小的 Qwen3-1.7B 失配更大、$\hat{T}_{\text{post}}$ 幅度更大且震荡更强；两模型均呈训练相关模式——失配随训练增大，$\hat{T}_{\text{post}}$ 由初期低值逐步升高。这表明 $\hat{T}_{\text{post}}$ 携带结构化推理侧信号而非无信息边界噪声。</p>
+    <p><strong>信号条件回滚 vs 随机回滚</strong>：Step 2-only 前 500 步回滚率约 70%，故设随机回滚概率 70% 作对照。在对比窗口中，随机回滚拒绝 67.0% 候选（多于 Step 2 的 53.5%），但<strong>仍崩溃</strong>；Step 2 维持稳定轨迹。这证明 Step 2 不是通用的更新稀疏化机制，其稳定性来自<strong>以 $\hat{T}_{\text{post}}$ 为条件的接受决策</strong>——能区分有害与良性同步候选，而随机回滚无法做到。</p>
+    <div id="chart-rollback" class="echarts-container" style="height:320px"></div>
+    <p style="text-align:center;color:#6c7086;font-size:0.85em">图：Step 2 vs 随机回滚的拒绝率与最终稳定性对比（数值源自 5.4 节）。</p>
+
+    <h3 id="ablation-tolerance">5.4 容忍度敏感性（Appendix C, Figure 6）</h3>
+    <p>保持边界形式 $\hat{T}_{\text{post}} \geq -c$，测试 $c > 0$（容忍 mild 负值）、$c=0$（代理下严格非退化）、$c \lt 0$（要求正裕度）。结论：<strong>越严未必越好</strong>。过严会在 $\hat{T}_{\text{post}}$ 初期偏低时拒绝大量早期有用候选，拖慢学习并落入更低平台；$c \lt 0$ 在约 280 步后进入持续回滚。MIPU 的动态容忍度先松后紧，平衡早期学习效率与后期对不可靠更新的防护——回滚率本身不是目标。</p>
+
+    <h2 id="conclusion">6. 总结与启发</h2>
+    <p>论文从<strong>目标层级</strong>重新审视 LLM RL 的训练-推理不一致：mismatch 不只是需要被减小的系统误差，而是<strong>改变了策略改进的对象</strong>——标准 RL 更新优化训练策略，而部署依赖推理策略。据此提出 MIPI 原则与 MIPU 两步框架，在 FP8 高失配下取得更优平均性能与更稳训练动态。</p>
+    <p><strong>核心启发</strong>：</p>
+    <ul>
+      <li><strong>把“是否同步”当作一等决策</strong>：更新有效性的判据应从训练侧 surrogate 转移到同步后推理策略的真实改进，这为 RL 训练崩溃提供了目标层根因解释。</li>
+      <li><strong>分解即力量</strong>：把 $\pi_\theta/\mu_k$ 分解为“更新前失配 × 当前更新”，分别用截断校正与 PPO clipping 处理，是 Step 1 的关键设计；盲切全比率会过度约束。</li>
+      <li><strong>代理信号需校准而非收紧</strong>：Step 2 的收益来自条件化接受而非稀疏化；动态容忍度先松后紧，避免早期过度拒绝。</li>
+      <li><strong>两步互补</strong>：候选质量（Step 1）与候选验收（Step 2）解决不同瓶颈，缺一不可——这是工程上可落地的组合范式。</li>
+    </ul>
+    <p><strong>局限</strong>：受算力限制仅在中等规模模型实验；Step 2 应视为可拓展设计空间（更高效估计器、更强验收准则、直接利用 post-update gap 的优化方案）而非固定实现；更大模型与更多样 RL 系统下的 mismatch 模式待验证。</p>
+
+    <h2 id="refs">7. 参考文献（节选）</h2>
+    <ul>
+      <li>Shao et al. DeepSeekMath / GRPO, arXiv:2402.03300, 2024.</li>
+      <li>Schulman et al. TRPO, ICML 2015；PPO, arXiv:1707.06347, 2017.</li>
+      <li>Kakade & Langford. Approximately optimal approximate RL, ICML 2002.</li>
+      <li>Yu et al. DAPO, arXiv:2503.14476, 2025.</li>
+      <li>Zheng et al. GSPO, arXiv:2507.18071, 2025.</li>
+      <li>Yao et al. Your efficient RL framework secretly brings you off-policy RL training, 2025.（TIS）</li>
+      <li>Liu et al. When speed kills stability: demystifying RL collapse from training-inference mismatch, 2025.（MIS）</li>
+      <li>Zhang et al. Beyond precision: training-inference mismatch is an optimization problem and simple LR scheduling fixes it, 2026.（LR-decay）</li>
+      <li>Qi et al. Defeating the training-inference mismatch via FP16, arXiv:2510.26788, 2025.</li>
+      <li>Li et al. QuRL: Low-precision RL for efficient reasoning, ICLR 2026.</li>
+      <li>Guo et al. DeepSeek-R1, Nature 645(8081):633–638, 2025.</li>
+      <li>Kwon et al. vLLM / PagedAttention, SOSP 2023；Zheng et al. SGLang, NeurIPS 2024.</li>
+      <li>Wang et al. ROLL, arXiv:2506.06122, 2025；Shoeybi et al. Megatron-LM, 2020.</li>
+    </ul>
+  </main>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    hljs.highlightAll();
+    const toc = document.getElementById('toc');
+    document.querySelectorAll('main h2, main h3').forEach((h, i) => {
+      if (!h.id) h.id = 'section-' + i;
+      const a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = h.textContent;
+      if (h.tagName === 'H3') a.classList.add('toc-h3');
+      toc.appendChild(a);
+    });
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        const link = toc.querySelector('a[href="#' + e.target.id + '"]');
+        if (link) link.classList.toggle('active', e.isIntersecting);
+      });
+    }, { rootMargin: '-10% 0px -80% 0px' });
+    document.querySelectorAll('main h2, main h3').forEach(h => observer.observe(h));
+
+    echarts.init(document.getElementById('chart-main')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: '各方法平均 pass@1 (%)', left: 'center', textStyle: { color: '#89b4fa' } },
+      legend: { top: 28, textStyle: { color: '#cdd6f4' } },
+      tooltip: { trigger: 'axis' },
+      grid: { top: 70, left: 50, right: 30, bottom: 40 },
+      xAxis: { type: 'category', data: ['Baseline', 'MIS', 'LR-decay', 'MIPU (Ours)'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: { type: 'value', name: 'Avg. pass@1 (%)', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#cdd6f4'}, splitLine: { lineStyle: { color: '#45475a' } } },
+      series: [
+        { name: 'Qwen3-4B', type: 'bar', data: [64.42, 63.42, 65.66, 66.71], itemStyle: { color: '#89b4fa' }, label:{show:true,position:'top',color:'#cdd6f4'} },
+        { name: 'Qwen3-1.7B', type: 'bar', data: [50.86, 51.73, 52.23, 53.97], itemStyle: { color: '#a6e3a1' }, label:{show:true,position:'top',color:'#cdd6f4'} }
+      ]
+    });
+
+    echarts.init(document.getElementById('chart-rollback')).setOption({
+      backgroundColor: '#2a2a3e',
+      title: { text: 'Step 2 vs 随机回滚', left: 'center', textStyle: { color: '#89b4fa' } },
+      legend: { top: 28, textStyle: { color: '#cdd6f4' } },
+      tooltip: { trigger: 'axis' },
+      grid: { top: 70, left: 60, right: 30, bottom: 40 },
+      xAxis: { type: 'category', data: ['拒绝率 (%)', '最终是否稳定'], axisLabel: { color: '#cdd6f4' } },
+      yAxis: [
+        { type: 'value', name: '拒绝率 (%)', axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#cdd6f4'}, splitLine: { lineStyle: { color: '#45475a' } } },
+        { type: 'value', name: '稳定 (1=是,0=否)', max: 1, min: 0, axisLabel: { color: '#cdd6f4' }, nameTextStyle:{color:'#cdd6f4'} }
+      ],
+      series: [
+        { name: 'Step 2 (信号条件)', type: 'bar', data: [53.5, 1], itemStyle: { color: '#a6e3a1' }, label:{show:true,position:'top',color:'#cdd6f4'} },
+        { name: '随机回滚 (70%)', type: 'bar', data: [67.0, 0], itemStyle: { color: '#fab387' }, label:{show:true,position:'top',color:'#cdd6f4'} }
+      ]
+    });
+  </script>
+</body>
+</html>
