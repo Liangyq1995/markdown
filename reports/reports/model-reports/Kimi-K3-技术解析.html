@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kimi K3 技术解析报告</title>
+<style>
+:root{--bg:#1e1e2e;--bg-code:#313244;--bg-nav:#181825;--text:#cdd6f4;--heading:#89b4fa;--link:#89dceb;--border:#45475a;--quote-bar:#fab387;--strong:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--purple:#cba6f7;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.8;}
+#toc{position:fixed;top:0;left:0;width:220px;height:100vh;background:var(--bg-nav);overflow-y:auto;padding:20px 12px;font-size:13px;border-right:1px solid var(--border);z-index:10;}
+#toc h2{color:var(--heading);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;}
+#toc a{display:block;color:var(--text);text-decoration:none;padding:3px 8px;border-radius:4px;margin-bottom:2px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#toc a:hover{background:var(--border);}
+#toc a.active{background:var(--heading);color:#1e1e2e;font-weight:600;}
+#toc a.toc-h3{padding-left:20px;font-size:12px;opacity:.8;}
+main{margin-left:240px;max-width:none;padding:40px 64px;}
+h1{color:var(--heading);font-size:1.9em;margin-bottom:8px;line-height:1.3;}
+h2{color:var(--heading);font-size:1.4em;margin:2em 0 .6em;border-bottom:1px solid var(--border);padding-bottom:6px;}
+h3{color:var(--heading);font-size:1.1em;margin:1.4em 0 .4em;}
+h4{color:var(--yellow);font-size:1em;margin:1.2em 0 .3em;}
+p{margin:.6em 0;}a{color:var(--link);}strong{color:var(--strong);}
+ul,ol{margin:.6em 0 .6em 1.6em;}li{margin:.3em 0;}
+blockquote{border-left:3px solid var(--quote-bar);padding:8px 16px;margin:1em 0;background:#2a2a3e;border-radius:0 4px 4px 0;}
+table{border-collapse:collapse;width:100%;margin:1em 0;font-size:.93em;}
+th{background:#2a2a3e;color:var(--heading);padding:8px 12px;text-align:left;border:1px solid var(--border);}
+td{padding:7px 12px;border:1px solid var(--border);}tr:hover td{background:#2a2a3e;}
+pre{background:var(--bg-code);border-radius:6px;padding:16px;overflow-x:auto;margin:1em 0;font-size:.88em;color:var(--text);}
+code{font-family:'JetBrains Mono','Fira Code',monospace;}
+p code,li code,td code{background:var(--bg-code);padding:2px 5px;border-radius:3px;font-size:.88em;}
+.mermaid{background:#2a2a3e;border-radius:6px;padding:16px;margin:1em 0;text-align:center;}
+.echarts-container{margin:1em 0;border-radius:6px;overflow:hidden;}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
+.math-block{background:#2a2a3e;border-radius:6px;padding:16px 20px;margin:.8em 0;overflow-x:auto;}
+.math-block mjx-container[display="true"]{display:block!important;text-align:left!important;margin:0.4em 0!important;line-height:1.6!important;}
+.math-block mjx-container[display="true"] mjx-mtr{line-height:1!important;}
+.tech-card{background:#24243e;border:1px solid var(--border);border-radius:8px;padding:20px 24px;margin:1.2em 0;}
+.tech-card.green{border-left:4px solid var(--strong);}
+.tech-card.blue{border-left:4px solid var(--heading);}
+.tech-card.yellow{border-left:4px solid var(--yellow);}
+.tech-card.purple{border-left:4px solid var(--purple);}
+.tech-card.red{border-left:4px solid var(--red);}
+.meta{color:#6c7086;margin-bottom:1.4em;}
+.note{font-size:.88em;color:#a6adc8;}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin:1em 0;}
+.kv .item{background:#2a2a3e;border:1px solid var(--border);border-radius:6px;padding:12px 14px;}
+.kv .num{font-size:1.5em;font-weight:700;color:var(--heading);}
+.kv .lbl{font-size:.82em;color:#a6adc8;}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script>window.MathJax={tex:{inlineMath:[['$','$']],displayMath:[['$$','$$']]},options:{skipHtmlTags:['script','noscript','style','textarea','pre','code']}};</script>
+<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+<nav id="toc"><h2>目录</h2></nav>
+<main>
+
+<h1>Kimi K3 技术解析报告</h1>
+<p class="meta">Moonshot AI · 全球首个开源 3T 级模型 · 博客 2026-07-16 / 技术报告 2026-07 · 报告整理日期：2026-07-31</p>
+
+<table>
+  <tr><th>一句话定位</th><td>把预训练规模与 test-time scaling 两条轴同时推到前沿的<strong>首个开源 3T 级模型</strong>：2.8T 总参数 / 104B 激活 / 原生视觉 / 1M 上下文</td></tr>
+  <tr><th>相对前代</th><td>较 Kimi K2：总参数 1.04T → 2.78T（+167%），激活 32.6B → 104.2B（+220%），整体<strong>缩放效率提升约 2.5×</strong></td></tr>
+  <tr><th>关键技术</th><td>KDA（Kimi Delta Attention）· Gated MLA + NoPE · Attention Residuals · Stable LatentMoE（896 专家 / 激活 16）· SiTU-GLU · Quantile Balancing · MOPD · MoonEP · AgentENV · KDA 感知前缀缓存</td></tr>
+  <tr><th>整体水位</th><td>整体仍落后 Claude Fable 5 与 GPT-5.6 Sol，<strong>稳定领先其余所有参评模型</strong>（含 Claude Opus 4.8、GPT-5.5、GLM-5.2）</td></tr>
+  <tr><th>权重</th><td>已于 2026-07-27 前全量开源：<a href="https://huggingface.co/moonshotai/Kimi-K3" target="_blank" rel="noopener">huggingface.co/moonshotai/Kimi-K3</a></td></tr>
+  <tr><th>原文</th><td><a href="https://www.kimi.com/blog/kimi-k3" target="_blank" rel="noopener">kimi.com/blog/kimi-k3</a> · <a href="https://github.com/MoonshotAI/Kimi-K3" target="_blank" rel="noopener">github.com/MoonshotAI/Kimi-K3（k3_tech_report.pdf，47 页）</a></td></tr>
+</table>
+
+<div class="tech-card blue">
+  <strong>阅读主线</strong>：K3 的叙事是「两条 scaling 轴一起推」。第一条轴：把预训练基座从 1T 级推到 2.8T，靠 KDA（序列维）+ AttnRes（深度维）+ LatentMoE（宽度维）三个方向重排信息流。第二条轴：在 1M 上下文上做 RL——3 个领域 × 3 档推理强度 = 9 个专家，再用 MOPD 蒸馏回单一模型。支撑这一切的是一整套基础设施：FlashKDA 内核、KDA 上下文并行、MoonEP 完美均衡 EP、可恢复 microVM 沙箱、KDA 感知前缀缓存。
+</div>
+
+<div class="kv">
+  <div class="item"><div class="num">2.78T</div><div class="lbl">总参数（MoE）</div></div>
+  <div class="item"><div class="num">104.2B</div><div class="lbl">每 token 激活参数</div></div>
+  <div class="item"><div class="num">1M</div><div class="lbl">上下文窗口</div></div>
+  <div class="item"><div class="num">896 / 16</div><div class="lbl">路由专家 / 每 token 激活（稀疏度 56）</div></div>
+  <div class="item"><div class="num">2.5×</div><div class="lbl">相对 K2 的缩放效率</div></div>
+  <div class="item"><div class="num">69+24</div><div class="lbl">KDA 层 + Gated MLA 层</div></div>
+</div>
+
+<hr>
+
+<h2 id="s1">一、模型架构：沿三个维度重排信息流</h2>
+
+<p>K3 架构的设计哲学是沿<strong>序列长度、网络深度、模型宽度</strong>三个互补维度分别扩容信息流：序列维用混合注意力（3 KDA + 1 Gated MLA），深度维用 Attention Residuals，宽度维用 Stable LatentMoE；输入侧由 MoonViT-V2 提供原生视觉通路。</p>
+
+<pre class="mermaid">
+graph TD
+  IMG["图像 / 视频"] --> ViT["MoonViT-V2（0.4B, 27 层）"]
+  ViT --> PRJ["轻量 MLP Projector<br>pixel-shuffle 2×2 下采样"]
+  TXT["文本 tokens"] --> EMB["Embedding"]
+  PRJ --> EMB
+  EMB --> B1["Block 1<br>3× KDA + 1× Gated MLA<br>每层配 Stable LatentMoE"]
+  B1 --> B2["Block 2"]
+  B2 --> BD["……"]
+  BD --> B8["Block 8（12 层/块）"]
+  EMB -. "AttnRes: 学习伪 query w，<br>对 embedding + 各块输出算注意力权重 α" .-> B1
+  B1 -.-> B2
+  B2 -.-> B8
+  B8 --> OUT["Output"]
+</pre>
+
+<h3 id="s1-1">1.1 混合注意力：KDA（3/4 层）+ Gated MLA（1/4 层）</h3>
+
+<p>每个 Block 由 <strong>3 层 KDA + 1 层 Gated MLA</strong> 组成（3:1 比例贯穿主干），主干末端再补一层 Gated MLA 保证最后一层是全局注意力。全模型共 <strong>69 层 KDA + 24 层 MLA</strong>。</p>
+
+<h4>Kimi Delta Attention（KDA）</h4>
+<p>KDA 在 delta-rule 递归上增加<strong>通道级遗忘门</strong>。单头形式下，对状态 $S_t \in \mathbb{R}^{d_k \times d_v}$：</p>
+
+<div class="math-block">
+$$
+S_t = \big(I - \beta_t k_t k_t^\top\big)\,\mathrm{Diag}(\alpha_t)\, S_{t-1} + \beta_t k_t v_t^\top, \qquad \tilde{o}_t = S_t^\top q_t
+$$
+</div>
+
+<p>其中 $\alpha_t \in (0,1)^{d_k}$ 是逐通道保留率，$\beta_t \in (0,1)$ 控制 delta-rule 写入强度。q/k/v 投影走 <code>ShortConv → Swish → L2Norm</code>（L2Norm 只作用于 q/k），衰减 logit $z_t$ 由低秩投影加每头偏置产生。</p>
+
+<p>K3 对 Kimi Linear 的两处关键修改：</p>
+
+<ol>
+  <li><strong>下界衰减（Lower-bounded decay）</strong>。Kimi Linear 用负 Softplus 映射 $g = -e^{A}\mathrm{Softplus}(z) \in (-\infty, 0)$，chunkwise 形式中键要除以累积衰减 $1/\Gamma$，该倒数可无限增大导致溢出，对角块只能走逐位置对计算（Tensor Core 无法覆盖）。K3 改为带缩放的 sigmoid 把 log-衰减限制在下界以上：</li>
+</ol>
+
+<div class="math-block">
+$$
+g_t^h = g_{\min}\,\sigma\big(e^{A^h} z_t^h\big) \in (g_{\min}, 0)^{d_k}, \qquad \alpha_t^h = \exp(g_t^h) \in (e^{g_{\min}}, 1)^{d_k}
+$$
+</div>
+
+<p>取 $g_{\min} = -5$、$A^h$ 初始化为 0。于是每个保留因子 $\alpha \gt e^{-5} \approx 6.7 \times 10^{-3}$，16-token 小瓦片内累积 log-衰减落在 $(-80, 0)$，倒数重缩放因子小于 $e^{80}$，<strong>仍在 BF16 动态范围内</strong>。结果：对角块与非对角块全部可用稠密 Tensor Core 矩阵乘，消除逐位置对路径这一 chunk 内主要瓶颈。</p>
+
+<ol start="2">
+  <li><strong>全秩输出门</strong>。把 Kimi Linear 的低秩输出门换成输入相关的全秩投影：先对递归输出做 head-wise RMSNorm，再做数据依赖门控：</li>
+</ol>
+
+<div class="math-block">
+$$
+y_t = W_o\left[\sigma(W_g x_t) \odot \mathrm{RMSNorm}(\tilde{o}_t)\right]
+$$
+</div>
+
+<h4>Gated MLA + NoPE</h4>
+<p>周期性全局注意力层沿用 DeepSeek-V2 提出、K2/K2.5 采用的 MLA（缓存低维潜向量 $c_t = W_c x_t$ 而非全量 K/V），但有<strong>两处不同</strong>：</p>
+<ul>
+  <li><strong>NoPE</strong>：所有 MLA 层不加任何显式位置编码（不调 RoPE 频率基、不用 YaRN）。位置敏感与近因感知由夹在中间的 KDA 层提供，MLA 层负责无限制的全局内容交互。扩上下文时<strong>无需修改任何位置编码参数</strong>。</li>
+  <li><strong>全秩输出门</strong>：与 KDA 同款 $y_t = W_o[\sigma(W_g x_t) \odot \tilde{o}_t]$，让每个 token 调制从全局注意力读出的通道。</li>
+</ul>
+<p class="note">训练侧细节：为纠正 flash attention 的偏置舍入误差，注意力输出在训练中保持 FP32；为此重写了训练 kernel，让输出瓦片与 KV 暂存缓冲（而非 query 瓦片）复用共享内存，换取更深的 KV 流水线和更高吞吐。</p>
+
+<h3 id="s1-2">1.2 Attention Residuals（AttnRes）：深度维的注意力</h3>
+
+<p>标准残差连接把之前所有层的信息压进单一状态 $h_l$——类似 RNN 在时间维的瓶颈。AttnRes 把 Transformer 对序列维做的事搬到深度维：<strong>每层用数据依赖的权重选择性检索所有前序层的表示</strong>，而不是均匀累加。</p>
+
+<div class="math-block">
+$$
+k_i = v_i = \begin{cases} h_1 & i = 0 \\ f_i(h_i) & 1 \le i \le l-1 \end{cases}, \qquad
+\alpha_{i \to l} = \frac{\phi(q_l, k_i)}{\sum_{j=0}^{l-1} \phi(q_l, k_j)}, \qquad
+h_l = \sum_{i=0}^{l-1} \alpha_{i \to l} \cdot v_i
+$$
+</div>
+
+<p>其中 $q_l = w_l$ 是每层一个可学习伪 query（不随 token 变化），核函数 $\phi(q,k) = \exp(q^\top \mathrm{RMSNorm}(k))$——RMSNorm 防止输出幅度大的层垄断权重。</p>
+
+<ul>
+  <li><strong>Full AttnRes</strong>：深度不大（$L \lt 100$），$O(L^2 d)$ 算力可承受；真正开销是保存全部层输出的 $O(Ld)$ 显存（流水线并行下还有跨 stage 通信）。</li>
+  <li><strong>Block AttnRes（实际采用）</strong>：把 $L$ 层切成 $N$ 块、每块 $S$ 层。块内各层输出求和成单一表示 $b_n$；跨块只对 $N$ 个块级表示做全注意力。显存与通信开销从 $O(Ld)$ 降到 $O(Nd)$，推理时可用 online softmax 把并行的块间结果与顺序的块内部分和合并，显著降低推理代价。</li>
+  <li>K3 具体配置：<strong>93 层切成 8 块、每块 12 层</strong>，加上 embedding 共 9 个块级表示（经验上 $N \approx 8$ 在各规模上已能拿回大部分收益）。</li>
+</ul>
+
+<h3 id="s1-3">1.3 Stable LatentMoE：896 专家、激活 16 的极端稀疏</h3>
+
+<p>LatentMoE 把「模型全宽」与「路由专家宽度」解耦：<strong>共享专家</strong>走全宽 $d$ 处理通用变换，<strong>路由专家</strong>在压缩潜空间宽度 $\ell$ 内运行。K3 把通道混合扩到 <strong>896 个路由专家、每 token 激活 16 个</strong>（稀疏度 56），潜空间维度 3584（$= 0.5d$），共享专家固定 $N_s = 2$：</p>
+
+<div class="math-block">
+$$
+u = \sum_{i \in \mathcal{T}_k(x)} p_i\, E_i^{\mathrm{routed}}(W_{\downarrow} x), \qquad
+y = \sum_{j=1}^{N_s} E_j^{\mathrm{shared}}(x) + W_{\uparrow}\,\mathrm{RMSNorm}(u)
+$$
+</div>
+
+<p>极端稀疏放大两个失效模式，Stable LatentMoE 用三个组件应对：</p>
+
+<h4>① 归一化 LatentMoE（RMSNorm）</h4>
+<p>路由路径是「$W_\downarrow$ → 多分支专家 FFN → $W_\uparrow$」近四连矩阵乘的病态链式结构，叠加 2.8T 规模会在路由分支产生<strong>激活爆炸</strong>。在专家聚合与上投影之间插入 RMSNorm（上式 $W_\uparrow \mathrm{RMSNorm}(u)$），降低路由分支对尺度变化的敏感度；除稳定训练外，验证 loss 与下游基准也一致变好。</p>
+
+<h4>② SiTU-GLU（Sigmoid Tanh Unit）</h4>
+<p>SwiGLU 两个乘性因子都无界，大坐标叠加会产生激活离群值、加大低精度溢出风险；原始 GLU 的 sigmoid 门有界但丢失 Swish 的正侧近似线性区。SiTU-GLU 对 Swish 的线性因子和上分支分别施加平滑封顶 $\mathrm{softcap}(x,\beta) = \beta \tanh(x/\beta)$：</p>
+
+<div class="math-block">
+$$
+\mathrm{SiTU\text{-}GLU}(x) = \left[\beta_1 \tanh\left(\frac{W_g x}{\beta_1}\right) \odot \sigma(W_g x)\right] \odot \left[\beta_2 \tanh\left(\frac{W_u x}{\beta_2}\right)\right]
+$$
+</div>
+
+<ul>
+  <li>K3 取 <strong>$\beta_1 = 4$（门分支）、$\beta_2 = 25$（上分支）</strong>，输出严格有界：$\|\mathrm{SiTU\text{-}GLU}(x)\|_\infty \le \beta_1 \beta_2 = 100$。</li>
+  <li>原点附近 $\beta\tanh(z/\beta) = z + O(z^3/\beta^2)$，与 SwiGLU 一阶吻合；$\beta_1, \beta_2 \to \infty$ 时逐点还原 SwiGLU。</li>
+  <li>相对硬截断（hard clamp），平滑 cap 在饱和区外保留非零梯度，训练行为更好。</li>
+</ul>
+
+<h4>③ Quantile Balancing（QB）：无辅助损失的精确负载均衡</h4>
+<p>K3 沿用 aux-loss-free 路由（对 router 分数加专家偏置 $b_j$ 再做 Top-k），但抛弃了 DeepSeek-V3 的定步长符号更新 $b_j \leftarrow b_j + \gamma\,\mathrm{sign}(\bar{\ell} - \ell_j)$——在 ~$10^3$ 专家量级下，$\gamma$ 在「适应慢」与「负载震荡」之间难以调和。QB 改为<strong>从 router 分数分位数直接解出下一步偏置</strong>：</p>
+
+<ul>
+  <li>把 Top-k 换成 <strong>Top-(k+1)</strong>：前 k 个是实际路由，第 (k+1) 个充当该 token 的入选截断 $\alpha_i$。</li>
+  <li>固定截断后，「路由到专家 j 的 token 数」关于候选偏置单调递减；令其数恰为目标负载 $q = mk/n$，则 $-\hat{b}_j$ 恰为边际 $s_{i,j} - \alpha_i$ 的第 (q+1) 大值，即 $(1 - k/n)$ 分位数：</li>
+</ul>
+
+<div class="math-block">
+$$
+\hat{b}_j^{(t+1)} \leftarrow -\mathrm{quantile}_{1 - k/n}\left(s_{:,j} - \alpha^{(t)}\right), \qquad
+b^{(t+1)} \leftarrow \hat{b}^{(t+1)} - \mathrm{mean}\left(\hat{b}^{(t+1)}\right)
+$$
+</div>
+
+<ul>
+  <li>因果性：更新只对下一步生效（绝不用从本批导出的偏置路由本批）；推理时偏置冻结。</li>
+  <li>理论根源：从「每专家服务恰好 mk/n 个 token 的最大分数均衡分配」出发，经 LP 松弛 + 对偶，token 侧与专家侧的精确坐标最小化解<strong>都是同一个 $(1-k/n)$ 分位数</strong>（附录 C 完整推导）。符号更新只保留负载误差方向，QB 直接跳到同一对偶目标的精确坐标最小值——这解释了它为何无需类学习率超参、几步内即均衡。</li>
+  <li><strong>直方图估计（工程实现）</strong>：全局 batch 的边际多达数百万且跨 rank/梯度累积分片，精确分位不可行。改为每专家维护 $B$ 桶直方图：每次前向各 rank 本地 scatter-add 计数，步末<strong>一次整数 all-reduce</strong>（每层 $nB$ 个值，$B = 1000$ 时误差仅几个 $10^{-3}$），从汇集计数中线性插值读出分位数。计数可加 ⇒ 估计的是「汇集后全 batch 的分位数」，而非各 rank 分位数的平均；通信量不到「每个 micro-batch 交换原始边际」方案的 1%。</li>
+</ul>
+
+<h3 id="s1-4">1.4 原生视觉：MoonViT-V2 从零训练</h3>
+
+<ul>
+  <li><strong>完全从零、用 next-token prediction 训练</strong>，不再从 SigLIP 等对比预训练模型初始化。动机是训练稳定性：SigLIP 初始化的 MoonViT-3D 接入 LLM 后梯度范数持续偏高且频繁尖刺，从零训练的 V2 全程平稳；且对比损失偏向全局语义，next-token 目标让表示直接被语言建模目标塑形。</li>
+  <li>结果：从零训练在各视觉评测上<strong>追平 SigLIP 初始化基线</strong>——在足够规模下，对比预训练初始化并非必需。</li>
+  <li>规格：<strong>27 层 ViT、约 0.4B 参数</strong>，RMSNorm，线性/注意力投影全部去偏置；图像视频参数完全共享（帧内空间注意力 + 帧间时间注意力 + 时间池化）；pixel-shuffle 2×2 下采样使视觉 token 数减为 1/4，最高支持 <strong>3584×3584</strong> 像素输入。</li>
+  <li>文本、图像、视频在<strong>同一主干、同一上下文</strong>内处理，无事后模态对齐阶段——这是「vision-in-the-loop」（写代码 → 看截图 → 迭代视觉产物）的架构地基。</li>
+</ul>
+
+<h3 id="s1-5">1.5 Per-Head Muon</h3>
+<p>矩阵参数沿用 Muon 优化器（K2 同款 weight clipping 保留）。对 Q/K/V 注意力投影进一步做<strong>逐头正交化</strong>：沿头维度切分动量矩阵，对每头的块单独做 Newton–Schulz 正交化。全矩阵正交化时梯度/动量尺度大的头会主导共享更新方向、小尺度头更新归一化不足；逐头正交化让各头更新尺度均等，大模型下训练更稳，且 Newton–Schulz 在瘦高块上迭代比全矩阵更便宜。</p>
+
+<table>
+  <tr><th>维度</th><th>做法</th><th>关键机制</th></tr>
+  <tr><td><strong>序列（token 混合）</strong></td><td>3× KDA + 1× Gated MLA 混合注意力</td><td>线性递归固定状态 + 周期全局注意力；NoPE；下界衰减消除对角块瓶颈</td></tr>
+  <tr><td><strong>深度（层间混合）</strong></td><td>Block Attention Residuals</td><td>可学习伪 query 对 8+1 个块表示做注意力；$O(Ld) \to O(Nd)$</td></tr>
+  <tr><td><strong>宽度（通道混合）</strong></td><td>Stable LatentMoE</td><td>896 专家/激活 16；RMSNorm + SiTU-GLU 抑爆；QB 精确均衡</td></tr>
+  <tr><td><strong>输入（视觉）</strong></td><td>MoonViT-V2 + Projector</td><td>从零 NTP 训练；图像视频共享参数；2×2 pixel-shuffle</td></tr>
+  <tr><td><strong>优化</strong></td><td>Per-Head Muon</td><td>逐头 Newton–Schulz 正交化，均衡各头更新尺度</td></tr>
+</table>
+
+<h3 id="s1-6">1.6 K2 → K3 架构参数对照</h3>
+
+<table>
+  <tr><th>项</th><th>Kimi K2</th><th>Kimi K3</th><th>变化</th></tr>
+  <tr><td>层数</td><td>61</td><td><strong>93</strong></td><td>+52%</td></tr>
+  <tr><td>总参数</td><td>1.04T</td><td><strong>2.78T</strong></td><td>+167%</td></tr>
+  <tr><td>激活参数</td><td>32.6B</td><td><strong>104.2B</strong></td><td>+220%</td></tr>
+  <tr><td>隐藏维度</td><td>7,168</td><td>7,168</td><td>不变</td></tr>
+  <tr><td>Latent MoE 维度</td><td>—</td><td>3,584（0.5×）</td><td>新增</td></tr>
+  <tr><td>单专家 MoE 隐藏维</td><td>2,048</td><td>3,072</td><td>+50%</td></tr>
+  <tr><td>路由专家数</td><td>384</td><td><strong>896</strong></td><td>+133%</td></tr>
+  <tr><td>每 token 激活专家</td><td>8</td><td><strong>16</strong></td><td>×2</td></tr>
+  <tr><td>共享专家</td><td>1</td><td>2</td><td>×2</td></tr>
+  <tr><td>注意力头数</td><td>64</td><td>96</td><td>+50%</td></tr>
+  <tr><td>训练上下文</td><td>128K</td><td><strong>1M</strong></td><td>×8</td></tr>
+  <tr><td>注意力机制</td><td>MLA</td><td>Hybrid KDA–MLA（69 KDA + 24 MLA）</td><td>—</td></tr>
+  <tr><td>激活函数</td><td>SwiGLU</td><td>SiTU-GLU</td><td>—</td></tr>
+  <tr><td>ViT</td><td>—</td><td>401M 参数 / 27 层 / patch 14 / 12 头</td><td>原生新增</td></tr>
+  <tr><td>词表 / Dense 层 / MTP</td><td>160K / 1 / 1 层</td><td>160K / 1 / 1 层</td><td>不变</td></tr>
+</table>
+
+<hr>
+
+<h2 id="s2">二、预训练：数据、缩放律与训练配方</h2>
+
+<h3 id="s2-1">2.1 数据</h3>
+<ul>
+  <li><strong>文本四域</strong>：Web Text、Code、Mathematics、Knowledge；规则启发式 + 分类器质量打分 + 去重，域采样率由小模型消融定。知识与数学语料沿用 K2 的 <strong>rephrase 配方</strong>（风格/视角多样化改写、分块自回归生成、对照原文保真校验）。</li>
+  <li><strong>视觉语料</strong>：captions、图文交错文档、OCR、感知、视频、视觉编码；坐标监督同时给绝对与归一化（[0,1]）两种格式。大幅扩充<strong>程序化多模态数据</strong>：代码片段与其渲染结果配对（SVG、3D 资产、Webpage、Game、CAD 图纸）。</li>
+</ul>
+
+<h3 id="s2-2">2.2 缩放律：2.5× 效率提升与 cosine 之争</h3>
+<ul>
+  <li>架构/数据/训练改动改变了最优训练区间，重新做缩放律研究重调 batch size、学习率、TPP 与模型形状。拟合曲线显示<strong>整体缩放效率较 K2 提升约 2.5×</strong>（同等 FLOPs 下 OOD 验证 loss 显著更低）。</li>
+  <li><strong>cosine vs WSD</strong>：两者最优超参（峰值 LR、batch size）差异巨大，共用一套超参对比会系统性偏袒一方；各自独立搜参后，<strong>cosine 衰减的最终 loss 一致低于 WSD</strong>，故采用 cosine 为默认调度。</li>
+</ul>
+
+<h3 id="s2-3">2.3 训练配方</h3>
+<ul>
+  <li><strong>原生多模态联合训练</strong>：语言与视觉从第一步起在同一 next-token 目标下联合优化，视觉与文本 token 交错于同一序列，而非「先训 LLM 再接视觉塔」。</li>
+  <li>优化器 Per-Head Muon + K2 式 weight clipping；MoE 负载均衡用 QB；cosine LR + <strong>1% 线性 warmup</strong>；weight decay 全程 0.1。</li>
+  <li>上下文先从 8K 起步，后续阶段扩到 64K。</li>
+</ul>
+
+<h3 id="s2-4">2.4 长上下文扩展：8K → 64K → 256K → 1M 四阶段课程</h3>
+<ul>
+  <li><strong>位置编码</strong>：NoPE——位置信息完全由 KDA 的递归门控与衰减机制隐式编码，直接外推到 1M，无需 RoPE 重缩放/插值。</li>
+  <li><strong>长上下文数据</strong>：自然长文档/视频含大量近重复、二进制块、截断文件、无效机器日志，需精确+模糊去重、视频帧感知哈希、启发式+分类器过滤、结构校验；真正长而连贯的样本稀缺，需上采样防止被短序列淹没。</li>
+  <li><strong>长度 ≠ 长程能力</strong>：合成长上下文数据——精心置换拼接多模态文档与子任务，使任务<strong>只有注意到散布于整个 1M 上下文的信息才能解</strong>，防止注意力退化为局部模式。</li>
+  <li><strong>渐进扩展</strong>：预训练期 8K→64K，cooldown 期 256K→1M。把昂贵的长序列计算集中在训练预算的一小部分，经济且让模型渐进适应；百万 token 训练的可行性由 KDA 上下文并行（§四）支撑。</li>
+</ul>
+
+<hr>
+
+<h2 id="s3">三、后训练：三阶段管线与 9 专家蒸馏</h2>
+
+<pre class="mermaid">
+graph LR
+  SFT["SFT 冷启动<br>XTML 序列化 + QAT"] --> RL["RL 三领域<br>通用任务 / 通用 Agent / 编码 Agent"]
+  RL --> E9["3 领域 × 3 档 effort<br>（low / high / max）= 9 个专家模型"]
+  E9 --> MOPD["Multi-Teacher<br>On-Policy Distillation"]
+  MOPD --> K3["统一模型 Kimi K3"]
+  SFT -. "MXFP4 权重 + MXFP8 激活 QAT 贯穿 SFT/RL 全程" .-> MOPD
+</pre>
+
+<h3 id="s3-1">3.1 SFT 冷启动</h3>
+<p>在既有 Kimi SFT 管线基础上大幅扩充复杂 agentic 任务覆盖：用前代 Kimi 领域专家模型合成轨迹，经多阶段验证 + 人工在环标注；所有数据用 <strong>XTML</strong>（自研 chat template，见 §3.8）统一序列化。从 SFT 阶段起即施加 QAT（MXFP4 权重 / MXFP8 激活，见 §3.6）。</p>
+
+<h3 id="s3-2">3.2 RL：三领域 × 三档 effort，partial rollout 抗长尾</h3>
+<p>不为单任务训练专用 RL 模型，而是跨三大领域、每领域在 {low, high, max} 三档推理强度各训一个专家，共 <strong>9 个专家模型</strong>：(i) 通用任务（通用体验、视觉、推理、忠实性、搜索、知识工作）；(ii) 通用 Agent（长程助理、深度研究、段落级写作）；(iii) 编码 Agent（SWE、编码体验、kernel、Web 开发）。随 RL FLOPs 增加，工具调用步数与各领域分数同步持续上升。</p>
+
+<ul>
+  <li><strong>Partial rollout</strong>：每迭代对 N 个 prompt 各采样 K 条轨迹（N×K 活跃），<strong>完成比例达 λ 即暂停生成</strong>进入策略优化，不等长尾；暂停的 rollout 入队、下一迭代优先恢复（依赖沙箱基础设施）。同一 prompt 的 K 条一旦齐了就立即送训。</li>
+  <li><strong>抗陈旧</strong>：长程轨迹天然跨多个迭代，引入数据陈旧。策略优化用<strong>逐 token 正则</strong>把更新约束在局部邻域，在极端 off-policy 下仍保持稳定。</li>
+</ul>
+
+<h3 id="s3-3">3.3 Reasoning Effort RL：按题预算控制</h3>
+<p>每题关联初始 token 预算 $b_0(x)$（由冷启动模型估计），超出缩放阈值即覆盖奖励：</p>
+
+<div class="math-block">
+$$
+R(y) = -1 \quad \text{若 } T(y) \gt \tau \cdot b_0(x)
+$$
+</div>
+
+<p>通用任务 $T(y)$ 计 thinking tokens；agentic 任务计累计输出 tokens（推理轨迹 + 工具调用参数）。课程式退火：先以大 $\tau$ 训 max 档（仍封顶抑制过度思考），再退火到小 $\tau$ 得 high / low 档；$\tau$ 按领域在人工在环指导下调整。</p>
+
+<h3 id="s3-4">3.4 Agentic GRM：不可验证任务的奖励模型</h3>
+<p>不可验证通用任务沿用 K2.5 的锦标赛式组奖励（二元比较），评审 agent 必须遵守协议：<strong>① 读产出 → ② 生成 rubric → ③ 按 rubric 逐项打分 → ④ 记录到 scorepad</strong>。为抑制「输出越来越长」的 reward hacking，加预算式冗长控制：输出长度超过 $\sigma \cdot \ell_0$ 的候选在二元比较中自动判负。</p>
+
+<h3 id="s3-5">3.5 MOPD：多教师在环蒸馏</h3>
+<p>给定领域 $d$ 与采样 effort 档 $e$，用对应教师 $\pi_{\mathrm{teacher}}^{(d,e)}$ 对学生 $\pi_\theta$ 给出逐 token 在环蒸馏奖励：</p>
+
+<div class="math-block">
+$$
+r_{\mathrm{opd}}^d(y_t \mid e, x, y_{\lt t}) = \mathrm{clip}\left(\mathrm{sg}\left[\log \frac{\pi_{\mathrm{teacher}}^{(d,e)}(y_t \mid x, y_{\lt t})}{\pi_\theta(y_t \mid e, x, y_{\lt t})}\right],\ -R_{\max},\ R_{\max}\right)
+$$
+</div>
+
+<p>稠密奖励无缝接入 RL 框架（partial rollout 等基建直接复用），clip 抑制极端优势信号。试过更细粒度 top-k 蒸馏目标，收敛与终性能均无明确优势。</p>
+
+<h3 id="s3-6">3.6 部署感知后训练：MXFP4 QAT 与 EAGLE-3 草稿模型</h3>
+<ul>
+  <li><strong>MXFP4 QAT</strong>：占参数大头的 MoE 专家权重量化到 MXFP4、激活 MXFP8；非专家组件（注意力投影、LatentMoE 投影、共享专家、路由器）保持高精度。QAT 贯穿 SFT 与 RL 全程，<strong>RL 的 rollout 与训练共享同一量化方案</strong>，消除训推不一致。</li>
+  <li><strong>草稿模型微调</strong>：预训练自带 MTP 层（结构与主干 block 相同），将其微调成 EAGLE-3 式单解码层草稿模型——目标模型冻结，只更新草稿层与特征融合投影。训练展开 7 步；输入融合目标模型第 1、4 及最后一个 AttnRes 块的低/中/高层特征，经无偏置矩阵 $W_{E3}$ 投影，初始化为 $[\,0\ 0\ I\,]$（初始等价于只用高层特征 $h_h$，即 MTP 预训练时的输入），微调中逐步学会利用低中层特征。</li>
+  <li><strong>LK loss</strong>：投机解码加速由逐 token 接受率 $\sum_x \min(p(x), q(x))$ 决定，最小化 KL 代理目标不保证最大化接受率，故直接优化接受率本身的负对数：</li>
+</ul>
+
+<div class="math-block">
+$$
+\mathcal{L}_{\mathrm{LK}} = -\log \sum_{x \in \mathcal{V}} \min\big(p(x), q(x)\big)
+$$
+</div>
+
+<p class="note">$p, q$ 在温度 1 下取值，无额外真值交叉熵项；草稿微调沿用 QAT 配置（专家 MXFP4 / 激活 MXFP8）。</p>
+
+<h3 id="s3-7">3.7 RL 环境：白盒 harness 与任务合成</h3>
+
+<table>
+  <tr><th>环境/机制</th><th>要点</th></tr>
+  <tr><td><strong>统一白盒 RL 环境</strong></td><td>把 agent harness 表示为可配置可组合模块（工具接口、系统提示、上下文管理、技能、记忆、子代理），可实例化 Kimi Code / Claude Code / Codex / OpenClaw / Hermes 及全新 harness；训练中动态为不同任务组配不同 harness，避免过拟合单一工具 schema</td></tr>
+  <tr><td><strong>知识图谱引导任务合成</strong></td><td>自演化分层知识图谱（DAG）：agent 从粗粒度种子节点出发做 web 探索递归扩图（查重复用已有节点、边恒由粗到细、原子概念停止）；按目标分布采样节点→组合关键词→检索真实材料→合成任务</td></tr>
+  <tr><td><strong>可验证 Agentic 问题</strong></td><td>多步复杂信息检索（规划-取证-可验证答案）；专业人士日常工作（投行/数据分析/法律，数十到数百步交付）；多步可验证视觉推理（沙箱内 Python 裁剪/放大/变换图像、验证中间结果）</td></tr>
+  <tr><td><strong>Kernel 优化任务</strong></td><td>源自 Flash Linear Attention 等高质量 GitHub 仓库；覆盖 CUDA / Triton / CuTe DSL / Gluon / ThunderKittens / TileLang 与 BF16/FP8/FP4；奖励 = 正确性（超数值误差阈值得 0）+ 性能（追平专家实现 0.5，逼近 roofline 趋 1）；<strong>反作弊系统</strong>惩罚 CUDA graph 重放、输入缓存、精度降级等 hack</td></tr>
+  <tr><td><strong>个人助理任务</strong></td><td>Gmail/Notion/Slack/Canvas 的高保真 mock（无外部 API 限流）；跨多个模拟日、数十个相互依赖事件；单条 rollout 可达<strong>数千次工具调用、数百万上下文 token</strong>；事件级确定规则或 LLM 评估</td></tr>
+  <tr><td><strong>自主执行任务 AET</strong></td><td>给初始状态/受限目标/工具空间/预算/独立验证器，无参考轨迹；奖励基于验证器对<strong>最终环境状态</strong>的评估而非自报完成；黑盒系统复制、量化因子发现、税务审计等；agent 与验证器隔离 + 公开/隐藏验证器配对 + 提交预算内惩罚式奖励，抑制 reward hacking</td></tr>
+  <tr><td><strong>Web 开发任务</strong></td><td>输入从一句话到多段规格；产物覆盖网站/交互游戏/3D WebGL/数据可视化/SVG/全栈应用；容器化沙箱 + 多样脚手架 rollout；奖励 = 确定性检查（功能测试、结构/像素级相似度，构建失败或造假归零）+ 模型评审（源码审查或实际操作产物）</td></tr>
+</table>
+
+<h3 id="s3-8">3.8 XTML：K3 的聊天模板</h3>
+<p>围绕三个目标重新设计：<strong>可扩展</strong>（新能力靠后向兼容的消息格式而非模板改版）、<strong>低对齐税</strong>（少量 SFT 即可学，轻调基座可直接进 RL）、<strong>解码友好</strong>（简单编码器/流式解析/语法约束）。用三个保留特殊 token <code>[open]</code> <code>[sep]</code> <code>[close]</code> 替代 XML 尖括号，另设 <code>[end_of_msg]</code> 作生成停止符——每个结构边界都是显式特殊 token，消除 tokenization 歧义。</p>
+
+<ul>
+  <li><strong>消息分区</strong>：全局 option 消息（tool-declare、thinking-effort）置于输入消息之前（改动本就使 KV cache 失效）；一次性 option（tool_choice、response_format）置于输入消息之后（不破坏历史 KV cache）；会话中动态加载的工具通过插入新的 tool-declare 消息扩容，无需重建上下文。</li>
+  <li><strong>通道</strong>：assistant 消息体分 think / response / tools 三通道（借鉴 Harmony）。思考模式与 instruct 模式仅由生成前缀区分。K3 <strong>只支持 preserved thinking</strong>——think 通道始终保留在历史中（即使为空）。这也是官方「局限性」中要求 harness 回传完整思考历史的原因。</li>
+  <li><strong>工具调用</strong>：每个 call 带 tool 与 index 属性（编号并行调用），tool-result 重复同样的 tool/index 对；参数带类型（字符串原文、其余 JSON 类型紧凑序列化），代码等自由文本是一等公民而非转义 JSON 字符串；纯 JSON fallback 块只出现在输入 token，训练时 mask 掉 loss。</li>
+  <li><strong>reasoning effort</strong>：作为 <code>thinking-effort</code> 全局 option 消息，用自然语言声明档位（schema 预留 low/medium/high/max 四级，K3 支持子集），充当生成约束指令——新 option 几乎零训练即可引入。</li>
+</ul>
+
+<hr>
+
+<h2 id="s4">四、基础设施：3T 训练 × 1M RL × 生产服务</h2>
+
+<p>K3 罕见地叠加三个系统难题：<strong>混合 KDA 注意力、3T 级稀疏多模态训推、百万 token agentic 负载</strong>。基础设施沿模型生命周期与之协同设计。</p>
+
+<h3 id="s4-1">4.1 KDA 的算法-系统协同设计</h3>
+
+<h4>FlashKDA：chunkwise 训练/prefill 内核</h4>
+<p>KDA 的 chunkwise 形式 chunk 内并行、chunk 间串行，朴素执行会让 SM 在串行传播期闲置。基于 CUTLASS 的 <strong>FlashKDA</strong> 把 token 并行阶段与 head 并行递归各自独立调度调优，重叠 chunk 内计算与跨 chunk 状态传播，显著优于 Triton 参考实现；同时服务训练与推理 prefill，作为 flash-linear-attention 的后端自动分发。另有<strong>设备内 CP 规划器</strong>：状态转移可独立于入状态评估再精确复合，把序列切到单 rank 的多个 SM 上并行求段转移再合并，解决超长 prefill 下「每 rank 只有几个头、SM 大量闲置」的问题，无跨设备通信。</p>
+
+<h4>KDA Context Parallelism（KCP）</h4>
+<p>softmax 注意力的 CP 要交换随序列增长的 KV 块；线性注意力只需传固定大小状态 $S$，但朴素线性注意力「各 rank 从 S=0 算局部状态再求和」的做法对 KDA 不成立——delta rule 在写入前先用 token 相关矩阵 $M_t = (I - \beta_t k_t k_t^\top)\mathrm{Diag}(\alpha_t)$ 作用于入状态，局部段的效果依赖进入该段的状态。KCP 把每段效果分解为两个本地可算量：<strong>累积转移 $M_{t\leftarrow 1}$（作用于入状态）与从零生成的局部状态 $\widetilde{S}_t$</strong>：</p>
+
+<div class="math-block">
+$$
+S_t[i{+}1] = \widetilde{S}_t[i{+}1] + M_{t\leftarrow 1}[i{+}1]\, S_{T_i}[i]
+$$
+</div>
+
+<p>两个量在 $S_{T_i}[i]$ 可用之前就能用本地 token 算出，正是各 rank 交换的片段；rank 级更新满足结合律，可用<strong>前缀扫描</strong>恢复每个 rank 的入状态：各 rank 本地算两个张量 → 一次 all-gather → 按序复合。KCP 只需<strong>固定大小的 all-gather</strong> 即完成递归状态同步，算力随序列线性扩展（构建于 DeltaNet CP 之上，实现见 FLA PR #691）。</p>
+
+<h3 id="s4-2">4.2 3T 级预训练基建</h3>
+
+<h4>MoonEP：完美均衡的专家并行</h4>
+<ul>
+  <li><strong>目标</strong>：每个 rank 恰好收到 $S \times K$ 个 token，所有 rank 计算量完全一致。已证明：每 rank 预留 <strong>E/R 个冗余专家槽</strong>即可保证均衡规划恒有可行解（上界基本紧，最坏构造需 $\lceil E(R-1)/R^2 \rceil \approx E/R$）；对比 ECHO/UltraEP 的预设上限或 token cap（无解即训练中断、需手调且留残余不均衡），MoonEP 训练<strong>永不因规划失败中断</strong>。</li>
+  <li><strong>在线规划</strong>：精确最优解用 ILP 离线算参考，线上用近最优 GPU 规划内核，开销可忽略且始终遵守 E/R 上界；前向用当前 micro-batch 的 router 输出规划并预取冗余专家，反向把梯度暂存本地 reduce buffer 后归约回原属 rank。</li>
+  <li><strong>零拷贝通信</strong>：融合 permute/unpermute 算子，规划内核预算每个 token 的目的地直发远端、通信缓冲视图直接给计算；最坏不均衡下 DeepEP 需 $S \times K \times R$ 缓冲，MoonEP 只需固定 $S \times K$。</li>
+  <li><strong>静态形状免同步</strong>：每层每 rank 恒收 $S \times K$ token ⇒ 所有层计算形状静态已知，消除逐层 MoE host 同步；rank 内专家 token 数仍偏斜，用 workload-aware 调度器在 launch 前按当前分布自适应 GEMM 参数；共享专家 GEMM 放到独立流上与其他内核重叠。</li>
+</ul>
+
+<h4>显存高效训练</h4>
+<ul>
+  <li><strong>统一激活管理器</strong>：重计算/量化/offload/远程 offload 都是张量级可插拔存储策略，注解式声明、与模型代码解耦；单一显存池 + 层粒度预取回取；K3 大部分激活用 <strong>block-wise FP8 量化 + offload/远程 offload</strong>，逐元素算子配重计算。</li>
+  <li><strong>MoE 梯度重写</strong>（受 SonicMoE 启发）：permuted probs 的梯度经数学变换只依赖中间激活与上游梯度，消除对前向输出的反向依赖；group GEMM 前向只存 dispatch 输入，反向重算 dispatch（通信可与部分反向计算重叠）。</li>
+  <li><strong>AttnRes 伴随优化</strong>：块表示在边界层生成一次、供后续所有层共享并常驻 GPU；AttnRes 计算整体包 checkpoint；流水线并行用缓存式流水线通信，只增量传输新块、micro-batch 结束即释放，达显存理论下界。</li>
+  <li><strong>PP rank 间激活均衡</strong>：interleaved 1F1B 下各 PP rank 驻留激活不均，用 Mooncake Transfer Engine 把激活远程 offload 到其他 PP rank 的显存。</li>
+  <li><strong>Pipeline ZeRO-2 梯度分片</strong>：梯度跨 DP rank 分片并存放 CPU 内存（GPU 上保留 double grad buffer）。</li>
+  <li><strong>P2P 式 Muon 正交化</strong>：分布式优化器把参数分片到 DP rank，而 Newton–Schulz 需要完整矩阵——不做全参数 all-gather，各 rank 只通过 P2P 向属主 rank 取回自己持有参数的分片，通信与计算按 model-chunk 粒度流水重叠。</li>
+</ul>
+
+<h4>多模态编码器优化</h4>
+<ul>
+  <li><strong>动态 CP</strong>：大图沿 patch 维切到多设备、gather-KV 算注意力；CP 组再分子组负载均衡地分发多张大图，降低大视觉样本延迟与跨设备负载不均。</li>
+  <li><strong>藏进流水线气泡</strong>：interleaved 1F1B 下，首批 micro-batch 的文本前向集中在开头、末批的文本反向集中在结尾；据此分解 ViT 计算——首批前向同步先跑，其余前向排进气泡，反向同理。<strong>大部分 ViT 计算被藏进流水线气泡</strong>，视觉编码器有效开销基本消除（K2.5 DEP 的进一步演进）。</li>
+</ul>
+
+<h3 id="s4-3">4.3 百万 token Agentic RL 基建</h3>
+<ul>
+  <li><strong>共置 RL + 外部 KV cache 池</strong>：co-located 训练让每个 1M-context RL 实验只需几百张 GPU；写回式设计——活跃解码块留 GPU，被逐出的可复用空闲前缀才写回 CPU DRAM 外部池、复用前预取；KDA 状态与对应 MLA KV 块一起 offload/预取，生命周期对齐。训练迭代结束后把训练状态（权重+优化器）卸到 NVMe 腾 DRAM，rollout 后释放池避免争用。</li>
+  <li><strong>自动节流调度</strong>：轨迹推进时上下文逐渐变长，固定并发不是保守就是爆 KV。用活跃请求数、排队数、KV 利用率等运行时信号动态控制发往推理引擎的请求数，无需手调即避免欠饱和与过载。</li>
+  <li><strong>梯度缓冲复用</strong>：参考模型等 forward-only 非策略模型权重驻留 CPU，需要时用策略模型的 FP32 梯度缓冲（每 GPU 仅存 2 个 VPP chunk 槽）来实体化——一个槽算当前 chunk、另一个槽预取下一 chunk，不新增显存。</li>
+</ul>
+
+<h4>AgentENV：microVM 沙箱</h4>
+<table>
+  <tr><th>设计目标</th><th>实现与数字</th></tr>
+  <tr><td>高保真隔离</td><td>Firecracker microVM：容器方案曾被 agent 的激进探索打出 kernel panic/死锁；microVM 允许挂载磁盘、跑容器甚至开 VM</td></tr>
+  <tr><td>灵活生命周期</td><td>增量 checkpoint/resume 仅 <strong>133ms / 49ms</strong>（只存脏页）；Pause（等待模型推理占沙箱寿命至多 98%，暂停期零资源）/ Fork（复制同状态沙箱做无副作用奖励评审）/ Snapshot（定期快照错误恢复）</td></tr>
+  <tr><td>高效高密度</td><td>OverlayBD 镜像 + 自研 ublk 驱动 + 存储层共享 + P2P 传输 ⇒ 秒级内创建数万沙箱、亚秒启动；写时复制内存 + 页缓存优化 ⇒ <strong>6.5× 内存超售</strong></td></tr>
+  <tr><td>实战规模</td><td>K3 训练与评测全程共创建 <strong>51,219,741 个沙箱 / 1,505,678 个镜像</strong></td></tr>
+</table>
+
+<h3 id="s4-4">4.4 推理与在线服务</h3>
+
+<h4>KDA 感知前缀缓存</h4>
+<p>混合架构下 KDA 递归状态（每请求一份定长）与 MLA KV（随序列增长、按 token 分页）大小与生命周期完全不同，但缓存前缀只有在同一边界<strong>两者都能恢复</strong>时才可复用：</p>
+<ul>
+  <li><strong>统一布局</strong>：把 KDA 状态打包进与 MLA KV 相同的分页块池（页字节数对齐，共享分配/引用计数/逐出实现）；页内按头连续存储，头是跨节点传输最小单元；PD 分离两侧 TP 度不同时重排布放在传输路径上做，GPU 侧零改洗。</li>
+  <li><strong>粒度解耦</strong>：状态快照只在稀疏边界可承受 ⇒ 物理块被迫大到 1024–6144 token，若哈希粒度随之变粗，缓存几乎无用（短于一块的请求永不命中）。解法：<strong>前缀哈希跑在 MLA 页内的细粒度哈希块（512 token）上，物理块仍是粗分配单元；KDA 只在（稀疏子集的）哈希端点存 checkpoint</strong>。查找两阶段：MLA 侧先整块匹配、落空则回退到块内哈希端点；KDA 侧要求候选边界在每个 KDA 缓存组都有 checkpoint；命中取两阶段都满足的最长边界。例：前 2800 token 匹配的请求在 $B = 2560 = 5 \times 512$ 处命中（深在 6144-token 物理块内部），从 B 续 prefill，$[0,B)$ 零重算。</li>
+  <li><strong>并发一致性</strong>：命中块先全组 pin 再分配；当前调度步内分配/注册的块在拷贝落地前不参与匹配；任一 KDA 组逐出 checkpoint 即原子失效其全部兄弟。</li>
+</ul>
+
+<h4>高性能内核</h4>
+<ul>
+  <li><strong>KDA 解码</strong>：MTP 投机解码下验证拒绝部分草稿时，原地更新的状态无法回滚；存每草稿位快照又会倍增状态流量。改为<strong>只缓存草稿 token 的投影输入（远小于状态），在片上重建被接受 token 的状态</strong>（与 ReplaySSM 独立同思路）；重放、bonus token、下一草稿窗口共享一个融合内核（短卷积/归一化/门控/递归/输出归一化），验证延迟随验证 token 数亚线性增长。</li>
+  <li><strong>Block AttnRes</strong>：prefill 用序列并行（TP all-reduce 拆成 reduce-scatter + all-gather，块内内核插中间）使每 token 块表示只在一个 rank 实体化；解码时块间内核放旁流与主流重叠，块内合并 + RMSNorm 融进前序 TP all-reduce。</li>
+  <li><strong>Stable LatentMoE</strong>：latent 下投影与路由器融为单 GEMM；latent 权重跨 rank 分片、输出 all-gather 用 multimem store 融进 GEMM 尾声；小 batch 下路由专家 group GEMM 退化为访存受限的权重流——改用 WarpDecode 式 token 中心内核（每 warp 负责一个输出神经元直读权重），warp 内再分 lane team 处理不相交专家子集 + warp 级归约；权重布局离线预置换降低运行时反量化开销。</li>
+</ul>
+
+<h4>集群级调度</h4>
+<ul>
+  <li><strong>缓存感知亲和调度</strong>：1M 下典型编码输入带 400K 前缀、prefill 增量仅 4K，命中比重算便宜数个量级 ⇒ 会话路由到持有其前缀缓存的集群；一致性哈希把每会话钉在<strong>主集群 + 预备份集群</strong>，主挂时备集群重新 prefill，且备分配均匀散布全 fleet，单集群故障影响有界。</li>
+  <li><strong>预算制准入控制</strong>：生产流量单请求成本横跨约 3 个数量级（&lt;2K 到 1M token），按「平均请求」做的容量规划/限流失效；给不同请求类别分配独立资源预算，长上下文突发最多耗尽自己份额，不拖累全局 TTFT SLO。</li>
+</ul>
+
+<div class="tech-card yellow">
+  <strong>部署建议（官方）</strong>：专家并行规模越大越需要大高带宽通信域，推荐 <strong>64+ 加速卡的超节点（supernode）</strong>配置部署 K3；KDA 前缀缓存实现已贡献给 vLLM 社区，随模型一同发布。官方 API 基于 Mooncake 分离式推理架构，编码负载下缓存命中率超 90%。
+</div>
+
+<hr>
+
+<h2 id="s5">五、评测：基准全景</h2>
+
+<p>对比基线：Claude Fable 5（max，含 fallback）、GPT-5.6 Sol（max，含 cyberguard）、Claude Opus 4.8（max）、GPT-5.5（xhigh）、GLM-5.2（max，开源）。K3 全部结果取 reasoning effort = max、temperature = 1.0；单步任务 top-p = 0.95，agentic 任务 top-p = 1.0。</p>
+
+<h3 id="s5-1">5.1 编码</h3>
+
+<div id="chart-coding" class="echarts-container" style="height:420px"></div>
+
+<table>
+  <tr><th>基准</th><th>K3</th><th>Fable 5</th><th>GPT-5.6 Sol</th><th>Opus 4.8</th><th>GPT-5.5</th><th>GLM-5.2</th></tr>
+  <tr><td>DeepSWE</td><td>67.5</td><td>70.0</td><td><strong>73.0</strong></td><td>59.0</td><td>67.0</td><td>46.2</td></tr>
+  <tr><td>ProgramBench</td><td><strong>77.8</strong></td><td>76.8</td><td>77.6</td><td>71.9</td><td>70.8</td><td>63.7</td></tr>
+  <tr><td>Terminal-Bench 2.1</td><td>88.3</td><td>88.0</td><td><strong>88.8</strong></td><td>84.6</td><td>83.4</td><td>82.7</td></tr>
+  <tr><td>FrontierSWE</td><td>81.2</td><td><strong>86.6</strong></td><td>71.3</td><td>66.7</td><td>64.9</td><td>67.3</td></tr>
+  <tr><td>SWE-Marathon</td><td><strong>42.0</strong></td><td>35.0</td><td>39.0</td><td>40.0</td><td>14.0</td><td>13.0</td></tr>
+  <tr><td>PostTrainBench</td><td>36.6</td><td><strong>41.4</strong></td><td>34.6</td><td>34.1</td><td>28.4</td><td>34.3</td></tr>
+  <tr><td>MLS-Bench-Lite</td><td>48.3</td><td><strong>49.9</strong></td><td>46.2</td><td>42.8</td><td>35.5</td><td>40.4</td></tr>
+  <tr><td>SciCode</td><td>58.7</td><td><strong>60.2</strong></td><td>56.1</td><td>53.5</td><td>56.1</td><td>50.5</td></tr>
+</table>
+
+<p>要点：ProgramBench 第一；SWE-Marathon（GPU kernel 取向）42.0% 领先 Fable 5 达 7 分；Terminal-Bench 2.1 与 GPT-5.6 Sol 几乎持平（88.3 vs 88.8）；FrontierSWE 长程基准第二（81.2），仅次于 Fable 5（86.6）且大幅领先其余模型。</p>
+
+<h3 id="s5-2">5.2 Agentic 与知识工作</h3>
+
+<div id="chart-agentic" class="echarts-container" style="height:420px"></div>
+
+<table>
+  <tr><th>基准</th><th>K3</th><th>Fable 5</th><th>GPT-5.6 Sol</th><th>Opus 4.8</th><th>GPT-5.5</th><th>GLM-5.2</th></tr>
+  <tr><td>BrowseComp</td><td><strong>91.2</strong></td><td>88.0</td><td>90.4</td><td>84.3</td><td>84.4</td><td>—</td></tr>
+  <tr><td>DeepSearchQA (F1)</td><td><strong>95.0</strong></td><td>94.2</td><td>—</td><td>93.1</td><td>—</td><td>—</td></tr>
+  <tr><td>ResearchRubrics</td><td><strong>76.2</strong></td><td>—</td><td>73.8</td><td>73.5</td><td>64.0</td><td>71.1</td></tr>
+  <tr><td>GDPval-AA v2 (Elo)</td><td>1686</td><td><strong>1747</strong></td><td>1736</td><td>1593</td><td>1491</td><td>1510</td></tr>
+  <tr><td>Toolathlon-Verified</td><td>76.5</td><td><strong>77.9</strong></td><td>74.9</td><td>76.2</td><td>73.5</td><td>59.9</td></tr>
+  <tr><td>MCPMark-Verified</td><td><strong>94.5</strong></td><td>87.4</td><td>92.9</td><td>76.4</td><td>92.9</td><td>—</td></tr>
+  <tr><td>MCP-Atlas</td><td>84.2</td><td><strong>84.7</strong></td><td>83.6</td><td>83.6</td><td>82.8</td><td>82.6</td></tr>
+  <tr><td>AutomationBench</td><td><strong>30.8</strong></td><td>29.1</td><td>29.7</td><td>27.2</td><td>22.7</td><td>12.9</td></tr>
+  <tr><td>JobBench</td><td>54.3</td><td><strong>57.4</strong></td><td>45.4</td><td>48.4</td><td>38.3</td><td>43.4</td></tr>
+  <tr><td>Agents' Last Exam</td><td>28.3</td><td>25.7</td><td><strong>29.6</strong></td><td>27.0</td><td>26.6</td><td>20.4</td></tr>
+  <tr><td>APEX-Agents</td><td>41.0</td><td><strong>43.3</strong></td><td>39.9</td><td>39.4</td><td>38.5</td><td>35.6</td></tr>
+  <tr><td>OfficeQA Pro</td><td>63.3</td><td><strong>69.9</strong></td><td>63.2</td><td>63.9</td><td>60.9</td><td>41.4</td></tr>
+  <tr><td>SpreadsheetBench 2</td><td><strong>34.8</strong></td><td>34.7</td><td>32.4</td><td>31.6</td><td>29.1</td><td>28.1</td></tr>
+  <tr><td>OSWorld-Verified</td><td>84.8</td><td><strong>85.0</strong></td><td>83.0</td><td>83.4</td><td>79.0</td><td>—</td></tr>
+  <tr><td>OSWorld 2.0</td><td>58.3</td><td><strong>66.1</strong></td><td>62.6</td><td>55.7</td><td>49.5</td><td>—</td></tr>
+  <tr><td>τ³-Banking</td><td><strong>33.4</strong></td><td>26.8</td><td>33.0</td><td>27.6</td><td>31.3</td><td>26.8</td></tr>
+  <tr><td>Harvey Lab-AA（法律）</td><td><strong>94.6</strong></td><td>93.6</td><td>87.2</td><td>91.1</td><td>86.3</td><td>91.0</td></tr>
+  <tr><td>CorpFin v2 / Finance Agent v2 / Legal Research</td><td>71.6 / 54.4 / 44.2</td><td>71.8 / 56.3 / 49.5</td><td>64.4 / 53.8 / 48.1</td><td>66.7 / 53.9 / 43.8</td><td>68.4 / 51.8 / 40.4</td><td>66.1 / 49.7 / 31.3</td></tr>
+</table>
+
+<p>要点：BrowseComp（91.2）、DeepSearchQA（95.0 F1）、ResearchRubrics、MCPMark-Verified（94.5）、AutomationBench、SpreadsheetBench 2、τ³-Banking、Harvey Lab-AA 均第一；两个 Elo 制知识工作套件由 Fable 5 领跑（GDPval 第三 1686、AA-Briefcase 第二 1548）；OSWorld-Verified 与 CorpFin v2 仅差 Fable 5 0.2 分。</p>
+
+<h3 id="s5-3">5.3 推理与知识</h3>
+
+<div id="chart-reason" class="echarts-container" style="height:380px"></div>
+
+<table>
+  <tr><th>基准</th><th>K3</th><th>Fable 5</th><th>GPT-5.6 Sol</th><th>Opus 4.8</th><th>GPT-5.5</th><th>GLM-5.2</th></tr>
+  <tr><td>GPQA Diamond</td><td>93.5</td><td>92.6</td><td><strong>94.1</strong></td><td>91.0</td><td>93.5</td><td>91.2</td></tr>
+  <tr><td>CritPt（研究级物理）</td><td>23.4</td><td>28.6</td><td><strong>32.3</strong></td><td>20.9</td><td>27.1</td><td>20.9</td></tr>
+  <tr><td>AA-LCR（长上下文推理）</td><td><strong>74.7</strong></td><td>70.0</td><td>73.7</td><td>67.7</td><td>74.3</td><td>71.3</td></tr>
+  <tr><td>HLE-Full（无工具 / 有工具）</td><td>43.5 / 56.0</td><td><strong>53.3 / 63.0</strong></td><td>44.5 / 58.0</td><td>49.8 / 57.9</td><td>41.4 / 52.2</td><td>—</td></tr>
+</table>
+
+<p>研究生级推理（GPQA 93.5%）与前沿并驾；<strong>研究级任务仍有差距</strong>：HLE-Full 有/无工具均落后 Fable 5 与 Sol，CritPt 23.4% 落后于 Fable 5 / Sol / GPT-5.5——官方明确把研究级推理列为关键改进方向。</p>
+
+<h3 id="s5-4">5.4 视觉</h3>
+
+<div id="chart-vision" class="echarts-container" style="height:400px"></div>
+
+<table>
+  <tr><th>基准</th><th>K3</th><th>Fable 5</th><th>GPT-5.6 Sol</th><th>Opus 4.8</th><th>GPT-5.5</th></tr>
+  <tr><td>MMMU-Pro（无/有 Python）</td><td>81.6 / 83.4</td><td>81.2 / <strong>86.5</strong></td><td>83.0 / 84.6</td><td>78.9 / 82.7</td><td>81.2 / 83.2</td></tr>
+  <tr><td>CharXiv RQ（无/有）</td><td>84.8 / 91.3</td><td><strong>88.9 / 93.5</strong></td><td>84.6 / 89.1</td><td>80.5 / 89.9</td><td>84.1 / 89.0</td></tr>
+  <tr><td>Math-Vision（无/有）</td><td>94.3 / 97.8</td><td>94.8 / <strong>98.6</strong></td><td>95.8 / 97.8</td><td>86.7 / 97.1</td><td>92.2 / 96.8</td></tr>
+  <tr><td>ZeroBench-main pass@5（无/有）</td><td>23.0 / 41.0</td><td>23.0 / <strong>46.0</strong></td><td>17.0 / 35.0</td><td>17.0 / 34.0</td><td>22.0 / 41.0</td></tr>
+  <tr><td>OmniDocBench</td><td><strong>91.1</strong></td><td>89.8</td><td>85.8</td><td>87.9</td><td>89.4</td></tr>
+  <tr><td>WorldVQA ForceAnswer</td><td>51.0</td><td><strong>56.7</strong></td><td>41.8</td><td>39.1</td><td>38.5</td></tr>
+  <tr><td>PerceptionBench</td><td>58.5</td><td>57.2</td><td><strong>59.7</strong></td><td>47.2</td><td>55.8</td></tr>
+  <tr><td>Video-MME (w/ sub) / MMVU</td><td><strong>90.0</strong> / <strong>82.1</strong></td><td>— / —</td><td>89.5 / 81.2</td><td>86.0 / 79.2</td><td>89.3 / 81.7</td></tr>
+</table>
+
+<p>要点：Python 工具显著放大视觉能力——Math-Vision 94.3% → 97.8%，ZeroBench 与 Fable 5 打平（23.0%）→ 41.0%；OmniDocBench 最高（91.1%）；WorldVQA 第二（51.0%），仅次于 Fable 5。</p>
+
+<h3 id="s5-5">5.5 内部基准：编排与研究型 Agent 是最强长板</h3>
+
+<table>
+  <tr><th>内部基准</th><th>K3</th><th>对比最优</th><th>读法</th></tr>
+  <tr><td>Swarm Bench（Agent 蜂群编排）</td><td><strong>76.3</strong></td><td>GPT-5.6 Sol 73.2</td><td>复杂目标分解 + 并行协同明显领先</td></tr>
+  <tr><td>Deep Research Bench</td><td><strong>90.0</strong></td><td>Opus 4.8 87.2</td><td> rubric 对齐的深度研究产出第一</td></tr>
+  <tr><td>Kimi Code Bench 2.0</td><td>72.9（Kimi Code）/ 73.7（Claude Code）</td><td>Fable 5 76.9</td><td>仅逊 Fable 5</td></tr>
+  <tr><td>Kimi Webdev Bench（盲评 vs Opus 4.8）</td><td colspan="2">胜 58.6% / 平 13.8% / 负 27.6%（净 +31.0）</td><td>3D/WebGL/Shader 子项净 +59.1</td></tr>
+  <tr><td>Coding Experience</td><td><strong>59.9</strong>（Claude Code 下）</td><td>Fable 5 59.8 / Sol 59.3</td><td>实战编码体验第一</td></tr>
+  <tr><td>Finance Bench</td><td>62.6</td><td>GPT-5.6 Sol 62.7</td><td>基本持平</td></tr>
+  <tr><td>落后项</td><td colspan="2">Agent Behavior（65.0 vs Sol 76.4）、MIRA（64.1 vs Fable 5 72.9）、24/7 ClawBench（48.3 vs Sol 52.0）、Agentic Vision、KWV</td><td>过程纪律性/多角色协作是短板</td></tr>
+</table>
+
+<h3 id="s5-6">5.6 网络安全评估（双层）</h3>
+<ul>
+  <li><strong>Tier 1 漏洞发现（防御向）</strong>：在数十个广泛部署系统（OS 内核、数据库、AI 服务、Web 框架、区块链、VPN）上发现数百个候选漏洞，人工复核约 70% 为真，含 <strong>6 个项目的 16 个未知漏洞</strong>——包括 Linux 内核一个可远程触发的堆越界写（不完整上游修复遗留，影响至最新上游，确认为远程 DoS 原语）和 RDMA 子系统一个 Dirty-COW 级漏洞（上游修复误删权限检查，确认为确定性本地提权原语）。</li>
+  <li><strong>Tier 2 端到端漏洞利用</strong>：36 题（16 用户态 + 20 内核，全部人类专家验证可解，全套约 540 专家时）——K3 解出 <strong>14/36（38.9%）</strong>，GLM-5.2 为 8/36；14 题中 10 题来自用户态轨道。失败模式四类：拿到原语后完不成利用链末段；缓解措施下策略选择差（该用 data-only 时死磕控制流劫持）；陷入长时间无效调试循环；提交前验证不足。</li>
+  <li><strong>第三方印证</strong>：UK AISI 与 NIST CAISI 联合评估结论一致——K3 优于 GLM-5.2（ExploitBench 32% vs 24%；32 步模拟企业网 17 vs 11 步），但端到端利用完成度仍落后前沿网络能力模型（41 题任意代码执行 0 通过）。</li>
+</ul>
+
+<h3 id="s5-7">5.7 第三方评估与成本效率</h3>
+
+<table>
+  <tr><th>来源</th><th>K3 成绩</th><th>排位</th></tr>
+  <tr><td>Artificial Analysis Intelligence Index v4.1</td><td>57.1</td><td><strong>#4 / 580</strong>（Fable 5 59.9、Sol 58.9 之后）</td></tr>
+  <tr><td>Vals AI Index（GDP 加权行业套件）</td><td>74.7%</td><td><strong>#2 / 39</strong>（Fable 5 75.1 之后，高于 Sol 73.1）</td></tr>
+  <tr><td>WebDev Arena</td><td>1,678 Elo</td><td><strong>#1 / 99 —— 首个登顶的开源模型</strong>（Fable 5 1,634）</td></tr>
+  <tr><td>Text Arena</td><td>1,486 Elo</td><td>#8 / 200</td></tr>
+  <tr><td>Agent Arena</td><td>9.1</td><td>#4 / 37（Fable 5 12.7、Sol 10.1、Opus 4.8 9.8）</td></tr>
+</table>
+
+<ul>
+  <li><strong>KCB 2.0</strong>：落后 Fable 5 4.0 分，但成本仅为其 <strong>38%</strong>；high 档已追平 Opus 4.8 max 档分数，成本约 1/3。</li>
+  <li><strong>BrowseComp</strong>：最高分 91.2%，单任务 <strong>$2.03</strong>——是 GPT-5.6 Sol（90.4%）的一半，比 Claude 各 max 档便宜一个数量级。</li>
+  <li><strong>GDPval-AA v2</strong>：与 Sol 相差 50 Elo 内、成本低 13%；比 Fable 5 便宜 <strong>2.6×</strong>。</li>
+  <li><strong>AA-Briefcase</strong>：第二高分，成本约为 Fable 5 的一半。</li>
+</ul>
+
+<div class="tech-card green">
+  <strong>一句话总结评测</strong>：K3 在四个成本-分数套件上都落在成本效率前沿上或附近——以接近头部的分数，收取 Fable 5 几分之一的价格；API 定价 $0.30 / $3.00 / $15.00 每 MTok（缓存命中输入 / 未命中输入 / 输出），编码负载缓存命中率 &gt; 90%。
+</div>
+
+<hr>
+
+<h2 id="s6">六、案例研究：模型自己做的硬核工程</h2>
+
+<table>
+  <tr><th>案例</th><th>关键数字</th><th>说明</th></tr>
+  <tr><td><strong>GPU kernel 优化</strong></td><td>AttnRes 延迟 283.6 → 114.4 ms；DSA 降 55.1%；KDA 降 73.6%；MLA 达峰值 TFLOPS 一半以上</td><td>每任务最多 24 小时独立沙箱（Hopper GPU + 另一家 GPGPU）；与 Fable 5（含 fallback）持平，显著优于 Opus 4.8 / Sol / 5.5；开发后期早期 checkpoint 已承担团队大部分 kernel 优化工作</td></tr>
+  <tr><td><strong>MiniTriton 编译器</strong></td><td>L20 上几何均值超 torch eager 与 torch.compile；tensor-core matmul 达实测机顶约 90%；nanoGPT 端到端训练收敛贴合参考（梯度差 ≤ torch fp32 舍入误差 10⁻⁴）</td><td>从零构建类 Triton 编译器：tile 级 Python 前端、MLIR 标注优化层、PTX 代码生成管线，外加双模式张量库（eager/compiled 共享编译器与运行时、autograd、NCCL 分布式原语）；已开源</td></tr>
+  <tr><td><strong>芯片设计 nano-KPU</strong></td><td>单次 48 小时自主运行；Nangate 45nm；4 mm² 内 100 MHz 收敛；RTL 仿真解码 &gt; 8,700 tokens/s；1.46M 标准单元 + 0.277 MiB SRAM + INT4 MAC 阵列（融合反量化）</td><td>为「与自身同架构」的 nano 模型（KDA+NoPE-MLA、Block AttnRes 块大小 2、sigmoid 路由 MoE、INT4 分组量化 group 128）设计推理芯片，全程开源 EDA；RTL 已开源</td></tr>
+  <tr><td><strong>计算天体物理研究</strong></td><td>约 2 小时 vs 有经验研究者 1–2 周</td><td>复现 I–Love–Q 普适关系：交叉验证 20+ 论文、实现完整数值管线、评估 300+ 状态方程、发现已发表公式不一致、写 3,000+ 行 Python、产出交互式 HTML 看板</td></tr>
+  <tr><td><strong>知识工作</strong></td><td>42 年 AI ASIC 行业研究网站：120+ 轮自我迭代、2.8k+ 次 web 检索、1.1k+ 次终端取数、87 份季报 + 99 份 PDF 共 1.1 万页；GWTC-5：391 个引力波事件、20+ 并发子代理、7 幅科学可视化 + 10+ 论文综述</td><td>Kimi Work 产出可钻取的交互式研究报告；新功能 Widgets（会话内可连数据源的交互组件）与 Dashboard（持久化主题视图）</td></tr>
+  <tr><td><strong>视频编辑</strong></td><td>从 56 段素材剪出自家预告片；熟练剪辑师 1–2 天的工作量</td><td>原生多模态理解文本/图像/视频于同一模型：选段、动接动剪辑、帧级卡点、音频处理、多轮修订；另做了 3Blue1Brown 风格的自身架构动画讲解</td></tr>
+</table>
+
+<hr>
+
+<h2 id="s7">七、局限、定价与使用建议</h2>
+
+<h3 id="s7-1">7.1 官方明示的三条局限</h3>
+<ol>
+  <li><strong>对思考历史敏感</strong>：K3 以 preserved thinking 模式训练，harness 若未按要求回传全部历史 thinking、或会话中途从别的模型切到 K3，生成质量可能极不稳定。建议用兼容性已验证的 harness（如 Kimi Code），且不要中途切模型。</li>
+  <li><strong>过度主动</strong>：训练偏重长程困难任务，遇到小问题或意图模糊时可能替用户做意料之外的决定。需要严格边界的应用，应在系统提示或 <code>AGENTS.md</code> 中施加显式行为约束。</li>
+  <li><strong>体验差距</strong>：整体竞争力强，但与 Fable 5、GPT-5.6 Sol 相比用户体验仍有可见差距。</li>
+</ol>
+
+<h3 id="s7-2">7.2 可用性与定价</h3>
+<table>
+  <tr><th>渠道</th><th>说明</th></tr>
+  <tr><td>Kimi App / Kimi.com</td><td>iOS / Android / HarmonyOS；默认 max thinking effort，low/high 档后续更新</td></tr>
+  <tr><td>Kimi Work 桌面端</td><td>≥ 3.1.0（Windows / Apple silicon）</td></tr>
+  <tr><td>Kimi Code</td><td>终端内 <code>/model</code> 选 Kimi K3</td></tr>
+  <tr><td>Kimi API</td><td><code>kimi-k3</code>：<strong>$0.30/MTok（缓存命中输入）· $3.00/MTok（未命中输入）· $15.00/MTok（输出）</strong>；Mooncake 分离式架构，编码负载缓存命中率 &gt; 90%</td></tr>
+  <tr><td>权重</td><td>2026-07-27 前全量发布（HuggingFace moonshotai/Kimi-K3）；推荐 64+ 加速卡超节点部署；KDA prefill cache 实现贡献至 vLLM</td></tr>
+</table>
+
+<hr>
+
+<h2 id="s8">八、速查表</h2>
+
+<table>
+  <tr><th>主题</th><th>一句话</th></tr>
+  <tr><td>定位</td><td>首个开源 3T 级模型：2.78T MoE / 104.2B 激活 / 原生视觉 / 1M 上下文</td></tr>
+  <tr><td>架构</td><td>3 KDA + 1 Gated MLA（NoPE）混合注意力；Block AttnRes 深度维检索；Stable LatentMoE 896 选 16</td></tr>
+  <tr><td>关键数值技巧</td><td>KDA 下界衰减 $g_{\min}=-5$（e⁸⁰ 内保 BF16）；SiTU-GLU $\beta_1=4,\beta_2=25$（输出界 100）</td></tr>
+  <tr><td>负载均衡</td><td>Quantile Balancing：偏置 = 边际分布的 $(1-k/n)$ 分位数，直方图 + 一次 all-reduce 估计</td></tr>
+  <tr><td>后训练</td><td>SFT → 3 域 × 3 档 = 9 RL 专家 → MOPD 蒸馏统一；partial rollout + 逐 token 正则抗陈旧；effort 用预算倍率 τ 退火</td></tr>
+  <tr><td>部署感知</td><td>SFT 起 MXFP4/MXFP8 QAT；MTP 层微调为 EAGLE-3 草稿 + LK loss 直优接受率</td></tr>
+  <tr><td>训练基建</td><td>FlashKDA / KCP（固定 all-gather 线性扩展）/ MoonEP（E/R 冗余专家上界、完美均衡、静态形状）</td></tr>
+  <tr><td>RL 基建</td><td>外部 KV 池 + 自动节流；AgentENV microVM：checkpoint/resume 133ms/49ms、6.5× 内存超售、累计 5,100 万+ 沙箱</td></tr>
+  <tr><td>推理服务</td><td>KDA 感知前缀缓存（512 哈希块 / 稀疏 checkpoint）；缓存亲和调度 + 预算制准入；64+ 卡超节点推荐</td></tr>
+  <tr><td>水位</td><td>整体仅逊 Fable 5 与 GPT-5.6 Sol；编码/Agentic/视觉多项第一；WebDev Arena 首个开源榜首；成本效率前沿</td></tr>
+  <tr><td>短板</td><td>研究级推理（HLE/CritPt）、Agent 过程纪律性（Agent Behavior/MIRA）、内核级漏洞利用、思考历史敏感 + 过度主动</td></tr>
+</table>
+
+</main>
+<script>
+mermaid.initialize({startOnLoad:true,theme:'dark'});
+const toc=document.getElementById('toc');
+document.querySelectorAll('main h2, main h3').forEach((h,i)=>{
+  if(!h.id) h.id='section-'+i;
+  const a=document.createElement('a');
+  a.href='#'+h.id; a.textContent=h.textContent;
+  if(h.tagName==='H3') a.classList.add('toc-h3');
+  toc.appendChild(a);
+});
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    const link=toc.querySelector(`a[href="#${e.target.id}"]`);
+    if(link) link.classList.toggle('active',e.isIntersecting);
+  });
+},{rootMargin:'-10% 0px -80% 0px'});
+document.querySelectorAll('main h2, main h3').forEach(h=>observer.observe(h));
+
+const MODELS=['Kimi K3','Fable 5','GPT-5.6 Sol','Opus 4.8','GPT-5.5','GLM-5.2'];
+const COLORS=['#89b4fa','#f9e2af','#a6e3a1','#fab387','#cba6f7','#94e2d5'];
+function barChart(elId,title,cats,series){
+  const el=document.getElementById(elId);
+  const chart=echarts.init(el);
+  chart.setOption({
+    backgroundColor:'#2a2a3e',
+    title:{text:title,left:'center',textStyle:{color:'#cdd6f4',fontSize:14}},
+    tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+    legend:{bottom:0,textStyle:{color:'#cdd6f4',fontSize:11}},
+    grid:{left:50,right:20,top:40,bottom:60},
+    xAxis:{type:'category',data:cats,axisLabel:{color:'#cdd6f4',fontSize:11,interval:0,rotate:cats.length>4?15:0},axisLine:{lineStyle:{color:'#45475a'}}},
+    yAxis:{type:'value',axisLabel:{color:'#cdd6f4'},splitLine:{lineStyle:{color:'#45475a'}}},
+    series:series.map((s,i)=>({name:s.name,type:'bar',data:s.data,itemStyle:{color:COLORS[i]},barMaxWidth:22}))
+  });
+  window.addEventListener('resize',()=>chart.resize());
+}
+barChart('chart-coding','编码基准对比','DeepSWE|ProgramBench|Terminal-Bench 2.1|FrontierSWE|SWE-Marathon'.split('|'),[
+  {name:'Kimi K3',data:[67.5,77.8,88.3,81.2,42.0]},
+  {name:'Fable 5',data:[70.0,76.8,88.0,86.6,35.0]},
+  {name:'GPT-5.6 Sol',data:[73.0,77.6,88.8,71.3,39.0]},
+  {name:'Opus 4.8',data:[59.0,71.9,84.6,66.7,40.0]},
+  {name:'GPT-5.5',data:[67.0,70.8,83.4,64.9,14.0]},
+  {name:'GLM-5.2',data:[46.2,63.7,82.7,67.3,13.0]}
+]);
+barChart('chart-agentic','Agentic 基准对比','BrowseComp|MCPMark|Toolathlon|AutomationBench|JobBench'.split('|'),[
+  {name:'Kimi K3',data:[91.2,94.5,76.5,30.8,54.3]},
+  {name:'Fable 5',data:[88.0,87.4,77.9,29.1,57.4]},
+  {name:'GPT-5.6 Sol',data:[90.4,92.9,74.9,29.7,45.4]},
+  {name:'Opus 4.8',data:[84.3,76.4,76.2,27.2,48.4]},
+  {name:'GPT-5.5',data:[84.4,92.9,73.5,22.7,38.3]},
+  {name:'GLM-5.2',data:[null,null,59.9,12.9,43.4]}
+]);
+barChart('chart-reason','推理与知识基准对比','GPQA Diamond|CritPt|AA-LCR|HLE-Full (tools)'.split('|'),[
+  {name:'Kimi K3',data:[93.5,23.4,74.7,56.0]},
+  {name:'Fable 5',data:[92.6,28.6,70.0,63.0]},
+  {name:'GPT-5.6 Sol',data:[94.1,32.3,73.7,58.0]},
+  {name:'Opus 4.8',data:[91.0,20.9,67.7,57.9]},
+  {name:'GPT-5.5',data:[93.5,27.1,74.3,52.2]},
+  {name:'GLM-5.2',data:[91.2,20.9,71.3,null]}
+]);
+barChart('chart-vision','视觉基准对比（含 Python 工具档）','MMMU-Pro|CharXiv RQ|Math-Vision|ZeroBench p@5'.split('|'),[
+  {name:'Kimi K3',data:[83.4,91.3,97.8,41.0]},
+  {name:'Fable 5',data:[86.5,93.5,98.6,46.0]},
+  {name:'GPT-5.6 Sol',data:[84.6,89.1,97.8,35.0]},
+  {name:'Opus 4.8',data:[82.7,89.9,97.1,34.0]},
+  {name:'GPT-5.5',data:[83.2,89.0,96.8,41.0]},
+  {name:'GLM-5.2',data:[null,null,null,null]}
+]);
+</script>
+</body>
+</html>
