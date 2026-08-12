@@ -46,6 +46,20 @@ hr{border:none;border-top:1px solid var(--border);margin:2em 0;}
 .kv .item{background:#2a2a3e;border:1px solid var(--border);border-radius:6px;padding:12px 14px;}
 .kv .num{font-size:1.5em;font-weight:700;color:var(--heading);}
 .kv .lbl{font-size:.82em;color:#a6adc8;}
+.shape-flow{display:flex;flex-wrap:wrap;gap:10px;margin:1em 0;align-items:stretch;}
+.shape-step{flex:1 1 160px;background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:12px 14px;min-width:150px;}
+.shape-step .tag{display:inline-block;font-size:.75em;font-weight:700;padding:1px 7px;border-radius:10px;background:var(--heading);color:#1e1e2e;margin-bottom:6px;}
+.shape-step .tag.green{background:var(--strong);}
+.shape-step .tag.yellow{background:var(--yellow);}
+.shape-step .tag.purple{background:var(--purple);}
+.shape-step .tag.orange{background:var(--quote-bar);}
+.shape-step .shape{font-family:'JetBrains Mono','Fira Code',monospace;font-size:.82em;color:var(--yellow);margin:.35em 0;}
+.shape-step p{font-size:.88em;margin:.25em 0;line-height:1.55;}
+.shape-arrow{display:flex;align-items:center;color:var(--heading);font-size:1.4em;padding:0 2px;flex:0 0 auto;}
+.compare-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:1em 0;}
+@media(max-width:900px){.compare-2{grid-template-columns:1fr;}}
+.compare-2 .col{background:#2a2a3e;border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+.compare-2 .col h4{margin-top:0;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
@@ -107,22 +121,145 @@ graph TD
 
 <p>每个 Block 由 <strong>3 层 KDA + 1 层 Gated MLA</strong> 组成（3:1 比例贯穿主干），主干末端再补一层 Gated MLA 保证最后一层是全局注意力。全模型共 <strong>69 层 KDA + 24 层 MLA</strong>。</p>
 
-<h4>Kimi Delta Attention（KDA）</h4>
-<p>KDA 在 delta-rule 递归上增加<strong>通道级遗忘门</strong>。单头形式下，对状态 $S_t \in \mathbb{R}^{d_k \times d_v}$：</p>
+<h4>Kimi Delta Attention（KDA）——先建立直觉</h4>
+
+<div class="tech-card green">
+  <strong>一句话</strong>：Softmax 注意力像「每次翻完整本历史书找相关段落」；KDA 像「只带一本页数固定的笔记本」——读完每个 token 就<strong>先衰减、再擦掉旧笔记、再写上新笔记</strong>，然后用当前 query 从这本笔记本里读出答案。笔记本大小恒定，所以状态不随上下文长度增长。
+</div>
+
+<div class="compare-2">
+  <div class="col">
+    <h4>Softmax / MLA：概率加权检索</h4>
+    <p>对所有历史位置算相似度 → Softmax 成概率 → 加权求和。KV cache <strong>随 $T$ 线性增长</strong>（MLA 每 token 约 576 维潜状态）。</p>
+    <p class="note">适合「任意远距离精确匹配」；贵在缓存与算力都随长度涨。</p>
+  </div>
+  <div class="col">
+    <h4>KDA：定长状态上的擦写记忆</h4>
+    <p>维护固定大小矩阵 $S$（单头 $128\times128$）。每步只更新 $S$，读出 $\tilde{o}=S^\top q$。状态大小<strong>与 $T$ 无关</strong>。</p>
+    <p class="note">适合长序列里的近因感知与递推混合；贵在递归难并行——靠 chunkwise + Tensor Core 化解。</p>
+  </div>
+</div>
+
+<p>单头、单步看，更新公式其实只干<strong>三件事</strong>（读出是第四件）：</p>
+
+<pre class="mermaid">
+flowchart LR
+  Sold["旧笔记本 S_{t-1}"] --> Decay["① 衰减 Diag(α)<br/>逐通道忘记多少"]
+  Decay --> Erase["② 擦除 (I-βkkᵀ)<br/>沿 k 方向抹掉旧内容"]
+  Erase --> Write["③ 写入 +βkvᵀ<br/>把新关联写进去"]
+  Write --> Snew["新笔记本 S_t"]
+  Snew --> Read["④ 读出 õ = Sᵀq"]
+</pre>
 
 <div class="math-block">
 $$
-S_t = \big(I - \beta_t k_t k_t^\top\big)\,\mathrm{Diag}(\alpha_t)\, S_{t-1} + \beta_t k_t v_t^\top, \qquad \tilde{o}_t = S_t^\top q_t
+S_t = \underbrace{\big(I - \beta_t k_t k_t^\top\big)}_{\text{② 擦除}}\,\underbrace{\mathrm{Diag}(\alpha_t)}_{\text{① 衰减}}\, S_{t-1} + \underbrace{\beta_t k_t v_t^\top}_{\text{③ 写入}}, \qquad \tilde{o}_t = S_t^\top q_t
 $$
 </div>
 
-<p>其中 $\alpha_t \in (0,1)^{d_k}$ 是逐通道保留率，$\beta_t \in (0,1)$ 控制 delta-rule 写入强度。q/k/v 投影走 <code>ShortConv → Swish → L2Norm</code>（L2Norm 只作用于 q/k），衰减 logit $z_t$ 由低秩投影加每头偏置产生。</p>
+<div class="tech-card yellow">
+  <strong>$\alpha$ 与 $\beta$ 的分工（粒度差 128 倍）</strong>
+  <ul>
+    <li><strong>$\alpha_t \in (e^{-5},1)^{128}$</strong>：<em>逐通道</em>保留因子，进 $\mathrm{Diag}(\alpha_t)$——决定旧状态每个 key 通道各自忘掉多少（越接近 1 记得越久）。</li>
+    <li><strong>$\beta_t \in (0,1)$</strong>：<em>每头一个标量</em>（整层只有 96 个数）——「擦掉多少旧的，就写入多少新的」。因为 $k_t$ 已 L2 归一化，$\beta_t=1$ 时 $I-k_tk_t^\top$ 恰是把 $k_t$ 方向投影掉的正交投影（完全替换该方向记忆）；$\beta_t\to 0$ 则这一步几乎不动状态。</li>
+  </ul>
+</div>
 
-<p>K3 对 Kimi Linear 的两处关键修改：</p>
+<p>参考实现与 checkpoint 的具体数字（与 <a href="https://github.com/wdkns/wdkns-skills/tree/main/demos/kimi-k3-tensor" target="_blank" rel="noopener">wdkns KDA 形状流</a> 一致）：</p>
+
+<table>
+  <tr><th>符号</th><th>K3 取值</th><th>含义</th></tr>
+  <tr><td>$d$</td><td>7168</td><td>模型隐藏宽度（≠ 头展平宽度）</td></tr>
+  <tr><td>$h$</td><td>96</td><td>注意力头数</td></tr>
+  <tr><td>$d_k = d_v$</td><td>128</td><td>单头维度；$S$ 是 $128\times128$ 方阵</td></tr>
+  <tr><td>$h\cdot d_v$</td><td>12288</td><td>投影后的扁平宽度（$96\times128$）</td></tr>
+  <tr><td>一层 KDA 推理状态</td><td>$(B,96,128,128)$ = <strong>1,572,864</strong> 元素/序列</td><td>与 $T$ 无关；另加 q/k/v 三份宽度 4 的卷积滑窗</td></tr>
+  <tr><td>追平一点</td><td>$T\approx 2731$</td><td>一层 Gated MLA 约 576/token，要到此长度才追上 KDA 常数状态</td></tr>
+</table>
+
+<h4>张量形状流：一层 KDA 实际在算什么</h4>
+<p>按数据路径拆成五段——把「形状」画出来，公式就不再抽象（布局全程 <code>b t h d</code>，与 MLA 的 <code>b h t d</code> 相反）：</p>
+
+<div class="shape-flow">
+  <div class="shape-step">
+    <span class="tag">a · 投影</span>
+    <p>输入 $x$</p>
+    <div class="shape">(B, T, 7168)</div>
+    <p>→ $W_{q/k/v}$（各 $12288\times7168$）→ ShortConv($k{=}4$) → Swish → rearrange</p>
+    <div class="shape">q,k,v : (B, T, 96, 128)</div>
+    <p class="note">仅 q、k 再过 L2Norm（在 kernel 内）</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag green">b · 衰减门 α</span>
+    <p>低秩 $7168\to128\to12288$ 产生衰减 logits，再下界化</p>
+    <div class="shape">$g\in(-5,0)^{128}$ → $\alpha=\exp(g)$</div>
+    <p class="note">K3 相对 Kimi Linear 的关键改动之一</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag yellow">c · 写入强度 β</span>
+    <p>$W_\beta$：$96\times7168$ → Sigmoid</p>
+    <div class="shape">$\beta$ : (B, T, 96)</div>
+    <p class="note">每头一个标量，擦写共用</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag purple">d · 递推</span>
+    <p>单头切片上：衰减 → 擦除 → 写入 → 读出</p>
+    <div class="shape">$S$ : $128\times128$</div>
+    <p class="note">$S$ 是值的累加器，不是概率、也不是注意力矩阵</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag orange">e · 输出门</span>
+    <p>逐头 RMSNorm → 满秩门 $\sigma(W_g x)$ → $W_o$</p>
+    <div class="shape">(B, T, 12288) → (B, T, 7168)</div>
+    <p class="note">K3 另一处改动：低秩门 → 满秩 $W_g$</p>
+  </div>
+</div>
+
+<pre class="mermaid">
+flowchart TB
+  subgraph A["(a) q/k/v 三路投影"]
+    X["x : B×T×7168"] --> W["Wq/k/v → 12288"]
+    W --> SC["ShortConv k=4 → Swish"]
+    SC --> R["rearrange → B×T×96×128"]
+    R --> QKV["q,k 再 L2Norm"]
+  end
+  subgraph BC["(b)(c) 两个门"]
+    X2["同一份 x"] --> Alpha["低秩 → gmin·σ → α"]
+    X2 --> Beta["Wβ → Sigmoid → β"]
+  end
+  subgraph D["(d) 一步递推"]
+    QKV --> ST["衰减 → 擦除 → 写入 → 更新 S"]
+    Alpha --> ST
+    Beta --> ST
+    ST --> OT["读出 õ = Sᵀ q"]
+  end
+  subgraph E["(e) 输出"]
+    OT --> RN["head-wise RMSNorm"]
+    X3["x"] --> GOUT["满秩 gout = σ(Wg x)"]
+    RN --> GATE["逐通道门控再 Wo"]
+    GOUT --> GATE
+    GATE --> Y["y : B×T×7168"]
+  end
+</pre>
+
+<h4>K3 相对 Kimi Linear 的两处改动</h4>
 
 <ol>
-  <li><strong>下界衰减（Lower-bounded decay）</strong>。Kimi Linear 用负 Softplus 映射 $g = -e^{A}\mathrm{Softplus}(z) \in (-\infty, 0)$，chunkwise 形式中键要除以累积衰减 $1/\Gamma$，该倒数可无限增大导致溢出，对角块只能走逐位置对计算（Tensor Core 无法覆盖）。K3 改为带缩放的 sigmoid 把 log-衰减限制在下界以上：</li>
+  <li><strong>下界衰减（Lower-bounded decay）——换来 Tensor Core 能算对角块</strong></li>
 </ol>
+
+<div class="compare-2">
+  <div class="col">
+    <h4>Kimi Linear</h4>
+    <p>$g = -e^{A}\mathrm{Softplus}(z) \in (-\infty, 0)$，无下界。</p>
+    <p>分块形式里键要除以累积衰减 $1/\Gamma$，$1/\Gamma$ 可<strong>无界增长</strong> → 溢出风险 → 对角小块只能走逐位置对计算（Tensor Core 用不上）。</p>
+  </div>
+  <div class="col">
+    <h4>Kimi K3</h4>
+    <p>$g = g_{\min}\sigma(e^{A}z) \in (g_{\min}, 0)$，固定 $g_{\min}=-5$。</p>
+    <p>16-token 小块累计对数衰减 $\in(-80,0)$，$1/\Gamma &lt; e^{80}\approx 5.5\times10^{34}$，<strong>稳落在 BF16 动态范围</strong> → 对角 / 非对角块全部走稠密 Tensor Core matmul。</p>
+  </div>
+</div>
 
 <div class="math-block">
 $$
@@ -130,10 +267,8 @@ g_t^h = g_{\min}\,\sigma\big(e^{A^h} z_t^h\big) \in (g_{\min}, 0)^{d_k}, \qquad 
 $$
 </div>
 
-<p>取 $g_{\min} = -5$、$A^h$ 初始化为 0。于是每个保留因子 $\alpha \gt e^{-5} \approx 6.7 \times 10^{-3}$，16-token 小瓦片内累积 log-衰减落在 $(-80, 0)$，倒数重缩放因子小于 $e^{80}$，<strong>仍在 BF16 动态范围内</strong>。结果：对角块与非对角块全部可用稠密 Tensor Core 矩阵乘，消除逐位置对路径这一 chunk 内主要瓶颈。</p>
-
 <ol start="2">
-  <li><strong>全秩输出门</strong>。把 Kimi Linear 的低秩输出门换成输入相关的全秩投影：先对递归输出做 head-wise RMSNorm，再做数据依赖门控：</li>
+  <li><strong>全秩输出门</strong>。把低秩输出门换成输入相关的满秩投影：先对递归输出做 head-wise RMSNorm，再做数据依赖门控：</li>
 </ol>
 
 <div class="math-block">
@@ -142,37 +277,147 @@ y_t = W_o\left[\sigma(W_g x_t) \odot \mathrm{RMSNorm}(\tilde{o}_t)\right]
 $$
 </div>
 
-<h4>Gated MLA + NoPE</h4>
-<p>周期性全局注意力层沿用 DeepSeek-V2 提出、K2/K2.5 采用的 MLA（缓存低维潜向量 $c_t = W_c x_t$ 而非全量 K/V），但有<strong>两处不同</strong>：</p>
+<p class="note">训练 / prefill 实际走 chunkwise 并行形式：$A_{[t]}=\mathrm{Tril}\big[(Q\odot\Gamma)(K\oslash\Gamma)^\top\big]$，$O_{[t]}=(\Gamma\odot Q)S_{[t]}+A_{[t]}\widetilde{V}_{[t]}$；Tril 含对角，正因为读的是<strong>更新后</strong>的状态。推理时状态 $S$ 原地递推；投机解码下用「缓存投影输入、片上重放」避免拒绝草稿后无法回滚（见 §4.4）。</p>
+
+<h4>Gated MLA + NoPE——先建立直觉</h4>
+
+<div class="tech-card blue">
+  <strong>一句话</strong>：MLA 仍是 Softmax 全局注意力，但把「每头一份完整 K/V」压成<strong>每 token 一份低维潜向量</strong>再解压；K3 再加两件东西——全部 MLA 用 <strong>NoPE</strong>（位置感交给夹在中间的 KDA），以及与 KDA 同款的<strong>满秩输出门</strong>。
+</div>
+
+<p>一层 Gated MLA 的数据路径（与 <a href="https://github.com/wdkns/wdkns-skills/tree/main/demos/kimi-k3-tensor" target="_blank" rel="noopener">wdkns MLA 形状流</a> 一致）：</p>
+
+<div class="shape-flow">
+  <div class="shape-step">
+    <span class="tag">a · Query</span>
+    <p>低秩拆参：18432×7168 稠密阵（≈132M）→ 1536 瓶颈再上投影</p>
+    <div class="shape">x → cQ (B,T,1536) → Qflat (B,T,96×192)</div>
+    <p class="note">cQ 只省参数，<strong>不进任何缓存</strong></p>
+  </div>
+  <div class="shape-step">
+    <span class="tag green">b · KV</span>
+    <p>一次下投影同时切出潜向量与解耦键</p>
+    <div class="shape">cKV (B,T,512) ‖ kR (B,T,64)</div>
+    <p class="note">论文口径每 token 缓存 <strong>512+64=576</strong>；kR 头间共享（MQA 广播）</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag yellow">c · 整形</span>
+    <p>view+transpose 只改 stride：扁平条按头切成 96 张面</p>
+    <div class="shape">Q,K : (B,96,T,192) · V : (B,96,T,128)</div>
+    <p class="note">K = KC（由 cKV 解压）∥ kR（绕过上投影直接拼上）</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag purple">d · 注意力+门</span>
+    <p>NoPE 因果 Softmax → 展平 → 满秩门 → Wo</p>
+    <div class="shape">A (B,96,T,T) → Õ (B,T,12288) ⊙ g → y (B,T,7168)</div>
+    <p class="note">门输入是层输入 x，与注意力并行算</p>
+  </div>
+</div>
+
+<pre class="mermaid">
+flowchart LR
+  X["x : 7168"] --> Qa["Wqa → cQ : 1536"]
+  Qa --> Qb["Wqb → Q : 96×192"]
+  X --> KVa["Wkva → cKV:512 + kR:64"]
+  KVa --> KVb["Wkvb 解压 → KC|V"]
+  KVb --> Cat["K = KC ∥ kR"]
+  Qb --> Attn["Softmax(QKᵀ/√192) V"]
+  Cat --> Attn
+  Attn --> Gate["⊙ σ(Wg x) → Wo"]
+  X --> Gate
+  Gate --> Y["y : 7168"]
+</pre>
+
+<div class="tech-card yellow">
+  <strong>三处容易记反</strong>
+  <ol>
+    <li>输入 $d{=}7168$ <strong>不是</strong> $96\times\mathrm{head\_dim}$；头主序扁平形只出现在上投影之后（18432 / 24576 / 12288）。</li>
+    <li>$k_R$ <strong>不是</strong>从 $c_{KV}$ 解压出来的——它是同一次下投影的另一段，且头间共享。</li>
+    <li>view+transpose 发生在上投影之后；NoPE 下 Q 的 rotary split→cat 是恒等（<code>rotary_emb = None</code>）。</li>
+  </ol>
+</div>
+
 <ul>
-  <li><strong>NoPE</strong>：所有 MLA 层不加任何显式位置编码（不调 RoPE 频率基、不用 YaRN）。位置敏感与近因感知由夹在中间的 KDA 层提供，MLA 层负责无限制的全局内容交互。扩上下文时<strong>无需修改任何位置编码参数</strong>。</li>
-  <li><strong>全秩输出门</strong>：与 KDA 同款 $y_t = W_o[\sigma(W_g x_t) \odot \tilde{o}_t]$，让每个 token 调制从全局注意力读出的通道。</li>
+  <li><strong>NoPE 的工程收益</strong>：扩上下文时无需改 RoPE 频率基或 YaRN；位置敏感与近因感知由夹在中间的 3 层 KDA 提供，MLA 只负责无限制的全局内容交互。</li>
+  <li><strong>缓存代价对照</strong>：一层 MLA ≈ 576/token；一层 KDA 常数状态 ≈ 1.57M 元素/序列——约到 $T\approx2731$ 两者持平。这也是 3:1 混排的动机：多数层用定长状态，少数层保留全局 Softmax。</li>
+  <li><strong>训练细节</strong>：注意力输出保持 FP32 以纠正 flash attention 偏置舍入；输出瓦片与 KV 暂存缓冲复用共享内存，换更深 KV 流水线。</li>
 </ul>
-<p class="note">训练侧细节：为纠正 flash attention 的偏置舍入误差，注意力输出在训练中保持 FP32；为此重写了训练 kernel，让输出瓦片与 KV 暂存缓冲（而非 query 瓦片）复用共享内存，换取更深的 KV 流水线和更高吞吐。</p>
-
-<h3 id="s1-2">1.2 Attention Residuals（AttnRes）：深度维的注意力</h3>
-
-<p>标准残差连接把之前所有层的信息压进单一状态 $h_l$——类似 RNN 在时间维的瓶颈。AttnRes 把 Transformer 对序列维做的事搬到深度维：<strong>每层用数据依赖的权重选择性检索所有前序层的表示</strong>，而不是均匀累加。</p>
 
 <div class="math-block">
 $$
-k_i = v_i = \begin{cases} h_1 & i = 0 \\ f_i(h_i) & 1 \le i \le l-1 \end{cases}, \qquad
-\alpha_{i \to l} = \frac{\phi(q_l, k_i)}{\sum_{j=0}^{l-1} \phi(q_l, k_j)}, \qquad
-h_l = \sum_{i=0}^{l-1} \alpha_{i \to l} \cdot v_i
+c_t^{\mathrm{KV}} = W^{\mathrm{kv}}_a x_t,\quad
+[K^C_t \mid V_t] = W^{\mathrm{kv}}_b\,\mathrm{RMSNorm}(c_t^{\mathrm{KV}}),\quad
+y_t = W_o\big[\sigma(W_g x_t)\odot \tilde{o}_t\big]
 $$
 </div>
 
-<p>其中 $q_l = w_l$ 是每层一个可学习伪 query（不随 token 变化），核函数 $\phi(q,k) = \exp(q^\top \mathrm{RMSNorm}(k))$——RMSNorm 防止输出幅度大的层垄断权重。</p>
+<h3 id="s1-2">1.2 Attention Residuals（AttnRes）：深度维的注意力</h3>
+
+<div class="tech-card green">
+  <strong>一句话</strong>：把 Softmax 注意力从<strong>横着的序列轴转 90° 放到竖着的深度轴</strong>——每层不再只读那个一路累加下来的 $h$，而是对更浅的层做一次加权检索。K3 再每 12 层切一刀，把 93 层收成 <strong>8 条总线 + 1 个 embedding = 9 个信息源</strong>。
+</div>
+
+<div class="compare-2">
+  <div class="col">
+    <h4>普通残差 = 深度上的 RNN</h4>
+    <p>$h_l = h_{l-1} + f_l(h_{l-1})$——此前所有层被压进<strong>同一个向量</strong>，像 RNN 把历史压进一个隐状态。</p>
+  </div>
+  <div class="col">
+    <h4>AttnRes = 深度上的 Transformer</h4>
+    <p>$h_l = \sum_{i&lt;l} \alpha_{i\to l} v_i$——每层自己挑要读哪些更浅的层；query 是可学习常量 $w_l$，数据相关性只从 key 进来。</p>
+  </div>
+</div>
+
+<table>
+  <tr><th></th><th>序列轴 $t$（普通注意力）</th><th>深度轴 $l$（AttnRes）</th></tr>
+  <tr><td>Query 从哪来</td><td>$q_t = W_q x_t$，随 token 变</td><td>$q_l = w_l$，每子层一个可学习常量</td></tr>
+  <tr><td>因果掩码</td><td>$s \le t$：不能看未来</td><td>$i &lt; l$：不能看更深的层</td></tr>
+  <tr><td>轴有多长</td><td>$T$ 可到 $10^6$</td><td>$L=93$，所以 $O(L^2 d)$ 本来就不贵</td></tr>
+  <tr><td>为什么还要分块</td><td>FLOPs 与 KV cache</td><td><strong>不是算力</strong>——是让每层输出都活着的显存与流水线跨 stage 通信</td></tr>
+  <tr><td>块间传什么</td><td>状态矩阵 $S\in\mathbb{R}^{d_k\times d_v}$（KDA）</td><td>一个向量 $b_n\in\mathbb{R}^d$</td></tr>
+  <tr><td>合并算子</td><td>矩阵乘累加</td><td>Softmax 凸组合，<strong>至多 9 项</strong></td></tr>
+</table>
+
+<div class="math-block">
+$$
+\alpha_{i\to l} = \frac{\phi(q_l, k_i)}{\sum_{j=0}^{l-1}\phi(q_l, k_j)},\quad
+\phi(q,k)=\exp\big(q^\top\mathrm{RMSNorm}(k)\big),\quad
+h_l = \sum_{i=0}^{l-1}\alpha_{i\to l}\cdot v_i
+$$
+</div>
+
+<h4>Block AttnRes：8 块总线拓扑</h4>
+
+<pre class="mermaid">
+flowchart LR
+  Emb["b0 = 词嵌入"] --> B1["块1 L0-11<br/>3×[KKKM]"]
+  B1 --> Bus1["总线 b1 冻结"]
+  Bus1 --> B2["块2 L12-23"]
+  B2 --> Bus2["总线 b2"]
+  Bus2 --> Bn["……"]
+  Bn --> B8["块8 L84-92<br/>仅 9 层"]
+  B8 --> Out["输出读取<br/>对 ≤9 个源 Softmax"]
+</pre>
 
 <ul>
-  <li><strong>Full AttnRes</strong>：深度不大（$L \lt 100$），$O(L^2 d)$ 算力可承受；真正开销是保存全部层输出的 $O(Ld)$ 显存（流水线并行下还有跨 stage 通信）。</li>
-  <li><strong>Block AttnRes（实际采用）</strong>：把 $L$ 层切成 $N$ 块、每块 $S$ 层。块内各层输出求和成单一表示 $b_n$；跨块只对 $N$ 个块级表示做全注意力。显存与通信开销从 $O(Ld)$ 降到 $O(Nd)$，推理时可用 online softmax 把并行的块间结果与顺序的块内部分和合并，显著降低推理代价。</li>
-  <li>K3 具体配置：<strong>93 层切成 8 块、每块 12 层</strong>，加上 embedding 共 9 个块级表示（经验上 $N \approx 8$ 在各规模上已能拿回大部分收益）。</li>
+  <li><strong>配置</strong>：<code>attn_res_block_size=12</code>，<code>num_hidden_layers=93</code>。$93=7\times12+9$——前 7 块满 12 层，末块残缺 9 层；总线 8 条 + embedding = 论文的「9 total blocks」。</li>
+  <li><strong>块入口清零</strong>：代码里 <code>prefix_sum = None</code> 把主干残差流 $p\leftarrow 0$。跨块<strong>没有恒等直连</strong>，只剩总线上的凸组合——深度方向从「一条串行求和链」变成「宽度 ≤9 的 DAG」，任意两层最多隔 2 跳。</li>
+  <li><strong>读 / 写分离</strong>：写是裸加法 $p += f_s$（系数恒 1、无参数）；读是 $V=[b_0,\ldots,b_{n-1},p]$，对每个子层各自的 $w_s$ 做 Softmax。总线 $b_n$ 在下一块入口处追加后<strong>只读不写</strong>。</li>
+  <li><strong>推理常驻状态钉死在 $9d$</strong>，与层数无关——流水线并行跨 stage 要搬的也就是这 8 个向量；可用 online softmax 把并行的块间结果与块内前缀和合并。</li>
+  <li><strong>读取次数</strong>：每层两次（attention 侧 + MLP 侧），全网 $93\times2=186$ 次，加输出级共 187 次深度 Softmax；单次只对 ≤9 项做 Softmax——同一个算子，规模比序列轴小两个数量级。</li>
 </ul>
+
+<div class="tech-card yellow">
+  <strong>块内结构</strong>：每 12 层 = 3 个 hybrid unit，每个 unit 是 <code>KDA·MoE · KDA·MoE · KDA·MoE · MLA·MoE</code>（即 3 KDA + 1 Gated MLA，各配一层 Stable LatentMoE）。末块 9 层 = 2×KKKM + 最后的 MLA。
+</div>
 
 <h3 id="s1-3">1.3 Stable LatentMoE：896 专家、激活 16 的极端稀疏</h3>
 
-<p>LatentMoE 把「模型全宽」与「路由专家宽度」解耦：<strong>共享专家</strong>走全宽 $d$ 处理通用变换，<strong>路由专家</strong>在压缩潜空间宽度 $\ell$ 内运行。K3 把通道混合扩到 <strong>896 个路由专家、每 token 激活 16 个</strong>（稀疏度 56），潜空间维度 3584（$= 0.5d$），共享专家固定 $N_s = 2$：</p>
+<div class="tech-card purple">
+  <strong>一句话</strong>：共享专家走「全宽高速公路」处理通用变换；路由专家挤进「半宽小巷」$\ell=3584$，让你能养 896 个专家却只激活 16 个。代价是路径病态 + 均衡极难——于是有 RMSNorm、SiTU-GLU、Quantile Balancing 三件套。
+</div>
+
+<p>LatentMoE 把「模型全宽」与「路由专家宽度」解耦。K3：路由专家 <strong>896</strong>、每 token 激活 <strong>16</strong>（稀疏度 56），潜空间 $\ell=3584$（$=0.5d$），共享专家固定 $N_s=2$：</p>
 
 <div class="math-block">
 $$
@@ -181,13 +426,23 @@ y = \sum_{j=1}^{N_s} E_j^{\mathrm{shared}}(x) + W_{\uparrow}\,\mathrm{RMSNorm}(u
 $$
 </div>
 
+<pre class="mermaid">
+flowchart LR
+  X["x : 7168"] --> Shared["2 个共享专家<br/>全宽 d→d"]
+  X --> Down["W↓ → 3584"]
+  Down --> Route["Top-16 / 896 专家<br/>各在 ℓ 内算"]
+  Route --> Up["RMSNorm → W↑"]
+  Shared --> Y["y : 7168"]
+  Up --> Y
+</pre>
+
 <p>极端稀疏放大两个失效模式，Stable LatentMoE 用三个组件应对：</p>
 
 <h4>① 归一化 LatentMoE（RMSNorm）</h4>
-<p>路由路径是「$W_\downarrow$ → 多分支专家 FFN → $W_\uparrow$」近四连矩阵乘的病态链式结构，叠加 2.8T 规模会在路由分支产生<strong>激活爆炸</strong>。在专家聚合与上投影之间插入 RMSNorm（上式 $W_\uparrow \mathrm{RMSNorm}(u)$），降低路由分支对尺度变化的敏感度；除稳定训练外，验证 loss 与下游基准也一致变好。</p>
+<p>路由路径是「$W_\downarrow$ → 多分支专家 FFN → $W_\uparrow$」近四连矩阵乘的病态链式结构，叠加 2.8T 规模会在路由分支产生<strong>激活爆炸</strong>。在专家聚合与上投影之间插入 RMSNorm，降低路由分支对尺度变化的敏感度；除稳定训练外，验证 loss 与下游基准也一致变好。</p>
 
 <h4>② SiTU-GLU（Sigmoid Tanh Unit）</h4>
-<p>SwiGLU 两个乘性因子都无界，大坐标叠加会产生激活离群值、加大低精度溢出风险；原始 GLU 的 sigmoid 门有界但丢失 Swish 的正侧近似线性区。SiTU-GLU 对 Swish 的线性因子和上分支分别施加平滑封顶 $\mathrm{softcap}(x,\beta) = \beta \tanh(x/\beta)$：</p>
+<p>SwiGLU 两个乘性因子都无界，大坐标叠加会产生激活离群值；原始 GLU 的 sigmoid 门有界但丢失 Swish 的正侧近似线性区。SiTU-GLU 对两端分别施加平滑封顶 $\mathrm{softcap}(x,\beta)=\beta\tanh(x/\beta)$：</p>
 
 <div class="math-block">
 $$
@@ -196,40 +451,126 @@ $$
 </div>
 
 <ul>
-  <li>K3 取 <strong>$\beta_1 = 4$（门分支）、$\beta_2 = 25$（上分支）</strong>，输出严格有界：$\|\mathrm{SiTU\text{-}GLU}(x)\|_\infty \le \beta_1 \beta_2 = 100$。</li>
-  <li>原点附近 $\beta\tanh(z/\beta) = z + O(z^3/\beta^2)$，与 SwiGLU 一阶吻合；$\beta_1, \beta_2 \to \infty$ 时逐点还原 SwiGLU。</li>
-  <li>相对硬截断（hard clamp），平滑 cap 在饱和区外保留非零梯度，训练行为更好。</li>
+  <li>K3 取 <strong>$\beta_1=4$（门）、$\beta_2=25$（上）</strong>，输出严格有界：$\|\cdot\|_\infty\le\beta_1\beta_2=100$。</li>
+  <li>原点附近与 SwiGLU 一阶吻合；$\beta\to\infty$ 时逐点还原 SwiGLU；相对硬截断，平滑 cap 在饱和区外保留非零梯度。</li>
 </ul>
 
-<h4>③ Quantile Balancing（QB）：无辅助损失的精确负载均衡</h4>
-<p>K3 沿用 aux-loss-free 路由（对 router 分数加专家偏置 $b_j$ 再做 Top-k），但抛弃了 DeepSeek-V3 的定步长符号更新 $b_j \leftarrow b_j + \gamma\,\mathrm{sign}(\bar{\ell} - \ell_j)$——在 ~$10^3$ 专家量级下，$\gamma$ 在「适应慢」与「负载震荡」之间难以调和。QB 改为<strong>从 router 分数分位数直接解出下一步偏置</strong>：</p>
+<h4>③ Quantile Balancing（QB）——先建立直觉</h4>
 
-<ul>
-  <li>把 Top-k 换成 <strong>Top-(k+1)</strong>：前 k 个是实际路由，第 (k+1) 个充当该 token 的入选截断 $\alpha_i$。</li>
-  <li>固定截断后，「路由到专家 j 的 token 数」关于候选偏置单调递减；令其数恰为目标负载 $q = mk/n$，则 $-\hat{b}_j$ 恰为边际 $s_{i,j} - \alpha_i$ 的第 (q+1) 大值，即 $(1 - k/n)$ 分位数：</li>
-</ul>
+<div class="tech-card yellow">
+  <strong>一句话</strong>：不要用「负载偏了就 ±γ」这种拧旋钮的方式调专家偏置。先算出每个 token 的入选<strong>门槛</strong>，再看每个专家「差多少才挤得进去」（margin），然后<strong>按列切一刀分位数</strong>——一步定位下一步偏置，无需辅助损失、也无需学习率式超参。
+</div>
+
+<p>沿用 aux-loss-free 路由：$T_i=\mathrm{argtopk}(s_i+b)$，但 $b$ <strong>只进选择、不进混合权重</strong> $p_{i,j}$（也不进梯度）。DeepSeek-V3 式 $b_j\leftarrow b_j+\gamma\,\mathrm{sign}(\bar{\ell}-\ell_j)$ 在 896 专家时几乎没有可用的 $\gamma$ 区间；QB 改用分数完整分布，一步定位。</p>
+
+<p>小例（论文 Fig.5 / wdkns 复算）：$m{=}8$ token、$n{=}4$ 专家、$k{=}1$、$q{=}mk/n{=}2$。K3 实际是 $n{=}896$、$k{=}16$，分位点 $1-k/n\approx0.982$。</p>
+
+<div class="shape-flow">
+  <div class="shape-step">
+    <span class="tag">a · Top-(k+1)</span>
+    <p>前 k 个是真正路由；第 k+1 个的值就是门槛 $\alpha_i$</p>
+    <div class="shape">α ∈ ℝᵐ —— 每 token 一条门槛</div>
+    <p class="note">为什么多取一个：Top-k 只告诉「谁进来了」，QB 还要「差多少才进得来」</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag green">b · Margin</span>
+    <p>$M = S - \alpha\mathbf{1}^\top$：$M_{ij}=s_{ij}-\alpha_i$</p>
+    <div class="shape">专家 j 距离挤进 token i 还差多少</div>
+    <p class="note">换候选偏置后，负载 = $\sum_i 1[M_{ij}&gt;-\hat{b}_j]$，关于阈值单调递减 → 可求逆</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag yellow">c · 逐列切刀</span>
+    <p>每列降序，在第 $(q{+}1)$ 行切一刀</p>
+    <div class="shape">$\hat{b}_j = -\mathrm{quantile}_{1-k/n}(M_{:,j})$</div>
+    <p class="note">要恰好 q 个留在线上，阈值只能落在第 (q+1) 大那一格</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag purple">d · 去均值</span>
+    <p>减均值不改任何 Top-k，只把 $b$ 钉在零均值</p>
+    <div class="shape">下一步再用；本批不用自己算出的 bias</div>
+    <p class="note">推理时偏置冻结</p>
+  </div>
+</div>
 
 <div class="math-block">
 $$
-\hat{b}_j^{(t+1)} \leftarrow -\mathrm{quantile}_{1 - k/n}\left(s_{:,j} - \alpha^{(t)}\right), \qquad
-b^{(t+1)} \leftarrow \hat{b}^{(t+1)} - \mathrm{mean}\left(\hat{b}^{(t+1)}\right)
+\hat{b}_j^{(t+1)} \leftarrow -\mathrm{quantile}_{1-k/n}\big(s_{:,j}-\alpha^{(t)}\big),\qquad
+b^{(t+1)}\leftarrow\hat{b}^{(t+1)}-\mathrm{mean}\big(\hat{b}^{(t+1)}\big)
 $$
 </div>
 
-<ul>
-  <li>因果性：更新只对下一步生效（绝不用从本批导出的偏置路由本批）；推理时偏置冻结。</li>
-  <li>理论根源：从「每专家服务恰好 mk/n 个 token 的最大分数均衡分配」出发，经 LP 松弛 + 对偶，token 侧与专家侧的精确坐标最小化解<strong>都是同一个 $(1-k/n)$ 分位数</strong>（附录 C 完整推导）。符号更新只保留负载误差方向，QB 直接跳到同一对偶目标的精确坐标最小值——这解释了它为何无需类学习率超参、几步内即均衡。</li>
-  <li><strong>直方图估计（工程实现）</strong>：全局 batch 的边际多达数百万且跨 rank/梯度累积分片，精确分位不可行。改为每专家维护 $B$ 桶直方图：每次前向各 rank 本地 scatter-add 计数，步末<strong>一次整数 all-reduce</strong>（每层 $nB$ 个值，$B = 1000$ 时误差仅几个 $10^{-3}$），从汇集计数中线性插值读出分位数。计数可加 ⇒ 估计的是「汇集后全 batch 的分位数」，而非各 rank 分位数的平均；通信量不到「每个 micro-batch 交换原始边际」方案的 1%。</li>
-</ul>
-
-<h3 id="s1-4">1.4 原生视觉：MoonViT-V2 从零训练</h3>
+<div class="tech-card blue">
+  <strong>三处「取自哪个分数」必须分清</strong>：路由与门槛取自<strong>有偏</strong>分数 $s+b$；margin 与混合权重 $p_{i,j}$ 取自<strong>原始</strong>分数 $s$。旧偏置只通过 $\alpha$ 进入更新，也不会污染 $p$ 的梯度。
+</div>
 
 <ul>
-  <li><strong>完全从零、用 next-token prediction 训练</strong>，不再从 SigLIP 等对比预训练模型初始化。动机是训练稳定性：SigLIP 初始化的 MoonViT-3D 接入 LLM 后梯度范数持续偏高且频繁尖刺，从零训练的 V2 全程平稳；且对比损失偏向全局语义，next-token 目标让表示直接被语言建模目标塑形。</li>
-  <li>结果：从零训练在各视觉评测上<strong>追平 SigLIP 初始化基线</strong>——在足够规模下，对比预训练初始化并非必需。</li>
-  <li>规格：<strong>27 层 ViT、约 0.4B 参数</strong>，RMSNorm，线性/注意力投影全部去偏置；图像视频参数完全共享（帧内空间注意力 + 帧间时间注意力 + 时间池化）；pixel-shuffle 2×2 下采样使视觉 token 数减为 1/4，最高支持 <strong>3584×3584</strong> 像素输入。</li>
-  <li>文本、图像、视频在<strong>同一主干、同一上下文</strong>内处理，无事后模态对齐阶段——这是「vision-in-the-loop」（写代码 → 看截图 → 迭代视觉产物）的架构地基。</li>
+  <li><strong>直方图估计</strong>：全局 batch 边际达数百万、跨 rank 分片，精确分位不可行。每专家 $B{=}1000$ 桶直方图，步末<strong>一次整数 all-reduce</strong>（每层 $nB$ 个值），线性插值读分位数；误差几个 $10^{-3}$，通信量不到交换原始边际方案的 1%。</li>
+  <li><strong>注意</strong>：「重新路由后恰好均分」不是定理——定理只保证门槛固定时每列恰好 $q$ 个；真正路由时门槛随新偏置一起动，实际负载是<strong>近似均衡</strong>。</li>
 </ul>
+
+<h3 id="s1-4">1.4 原生视觉：MoonViT-V2——一张图如何变成序列嵌入</h3>
+
+<div class="tech-card green">
+  <strong>一句话</strong>：图片在文本里只占一个 <code>&lt;|media_pad|&gt;</code> 占位符；拼接时这个占位符<strong>膨胀成整张图的视觉 token 槽</strong>，视觉特征直接写进 <code>inputs_embeds</code>——此后与文本一视同仁地过 93 层 KDA/MLA 主干，没有独立的交叉注意力。
+</div>
+
+<ul>
+  <li><strong>从零 NTP 训练</strong>：不再从 SigLIP 初始化。动机是稳定性——SigLIP 初始化接入 LLM 后梯度范数持续偏高且频繁尖刺；next-token 目标也让表示直接被语言建模塑形。结果在各视觉评测上<strong>追平 SigLIP 基线</strong>。</li>
+  <li>规格：<strong>27 层 ViT、约 0.4B</strong>，RMSNorm，全线 <code>bias=False</code>；图像视频参数共享；最高 <strong>3584×3584</strong>（= 256×14，受 in_patch_limit=65536 约束）。</li>
+</ul>
+
+<p>以 1920×1080 截图 + 一句 prompt 为例（与 <a href="https://github.com/wdkns/wdkns-skills/tree/main/demos/kimi-k3-tensor" target="_blank" rel="noopener">wdkns MoonViT 形状流</a> 一致）：</p>
+
+<div class="shape-flow">
+  <div class="shape-step">
+    <span class="tag">a · 原生分辨率</span>
+    <p>不缩放、不裁剪、不切 tile：右侧/下方补零到 28 的整数倍</p>
+    <div class="shape">1080×1920 → pad → 1092×1932</div>
+    <p class="note">三道闸门只缩小不放大：总 patch ≤65536、单边 ≤512 patch</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag green">b · Patch 嵌入</span>
+    <p>14×14 patchify + 可学习 64×64 绝对位置表（双线性插值适配）</p>
+    <div class="shape">grid (1,78,138) → L=10764 patches → H⁽⁰⁾ (10764,1024)</div>
+    <p class="note">绝对位置答「在哪个角落」；每层 2D RoPE 答「俩人隔多远」</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag yellow">c · 27 层编码器</span>
+    <p>RMSNorm 前置；注意力内部 $d_{qkv}{=}1536\neq d{=}1024$</p>
+    <div class="shape">12 头 × 128；双向、无因果掩码</div>
+    <p class="note">压缩<strong>不在</strong> ViT 里——27 层全程在 10764 个 patch 上算</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag purple">d · Pixel shuffle</span>
+    <p>2×2 → 通道：token 数 ÷4、通道 ×4，信息不丢只换轴</p>
+    <div class="shape">10764 → 2691 → MLP → V (2691, 7168)</div>
+    <p class="note">一个 LLM 视觉 token 覆盖 28×28 像素；视频再对时间轴 mean</p>
+  </div>
+  <div class="shape-step">
+    <span class="tag orange">e · 占位符膨胀</span>
+    <p>文本里一个 media_pad，$n_i{=}2691$；按 cumsum 重排，空槽灌进 V</p>
+    <div class="shape">15 个文本 ID → (1, 2705, 7168) 序列嵌入</div>
+    <p class="note">分辨率写进文本（如 <code>image 1920x1080</code>），模型看得见原始尺寸</p>
+  </div>
+</div>
+
+<pre class="mermaid">
+flowchart TB
+  Img["截图 1920×1080"] --> Pad["补零到 28 倍数"]
+  Pad --> Patches["10764 个 14×14 patch"]
+  Patches --> ViT["MoonViT-V2 ×27 层<br/>d=1024"]
+  ViT --> PS["2×2 pixel-shuffle"]
+  PS --> Proj["MLP projector → 7168"]
+  Proj --> V["V : 2691×7168"]
+  Txt["文本含一个 media_pad"] --> Exp["占位符膨胀成 2691 槽"]
+  V --> Merge["写入 inputs_embeds"]
+  Exp --> Merge
+  Merge --> Backbone["93 层 KDA/MLA 主干"]
+</pre>
+
+<div class="tech-card yellow">
+  <strong>关键数字</strong>：4× 压缩发生在 ViT <em>之后</em>（10764→2691）；注意力按 $L^2$ 走（$10764^2\approx1.16\times10^8$ 对），靠 flash 变长注意力，$A$ 从不显式建出。真正进模型的是「前缀文本 + 整段视觉 token + 后缀文本」，占位符本身被覆盖掉。
+</div>
 
 <h3 id="s1-5">1.5 Per-Head Muon</h3>
 <p>矩阵参数沿用 Muon 优化器（K2 同款 weight clipping 保留）。对 Q/K/V 注意力投影进一步做<strong>逐头正交化</strong>：沿头维度切分动量矩阵，对每头的块单独做 Newton–Schulz 正交化。全矩阵正交化时梯度/动量尺度大的头会主导共享更新方向、小尺度头更新归一化不足；逐头正交化让各头更新尺度均等，大模型下训练更稳，且 Newton–Schulz 在瘦高块上迭代比全矩阵更便宜。</p>
@@ -641,7 +982,7 @@ $$
 <table>
   <tr><th>主题</th><th>一句话</th></tr>
   <tr><td>定位</td><td>首个开源 3T 级模型：2.78T MoE / 104.2B 激活 / 原生视觉 / 1M 上下文</td></tr>
-  <tr><td>架构</td><td>3 KDA + 1 Gated MLA（NoPE）混合注意力；Block AttnRes 深度维检索；Stable LatentMoE 896 选 16</td></tr>
+  <tr><td>架构</td><td>3 KDA + 1 Gated MLA（NoPE）混排；KDA = 定长笔记本「衰减→擦除→写入→读出」；MLA = 低维潜 KV（576/token）+ 满秩门；Block AttnRes = 深度轴转 90°，8 总线 / 9 源；LatentMoE 896 选 16 + QB 分位数切刀；MoonViT 占位符膨胀写进序列</td></tr>
   <tr><td>关键数值技巧</td><td>KDA 下界衰减 $g_{\min}=-5$（e⁸⁰ 内保 BF16）；SiTU-GLU $\beta_1=4,\beta_2=25$（输出界 100）</td></tr>
   <tr><td>负载均衡</td><td>Quantile Balancing：偏置 = 边际分布的 $(1-k/n)$ 分位数，直方图 + 一次 all-reduce 估计</td></tr>
   <tr><td>后训练</td><td>SFT → 3 域 × 3 档 = 9 RL 专家 → MOPD 蒸馏统一；partial rollout + 逐 token 正则抗陈旧；effort 用预算倍率 τ 退火</td></tr>
