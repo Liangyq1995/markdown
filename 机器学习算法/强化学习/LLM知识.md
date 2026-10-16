@@ -1,4 +1,4 @@
-LLM的多模态模型根据侧重不同，通常有以下多种称呼：VLM`Vision-Language Model，视觉语言模型`; MLLM`Multimodal Large Language Model，多模态大语言模型`; VLA`Vision-Language-Action Model，视觉语言动作模型`
+﻿LLM的多模态模型根据侧重不同，通常有以下多种称呼：VLM`Vision-Language Model，视觉语言模型`; MLLM`Multimodal Large Language Model，多模态大语言模型`; VLA`Vision-Language-Action Model，视觉语言动作模型`
 
 ### LLM模型基础
 
@@ -17,7 +17,7 @@ $$
 
 #### 注意力机制
 
-![](D:\workfileS\coding\gitfile\md\picture\19.png)
+![](../../pictures/000.png)
 
 注意力机制的计算可以分为两步：
 
@@ -89,7 +89,7 @@ $$
 
 其中$Q, K, V$分别为查询向量序列，键向量序列和值向量序列。可以得到输出向量$\mathbf{h}_i$，
 
-<img src="../../pictures/105.png" style="zoom:67%;" />
+<img src="../../pictures/076.png" style="zoom:67%;" />
 $$
 \begin{aligned} \mathbf{h}_{i} &=\operatorname{att}\left((K, V), \mathbf{q}_{i}\right) \\ &=\sum_{j=1}^{N} \alpha_{i j} \mathbf{v}_{j} \\ &=\sum_{j=1}^{N} \operatorname{softmax}\left(s\left(\mathbf{k}_{j}, \mathbf{q}_{i}\right)\right) \mathbf{v}_{j} \end{aligned}
 $$
@@ -195,15 +195,15 @@ LLM主要有三类架构：Encoder-only`BERT`；Decoder-only`GPT`；Encoder-deco
 - Prefix Decoder 架构和因果解码器一样，仅仅使用了解码器组件。Prefix Decoder 对于输入和输出部分进行了特定处理。前缀解码器对于输入(前缀)部分使用双向注意力进行编码，而对于输出部分利用单向的掩码注意力利用该词元本身和前面的词元进行自回归地预测。与编码器-解码器不同的是，前缀解码器在编码和解码过程中是共享参数的，并没有划分为独立的解码器和编码器。
 - Encoder-Decoder 架构组合了两个分别担任编码器和解码器的Transformer 模块。此架构在编码器端采用了双向自注意力机制对输入信息进行编码处理，而在解码器端则使用了交叉注意力与掩码自注意力机制，进而通过自回归的方式对输出进行生成。
 
-![](../../pictures/168.png)
+![](../../pictures/095.png)
 
 LLM主要有`Decoder-Only`或`MoE`两种形式，两者在整体架构上较为相似，主要区别为`MoE`在`FFN`部分引入了多个专家网络。一个典型的LLM结构，可分为三部分——输入层、多层Decoder堆叠结构和输出层
 
-![](../../pictures/215.png)
+![](../../pictures/123.png)
 
 输入层将输入文本转换为多维数值矩阵，以便送往模型主体结构进行计算。
 
-![](../../pictures/216.png)
+![](../../pictures/124.png)
 
 输出层负责根据概率分布，应用解码算法确定最终预测的下一个/N个词元。根据概率分布，应用解码策略确定最终预测的下一个词元。每一个token的生成都需要重新走一遍所有层Transformer结构。
 
@@ -219,9 +219,9 @@ LLM主要有`Decoder-Only`或`MoE`两种形式，两者在整体架构上较为�
 >
 > - **Beam Search**`波束搜索`在每一步生成时，不仅仅选择一个最优Token（词元），而是保留**多个候选**序列，其余的路径则被剪枝。这些候选序列会在后续步骤中继续扩展，直到生成结束。最终，从所有候选序列中选择得分**最高**的一条作为最终输出。Beam的数量（num_beams参数）越大，搜索空间越广，生成结果越**接近全局最优**，但计算成本也随之增加。
 >
->     ![](../../pictures/227.png)
+>     ![](../../pictures/135.png)
 
-![](../../pictures/217.png)
+![](../../pictures/125.png)
 
 > - **多项式采样**（Multinomial Sampling）是生成式模型中一种常见的**随机采样**方法，生成下一个Token时，以模型预测的概率分布为依据，在概率分布中“按概率大小”随机抽取Token（而非等概率随机抽样）。包含Top-K、Top-P等
 > - **Top-K采样**（Top-K Sampling）是一种在生成任务中常用的策略，类似于**多项式采样**，但其采样候选池经过限制。使用Top-K采样时，每一步生成Token时仅保留模型预测概率最高的**前K个**词，并从中按概率分布进行随机抽样。
@@ -233,7 +233,7 @@ LLM主要有`Decoder-Only`或`MoE`两种形式，两者在整体架构上较为�
 
     > 目前，LLM常用的预训练任务主要分为三类，包括语言建模`Language Modeling,LM`、去噪自编码`Denoising Autoencoding, DAE`以及混合去噪器`Mixture-of-Denoisers,MoD`
     >
-    > ![](../../pictures/169.png)
+    > ![](../../pictures/096.png)
     > 在去噪自编码任务中，输入文本经过一系列随机替换或删除操作，形成损坏的文本$u_{|\tilde{u}}$。模型的目标是根据这些损坏的文本恢复出被替换或删除的词元片段$\tilde{u}$。去噪自编码器的训练目标可以用以下数学公式表示:
     > $$
     > \mathcal{L}({u}) = \log P(\tilde{u}|u_{|\tilde{u}})
@@ -243,7 +243,7 @@ LLM主要有`Decoder-Only`或`MoE`两种形式，两者在整体架构上较为�
     > 混合去噪器，通过将语言建模和去噪自编码的目标均视为不同类型的去噪任务，对于预训练任务进行了统一建模。
 - 后训练阶段则包含多种可选的训练范式，包括但不限于SFT（监督微调）、蒸馏、RSFT（拒绝采样微调）、RLHF（基于人类反馈的强化学习）、DPO（直接偏好优化），以及其他强化学习方法，例如GRPO（群体相对策略优化）、PPO（近端策略优化）等。其中，某些环节也可进行多轮迭代训练，例如多轮拒绝采样微调（Rejection Sampling Fine-Tuning, RSFT）。
 
-![](../../pictures/218.png)
+![](../../pictures/126.png)
 
 ### 模型微调
 
@@ -253,9 +253,9 @@ LLM主要有`Decoder-Only`或`MoE`两种形式，两者在整体架构上较为�
 - Prefix Tuning类通过在模型的输入或隐层添加k个额外可训练的前缀标记，模型微调时只训练这些前缀参数便能实现高效微调的目标。
 - LORA类通过学习小参数的低秩矩阵来近似模型权重矩阵 W 的参数更新，微调训练时只需优化低秩矩阵参数便能实现高效微调的目标。
 
-![](../../pictures/219.png)
+![](../../pictures/127.png)
 
-![](../../pictures/162.png)
+![](../../pictures/091.png)
 
 具体来说，当以下场景出现时，可以考虑对大型语言模型进行微调:
 
@@ -266,11 +266,11 @@ LLM主要有`Decoder-Only`或`MoE`两种形式，两者在整体架构上较为�
 
 与预训练阶段类似，SFT的Loss也是基于交叉熵
 
-<img src="../../pictures/256.png" style="zoom:67%;" />
+<img src="../../pictures/164.png" style="zoom:67%;" />
 
 模型训练时通常使用固定长度的输入。当输入的数据长度不一致时，对于短序列，会在其末尾填充（padding）以匹配最大序列长度，这会导致计算资源的浪费。因此，常见的做法是将多条数据拼接（Packing）在一起，填充到一个固定长度的输入序列中。为了确保计算过程中不同数据之间互不干扰，通常需要**重设**位置编号和注意力掩码，以在计算Attention时保持各条数据的语义独立性。
 
-<img src="../../pictures/257.png" style="zoom:67%;" />
+<img src="../../pictures/165.png" style="zoom:67%;" />
 
 #### Adapter Tuning
 
@@ -281,7 +281,7 @@ Adapter Tuning 的主要是想是:
 - 在训练时，固定住原来预训练模型的参数不变，只对新增的 Adapter 结构和 Laver Norm 层进行微调，从而保证了训练的高效性
 - 每当出现新的下游任务，通过添加Adapter模块来产生一个易于扩展的下游模型，从而<span style="color: red;">避免全量微调与灾难性遗忘的问题</span>。
 
-![](../../pictures/151.png)
+![](../../pictures/088.png)
 
 同时，通过一个跳跃连接`skip·connection`来将Adapter的输入重新加到最终的输出中去，这样可以保证，即便 Adapter 一开始的参数初始化接近0，Adapter也由于skip connection的设置而接近于一个恒等映射，从而确保训练的有效性。
 
@@ -293,7 +293,7 @@ Prefix Tuning，在输入token之前构造一段任务相关的virtual tokens作
 
 > 这在每一层都添加了相同的 `prefix`，包括输入层。是否可以对不同的层采用不同的 `prefix`，使得表达能力更强？这就是 `P-Tuning V2` 的思想。
 
-![](../../pictures/221.png)
+![](../../pictures/129.png)
 
 ##### Prompt Tuning
 
@@ -303,7 +303,7 @@ Prompt Tuning可以看作是Prefix Tuning的简化版本，它给每个任务定
 
 > 这是 `Prefix-tuning` 在仅有输入被添加 `prefix` 的特殊情况，根据 `prefix-tuning` 的论文，这种情况的效果不佳。猜测原因是：`Prefix-tuning` 中的模型规模不够大；`Prefix-tuning` 采用了重参数化技巧的影响。
 
-![](../../pictures/157.png)
+![](../../pictures/089.png)
 
 #### p-tuning
 
@@ -328,7 +328,7 @@ Prompt Tuning可以看作是Prefix Tuning的简化版本，它给每个任务定
 
 鉴于这些挑战，在 `P-tuning` 中，我们建议使用一个由非常简单的神经网络组成的 `prompt encoder` 将$\mathbf{h}_i$建模为一个序列，以解决离散性和关联问题。而在实践中，<span style="color: red;">我们选择了一个双向的 `LSTM` ，具有 `ReLU` 激活的双层 `MLP`</span>，从而鼓励离散性。正式地，语言模型$\mathcal{M}$的 `input embeddings`$\mathbf{h}_i^{\prime}$为：
 
-![](../../pictures/166.png)
+![](../../pictures/093.png)
 
 虽然 `LSTM head` 的使用确实给 `continuous prompts` 的训练增加了一些参数，但 `LSTM head` 比 `pre-trained` 模型要小几个数量级。而且，在推理中，我们只需要输出 `embedding`$\mathbf{h}^{\prime}$，可以舍弃 `LSTM head` 。
 
@@ -352,7 +352,7 @@ Prompt Tuning可以看作是Prefix Tuning的简化版本，它给每个任务定
     > - `P-Tuning v2` 直接采用 `Classification Head`，这类似于 `BERT` 。
     > - `P-Tuning v2` 发现某些任务上，重参数化技巧导致效果下降。
 
-![](../../pictures/167.png)
+![](../../pictures/094.png)
 
 #### Lora
 
@@ -362,7 +362,7 @@ Prompt Tuning可以看作是Prefix Tuning的简化版本，它给每个任务定
 $$
 \mathbf{W} = \mathbf{W}_0 + A\cdot B^T
 $$
-![](../../pictures/165.png)
+![](../../pictures/092.png)
 
 如果同时将 A和 B都初始化为零：
 
@@ -379,7 +379,7 @@ $$
 - 优化过程:将B初始化为随机高斯分布，而A初始化为零，并不会改变预训练权重的初始状态。但在优化中，梯度如何影响B和A的学习方向可能会略有不同。
 - 数值稳定性:文中推荐的方式可能经过了实验验证，确保在实际应用中具有较好的数值稳定性。如果对调初始化，可能需要重新调试超参数(如学习率)。
 
-![](../../pictures/220.png)
+![](../../pictures/128.png)
 
 在使用LORA进行微调时，过拟合是一个常见的问题。如何避免过拟合
 
@@ -399,11 +399,11 @@ $$
 
 在给定一个 `prompt` 的条件下，我们探索了语言模型对推理任务进行 `few-shot prompting` 的能力，其中给定的 `prompt` 由三要素组成：`<input, chain of thought, output>`。`chain of thought: COT` 是一系列中间的自然语言推理步骤（这些中间步骤导致了最终输出），我们把这种方法称为 `chain-of-thought prompting` 。
 
-![](../../pictures/178.png)
+![](../../pictures/101.png)
 
 在CoT展现其潜力后，迅速**衍生**出多种相关技术，例如ToT、GoT、Self-consistency CoT、Zero-shot-CoT、Auto-CoT、MoT、XoT等
 
-![](../../pictures/226.png)
+![](../../pictures/134.png)
 
 #### Auto `CoT`
 
@@ -428,7 +428,7 @@ $$
 > - 通过 `Zero-Shot-CoT` 来人工构造 ”伪“ `examples` ，从而进行 `Few-Shot-CoT` 。
 > - 构造的时候选择多样化的样本，并且过滤掉不满足条件的样本（这个条件是人工定义的规则）。
 
-![](../../pictures/179.png)
+![](../../pictures/102.png)
 
 #### Least-To-Most Prompting
 
@@ -437,7 +437,7 @@ $$
 - 首先将一个复杂的问题分解成一系列较容易的子问题。
 - 然后依次解决这些子问题，其中，解决一个给定的子问题是由以前所解决的子问题的答案来推动的。
 
-![](../../pictures/180.png)
+![](../../pictures/103.png)
 
 在上图所示的例子中，语言模型首先被要求将原始问题分解为子问题。传递给模型的 `prompt` 包括：说明如何分解复杂问题的 `examples` （图中没有显示），然后是要分解的具体问题。语言模型发现，原始问题可以通过解决一个中间问题来回答 `"How long does each trip take?"` 。在下一个阶段，我们要求语言模型依次解决 `problem decomposition` 阶段所得到的子问题。
 
@@ -477,13 +477,13 @@ $$
   - 逐位置的前馈神经网络：使用一个前馈神经网络来综合得到所有信息。将上述三个步骤重复多次，最后通过一个全连接前馈神经网络来计算输出概率。
 
 
-![](../../picture/39.png)![](../../pictures/104.png)
+![](../../pictures/002.png)![](../../pictures/075.png)
 
 ### 模型结构
 
 #### position-encoder
 
-![](../../picture/1/398.png)
+![](../../pictures/036.png)
 
 对于一个序列$\mathbf{x}_{1:T}$，我们可以构建一个多层的多头自注意力来对其进行编码。由于自注意力模型忽略了输入信息的位置信息，因此初始的输入序列中加入位置编码信息来进行修正。对于一个输入序列$\mathbf{x}_{1:T}$，
 $$
@@ -514,7 +514,7 @@ $$
 
 #### Encoder
 
-<img src="../../pictures/100.png" style="zoom:80%;" /><img src="../../pictures/101.jpg" style="zoom: 33%;" />
+<img src="../../pictures/072.png" style="zoom:80%;" /><img src="../../pictures/073.jpg" style="zoom: 33%;" />
 
 编码器 `encoder` 包含一组 6 个相同的层 `Layer` ，每层包含两个子层 `SubLayer`。
 
@@ -535,7 +535,7 @@ $$
 
 #### Decoder
 
-<img src="../../pictures/102.png" style="zoom: 80%;" /><img src="../../pictures/107.png" style="zoom: 80%;" />
+<img src="../../pictures/074.png" style="zoom: 80%;" /><img src="../../pictures/077.png" style="zoom: 80%;" />
 
 解码器 `decoder` 也包含一组 6 个相同的层 `Layer`，但是每层包含三个子层 `SubLayer` 
 
@@ -604,7 +604,7 @@ BERT 的注意力计算过程和 Transformer 的唯一差异在于，在完成�
   - 首先，我们用一个特殊的 `token`（即，`[SEP]`）将这两个句子分开。（注意，每个句子的结尾都有一个 `[SEP]` ）
   - 其次，我们在第一句的每个 `token` 上添加一个学到的 `segment A Embedding` ，在第二句的每个 `token` 上添加一个学到的 `segment B Embedding` 。
 
-![](../../pictures/145.png)
+![](../../pictures/082.png)
 
 #### 预训练任务
 
@@ -635,9 +635,9 @@ BERT 的注意力计算过程和 Transformer 的唯一差异在于，在完成�
 
 #### 微调`fine-tune`
 
-<img src="../../pictures/146.png" style="zoom:50%;" /><img src="../../pictures/147.png" style="zoom:50%;" />
+<img src="../../pictures/083.png" style="zoom:50%;" /><img src="../../pictures/084.png" style="zoom:50%;" />
 
-<img src="../../pictures/148.png" style="zoom:50%;" /><img src="../../pictures/149.png" style="zoom:50%;" />
+<img src="../../pictures/085.png" style="zoom:50%;" /><img src="../../pictures/086.png" style="zoom:50%;" />
 
 ### `RoBERTa`
 
@@ -714,7 +714,7 @@ $$
 
   > 注意：这里直接拼接了上下文文档和问题，并没有在它们之间添加 `delimiter token`。个人猜测这是为了区分问题和答案，而没必要区分问题和文档，因为问题可以作为文档的最后一句话。
 
-  ![](../../pictures/150.png)
+  ![](../../pictures/087.png)
 
 使用可学习的 `positional embedding` 而不是原始工作中提出的正弦版本
 
@@ -779,7 +779,7 @@ $$
 
 注：读者猜测模型结构为 `GPT-1` 中的 `Multiple Choice` 。每个输入都添加了 `start token` `<s>` 和 `extract token` `<e>` （也叫做 `end token` ）。
 
-![](../../pictures/187.png)
+![](../../pictures/105.png)
 
 现在我们强化学习微调$\pi_{\theta}$从而优化奖励模型$r$。为了防止$\pi_{\theta}$离$r$太远，我们增加了一个惩罚项$\beta\text{KL}(\pi_{\theta}, \rho)$，其中 `KL` 为 `KL` 散度。我们在修改后的奖励上执行强化学习：
 $$
@@ -819,7 +819,7 @@ $$
 
 整体框架如下图所示。注意，根据下图所示，奖励模型的样本由 `policy` 函数 生成，而不是预训练模型 生成。这是讲得通的，因为奖励模型要对策略进行打分，而不是对预训练模型进行打分。
 
-![](../../pictures/213.png)
+![](../../pictures/121.png)
 
 ### 其他模型系列
 
@@ -893,7 +893,7 @@ $$
 
 为了开启 `autoregressive generation` ，每个 `span` 都被填充了 `special token`，即 `[START]` （记做 `[S]`）和 `[END]` （记做`[E]`），分别用于输入和输出。通过这种方式，我们的模型在一个统一的模型中自动学习双向编码器（用于 `Part A`）和单向解码器（用于 `Part B`）。
 
-![](../../pictures/200.png)
+![](../../pictures/108.png)
 
 我们考虑以下两个目标：
 
@@ -932,11 +932,11 @@ $$
     $$
     其中：$d$为 `sentence embedding` 维度，$K$为 `label` 的数量，$[\cdot]$为向量拼接。我们优化交叉熵损失。整体结构如下图所示。
 
-    ![](../../pictures/188.png)
+    ![](../../pictures/106.png)
 
 `Regression Objective Function`：我们计算 `sentence embedding`$\vec{\mathbf{u}}$、$\vec{\mathbf{v}}$之间的余弦相似度，如下图所示。我们使用`mean-squared-error:MSE loss` 作为目标函数。
 
-![](../../pictures/189.png)
+![](../../pictures/107.png)
 
 `Triplet Objective Function`：给定一个锚点句子`anchor sentence`$a$，一个 `positive sentence`$p$和一个 `negative sentence`$n$， `triplet loss` 使得$a$和$p$之间的距离小于$a$和$n$之间的距离。在数学上讲，我们最小化以下损失函数：
 $$
@@ -986,7 +986,7 @@ RAG可分为5个基本流程:知识文档的准备；嵌入模型(embedding mode
 
 向量数据库是专门设计用于存储和检索向量数据的数据库系统在RAG系统中，通过嵌入模型生成的所有向量都会被存储在这样的数据库中。
 
-![](../../pictures/170.png)
+![](../../pictures/097.png)
 
 前k项中，包含正确信息的项的数目占比。RAG评估：检索环节评估（MRR平均倒数排名、hits Rate 命中率：前k项中，包含正确信息的项的数目占比、NDCG）；生成环节的评估：非量化（完整性、准确性、相关性）；量化（Rouge-L)
 
@@ -1078,7 +1078,7 @@ https://huggingface.co/spaces/mteb/leaderboard 嵌入模型排行榜，嵌入模
 
 ## `DeepSeek`
 
-![](../../pictures/172.png)
+![](../../pictures/099.png)
 `DeepSeek-R1`训练方式
 
 - 冷启动数据引入：通过引小数千条高质量的冷启动数据进行初始微调，解决了DeepSeek-R1-Zero的可读性和语言混杂问题，显著提升了模型的可读性和多语言处理能力。
@@ -1097,7 +1097,7 @@ https://huggingface.co/spaces/mteb/leaderboard 嵌入模型排行榜，嵌入模
     > 对于推理数据，遵循 DeepSeek-R1-Zero 的方法，利用基于规则的奖励来指导数学、代码和逻辑推理领域的学习过程。
     > 对于通用数据，采用基于模型的奖励来捕捉复杂和细微场景中的人类偏好。
 
-![](../../pictures/171.png)
+![](../../pictures/098.png)
 `DeepSeek-R1 Zero`训练方式是首个完全基于强化学习的推理模型，直接在基础模型上应用强化学习，跳过了监督微调阶段。训练中主要有两种奖励:
 
 - 准确性奖励：一种是只看最终答案是否正确，如数学题看最终结果，编程题看测试用例结果;
@@ -1126,7 +1126,7 @@ DeepSeek-R1-Zero摒弃了传统大语言模型(LLM)训练中依赖监督微调(S
 
 #### `MoE`架构
 
-![](../../pictures/173.png)
+![](../../pictures/100.png)
 
 - 传统的MoE 模块包含 N 个前馈神经网络(Feed-Forward Network)专家，每个专家在处理特定类型的数据上具有独特的优势。
 
@@ -1261,19 +1261,19 @@ BPE算法在这里的作用是为了进一步减少数据的稀疏性。通过�
 - 
 - **低开销**：DPO在训练过程中只需要加载**一个模型**（只需加载策略模型，而对于参考模型，可以将参考模型的输出结果预先录制好，然后在训练时就不需要加载），算力开销更低，更易于落地实践。
 
-![](../../pictures/222.png)
+![](../../pictures/130.png)
 
 DPO算法跳过了训练奖励模型这一中间过程，直接优化策略模型。 DPO的训练涉及2个模型：策略模型和参考模型。它们的**初始化**方法如下：
 
 - **策略模型**：直接复制SFT模型作为初始化。
 - **参考模型**：通常也从SFT模型复制。但在某些情况下，可能会选择从一个比SFT模型更强的模型进行复制。此时，需特别关注参考模型与策略模型的匹配性，主要涉及两者的KL距离及训练数据分布等方面。
 
-![](../../pictures/223.png)
+![](../../pictures/131.png)
 
 DPO训练时，可以选择**加载**2个模型（策略模型 和参考模型 ），也可以只加载1个模型（策略模型 ）。DPO的整体训练流程如图所示（**蓝色**色块代表偏好数据对中的“优质回答” 及其对应的中间计算结果；**粉色**色块代表偏好数据对中的“劣质回答” 及其对应的中间计算结果）。
 
-![](../../pictures/224.png)
+![](../../pictures/132.png)
 
 在DPO中， 参数的作用类似于其在RLHF中的作用。$\beta$很小，策略模型和偏好数据分布更接近，$\beta$​很大，策略模型和参考模型更接近。DPO的梯度更新旨在**增加**优质回答的概率，同时**减少**劣质回答的概率。更重要的是，梯度中包含一个**动态系数**——优质和劣质回答的隐式奖励差异。换言之，这个动态系数反映了隐式“奖励模型”在对偏好顺序的判断上有多大误差。
 
-![](../../pictures/225.png)
+![](../../pictures/133.png)

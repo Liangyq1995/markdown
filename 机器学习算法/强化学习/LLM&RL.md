@@ -1,4 +1,4 @@
-## LLM & RL
+﻿## LLM & RL
 
 生成式语言模型中的一些关键概念在强化学习范式下，具体的定义如下：
 
@@ -10,11 +10,11 @@
 - 回合`Episode`：回合是一次完整的文本生成过程，从初始输入（例如一个问题或指令）开始，到模型生成结束（通常以特殊符号或表示）。
 - 价值`Value`：价值表示在特定状态下或采取特定动作后，模型未来所能获得的预期回报。它衡量当前动作（Token或词）的选择质量及其后续可能动作的潜在影响，通常由单独的价值网络进行估计。
 
-![](D:/workfileS/coding/gitfile/md/pictures/229.png)
+![](../../pictures/137.png)
 
 RLHF训练可以分为两个阶段：
 
-![](D:/workfileS/coding/gitfile/md/pictures/230.png)
+![](../../pictures/138.png)
 
 - 阶段一`SFT,训练奖励模型`：根据用户输入，生成多种候选回答，并由人工对这些回答进行偏好标注。这些标注数据作为训练样本，用于监督学习训练奖励模型，使其能够预测不同回答的偏好得分。
 
@@ -28,7 +28,7 @@ RLHF训练可以分为两个阶段：
     >
     >- 价值模型`Value Model, Critic`：全面评估策略模型生成的回答，预测在特定状态下执行某动作的长期回报，计算价值估计$V_t$。
     >
-    >    ![](D:/workfileS/coding/gitfile/md/pictures/234.png)
+    >    ![](../../pictures/142.png)
 
 - 两个阶段的样本如下：
 
@@ -50,14 +50,14 @@ RLHF训练可以分为两个阶段：
 | 奖励模型 | Prompt（或上下文） + 回答 | 回答对应的每个 token 的奖励值      |
 | 价值模型 | Prompt（或上下文） + 回答 | 回答对应的每个 token 的价值估计    |
 
-![](D:/workfileS/coding/gitfile/md/pictures/238.png)
+![](../../pictures/146.png)
 
 基于PPO算法进行RLHF训练时，整体结构主要分为经验收集和多轮PPO训练两个部分，这两个部分以循环的方式进行多次迭代。
 
 - **缓冲区**：图中间的缓冲区用于存储左半区收集的经验数据。这些数据将被切分成多个**小批量**（mini-batch），以支持右半区进行多次训练和参数更新。
 - **模型版本**的区别：左半区的策略模型和价值模型可视为**旧模型**，主要用于生成样本及相关计算。右半区的策略模型和价值模型则会在训练过程中进行多次迭代更新，因此可称为**新模型**。本质上，左右两个半区的模型（策略模型和价值模型）是同一个模型的**不同状态版本**，但为了便于理解，图中额外在右半区重复绘制了策略模型和价值模型。
 
-![](D:/workfileS/coding/gitfile/md/pictures/240.png)
+![](../../pictures/148.png)
 
 在基于GAE算法计算Advantage时，需要用到奖励模型估计的奖励分数。在此基础上，可以对奖励分数进行调整。策略模型和参考模型均会输出Logits，并进一步转换为对数概率`LogProbs`。这里假设批次大小为1，词表大小为7，回答对应的Token序列长度为3。Prompt为“吃饭？”，其Token化后为[吃饭]和[？]。回答为“你先去。”，其Token化后为[你]、[先去]和[。]。此处忽略[EOS]等特殊Token。
 
@@ -67,7 +67,7 @@ RLHF训练可以分为两个阶段：
 - 抽取`**Gather**`：以步骤`1`中策略模型生成的三个回答Token为**索引**，在策略模型和参考模型的对数概率矩阵中，分别提取出对应Token的对数概率值。通过这一操作，可以得到三个Token的**对数概率**值——策略模型的`logprob`和参考模型的`ref_logprob`。全词表范围下的对数概率矩阵形状为（序列长度=3，词表大小=7），而抽取后的`logprob`和`ref_logprob`形状为（3，1）。
 - **KL距离**计算：如图所示，对`logprob`和`ref_logprob`进行**逐位置相减**，最终得到策略模型和参考模型之间的KL距离。
 
-![](D:/workfileS/coding/gitfile/md/pictures/239.png)
+![](../../pictures/147.png)
 
 通常，在通用&低成本场景下，RLHF涉及的四种模型拥有类似的结构，主要区别在于各模型的头部`Head`。这些模型可以基于SFT模型进行改造和初始化：
 
@@ -76,11 +76,11 @@ RLHF训练可以分为两个阶段：
 - 奖励模型：与SFT模型的底层Decoder部分结构一致，但将头部结构替换为Reward Head。在参数初始化时，仅复制SFT模型的底层Decoder，而Reward Head的参数通常随机初始化。在随后的PPO训练中，奖励模型的参数始终保持冻结。
 - 价值模型：结构类似于奖励模型，包含N层Decoder和Value Head。在参数初始化时，可以复制奖励模型的所有参数，有时也可基于SFT模型进行改造。在随后的PPO训练中，价值模型的参数会持续更新。
 
-![](D:/workfileS/coding/gitfile/md/pictures/235.png)
+![](../../pictures/143.png)
 
 在RLHF中，通过**共享**同一个底座（N层Decoder），可以显著**降低**显存开销。采用LoRA微调技术，四种模型可以共用同一底座，同时保持底座参数冻结（不更新）。具体而言，参考模型仅用于评估对比，**不参与**训练；奖励模型在RLHF的第一阶段（奖励建模）中进行训练；而策略模型和价值模型则在第二阶段（策略优化）中进行训练。因此，为奖励模型、策略模型和价值模型分别配备了独立的LoRA模块，通过组合相应的LoRA模块、Head和共享的底座，即可动态组装所需的模型。在训练过程中，仅更新LoRA模块和Head部分的参数。**四种模型共享**相同的底座（N层Decoder）。该底座参数**常驻GPU**并保持冻结状态，而LoRA模块和Head部分则根据PPO训练的不同环节，可动态加载到GPU中或动态swap。
 
-![](D:/workfileS/coding/gitfile/md/pictures/237.png)
+![](../../pictures/145.png)
 
 #### 奖励模型
 
@@ -89,14 +89,14 @@ RLHF训练可以分为两个阶段：
 - 共享底层结构：奖励模型复用了LLM的底层结构及其权值，包括所有的Transformer Decoder层和Embedding层，从而确保两者具备一致的隐藏状态表示能力。
 - 替换输出头：将LLM原有的顶层线性层`LM Head`替换为全新的线性层`Reward Head`。奖励模型只需输出一个分数值，因此，LLM的输出头被替换为一个全新的线性层，该层的输出维度为1，用于生成奖励分数。
 
-![](D:/workfileS/coding/gitfile/md/pictures/231.png)
+![](../../pictures/139.png)
 
 奖励模型输入由一条Prompt + 其对应的一条回答（Response）拼接而成，构成一个完整的序列。
 
 - 从第一个动作a0=“青”到最后一个动作`a5=<eos>`，回答序列中的每个Token都被视为一个独立的动作。
 - 奖励模型输出一组奖励分数$r_,r_1, \cdots, r_5$，分别对应生成回答序列中每个Token位置，用于表示各位置生成Token的质量评分。
 
-![](D:/workfileS/coding/gitfile/md/pictures/232.png)
+![](../../pictures/140.png)
 
 奖励模型`RM`的目标是利用偏好数据集训练出能够拟合人类反馈的评分函数，以准确评估生成文本的质量。`Loss`通常采用基于对比的负对数似然形式，这与DPO算法中的奖励建模过程类似。
 $$
@@ -109,7 +109,7 @@ $$
 - 梯度更新：通过反向传播计算梯度，并更新奖励模型的参数。
 - 重复迭代多次：读取下一批偏好样本，按照上面的流程，重复迭代。
 
-![](D:/workfileS/coding/gitfile/md/pictures/233.png)
+![](../../pictures/141.png)
 
 #### 价值模型
 
@@ -120,17 +120,17 @@ $$
 
 通过这种双头结构设计，模型的核心模块仅需执行一次推理，这显著**降低**了计算成本和显存消耗
 
-![](D:/workfileS/coding/gitfile/md/pictures/236.png)
+![](../../pictures/144.png)
 
 #### `RLAIF`
 
 **拒绝采样**`Rejection Sampling`微调：是一种基于数据**筛选**的模型微调策略，旨在通过人工或模型标注对模型生成的样本进行筛选，剔除低质量的样本，仅保留优质样本用于进一步微调。
 
-![](D:/workfileS/coding/gitfile/md/pictures/241.png)
+![](../../pictures/149.png)
 
 **RLAIF**是一种以**AI反馈**为基础的强化学习方法。RLAIF与RLHF在整体流程上具有较高的相似性，其主要**区别**在于偏好样本的标注环节。RLHF依赖人类进行偏好标注，而RLAIF则通过AI完成此过程。
 
-![](D:/workfileS/coding/gitfile/md/pictures/242.png)
+![](../../pictures/150.png)
 
 **CAI**`Constitutional AI, 基于宪法的AI`是一种用于大模型训练的RLAIF类型的算法，该算法以一套预先制定的**宪法原则**为指导，通过结合AI反馈和自我批评机制，得以更加高效地提升模型的有用性和无害性。 CAI的训练过程：
 
@@ -140,17 +140,17 @@ $$
 - **训练奖励模型**：将AI标注数据与人工标注数据混合，形成偏好数据集，并以此训练奖励模型，或称为偏好模型`Preference Model，RM`。
 - **强化学习优化目标模型`RL-CAI`**：在强化学习阶段，利用奖励模型提供奖励信号，通过强化学习算法对目标模型进行优化。此阶段逐步增强模型在无害性和有用性上的表现，同时减少模型在敏感问题上的逃避倾向，确保其行为更加透明和可靠。
 
-![](D:/workfileS/coding/gitfile/md/pictures/243.png)
+![](../../pictures/151.png)
 
 **RBR**`Rule Based Rewards，基于规则的奖励`是一种基于规则的偏好建模方法，该方法通过人工标注数据训练出一个RBR奖励模型，将AI反馈融入传统的RLHF流程中。自GPT-4推出以来，OpenAI就将RBR作为其安全系统的**核心**组成部分，并已应用于包括GPT-4o mini等模型。
 
-![](D:/workfileS/coding/gitfile/md/pictures/244.png)
+![](../../pictures/152.png)
 
 #### 逻辑推理能力优化
 
 ##### 知识蒸馏
 
-![](D:/workfileS/coding/gitfile/md/pictures/161.png)
+![](../../pictures/090.png)
 
 基于反馈的知识蒸馏：这种方法主要关注教师模型最后一层输出的logits，这些 logits 经过$\text{softmax}$变换后，可以用作学生模型的“软标签"来进行学习。蒸馏损失函数可以形式化表示为:
 $$
@@ -167,46 +167,46 @@ $f_t(x)$和$f_s(x)$分别表示教师模型和学生模型的中间层输出特�
 
 强大模型生成CoT推理链和回答结果，并将其作为训练数据用于对**较弱**模型进行**蒸馏训练**。
 
-![](D:/workfileS/coding/gitfile/md/pictures/245.png)
+![](../../pictures/153.png)
 
 结果奖励模型`Outcome Reward Model`：对于给定的Prompt及模型生成的回答y，结果奖励模型仅对**最终**输出的结果进行整体验证和奖励评分。
 
 过程奖励模型`Process Reward Mode`：过程奖励模型对推理过程中的每个中间**步骤**逐一进行验证和奖励评分，从而提供更**精细**的反馈，能够有效指导模型关注推理过程的质量。
 
-![](D:/workfileS/coding/gitfile/md/pictures/267.png)
+![](../../pictures/175.png)
 
 **MCTS**每次迭代的**四个关键步骤**： MCTS算法通过构建决策树逐步探索问题的解空间，其核心思想是从当前状态出发，通过**模拟**或推演评估状态的价值，并利用评估结果指导后续的搜索方向。MCTS通过**重复迭代**上述四个步骤，不断扩展和完善搜索树，进而逐步提升对各状态的评估精度。随着推演迭代次数的增加，算法**逐渐**倾向于选择更优的路径，从而不断优化决策质量。
 
-![](D:/workfileS/coding/gitfile/md/pictures/246.png)
+![](../../pictures/154.png)
 
 #### 位置编码
 
 ##### `ALiBi`位置编码
 
-![](D:/workfileS/coding/gitfile/md/pictures/268.png)
+![](../../pictures/176.png)
 
 ##### `RoPE`
 
 `RoPE`，Rotary Position Embedding，**旋转**位置编码，原理：对 Transformer 中的 Query 和 Key 隐藏向量应用旋转变换（基于正弦、余弦函数），将位置信息编码为向量的**相位差**。相对位置：旋转操作天然地保留了向量之间的相对角度差异，使模型能够捕捉**相对位置**信息而不依赖绝对位置索引。优点：无需额外参数、计算开销低；在长序列场景下相较于传统绝对位置编码具有更好的泛化和性能。
 
-![](D:/workfileS/coding/gitfile/md/pictures/255.png)
+![](../../pictures/163.png)
 
 #### 注意力机制
 
-![](D:/workfileS/coding/gitfile/md/pictures/250.png)
+![](../../pictures/158.png)
 
 #### 归一化
 
 `Pre-norm`：在**子层**（如自注意力或前馈网络）**输入前**先执行`LayerNorm`，然后经过子层并与原始输入进行**残差连接**，可提升**梯度流动**和深层模型的**训练稳定性**。`Post-norm`：在子层输出后与原始输入进行**残差连接**，再执行`LayerNorm`，是**Transformer**的经典结构，但在深层网络中可能导致**梯度衰减**和训练不稳定
 
-![](D:/workfileS/coding/gitfile/md/pictures/251.png)
+![](../../pictures/159.png)
 
 `BatchNorm`：对每个小批量中的每个通道进行标准化（减去均值、除以标准差），再加上可学习的**缩放**和**偏移**参数。`LayerNorm`：对每个**样本**的所有**特征维度**进行**标准化**（减去均值、除以标准差），同样使用可学习的**缩放**和**偏移**参数。
 
 - 对于计算机视觉领域，特征依赖于不同样本之间的统计参数，而Batch Norm更为有效，因为它消除了不同特征之间的大小关系，同时保留了不同样本之间的大小关系。
 - 在NLP领域，LaverNorm更加合适。这是因为单个样本的不同特征实际上是词语随时间的变化，并且样本内的特征关系非常紧密。
 
-![](D:/workfileS/coding/gitfile/md/pictures/252.png)
+![](../../pictures/160.png)
 
 `RMSNorm`和 `LayerNorm` 的主要区别在于 `RMSNorm` 不需要同时计算均值和方差两个统计量，而只需要计算均方根这一个统计量。对于输入向量$\vec{\mathbf{x}}=(x_1, x_2, \cdots, x_d)$，`RMSNorm`的计算过程如下
 
@@ -214,7 +214,7 @@ $f_t(x)$和$f_s(x)$分别表示教师模型和学生模型的中间层输出特�
 - 对每个元素 ;进行归一化 $\hat{x}_i = \frac{x_i}{\text{RMS}(\vec{\mathbf{x}}) + \epsilon}$
 - 引入可学习的缩放参数 $y_i = \gamma\hat{x}_i$
 
-![](D:/workfileS/coding/gitfile/md/pictures/253.png)
+![](../../pictures/161.png)
 
 为什么`RMSNorm`仅保留缩放参数了，去除了平移参数 ，效果依然ok?
 
@@ -234,7 +234,7 @@ $$
 \text{SwiGLU}(x) = \text{Linear}_{1}(x)\otimes \text{Swish}(\text{Linear}_2(x))\\
 \text{Swish}(x) = x\cdot\sigma(\beta(x))
 $$
-![](D:/workfileS/coding/gitfile/md/pictures/254.png)
+![](../../pictures/162.png)
 
 #### 量化
 
@@ -251,9 +251,9 @@ $$
 | UINT8 | 8      | 0      | –      | 8 (整数值)      |
 | INT4  | 4      | 1      | –      | 3 (整数值)      |
 
-![](D:/workfileS/coding/gitfile/md/pictures/247.png)
+![](../../pictures/155.png)
 
-![](D:/workfileS/coding/gitfile/md/pictures/248.png)
+![](../../pictures/156.png)
 
 #### 训练
 
@@ -263,7 +263,7 @@ $$
 
 **梯度累积**训练：多个 batch分别计算梯度，不立刻更新，而是将**多个梯度累加后统一更新一次**，等效于更大的 batch size，适合显存受限的情况。
 
-![](D:/workfileS/coding/gitfile/md/pictures/269.png)
+![](../../pictures/177.png)
 
 ##### Gradient Checkpoint
 
@@ -271,7 +271,7 @@ $$
 
 梯度重计算：只保存**关键层**的激活值，在反向传播时，对中间未保存的激活值进行重新前向计算，以此节省显存。总结：梯度重计算通过以**多算换空间**的方式降低显存使用，适合训练大模型时节省资源，但代价是训练时间略有增加。
 
-![](D:/workfileS/coding/gitfile/md/pictures/249.png)
+![](../../pictures/157.png)
 
 
 

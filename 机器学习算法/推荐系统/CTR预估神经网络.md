@@ -1,6 +1,6 @@
-# CTR模型
+﻿# CTR模型
 
-![](../../picture/1/142.png)
+![](../../pictures/004.png)
 
 假设有$F$个 `field`，`one-hot`向量为$\vec{\mathbf{x}}$，`field i`在向量中的起始位置为$s_i$、终止位置为$e_i$（包含）。每个 `field` 生成一个 `embedding` 向量。即 `field i` 生成$\vec{\mathbf{z}}_i=(v_1^i,\cdots,v_K^i)\in \mathbb{R}^{K}$。
 
@@ -33,7 +33,7 @@ DSSM使用深度神经网络 `DNN` 对给定 `query` 的一组 `document` 进行
 - 然后通过多层非线性投影来映射经过 `word hashed` 的特征。
 - `DNN` 的输出是低维语义特征空间中的概念向量 `concept vector` 。
 
-![](D:\workfileS\coding\gitfile\md\picture\1\418.png)
+![](../../pictures/042.png)
 
 `DSSM` 模型将原始的文本特征映射到低维的语义空间。
 
@@ -95,7 +95,7 @@ $$
 - 基于 `embedding` 的特征向量构建一个 `product layer`，从而建模 `inter-field` 特征交互。
 - 使用全连接的 `MLP` 进一步提取高阶特征模式。
 
-  ![PNN](../../picture/1/145.png)
+  ![PNN](../../pictures/005.png)
 
 ### 模型结构
 
@@ -158,7 +158,7 @@ $$
 
 - 广义线性模型表达能力不强，容易欠拟合；深度神经网络模型表达能力太强，容易过拟合。二者结合就能取得平衡。
 
-![Wide&Deep](../../picture/1/146.png)
+![Wide&Deep](../../pictures/006.png)
 
 ### 模型结构
 
@@ -196,7 +196,7 @@ $$
 - 提出了一种新颖的交叉网络，它在每一层显式地应用特征交叉，有效地学习有界阶次的、预测性的交叉特征，并且无需手动特征工程或详尽的搜索。
 - 交叉网络简单而有效。根据设计，多项式最高阶次在每一层都增加，并且由层的深度来决定。网络由最低阶到最高阶的所有阶次的、系数不同的交叉项`cross terms` 来组成
 
-![DCN](../../picture/1/148.png)
+![DCN](../../pictures/008.png)
 
 ### 模型结构
 
@@ -236,7 +236,7 @@ $$
 - 观察到 `DCN-V2` 中所学到的矩阵的低秩性质，论文提出利用低秩技术从而在子空间中近似`feature cross` ，以获得更好的性能和延迟的 `trade-off` 。
 - 论文利用人工合成数据集进行并提供了广泛的研究，证明了传统的基于 `ReLU` 的神经网络学习高阶特征交叉的低效率。
 
-![DCNV2](../../picture/1/429.png)
+![DCNV2](../../pictures/048.png)
 
 `DCN-V2` 首先通过 `cross layer` 学习输入的显式特征交互，然后与深度网络相结合从而学习互补的隐式交互。`DCN-V2` 的核心是 `cross layer` ，它继承了 `DCN` 中 `cross network` 的简单结构，然而在学习显式的和有界的交叉特征方面的表达能力显著增强。根据他们如何结合显式部分和隐式部分来组织相关工作。
 
@@ -270,7 +270,7 @@ $$
 
 `DeepFM` 模型由两种组件构成：`FM` 组件、`deep` 组件，它们共享输入。这种共享输入使得`DeepFM` 可以同时从原始特征中学习低阶特征交互和高阶特征交互，完全不需要执行特征工程
 
-![DeepFM](../../picture/1/147.png)
+![DeepFM](../../pictures/007.png)
 
 ### 模型结构
 
@@ -292,7 +292,7 @@ $$
 $$
 \hat{y}_{\text{FM}} = \sum_{i=1}^d(\omega_i\times x_i)+\sum_{i=1}^d\sum_{j=i+1}(\vec{\mathbf{v}}_i\cdot\vec{\mathbf{v}}_j)\times x_i\times x_j
 $$
-![](../../picture/1/280.png)
+![](../../pictures/031.png)
 
 `deep` 组件：该部分是一个全连接的前馈神经网络，用于学习高阶特征交互。假设 `embedding` 层的输出为：$\vec{\mathbf{h}}^0=[\vec{\mathbf{e}}_1,\cdots,\vec{\mathbf{e}}_F]$，其中$\vec{\mathbf{e}}_i$为`field i` 的 `embedding` 向量，$\vec{\mathbf{h}}^0$为前馈神经网络的输入。则有：
 $$
@@ -327,7 +327,7 @@ $$
 $$
 类似 `FM`，`NFM` 的第一项为全局偏置，第二项为一阶特征。与 `FM` 不同，`NFM` 的第三项$f(\vec{\mathbf{x}})$对交叉特征进行建模，它是一个多层前馈神经网络，包含 `embedding`层、`Bi-Interaction` 层、`Hidden` 层、输出层。
 
-![](../../picture/1/149.png)
+![](../../pictures/009.png)
 
 `embedding` 层将每个`feature` 映射到一个 `dense vector representation`，即特征$i$映射到向量$\vec{\mathbf{v}}_i\in\mathbb{R}^k$。一旦得到 `embedding` 向量，则输入$\vec{\mathbf{x}}=(x_1,\cdots,x_n)^T$就可以表示为：
 $$
@@ -365,7 +365,7 @@ $$
 $$
 类似 `FM`，`AFM` 的第一项为全局偏置，第二项为一阶特征。与 `FM` 不同，`NFM` 的第三项$f(\vec{\mathbf{x}})$对交叉特征进行建模，包含 `embedding`层、`Pair-wise Interaction` 成对交叉层、`Attention-based Pooling` 层、输出层。
 
-![](../../picture/1/150.png)
+![](../../pictures/010.png)
 
 `embedding` 层将每个`feature` 映射到一个 `dense vector representation`，即特征$i$映射到向量$\vec{\mathbf{v}}_i\in\mathbb{R}^k$。一旦得到 `embedding` 向量，则输入$\vec{\mathbf{x}}=(x_1,\cdots,x_n)^T$就可以表示为：
 $$
@@ -442,11 +442,11 @@ $$
 
 `CIN` 的建模过程非常类似卷积神经网络`CNN` 。首先引入临时三维张量$\mathbf{Z}^{k+1}\in\mathbb{R}^{H_k\times m\times D}$，它是$\mathbf{X}^k$和$\mathbf{X}^0$的外积。
 
-![](../../picture/1/414.png)
+![](../../pictures/038.png)
 
 然后将三维张量$\mathbf{Z}^{k+1}$视为一张图片，将$\mathbf{W}^{k+1,h}\in\mathbb{R}^{H_k\times m}$视为一个卷积核，沿着 `embedding` 维度进行卷积得到 `featuremap` ，即向量$\vec{\mathbf{x}}^{k+1}_h\in\mathbb{R}^D$。
 
-![](../../picture/1/415.png)
+![](../../pictures/039.png)
 
 使用$H_{k+1}$个卷积核执行卷积，得到的 `featuremap` 组成输出张量$\mathbf{X}^{k+1}\in\mathbb{R}^{H_{k+1}\times D}$。因此 `CIN` 网络将$H_k\times m$个交叉向量压缩到$H_{k+1}$个向量，这就是网络名称中的 `compressed` 的由来。
 
@@ -466,7 +466,7 @@ $$
 $$
 \hat{y} = \frac{1}{1+\exp(\vec{\mathbf{p}}^+\cdot\vec{\mathbf{w}}^+)}
 $$
-![](../../picture/1/416.png)
+![](../../pictures/040.png)
 
 卷积、池化操作都是沿着 `embedding` 维度进行，而不是沿着其它方向。原因是：我们希望对特征之间的高阶特征交叉显式建模。根据 `CIN` 网络的基本原理，卷积必须对$\mathbf{Z}^{k+1}$​的 `embedding` 维度进 行。
 
@@ -479,7 +479,7 @@ $$
 $$
 \hat{y} = \sigma(\vec{\mathbf{w}}_{\text{linear}}\cdot\vec{\mathbf{x}}+\vec{\mathbf{w}}_{\text{dnn}}\cdot\vec{\mathbf{x}}_{\text{dnn}}+\vec{\mathbf{w}}_{\text{cin}}\cdot\vec{\mathbf{p}}^++b)
 $$
-![](../../picture/1/417.png)
+![](../../pictures/041.png)
 
 其中$\sigma(\cdot)$为激活函数；$\vec{\mathbf{w}}_{\text{linear}},\vec{\mathbf{w}}_{\text{dnn}},\vec{\mathbf{w}}_{\text{cin}}$分别为线性部分、`DNN` 部分、`CIN` 部分的输出层权重参数；$\vec{\mathbf{x}},\vec{\mathbf{x}}_{\text{dnn}},\vec{\mathbf{x}}_{\text{cin}}$分别为模型的原始输入特征、`DNN` 网络提取的特征、`CIN` 网络提取的特征。模型损失函数为负的对数似然函数：
 $$
@@ -504,7 +504,7 @@ $$
 - 此外，`CVR` 网络的 `feature representation` 参数与 `CTR` 网络共享，而 `CTR` 用更丰富的样本进行训练。这种 `parameter transfer learning` 有助于显著地缓解 `DS` 问题。
 - `ESMM` 模型借鉴了多任务学习的思想，基于该顺序引入两个辅助任务：`CTR` 预测任务、`CTCVR` 预测任务。模型由两个子网络构成：左侧的 `CVR` 网络和右侧的 `CTR` 网络，二者均采用 `BASE` 模型相同的结构。模型同时输出`pCTR,pCVR,pCTCVR` 三路输出，其中：`pCVR` 输出由左侧的 `CVR` 网络输出、`pCTR` 输出由右侧的 `CTR` 网络输出、`pCTCVR` 输出将 `CVR` 和 `CTR` 网络输出的乘积作为输出
 
-![](../../picture/1/419.png)
+![](../../pictures/043.png)
 
 假设观察到的所有样本集合为：$\mathcal{S}=\{(\vec{\mathbf{x}}_1,y_1,z_1),\cdots,(\vec{\mathbf{x}}_N,y_N,z_N)\}$。其中$\vec{\mathbf{x}}\in\mathcal{X}$为特征，$y\in\mathcal{Y}$点击`label`，$z\in\mathcal{Z}$为转化`label`。
 
@@ -590,7 +590,7 @@ p_i^{cvr} = p(b_i=1|v_i=1)\\
 $$
 因此，上式可以通过将有向图 “曝光 --> 点击 --> `D(O)Action` --> 购买” 分解为 “曝光 --> 点击”、以及 “点击 --> `D(O)Action` --> 购买”，并根据链式法则 `chain rule`整合之前所有的公式$p_i^{ctcvr}=p_i^{ctr}\times p_i^{cvr}$从而得出。
 
-![](../../picture/1/434.png)
+![](../../pictures/053.png)
 
 以$y_{2,i}$为例，仅使用点击样本直接训练$y_{2,i}$会遇到 `SSB` 问题。 实际上根据前面的推导，$y_{2,i}$是从$p_i^{ctr}$和$p_i^{ctavr}$派生的中间变量`intermediate variable`。由于$p_i^{ctr}$和$p_i^{ctavr}$都是使用所有曝光样本在整个空间上建模的，因此派生的$y_{2,i}$也适用于整个空间，因此在我们的模型中没有 `SSB` 。另一方面， 给定用户的日志，$p_i^{ctr},p_i^{ctavr},p_i^{ctcvr}$的 `ground truth label` 是可用的，这些 `label` 可用于监督这些子目标。
 
@@ -604,7 +604,7 @@ $$
 
 `DIN` 通过考虑历史行为与目标广告的相关性来自适应地计算用户兴趣的 `representation` 向量。通过引入局部激活单元 `local activation unit`，`DIN` 通过软搜索 `soft-searching` 历史行为与目标广告的相关部分来关注相关的用户兴趣，并采用加权`sum` 池化来获得对目标广告的用户兴趣 `representation` 。与目标广告相关性更高的行为将会获得更高的激活权重 `activated weight`，并将主导用户兴趣`representation
 
-![](../../picture/1/151.png)
+![](../../pictures/011.png)
 
 由于输入中包含长度可变的行为序列`ID`，因此基准模型采用一个池化层（如 `sumpooling` ）来聚合 `embedding` 向量序列，从而获得固定尺寸的向量。基准模型在实践中表现良好，但是在池化过程中丢失了很多信息。即：池化操作破坏了用户行为数据的内部结构。
 
@@ -655,7 +655,7 @@ $$
 - 兴趣抽取层 `interest extractor layer` ：用于从用户的历史行为序列中捕获潜在的时序兴趣 `latent temporal interest`。在兴趣提取层，`DIEN` 选择利用 `GRU` 来建模用户行为之间的依赖关系。遵循兴趣直接导致连续行为的原则，论文提出了辅助损失，它使用下一个行为 `next behavior` 来监督当前隐状态`hidden state` 的学习。论文将这些具有额外监督信息的隐状态称作兴趣状态 `interest state` 。这些额外的监督信息有助于为兴趣 `representation` 捕获更多的语义信息，并推动 `GRU` 的隐状态有效地表达兴趣。
 - 兴趣演化层 `interest evolving layer` ：用于建模用户的兴趣演变过程。用户的兴趣是多种多样的，这导致产生兴趣漂移现象：相邻的两次访问中，用户的意图可能完全不同。并且用户的当前行为可能取决于很久之前的行为，而不是前几次行为。在兴趣演变层，`DIEN` 对与目标商品有关的兴趣演变轨迹进行建模。基于从兴趣提取层得到的兴趣序列，`DIEN` 采用带注意力更新门的 `GRU` ( `GRU with attentional update gate:AUGRU` ）来建模针对不同目标商品的特定兴趣演变过程。`AUGRU` 使用兴趣状态和目标商品来计算相关性，从而增强了相关兴趣对于兴趣演变的影响，同时减弱由于兴趣漂移产生的无关兴趣的影响。
 
-![](../../picture/1/420.png)
+![](../../pictures/044.png)
 
 ### 模型结构
 
@@ -764,7 +764,7 @@ $$
 
 最后会话兴趣激活层的输出和用户画像`embedding`、商品画像`embedding` 一起馈入 `MLP` 来执行预测。
 
-![](../../picture/1/421.png)
+![](../../pictures/045.png)
 
 `Session Division Layer`：为了更精确的抽取用户的会话兴趣，我们将用户行为序列$\mathbf{S}=[\vec{\mathbf{b}}_1,\cdots,\vec{\mathbf{b}}_N]\in\mathbb{R}^{N\times d}$划分为会话序列$\mathbf{Q}$，其中第$k$个会话（$1\le k\le K$）为：
 $$
@@ -818,9 +818,9 @@ $$
 
 ### 模型结构
 
-![](../../picture/1/430.png)
+![](../../pictures/049.png)
 
-![](../../picture/1/431.png)
+![](../../pictures/050.png)
 
 特征分为四组：用户特征（如用户 `ID`、年龄）、`query` 特征（如 `query`、`query category` ）、广告特征（如创意`ID`、广告标题）、其它特征（如一天中的小时、星期）。
 
@@ -914,7 +914,7 @@ $$
 
 最终损失由 `MLP` 的 `target loss` 和辅助的 `match network loss` 组成。
 
-![](../../picture/1/432.png)
+![](../../pictures/051.png)
 
 #### User-to-Item Network
 
@@ -1009,7 +1009,7 @@ $$
 
 ### 模型结构
 
-![MiNet](../../picture/1/433.png)
+![MiNet](../../pictures/052.png)
 
 #### 跨域的长期兴趣
 
@@ -1136,7 +1136,7 @@ $$
 $$
 和 `DSTN-Self Attention` 相比，这里的$\alpha_{c,i}$现在是目标广告$\vec{\mathbf{x}}_{t}$和上下文辅助广告$\vec{\mathbf{x}}_{c,i}$的函数。
 
-![](../../picture/1/436.png)
+![](../../pictures/055.png)
 
 ## `BST`
 
@@ -1148,7 +1148,7 @@ $$
 - 然后，通过将`Other Features`的 `embedding` 和 `transformer layer` 的输出进行拼接，并使用三层 `MLP` 来学习 `hidden features` 的交互作用。
 - 最后，使用 `sigmoid` 函数生成最终输出。
 
-![](../../picture/1/435.png)
+![](../../pictures/054.png)
 
 用户行为序列中每个 `item` （包括目标`item`）的 `embedding` 。我们使用两种类型的特征来表示一个 `item`：`Sequence Item Features`（红色）、`Positional Features`（深蓝色）。
 
@@ -1171,7 +1171,7 @@ $$
 - 提出了一种新的范式 `SIM`，用于长的用户行为序列数据进行建模。级联的两阶段搜索机制的设计使得 `SIM` 具有更好的能力，可以在可扩展性`scalability` 和准确性`accuracy` 方面为长期的`life-long` 用户行为序列数据建模。
 - 将长的用户行为序列数据建模的最大长度提高到 `54000`，比已发布的 `SOTA` 行业解决方案 `MIMN` 大 `54` 倍。
 
-![](../../picture/1/437.png)
+![](../../pictures/056.png)
 
 ### General Search Unit
 
@@ -1254,7 +1254,7 @@ $$
 - 论文提议研究显式学习高阶特征交互的问题，同时为该问题找到具有良好解释能力的模型。
 - 论文提出了一种基于自注意力神经网络的新方法，它可以自动学习高阶特征交互，并有效地处理大规模高维稀疏数据
 
-![](../../picture/1/438.png)
+![](../../pictures/057.png)
 
 `Input Layer`：我们首先将用户画像和 `item` 属性表示为一个稀疏向量，它是所有 `field` 的拼接：
 $$
@@ -1360,7 +1360,7 @@ $$
 - 转换：将$\mathbf{M}_{F(i),F(j)}$和$\mathbf{M}_{F(i),F(k)}$分别与$\vec{\mathbf{v}}_i$相乘，得到中间向量$\vec{\mathbf{v}}_{i,F(j)} = \mathbf{M}_{F(i),F(j)}\vec{\mathbf{v}}_i$用于 `field`$F(j)$、$\vec{\mathbf{v}}_{i,F(k)}$用于 `field`$F(k)$。
 - 点乘：最终的交互项将是$\vec{\mathbf{v}}_{i,F(j)}\cdot\vec{\mathbf{v}}_j$以及$\vec{\mathbf{v}}_{i,F(k)}\vec{\mathbf{v}}_k$。
 
-![](../../picture/1/441.png)
+![](../../pictures/059.png)
 
 ## `FiBiNet`
 
@@ -1370,7 +1370,7 @@ $$
 - 论文引入了三种类型的双线性交互层 `Bilinear-Interaction layer` ，以一种精细的方式学习特征交互。而之前的工作用 `Hadamard` 积或内积来计算特征交互。
 - 为了进一步提高性能，论文将经典的深度神经网络组件与浅层模型相结合，构成一个深度模型。
 
-![](../../picture/1/440.png)
+![](../../pictures/058.png)
 
 `embedding layer` 的输出是由 `field embedding` 向量所拼接而来：$\vec{\mathbf{e}} = \vec{\mathbf{e}}_1||\cdots||\vec{\mathbf{e}}_f\in\mathbb{R}^{fk}$，其中$f$ 为 `field` 数量，$k$为 `field embedding` 维度。
 
@@ -1397,7 +1397,7 @@ $$
 
 `Bilinear-Interaction Layer`：`Interaction layer` 用于计算二阶的特征交互。特征交互的经典方法是内积和 `Hadamard` 积，其形式分别为：$\{(\vec{\mathbf{v}}_i\cdot\vec{\mathbf{v}}_j)x_ix_j\}_{(i,j)\in\mathcal{R}_x}$以及$\{(\vec{\mathbf{v}}_i\odot\vec{\mathbf{v}}_j)x_ix_j\}_{(i,j)\in\mathcal{R}_x}$，其中$\mathcal{R}_x =\{(i,j)\}_{i,j \in\{1,\cdots,f\},j > i}$。
 
-![](../../picture/1/442.png)
+![](../../pictures/060.png)
 
 我们在`Interaction layer` 提出了三种类型的双线性函数，并称这一层为 `Bilinear-Interaction layer` 。以第$i$个 `field embedding`$\vec{\mathbf{v}}_i$和第$j$个`field embedding`$\vec{\mathbf{v}}_j$为例，特征交互的结果$p_{i,j}$可以计算为：
 
@@ -1437,7 +1437,7 @@ $$
 
 `AFN`，从数据中自适应地学习任意阶次的交叉特征及其权重。其关键思想是：将 `feature embedding` 编码到一个对数空间中，并将特征的幂次转换为乘法。`AFN` 的核心是一个对数神经转换层 `logarithmic neural transformation layer` ，由多个 `vector-wise` 对数神经元组成。每个对数神经元的目的是：在可能有用的特征组合中，自动学习特征的幂次（即，阶次）。在对数神经转换层上，`AFN` 应用前馈神经网络来建模 `element-wise` 的特征交互。与 `FM/HOFM` 不同的是，`AFN` 能够自适应地从数据中学习有用的交叉特征，而且最大阶次可以通过数据自动学到。
 
-![](../../picture/1/443.png)
+![](../../pictures/061.png)
 
 `Input Layer and Embedding Layer`：`AFN` 的 `inpyt layer` 同时采用 `sparse categorical feature` 和 `numerical feature`。最后，`embedding layer` 的输出是 `positive feature embedding` 的一个集合：$\vec{\mathbf{e}}=\{\vec{\mathbf{e}}_1,\cdots,\vec{\mathbf{e}}_m\}$。
 
@@ -1464,7 +1464,7 @@ $$
 - 在特征生成中，作者设计了一个 `CNN+MLP` 的结构用来从原始特征中识别和生成新的重要特征。更具体地说，`CNN` 被用来学习 `neighbor feature interaction`，而 `MLP` 被用来重新组合它们从而提取 `global feature interaction` 。在特征生成之后，特征空间可以通过结合原始特征和新特征来进行扩充。
 - 在深度分类器中，几乎所有 `SOTA` 网络结构（如 `PIN`、`xDeepFM`、`DeepFM`）都可以被采用。
 
-![](../../picture/1/444.png)
+![](../../pictures/062.png)
 
 每个样本可以表示为一个 `embedding` 矩阵$\mathbf{E} = (\vec{\mathbf{e}}_1,\cdots,\vec{\mathbf{e}}_m)\in\mathbb{R}^{m\times k}$。为了避免更新参数时梯度方向的不一致，我们将为深度分类器引入另一个 `embedding` 矩阵$\mathbf{E}^{\prime}$，而$\mathbf{E}$用于特征生成。
 
@@ -1496,7 +1496,7 @@ $$
 - `InterHAt` 利用具有 `multi-head self-attention` 的 `Transformer` ，从而在不同潜在语义子空间中彻底分析特征之间可能的交互关系。
 - `InterHAt` 预测 `CTR` 时无需使用需要大量计算成本的深层 `MLP` 。相反，它聚合了特征，因此节省了枚举指数级数量的特征交互的指开销。
 
-![](../../picture/1/445.png)
+![](../../pictures/063.png)
 
 每个样本可以表示为一个 `embedding` 矩阵$\mathbf{E} = (\vec{\mathbf{e}}_1,\cdots,\vec{\mathbf{e}}_m)\in\mathbb{R}^{m\times k}$。
 
@@ -1535,7 +1535,7 @@ $$
 - 在高阶多项式逻辑回归的启发下，论文设计了一个 `Polynomial-Interaction-Network: PIN` 层，它可以递归地学习高阶的、显式的特征交互。通过调整 `PIN` 层的数量来控制交互的阶次。作者进行了一项分析，以证明 `PIN` 的多项式逼近的属性。
 - 论文引入了一个 `subspace-crossing` 机制来建模 `PIN` 层内不同 `field` 之间的 `bit-wise` 交互。 `PIN` 层和 `subspace-crossing` 机制的结合使我们能够控制 `bit-wise` 交互的阶次。随着子空间数量的增加，模型可以动态地学习更细粒度的 `bit-wise` 特征交互。
 
-![](../../picture/1/446.png)
+![](../../pictures/064.png)
 
 我们堆叠 � 个 `embedding` 向量，从而获得 `input feature map`$\mathbf{X}_0$：
 $$

@@ -1,4 +1,4 @@
-##### `DeepFM`
+﻿##### `DeepFM`
 
  `DeepFM` 模型结合了 `FM` 的推荐能力和 `DNN` 的特征学习能力，综合利用了低阶交叉特征和高阶交叉特征。其特点有：
 
@@ -7,7 +7,7 @@
 
 `DeepFM` 模型由两种组件构成：`FM` 组件、`deep` 组件，它们共享输入。这种共享输入使得`DeepFM` 可以同时从原始特征中学习低阶特征交互和高阶特征交互，完全不需要执行特征工程
 
-![](../../picture/1/147.png)
+![](../../pictures/007.png)
 
 假设输入包含 `sparse` 特征和 `dense` 特征。设原始特征为向量$\vec{\mathbf{x}}$，其中：
 $$
@@ -27,7 +27,7 @@ $$
 $$
 \hat{y}_{\text{FM}} = \sum_{i=1}^d(\omega_i\times x_i)+\sum_{i=1}^d\sum_{j=i+1}(\vec{\mathbf{v}}_i\cdot\vec{\mathbf{v}}_j)\times x_i\times x_j
 $$
-![](../../picture/1/280.png)
+![](../../pictures/031.png)
 
 `deep` 组件：该部分是一个全连接的前馈神经网络，用于学习高阶特征交互。假设 `embedding` 层的输出为：$\vec{\mathbf{h}}^0=[\vec{\mathbf{e}}_1,\cdots,\vec{\mathbf{e}}_K]$，其中$\vec{\mathbf{e}}_i$为`field i` 的 `embedding` 向量，$\vec{\mathbf{h}}^0$为前馈神经网络的输入。则有：
 $$
@@ -61,7 +61,7 @@ $$
 $$
 类似 `FM`，`NFM` 的第一项为全局偏置，第二项为一阶特征。与 `FM` 不同，`NFM` 的第三项$f(\vec{\mathbf{x}})$对交叉特征进行建模，它是一个多层前馈神经网络，包含 `embedding`层、`Bi-Interaction` 层、`Hidden` 层、输出层。
 
-![](../../picture/1/149.png)
+![](../../pictures/009.png)
 
 `embedding` 层将每个`feature` 映射到一个 `dense vector representation`，即特征$i$映射到向量$\vec{\mathbf{v}}_i\in\mathbb{R}^k$。一旦得到 `embedding` 向量，则输入$\vec{\mathbf{x}}=(x_1,\cdots,x_n)^T$就可以表示为：
 $$
@@ -107,7 +107,7 @@ $$
 $$
 类似 `FM`，`AFM` 的第一项为全局偏置，第二项为一阶特征。与 `FM` 不同，`NFM` 的第三项$f(\vec{\mathbf{x}})$对交叉特征进行建模，包含 `embedding`层、`Pair-wise Interaction` 成对交叉层、`Attention-based Pooling` 层、输出层。
 
-![](../../picture/1/150.png)
+![](../../pictures/010.png)
 
 `embedding` 层将每个`feature` 映射到一个 `dense vector representation`，即特征$i$映射到向量$\vec{\mathbf{v}}_i\in\mathbb{R}^k$。一旦得到 `embedding` 向量，则输入$\vec{\mathbf{x}}=(x_1,\cdots,x_n)^T$就可以表示为：
 $$
@@ -182,11 +182,11 @@ $$
 
 `CIN` 的建模过程非常类似卷积神经网络`CNN` 。首先引入临时三维张量$\mathbf{Z}^{k+1}\in\mathbb{R}^{H_k\times m\times D}$，它是$\mathbf{X}^k$和$\mathbf{X}^0$的外积。
 
-![](../../picture/1/414.png)
+![](../../pictures/038.png)
 
 然后将三维张量$\mathbf{Z}^{k+1}$视为一张图片，将$\mathbf{W}^{k+1,h}\in\mathbb{R}^{H_k\times m}$视为一个卷积核，沿着 `embedding` 维度进行卷积得到 `featuremap` ，即向量$\vec{\mathbf{x}}^{k+1}_h\in\mathbb{R}^D$。
 
-![](../../picture/1/415.png)
+![](../../pictures/039.png)
 
 使用$H_{k+1}$个卷积核执行卷积，得到的 `featuremap` 组成输出张量$\mathbf{X}^{k+1}\in\mathbb{R}^{H_{k+1}\times D}$。因此 `CIN` 网络将$H_k\times m$个交叉向量压缩到$H_{k+1}$个向量，这就是网络名称中的 `compressed` 的由来。
 
@@ -206,7 +206,7 @@ $$
 $$
 \hat{y} = \frac{1}{1+\exp(\vec{\mathbf{p}}^+\cdot\vec{\mathbf{w}}^+)}
 $$
-![](../../picture/1/416.png)
+![](../../pictures/040.png)
 
 卷积、池化操作都是沿着 `embedding` 维度进行，而不是沿着其它方向。原因是：我们希望对特征之间的高阶特征交叉显式建模。根据 `CIN` 网络的基本原理，卷积必须对$\mathbf{Z}^{k+1}$​的 `embedding` 维度进 行。
 $$
@@ -218,7 +218,7 @@ $$
 $$
 \hat{y} = \sigma(\vec{\mathbf{w}}_{\text{linear}}\cdot\vec{\mathbf{x}}+\vec{\mathbf{w}}_{\text{dnn}}\cdot\vec{\mathbf{x}}_{\text{dnn}}+\vec{\mathbf{w}}_{\text{cin}}\cdot\vec{\mathbf{x}}_{\text{cin}}+b)
 $$
-![](../../picture/1/417.png)
+![](../../pictures/041.png)
 
 其中$\sigma(\cdot)$为激活函数；$\vec{\mathbf{w}}_{\text{linear}},\vec{\mathbf{w}}_{\text{dnn}},\vec{\mathbf{w}}_{\text{cin}}$分别为线性部分、`DNN` 部分、`CIN` 部分的输出层权重参数；$\vec{\mathbf{x}},\vec{\mathbf{x}}_{\text{dnn}},\vec{\mathbf{x}}_{\text{cin}}$分别为模型的原始输入特征、`DNN` 网络提取的特征、`CIN` 网络提取的特征。模型损失函数为负的对数似然函数：
 $$
@@ -249,7 +249,7 @@ $$
 - `ESMM` 模型不会直接使用点击样本来预测 `CVR`，而是将 `CVR` 作为一个中间变量：$\text{pCTR}\times\text{pCVR}=\text{pCTCVR}$。其中 `PCTR` 和 `pCTCVR` 都是在整个曝光样本空间进行估计的，因此派生的 `pCVR` 也适用于整个曝光样本空间。这就消除了样本选择偏差问题。
 - 另外，`CVR` 网络的 `embedding` 参数和 `CTR` 网络的 `embeddin` 参数共享，而后者具有更多的训练样本。因此这种参数的迁移学习可以有效缓解数据稀疏问题。
 
-![](../../picture/1/419.png)
+![](../../pictures/043.png)
 
 假设观察到的所有样本集合为：$\mathcal{S}=\{(\vec{\mathbf{x}}_1,y_1,z_1),\cdots,(\vec{\mathbf{x}}_N,y_N,z_N)\}$。其中$\vec{\mathbf{x}}\in\mathcal{X}$为特征，$y\in\mathcal{Y}$点击`label`，$z\in\mathcal{Z}$为转化`label`。
 
@@ -308,7 +308,7 @@ $$
 
 `DIN` 模型（右图）和基准模型 `Base Model` （左图）如下图所示。
 
-![](../../picture/1/151.png)
+![](../../pictures/011.png)
 
 基准模型采用 `embedding&MLP` 结构，它由两个部分组成：
 
@@ -353,7 +353,7 @@ $$
 - 兴趣抽取层 `interest extractor layer` ：用于从用户的历史行为序列中捕获潜在的时序兴趣 `latent temporal interest`。在兴趣提取层，`DIEN` 选择利用 `GRU` 来建模用户行为之间的依赖关系。
 - 兴趣演化层 `interest evolving layer` ：用于建模用户的兴趣演变过程。用户的兴趣是多种多样的，这导致产生兴趣漂移现象：相邻的两次访问中，用户的意图可能完全不同。并且用户的当前行为可能取决于很久之前的行为，而不是前几次行为。在兴趣演变层，`DIEN` 对与目标商品有关的兴趣演变轨迹进行建模。基于从兴趣提取层得到的兴趣序列，`DIEN` 采用带注意力更新门的 `GRU` ( `GRU with attentional update gate:AUGRU` ）来建模针对不同目标商品的特定兴趣演变过程。`AUGRU` 使用兴趣状态和目标商品来计算相关性，从而增强了相关兴趣对于兴趣演变的影响，同时减弱由于兴趣漂移产生的无关兴趣的影响。
 
-![](../../picture/1/420.png)
+![](../../pictures/044.png)
 
 假设用户画像、用户行为、广告、上下文这四个`field` 的不同特征 `one-hot` 编码拼接之后分别为$\mathbf{x}_p,\mathbf{x}_b,\mathbf{x}_a,\mathbf{x}_c$。通常用户行为特征是一个行为序列，因此有：
 $$
@@ -464,7 +464,7 @@ $$
 
 最后会话兴趣激活层的输出和用户画像`embedding`、商品画像`embedding` 一起馈入 `MLP` 来执行预测。
 
-![](../../picture/1/421.png)
+![](../../pictures/045.png)
 
 ###### 会话划分层
 

@@ -1,4 +1,4 @@
-### `Dataset`
+﻿### `Dataset`
 
 | 数据格式           | 类型参数 | 加载的指令                                              |
 | ------------------ | -------- | ------------------------------------------------------- |
@@ -293,7 +293,7 @@ encoding.tokens()
 encoding.word_ids()
 ```
 
-![](D:/workfileS/coding/gitfile/md/pictures/210.png)
+![](../../pictures/118.png)
 
 #### 标准化
 
@@ -865,7 +865,7 @@ wrapped_tokenizer = PreTrainedTokenizerFast(
 
 ### 模型
 
-![](D:/workfileS/coding/gitfile/md/pictures/208.png)
+![](../../pictures/116.png)
 
 我们使用 tokenizer，它将负责：
 
@@ -916,7 +916,7 @@ print(predictions)
 
 Transformers 模型的输出会直接发送到模型头进行处理。模型头通常由一个或几个线性层组成，它的输入是隐状态的高维向量，它会并将其投影到不同的维度。
 
-![](D:/workfileS/coding/gitfile/md/pictures/209.png)
+![](../../pictures/117.png)
 
 ### Tokenizer
 
